@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Inspect a track's rhythm and export a deterministic timing map for coding agents.">
+  <title>BeatScope</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#workspace">Skip to workspace</a>
+  <div id="dropOverlay" class="drop-overlay" aria-hidden="true">
+    <div class="drop-overlay-box"><strong>Drop audio</strong><span>WAV · FLAC · MP3 · OGG · M4A</span></div>
+  </div>
+  <main id="app" data-state="empty">
+    <header class="topbar">
+      <a class="wordmark" href="/" aria-label="BeatScope home"><span class="wordmark-mark">B/S</span><span>BeatScope</span></a>
+      <div class="topbar-track"><strong id="filename">No audio selected</strong><span id="status" role="status">Local processing</span></div>
+      <div class="topbar-actions"><span id="timecode" class="mono">00:00.000</span><button id="play" class="transport-button" disabled>Play</button><button id="loop" class="quiet-button" disabled>Loop 8 bars</button><button id="replaceAudio" class="quiet-button">New audio</button></div>
+    </header>
+
+    <section class="intake" aria-labelledby="intake-title">
+      <div class="intake-copy"><span class="kicker">Audio input</span><h1 id="intake-title">BeatScope</h1><p>Choose a track.</p></div>
+      <div id="dropZone" class="drop-zone" role="button" tabindex="0" aria-label="Choose or drop an audio file"><div><span class="drop-zone-label">Drop audio here</span><span class="drop-zone-meta">WAV, FLAC, MP3, OGG or M4A · processed locally</span></div><button id="selectAudioBtn" class="primary-button" type="button">Choose file</button></div>
+      <input id="audioFileInput" type="file" accept=".wav,.mp3,.flac,.ogg,.m4a,audio/*" hidden>
+      <div id="analysisProgressBox" class="analysis-progress" hidden><div class="progress-copy"><span id="progressMessage">Preparing analysis</span><button id="cancelAnalysisBtn" class="text-button">Cancel</button></div><div class="progress-track"><div id="progressBarInner" class="progress-bar-inner"></div></div></div>
+    </section>
+
+    <div id="workspace" class="workspace">
+      <section id="visualSection" class="player-section" aria-labelledby="visual-title">
+        <div class="section-heading stage-heading"><div><h2 id="visual-title">Signal player</h2></div><div class="track-facts"><span><b id="factBpm">—</b> BPM</span><span><b id="factBars">—</b> bars</span><span><b id="factDuration">—</b></span></div></div>
+        <div class="visual-stage-shell">
+          <div class="stage-meta"><strong id="stageTrackName">No track</strong><span id="visualReadout" class="mono">BAR — · BEAT —</span></div>
+          <canvas id="visualStage" width="1400" height="520" aria-label="Audio-reactive composition driven by playback time"></canvas>
+          <div class="stage-transport"><button id="stagePlay" class="stage-play" disabled aria-label="Play">▶</button><span id="currentTime" class="mono">00:00.000</span><input id="seekRange" type="range" min="0" max="0" step="0.001" value="0" disabled aria-label="Seek audio"><span id="durationLabel" class="mono">00:00.000</span><button id="seekBack" class="icon-button" disabled aria-label="Back five seconds">−5</button><button id="seekForward" class="icon-button" disabled aria-label="Forward five seconds">+5</button><label class="volume-control"><span>VOL</span><input id="volumeRange" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume"></label></div>
+        </div>
+      </section>
+
+      <section id="overviewSection" class="overview-section" aria-labelledby="overview-title">
+        <div class="section-heading compact-heading"><div><h2 id="overview-title">Track structure</h2></div><label class="follow-control"><input id="followPlayback" type="checkbox" checked><span>Follow playback</span></label></div>
+        <div class="overview-shell"><canvas id="overview" width="1400" height="192" tabindex="0" aria-label="Song structure and whole-track energy navigation"></canvas></div>
+        <div class="overview-meta"><span id="rangeLabel">No track loaded</span><span>Select a bar to move the eight-bar window</span></div>
+      </section>
+
+      <section id="gridSection" class="grid-section" aria-labelledby="map-title">
+        <div class="section-heading grid-heading"><div><h2 id="map-title">8-bar cue map</h2></div><div class="grid-tools"><button id="prev" class="icon-button" disabled aria-label="Previous 8 bars">←</button><span id="windowLabel" class="mono">01—08</span><button id="next" class="icon-button" disabled aria-label="Next 8 bars">→</button><label class="grid-select">Resolution<select id="subdivision"><option value="16" selected>1/16</option><option value="32">1/32</option></select></label></div></div>
+        <div class="map-wrap"><div class="empty-state-notice" id="emptyStateNotice">Load audio to inspect its rhythm.</div><div class="map-stack" id="mapStack"><canvas id="mapStatic" width="1400" height="500" tabindex="0" aria-label="Eight-bar motion cue map; click once to preview and drag to select"></canvas><canvas id="mapOverlay" width="1400" height="500" aria-hidden="true"></canvas></div></div>
+        <div class="selection-strip"><div class="selection-title"><span>Selected cue</span><strong id="cellLabel">Nothing selected</strong></div><dl><div><dt>Raw</dt><dd id="rawTime">—</dd></div><div><dt>Grid</dt><dd id="quantizedTime">—</dd></div><div><dt>Shift</dt><dd id="offset">—</dd></div><div><dt>Strength</dt><dd id="strength">—</dd></div><div class="bands-detail"><dt>Drivers</dt><dd id="bands">—</dd></div></dl></div>
+        <p class="interaction-note">Click once to preview. Drag to define a loop. Selecting a range does not restart playback.</p>
+      </section>
+
+      <section id="exportSection" class="export-section" aria-labelledby="export-title">
+        <div class="export-copy"><h2 id="export-title">Export for Codex</h2><p>Analysed timing, a seek-safe state function and the instructions an agent needs to use them.</p><div class="package-list"><span>rhythm-map.json</span><span>visual-state.js</span><span>BEATSCOPE.md</span><span>SKILL.md</span><span>references/schema.md</span><span>README.md</span></div></div>
+        <div class="export-actions"><button id="exportCodex" class="primary-button large-button" disabled>Download Codex package</button><button id="copyPrompt" class="quiet-button" disabled>Copy Codex prompt</button><span id="copyStatus" class="mono" role="status"></span><details class="advanced-exports"><summary>Advanced tools</summary><p>Reference formats for inspection. MIDI is quantized timing, not a drum transcription.</p><div class="utility-actions"><button id="exportMidi" class="text-button" disabled>Reference MIDI</button><button id="exportCsv" class="text-button" disabled>CSV data</button><button id="exportPng" class="text-button" disabled>Map PNG</button><button id="openProject" class="text-button">Open JSON</button><input id="projectFile" type="file" accept=".json,application/json" hidden></div></details></div>
+      </section>
+    </div>
+    <audio id="audio" preload="metadata"></audio>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

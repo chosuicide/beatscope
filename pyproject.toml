@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "beatscope"
+version = "0.1.0"
+description = "Local, editable rhythm maps from audio"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+keywords = ["audio-visualization", "music", "rhythm", "creative-coding", "codex"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+dependencies = ["numpy>=1.24", "soundfile>=0.12"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+high-quality = ["librosa>=1.0", "demucs>=4.1"]
+
+[project.scripts]
+beatscope = "beatscope.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["beatscope*"]
+
+[tool.setuptools.package-data]
+beatscope = ["web/*.html", "web/*.js", "web/*.css", "agent_skill/*.md", "agent_skill/references/*.md"]

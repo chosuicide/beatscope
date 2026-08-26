@@ -1,0 +1,202 @@
+# BeatScope
+
+简体中文 | [English](README.en.md)
+
+一个把歌曲节奏变成可播放视觉参考与 Agent 可复用时序包的本地个人项目。
+
+BeatScope 允许用户上传一首歌，在浏览器里一边播放，一边查看随 LOW、MID、HIGH、瞬态与段落变化运动的粒子球、频段曲线和全曲结构。分析结果还会整理成 8 小节 cue map，并导出为带 <code>SKILL.md</code> 的 Codex 包，让后续视觉项目不必重新猜测同一首歌的节奏。
+
+**[观看 29 秒演示](docs/demo/beatscope-demo.mp4)**
+
+![BeatScope 音乐动效播放器](docs/screenshots/beatscope-player-impact.jpg)
+
+> BeatScope 展示的是节奏强度、频段分布和时间结构，不会把不确定的瞬态冒充成 kick、snare 或 808。音频在本机分析，临时上传文件会在处理后删除。
+
+## 为什么做这个项目
+
+音乐可视化真正麻烦的部分通常不是画一个会动的图形，而是确定它为什么在这一刻动、应该动多大，以及同一套动画怎样适应节奏密度完全不同的歌曲。
+
+直接把每个峰值映射成一次爆炸，很快会遇到问题：稀疏歌曲看起来有冲击，密集歌曲却会让球体持续炸开；只看总音量又会丢失低频重量、高频细节和段落转换。下一次把音乐交给另一个 Agent 时，这些判断还要重新做一遍。
+
+BeatScope 尝试把这段工作留下来。Python 负责读取音频、建立节拍网格和提取多频段能量；浏览器使用 <code>audio.currentTime</code> 作为唯一时钟；粒子动画把普通节拍、连续湍流、局部冲击和稀有重击分成不同层级。最终结果既可以直接观看，也可以作为下一次创作的时间参考。
+
+## 一次使用怎样展开
+
+~~~text
+上传本地音频 → 建立节拍与多频段能量
+            → 自动进入 Signal player
+            → 播放、暂停、拖动与查看全曲结构
+            → 在 8-bar cue map 中试听或框选循环
+            → 导出 Codex package 继续制作视觉项目
+~~~
+
+1. 用户选择 WAV、FLAC、MP3、OGG 或 M4A 文件。
+2. 本地服务生成节拍、瞬态、LOW / MID / HIGH 能量和段落概览。
+3. 页面平滑移动到播放器，粒子球、频段线和频谱随播放位置变化。
+4. Track structure 用整首歌的视角显示能量与段落，并允许跳转。
+5. 8-bar cue map 把当前窗口整理成 impact、scale、flow、flash 和 bloom 参考。
+6. Codex 导出包保存分析数据、视觉状态函数、说明与可移植 Skill。
+
+<details>
+<summary>查看更多播放器状态</summary>
+
+### 安静段
+
+![BeatScope 安静段](docs/screenshots/beatscope-player-calm.jpg)
+
+### 高密度段
+
+![BeatScope 高密度段](docs/screenshots/beatscope-player-dense.jpg)
+
+</details>
+
+## 音乐怎样影响画面
+
+播放器不会把所有强拍都当成同一种事件。它先在当前歌曲内部比较瞬态强度和局部密度，再给动画分配有限的视觉预算。
+
+| 音乐状态 | 视觉反应 |
+| --- | --- |
+| 普通节拍 | 球体轻微呼吸，中心与频段线短促响应 |
+| 连续强拍 | 表面波动与粒子湍流增加，不连续炸开 |
+| 局部突出瞬态 | 少量粒子脱离，并出现短冲击 |
+| 稀有重击或段落变化 | 在冷却间隔允许时触发完整展开 |
+| LOW / MID / HIGH | 分别控制重量与尺度、表面流动、细节与亮度 |
+| 播放位置 | 粒子、曲线、结构导航和 cue map 使用同一时间来源 |
+
+粒子数量会根据单帧渲染耗时自动调整。结构导航与 cue map 使用较低刷新频率，避免它们与主动画争抢录屏资源；音频时间本身不会因此降采样。
+
+## 8 小节参考怎样工作
+
+BeatScope 将原始瞬态对齐到 1/16 或 1/32 网格，同时保留真实发生时间、量化位置和偏移量。页面不要求用户相信某个乐器标签，而是直接显示可验证的节奏事实：
+
+| Cue | 适合参考的视觉方向 |
+| --- | --- |
+| IMPACT | 几何体、镜头或构图的短促冲击 |
+| LOW / SCALE | 尺度、重量和景深 |
+| MID / FLOW | 主体表面与方向性运动 |
+| HIGH / FLASH | 边缘光、细粒子和短曝光 |
+| ACCENT / BLOOM | 少数主事件与全局强调 |
+
+单击 cue 可以试听附近瞬态；拖动可以定义循环范围。选择与拖动不会让歌曲从头重新播放。
+
+## 给 Codex 的导出包
+
+~~~text
+beatscope-codex.zip
+├── SKILL.md
+├── references/schema.md
+├── rhythm-map.json
+├── visual-state.js
+├── BEATSCOPE.md
+└── README.md
+~~~
+
+<code>visual-state.js</code> 根据时间返回确定性的视觉状态。Agent 可以直接读取 cue、频段与段落，不必再次分析音频；暂停、拖动和跳转后仍然由同一个播放时间恢复画面。
+
+MIDI、CSV、PNG 和原始 JSON 仍然保留在 **Advanced tools** 中。MIDI 只是量化时间参考，不是重建出来的鼓组演奏。
+
+## 当前实现
+
+- 本地音频读取、格式检查与 FFmpeg 安全回退
+- 节拍网格、瞬态、多频段能量和全曲结构分析
+- Canvas 2D 粒子球、频段曲线、光晕与频谱面板
+- 根据歌曲分布和节奏密度分配动画层级
+- 播放、暂停、音量、跳转和 8 小节循环
+- 全曲结构导航与 1/16、1/32 cue map
+- Codex ZIP、Skill、JSON、CSV、PNG 和参考 MIDI 导出
+- 请求级临时文件、250 MB 上传限制和本地项目缓存
+- Python、纯 JavaScript 与 GitHub Actions 回归测试
+
+## 技术栈
+
+| 部分 | 使用的技术 |
+| --- | --- |
+| 分析 | Python、NumPy、SoundFile |
+| 高质量可选流程 | librosa、Demucs、Beat This |
+| 本地服务 | Python HTTP server |
+| 播放 | HTML Audio、audio.currentTime |
+| 视觉 | Canvas 2D、原生 JavaScript、CSS |
+| 导出 | JSON、CSV、PNG、Standard MIDI、ZIP Skill package |
+| 验证 | pytest、Node Test Runner、GitHub Actions |
+
+## 项目结构
+
+~~~text
+beatscope/
+├── analysis.py             # 基础音频分析
+├── rhythm.py               # 事实型节奏项目
+├── beatgrid.py             # 节拍、量化与偏移
+├── structure.py            # 全曲段落与模式概览
+├── exports.py              # Codex、CSV、PNG 与 MIDI 导出
+├── server.py               # 本地上传、项目与媒体服务
+├── agent_skill/            # 打入 ZIP 的可移植 Skill
+└── web/
+    ├── renderer.js         # 粒子播放器、结构与 cue map
+    ├── audio.js            # 单一音频时钟与播放控制
+    ├── app.js              # 页面状态和交互
+    └── index.html
+skills/beatscope-visualizer/ # 仓库内 Skill
+tests/                       # Python 与 JavaScript 回归测试
+docs/                        # README 截图和演示视频
+~~~
+
+## 本地运行
+
+需要 Python 3.10 或更新版本。
+
+~~~powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+beatscope serve
+~~~
+
+打开 <code>http://127.0.0.1:8765</code>，然后选择音频。WAV、FLAC 和 OGG 通过 SoundFile 读取；本机 libsndfile 不支持 MP3 时会使用 FFmpeg 回退。
+
+常用命令：
+
+~~~powershell
+beatscope serve
+beatscope rhythm song.wav --drums drums.wav --beat-this song.beats --output rhythm.json
+beatscope separate song.wav --output-dir .beatscope-cache\song\stems --model htdemucs --device cuda
+beatscope doctor
+~~~
+
+## 可选高质量流程
+
+内置分析器足够体验播放器。对于鼓组埋在完整混音中的歌曲，可以安装额外依赖并提供 Beat This 时间与 Demucs drums stem：
+
+~~~powershell
+pip install -e ".[high-quality]"
+beatscope separate "song.wav" --output-dir .beatscope-cache\song\stems --model htdemucs --device cpu
+beatscope rhythm "song.wav" --drums drums.wav --beat-this song.beats --output rhythm.json
+beatscope serve --project rhythm.json
+~~~
+
+选择 <code>--device cuda</code> 时，BeatScope 不会静默改用 CPU。
+
+## 验证
+
+~~~powershell
+pytest -q
+node tests\test_grid.js
+node tests\test_interaction.js
+~~~
+
+GitHub Actions 会在 Windows 与 Ubuntu、Python 3.10 与 3.12 上运行相同的核心检查。
+
+## 已知限制
+
+- 内置分析不会可靠识别 kick、snare 或 808 身份，只报告瞬态和频段事实。
+- Canvas 2D 粒子在高分辨率录屏时仍受浏览器和 GPU 性能影响；稳定高帧率的下一步是迁移到 WebGL。
+- 自动段落标签来自能量与重复关系，不等同于人工编曲标注。
+- MP3 支持取决于本机 libsndfile 或 FFmpeg。
+- 这是本地创作与参考工具，不是 DAW、FLP 生成器或精确鼓组转录器。
+
+## 项目状态
+
+BeatScope 已完成从音频上传、播放式可视化、全曲结构、8 小节 cue map 到 Codex Skill 导出的完整本地流程。它仍是一个持续调整的个人实验；后续重点不是增加更多导出格式，而是让同一套视觉语法在更多歌曲、设备和录制环境中保持稳定。
+
+## License
+
+本项目使用 [MIT License](LICENSE)。
