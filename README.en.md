@@ -6,9 +6,9 @@ A local personal project that turns a song's rhythm into a playable visual refer
 
 BeatScope lets you upload a track, play it in the browser, and watch a particle sphere, frequency traces, and a whole-song structure view respond to LOW, MID, HIGH, transients, and section changes. The same analysis is arranged into an eight-bar cue map and exported as a Codex package with its own <code>SKILL.md</code>, so the next visual project does not have to guess the timing of the same song again.
 
-**[Watch the 10-second demo with sound](docs/demo/beatscope-demo.mp4)**
+[![BeatScope animated preview; click to play with sound](docs/demo/beatscope-preview.gif)](docs/demo/beatscope-demo.mp4)
 
-![BeatScope audio-reactive signal player](docs/screenshots/beatscope-player-impact.jpg)
+**Click the animation to play the 10-second demo with sound.**
 
 > BeatScope reports rhythm strength, frequency distribution, and timing structure. It does not present uncertain transients as kicks, snares, or 808s. Audio is analysed locally and request-scoped temporary files are removed after processing.
 

@@ -6,9 +6,9 @@
 
 BeatScope 允许用户上传一首歌，在浏览器里一边播放，一边查看随 LOW、MID、HIGH、瞬态与段落变化运动的粒子球、频段曲线和全曲结构。分析结果还会整理成 8 小节 cue map，并导出为带 <code>SKILL.md</code> 的 Codex 包，让后续视觉项目不必重新猜测同一首歌的节奏。
 
-**[观看 10 秒带原声演示](docs/demo/beatscope-demo.mp4)**
+[![BeatScope 动态演示；点击播放原声视频](docs/demo/beatscope-preview.gif)](docs/demo/beatscope-demo.mp4)
 
-![BeatScope 音乐动效播放器](docs/screenshots/beatscope-player-impact.jpg)
+**点击动画播放 10 秒原声演示。**
 
 > BeatScope 展示的是节奏强度、频段分布和时间结构，不会把不确定的瞬态冒充成 kick、snare 或 808。音频在本机分析，临时上传文件会在处理后删除。
 
