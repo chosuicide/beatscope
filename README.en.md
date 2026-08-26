@@ -6,7 +6,7 @@ A local personal project that turns a song's rhythm into a playable visual refer
 
 BeatScope lets you upload a track, play it in the browser, and watch a particle sphere, frequency traces, and a whole-song structure view respond to LOW, MID, HIGH, transients, and section changes. The same analysis is arranged into an eight-bar cue map and exported as a Codex package with its own <code>SKILL.md</code>, so the next visual project does not have to guess the timing of the same song again.
 
-**[Watch the 29-second demo](docs/demo/beatscope-demo.mp4)**
+**[Watch the 10-second demo with sound](docs/demo/beatscope-demo.mp4)**
 
 ![BeatScope audio-reactive signal player](docs/screenshots/beatscope-player-impact.jpg)
 
@@ -49,6 +49,26 @@ Upload local audio → build beats and multiband energy
 ![BeatScope dense passage](docs/screenshots/beatscope-player-dense.jpg)
 
 </details>
+
+## More than a sphere that moves
+
+### Track structure: see the whole song first
+
+![BeatScope whole-song structure navigator](docs/screenshots/beatscope-track-structure.png)
+
+This navigator compresses the complete track into sections, LOW / MID / HIGH energy traces, and transient density. Clicking a bar seeks directly to it. The red frame always marks the eight bars currently shown in the cue map, so changes do not have to be found by scrubbing blindly through one long timeline.
+
+### Eight-bar cue map: turn listening into usable timing
+
+![BeatScope eight-bar motion cue map](docs/screenshots/beatscope-cue-map.png)
+
+The same eight-bar window exposes IMPACT, LOW / SCALE, MID / FLOW, HIGH / FLASH, and ACCENT / BLOOM. This is not a drum transcription; it is a motion-oriented reference. A transient can be auditioned with one click, a loop can be dragged out, and the resulting timing, strength, and band drivers can be passed into the next visual build.
+
+### Export for Codex: carry the analysis forward
+
+![BeatScope Codex export panel](docs/screenshots/beatscope-codex-export.png)
+
+The package contains more than analysis JSON. It also carries a seek-safe <code>visual-state.js</code>, usage notes, the schema, and a project-level <code>SKILL.md</code>. Drop the ZIP into a new Codex project and the agent can reuse the same timing and visual semantics instead of listening and guessing again.
 
 ## How music changes the scene
 

@@ -6,7 +6,7 @@
 
 BeatScope 允许用户上传一首歌，在浏览器里一边播放，一边查看随 LOW、MID、HIGH、瞬态与段落变化运动的粒子球、频段曲线和全曲结构。分析结果还会整理成 8 小节 cue map，并导出为带 <code>SKILL.md</code> 的 Codex 包，让后续视觉项目不必重新猜测同一首歌的节奏。
 
-**[观看 29 秒演示](docs/demo/beatscope-demo.mp4)**
+**[观看 10 秒带原声演示](docs/demo/beatscope-demo.mp4)**
 
 ![BeatScope 音乐动效播放器](docs/screenshots/beatscope-player-impact.jpg)
 
@@ -49,6 +49,26 @@ BeatScope 尝试把这段工作留下来。Python 负责读取音频、建立节
 ![BeatScope 高密度段](docs/screenshots/beatscope-player-dense.jpg)
 
 </details>
+
+## 页面不只是一颗会动的球
+
+### Track structure：先看完整首歌
+
+![BeatScope 全曲结构导航](docs/screenshots/beatscope-track-structure.png)
+
+这条导航把整首歌压缩成段落、LOW / MID / HIGH 能量曲线与瞬态分布。点击任意小节即可跳转，红色框始终标出 cue map 当前查看的八小节，因此不用在一条长时间轴里盲目寻找变化。
+
+### 8-bar cue map：把听感拆成可操作时间点
+
+![BeatScope 八小节节奏参考图](docs/screenshots/beatscope-cue-map.png)
+
+同一个八小节窗口同时展示 IMPACT、LOW / SCALE、MID / FLOW、HIGH / FLASH 与 ACCENT / BLOOM。它不是鼓组转写，而是一张面向动画的运动提示图：可以单击试听瞬态，也可以拖出循环，再把时间、强度与频段驱动交给下一段视觉代码。
+
+### Export for Codex：把分析结果带走
+
+![BeatScope Codex 导出区域](docs/screenshots/beatscope-codex-export.png)
+
+导出包不仅包含分析 JSON，还包含 seek-safe 的 <code>visual-state.js</code>、使用说明、Schema 与项目级 <code>SKILL.md</code>。把 ZIP 放进新的 Codex 项目，Agent 就能沿用同一套时间与视觉语义，而不是重新听歌猜节奏。
 
 ## 音乐怎样影响画面
 
