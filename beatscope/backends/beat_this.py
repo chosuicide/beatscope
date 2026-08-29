@@ -1,0 +1,86 @@
+"""Beat This backend: real beat markers from a .beats file drive the grid."""
+from __future__ import annotations
+
+from pathlib import Path
+
+import numpy as np
+
+from ..audio_io import load_analysis_audio
+from ..backends.base import AnalysisEvidence, CancelCallback, ProgressCallback, check_cancelled
+from ..backends.lightweight import compress_energy
+from ..beatgrid import estimate_bpm, parse_beat_this
+from ..features import compute_multiband_novelty, extract_onsets
+from ..models import AnalysisConfig
+
+
+class BeatThisBackend:
+    """Analyze a drums stem (or the full mix) using externally provided beat markers.
+
+    Beats come from the marker file; the global BPM is derived from marker
+    intervals and never regenerates the grid.
+    """
+
+    name = "beat-this"
+    version = "1.0"
+
+    def __init__(self, beat_file: str | Path, drums_path: str | Path | None = None):
+        self.beat_file = Path(beat_file)
+        self.drums_path = Path(drums_path) if drums_path is not None else None
+
+    def analyze(
+        self,
+        audio_path: Path,
+        config: AnalysisConfig,
+        progress: ProgressCallback,
+        cancelled: CancelCallback,
+    ) -> AnalysisEvidence:
+        check_cancelled(cancelled)
+        progress("decode", 0.10, "读取鼓组音轨...")
+        y, sr, duration, warnings = load_analysis_audio(
+            self.drums_path or audio_path, target_sr=config.sample_rate,
+        )
+
+        check_cancelled(cancelled)
+        progress("beatgrid", 0.60, "解析 Beat This 拍点...")
+        beats = parse_beat_this(self.beat_file)
+        bpm, tempo_score, variable_tempo = estimate_bpm([b["time"] for b in beats])
+
+        gap_count = sum(1 for b in beats if b["sequence_gap"])
+        if gap_count > 0:
+            warnings.append(f"Detected {gap_count} beat sequence gaps in Beat This tracking")
+
+        origin = next((b["time"] for b in beats if b["beat"] == 1), beats[0]["time"])
+        max_time = max(duration, beats[-1]["time"])
+        bar_seconds = (60.0 / bpm) * 4.0
+        bars = max(1, int(np.ceil(max(0.0, max_time - origin) / bar_seconds)))
+
+        check_cancelled(cancelled)
+        progress("features", 0.75, "提取多频段瞬态能量...")
+        hop = config.hop_length
+        times, novelty = compute_multiband_novelty(y, sr=sr, hop=hop, n_fft=config.n_fft)
+        onsets = extract_onsets(times, novelty, sr=sr, hop=hop, bpm=bpm)
+
+        return AnalysisEvidence(
+            duration=round(float(duration), 4),
+            sample_rate=sr,
+            channels=2,
+            tempo_bpm=float(bpm),
+            grid_origin=round(float(origin), 4),
+            bars=bars,
+            beats=beats,
+            onsets=onsets,
+            energy=compress_energy(novelty, sr, hop),
+            tempo_score=float(tempo_score),
+            warnings=warnings,
+            diagnostics={
+                "tempo_method": "beat-marker-intervals",
+                "sequence_gaps": gap_count,
+                "onset_count": len(onsets),
+                "variable_tempo": bool(variable_tempo),
+                "separated": True,
+            },
+            provenance={
+                "beats": {"method": "beat-this-markers", "backend": self.name},
+                "onsets": {"method": "multiband-positive-spectral-flux", "backend": self.name},
+            },
+        )

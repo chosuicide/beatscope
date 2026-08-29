@@ -1,0 +1,609 @@
+{
+  "schema_version": "4.0",
+  "project_id": "d6abba7436d9",
+  "source": {
+    "display_name": "fixed-120.wav",
+    "duration": 8.0,
+    "sample_rate": 44100,
+    "channels": 2,
+    "sha256": "d6abba7436d90b40d12780f99d013aef001c0b50cdd9481b485bc2fb07d97d06"
+  },
+  "analysis": {
+    "backend": "lightweight",
+    "pipeline_version": "0.4.0",
+    "warnings": [],
+    "separation_used": false,
+    "parameters": {
+      "subdivision": 16,
+      "sample_rate": 44100,
+      "hop_length": 256,
+      "n_fft": 2048
+    },
+    "provenance": {
+      "beats": {
+        "method": "uniform-grid-from-global-bpm",
+        "backend": "lightweight"
+      },
+      "onsets": {
+        "method": "multiband-positive-spectral-flux",
+        "backend": "lightweight"
+      }
+    },
+    "diagnostics": {
+      "tempo_method": "spectral-flux-autocorrelation",
+      "beat_interval_cv": 0.0001,
+      "onset_count": 16,
+      "variable_tempo": false,
+      "separated": false
+    }
+  },
+  "tempo": {
+    "global_bpm": 120.19,
+    "segments": [
+      {
+        "start": 0.0,
+        "end": 8.0,
+        "bpm": 120.19,
+        "method": "spectral-flux-autocorrelation",
+        "score": null
+      }
+    ]
+  },
+  "meter": {
+    "numerator": 4,
+    "denominator": 4
+  },
+  "grid": {
+    "origin": 0.0058,
+    "default_subdivision": 16,
+    "bars": 4
+  },
+  "beats": [
+    {
+      "time": 0.0058,
+      "index": 0,
+      "bar": 1,
+      "beat_in_bar": 1,
+      "downbeat": true
+    },
+    {
+      "time": 0.505,
+      "index": 1,
+      "bar": 1,
+      "beat_in_bar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 1.0042,
+      "index": 2,
+      "bar": 1,
+      "beat_in_bar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 1.5034,
+      "index": 3,
+      "bar": 1,
+      "beat_in_bar": 4,
+      "downbeat": false
+    },
+    {
+      "time": 2.0026,
+      "index": 4,
+      "bar": 2,
+      "beat_in_bar": 1,
+      "downbeat": true
+    },
+    {
+      "time": 2.5019,
+      "index": 5,
+      "bar": 2,
+      "beat_in_bar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 3.0011,
+      "index": 6,
+      "bar": 2,
+      "beat_in_bar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 3.5003,
+      "index": 7,
+      "bar": 2,
+      "beat_in_bar": 4,
+      "downbeat": false
+    },
+    {
+      "time": 3.9995,
+      "index": 8,
+      "bar": 3,
+      "beat_in_bar": 1,
+      "downbeat": true
+    },
+    {
+      "time": 4.4987,
+      "index": 9,
+      "bar": 3,
+      "beat_in_bar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 4.9979,
+      "index": 10,
+      "bar": 3,
+      "beat_in_bar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 5.4971,
+      "index": 11,
+      "bar": 3,
+      "beat_in_bar": 4,
+      "downbeat": false
+    },
+    {
+      "time": 5.9963,
+      "index": 12,
+      "bar": 4,
+      "beat_in_bar": 1,
+      "downbeat": true
+    },
+    {
+      "time": 6.4955,
+      "index": 13,
+      "bar": 4,
+      "beat_in_bar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 6.9947,
+      "index": 14,
+      "bar": 4,
+      "beat_in_bar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 7.4939,
+      "index": 15,
+      "bar": 4,
+      "beat_in_bar": 4,
+      "downbeat": false
+    },
+    {
+      "time": 7.9932,
+      "index": 16,
+      "bar": 5,
+      "beat_in_bar": 1,
+      "downbeat": true
+    }
+  ],
+  "onsets": [
+    {
+      "id": 1,
+      "time": 0.0058,
+      "strength": 0.6174,
+      "bands": {
+        "all": 0.6174,
+        "low": 0.0,
+        "mid": 0.6207,
+        "high": 0.7865
+      }
+    },
+    {
+      "id": 2,
+      "time": 0.4934,
+      "strength": 1.0,
+      "bands": {
+        "all": 1.0,
+        "low": 1.0,
+        "mid": 1.0,
+        "high": 0.9566
+      }
+    },
+    {
+      "id": 3,
+      "time": 0.9927,
+      "strength": 1.0,
+      "bands": {
+        "all": 1.0,
+        "low": 0.9588,
+        "mid": 1.0,
+        "high": 0.9367
+      }
+    },
+    {
+      "id": 4,
+      "time": 1.4919,
+      "strength": 0.9857,
+      "bands": {
+        "all": 0.9857,
+        "low": 1.0,
+        "mid": 0.9844,
+        "high": 0.9132
+      }
+    },
+    {
+      "id": 5,
+      "time": 1.9969,
+      "strength": 0.971,
+      "bands": {
+        "all": 0.971,
+        "low": 0.8756,
+        "mid": 0.9715,
+        "high": 1.0
+      }
+    },
+    {
+      "id": 6,
+      "time": 2.4961,
+      "strength": 0.9874,
+      "bands": {
+        "all": 0.9874,
+        "low": 0.8977,
+        "mid": 0.9878,
+        "high": 0.9998
+      }
+    },
+    {
+      "id": 7,
+      "time": 2.9954,
+      "strength": 1.0,
+      "bands": {
+        "all": 1.0,
+        "low": 0.945,
+        "mid": 1.0,
+        "high": 0.9919
+      }
+    },
+    {
+      "id": 8,
+      "time": 3.4946,
+      "strength": 1.0,
+      "bands": {
+        "all": 1.0,
+        "low": 0.9581,
+        "mid": 1.0,
+        "high": 0.981
+      }
+    },
+    {
+      "id": 9,
+      "time": 3.9938,
+      "strength": 1.0,
+      "bands": {
+        "all": 1.0,
+        "low": 0.9767,
+        "mid": 1.0,
+        "high": 0.9663
+      }
+    },
+    {
+      "id": 10,
+      "time": 4.4931,
+      "strength": 1.0,
+      "bands": {
+        "all": 1.0,
+        "low": 1.0,
+        "mid": 1.0,
+        "high": 0.9478
+      }
+    },
+    {
+      "id": 11,
+      "time": 4.9923,
+      "strength": 0.9945,
+      "bands": {
+        "all": 0.9945,
+        "low": 1.0,
+        "mid": 0.9936,
+        "high": 0.9243
+      }
+    },
+    {
+      "id": 12,
+      "time": 5.4915,
+      "strength": 0.9752,
+      "bands": {
+        "all": 0.9752,
+        "low": 1.0,
+        "mid": 0.9743,
+        "high": 0.9004
+      }
+    },
+    {
+      "id": 13,
+      "time": 5.9966,
+      "strength": 0.9791,
+      "bands": {
+        "all": 0.9791,
+        "low": 0.8827,
+        "mid": 0.9796,
+        "high": 1.0
+      }
+    },
+    {
+      "id": 14,
+      "time": 6.4958,
+      "strength": 0.9938,
+      "bands": {
+        "all": 0.9938,
+        "low": 0.9184,
+        "mid": 0.9941,
+        "high": 0.9966
+      }
+    },
+    {
+      "id": 15,
+      "time": 6.995,
+      "strength": 1.0,
+      "bands": {
+        "all": 1.0,
+        "low": 0.953,
+        "mid": 1.0,
+        "high": 0.9874
+      }
+    },
+    {
+      "id": 16,
+      "time": 7.4942,
+      "strength": 1.0,
+      "bands": {
+        "all": 1.0,
+        "low": 0.9687,
+        "mid": 1.0,
+        "high": 0.9742
+      }
+    }
+  ],
+  "energy": {
+    "fps": 172,
+    "start": 0.0,
+    "bands": {
+      "all": {
+        "length": 1379,
+        "head": [
+          0.0,
+          0.6174,
+          0.1314,
+          0.035,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "tail": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sha256": "f5f964504a5644ed"
+      },
+      "low": {
+        "length": 1379,
+        "head": [
+          0.0,
+          0.0,
+          0.0,
+          0.3219,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "tail": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sha256": "9786ddcff7c4d1cc"
+      },
+      "mid": {
+        "length": 1379,
+        "head": [
+          0.0,
+          0.6207,
+          0.1321,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "tail": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sha256": "dd15975de1a34f59"
+      },
+      "high": {
+        "length": 1379,
+        "head": [
+          0.0,
+          0.7865,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "tail": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sha256": "0c70b113349e697e"
+      }
+    }
+  },
+  "patterns": {
+    "method": "bar-rhythm-cosine-v1",
+    "bars": [
+      {
+        "bar": 1,
+        "label": "change",
+        "group": "A",
+        "mean_strength": 0.9008,
+        "similarity_previous": 0.0,
+        "vector": [
+          0.1713,
+          0.0,
+          0.0,
+          0.0,
+          0.2775,
+          0.0,
+          0.0,
+          0.0,
+          0.2775,
+          0.0,
+          0.0,
+          0.0,
+          0.2735,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "bar": 2,
+        "label": "repeat",
+        "group": "A",
+        "mean_strength": 0.9896,
+        "similarity_previous": 0.9649,
+        "vector": [
+          0.2483,
+          0.0,
+          0.0,
+          0.0,
+          0.2525,
+          0.0,
+          0.0,
+          0.0,
+          0.2557,
+          0.0,
+          0.0,
+          0.0,
+          0.2557,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "bar": 3,
+        "label": "repeat",
+        "group": "A",
+        "mean_strength": 0.9924,
+        "similarity_previous": 0.9986,
+        "vector": [
+          0.2544,
+          0.0,
+          0.0,
+          0.0,
+          0.2544,
+          0.0,
+          0.0,
+          0.0,
+          0.253,
+          0.0,
+          0.0,
+          0.0,
+          0.2481,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "bar": 4,
+        "label": "repeat",
+        "group": "A",
+        "mean_strength": 0.9932,
+        "similarity_previous": 0.9989,
+        "vector": [
+          0.2495,
+          0.0,
+          0.0,
+          0.0,
+          0.2532,
+          0.0,
+          0.0,
+          0.0,
+          0.2548,
+          0.0,
+          0.0,
+          0.0,
+          0.2548,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    ]
+  },
+  "cues": {
+    "accent": [
+      {
+        "time": 0.4934,
+        "onset": 2
+      },
+      {
+        "time": 0.9927,
+        "onset": 3
+      },
+      {
+        "time": 2.9954,
+        "onset": 7
+      },
+      {
+        "time": 3.4946,
+        "onset": 8
+      },
+      {
+        "time": 3.9938,
+        "onset": 9
+      },
+      {
+        "time": 4.4931,
+        "onset": 10
+      },
+      {
+        "time": 6.995,
+        "onset": 15
+      },
+      {
+        "time": 7.4942,
+        "onset": 16
+      }
+    ],
+    "impact": [],
+    "scale": [],
+    "flow": [],
+    "flash": [],
+    "bloom": []
+  },
+  "exports": {}
+}

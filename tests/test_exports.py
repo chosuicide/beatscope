@@ -54,11 +54,18 @@ def test_cli_export(tmp_path):
     midi_path = tmp_path / "export.mid"
     csv_path = tmp_path / "export.csv"
 
+    # v3-shaped document: the CLI export path must migrate it to v4 on read.
     rhythm_sample = {
-        "tempo": {"global_bpm": 120.0},
-        "grid": {"origin": 0.0},
-        "beats": [{"time": 0.0, "beat": 1, "bar": 1, "downbeat": True, "sequence_gap": False}],
-        "onsets": [{"raw_time": 0.0, "strength": 0.8, "bands": {"all": 0.8, "low": 0.5, "mid": 0.2, "high": 0.1}}],
+        "schema_version": "3.0",
+        "source": {"display_name": "clip.wav", "duration": 2.0, "sample_rate": 44100, "channels": 2, "sha256": "ab" * 32},
+        "analysis": {"pipeline": "test", "analyzer_version": "0.3.0", "warnings": [], "separation_used": False},
+        "tempo": {"global_bpm": 120.0, "confidence": 0.9, "variable_tempo": False},
+        "grid": {"time_signature": [4, 4], "origin": 0.0, "default_subdivision": 16, "bars": 1},
+        "beats": [{"time": 0.0, "beat": 1, "bar": 1, "downbeat": True, "confidence": 0.9, "sequence_gap": False}],
+        "onsets": [{"id": 1, "raw_time": 0.0, "strength": 0.8, "bands": {"all": 0.8, "low": 0.5, "mid": 0.2, "high": 0.1}, "accent": True, "confidence": 0.8}],
+        "energy": {"fps": 100, "start": 0.0, "bands": {"all": [], "low": [], "mid": [], "high": []}},
+        "overview": [],
+        "exports": {},
     }
     json_path.write_text(json.dumps(rhythm_sample), encoding="utf-8")
 

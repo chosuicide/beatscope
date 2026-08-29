@@ -28,7 +28,7 @@
 
     <div id="workspace" class="workspace">
       <section id="visualSection" class="player-section" aria-labelledby="visual-title">
-        <div class="section-heading stage-heading"><div><h2 id="visual-title">Signal player</h2></div><div class="track-facts"><span><b id="factBpm">—</b> BPM</span><span><b id="factBars">—</b> bars</span><span><b id="factDuration">—</b></span></div></div>
+        <div class="section-heading stage-heading"><div><h2 id="visual-title">Signal player</h2></div><div class="track-facts"><span><b id="factBpm">—</b> BPM</span><span><b id="factBars">—</b> bars</span><span><b id="factDuration">—</b></span><span><b id="factBackend">—</b> backend</span></div></div>
         <div class="visual-stage-shell">
           <div class="stage-meta"><strong id="stageTrackName">No track</strong><span id="visualReadout" class="mono">BAR — · BEAT —</span></div>
           <canvas id="visualStage" width="1400" height="520" aria-label="Audio-reactive composition driven by playback time"></canvas>
@@ -37,9 +37,10 @@
       </section>
 
       <section id="overviewSection" class="overview-section" aria-labelledby="overview-title">
-        <div class="section-heading compact-heading"><div><h2 id="overview-title">Track structure</h2></div><label class="follow-control"><input id="followPlayback" type="checkbox" checked><span>Follow playback</span></label></div>
+        <div class="section-heading compact-heading"><div><h2 id="overview-title">Rhythm pattern overview</h2></div><label class="follow-control"><input id="followPlayback" type="checkbox" checked><span>Follow playback</span></label></div>
         <div class="overview-shell"><canvas id="overview" width="1400" height="192" tabindex="0" aria-label="Song structure and whole-track energy navigation"></canvas></div>
         <div class="overview-meta"><span id="rangeLabel">No track loaded</span><span>Select a bar to move the eight-bar window</span></div>
+        <p id="analysisMeta" class="analysis-meta" hidden></p>
       </section>
 
       <section id="gridSection" class="grid-section" aria-labelledby="map-title">
@@ -50,7 +51,7 @@
       </section>
 
       <section id="exportSection" class="export-section" aria-labelledby="export-title">
-        <div class="export-copy"><h2 id="export-title">Export for Codex</h2><p>Analysed timing, a seek-safe state function and the instructions an agent needs to use them.</p><div class="package-list"><span>rhythm-map.json</span><span>visual-state.js</span><span>BEATSCOPE.md</span><span>SKILL.md</span><span>references/schema.md</span><span>README.md</span></div></div>
+        <div class="export-copy"><h2 id="export-title">Export for Codex</h2><p>Analysed timing, a seek-safe state function and the instructions an agent needs to use them.</p><div class="package-list"><span>rhythm-map.json</span><span>visual-state.js</span><span>beatscope-runtime.js</span><span>BEATSCOPE.md</span><span>SKILL.md</span><span>references/schema.md</span><span>README.md</span></div></div>
         <div class="export-actions"><button id="exportCodex" class="primary-button large-button" disabled>Download Codex package</button><button id="copyPrompt" class="quiet-button" disabled>Copy Codex prompt</button><span id="copyStatus" class="mono" role="status"></span><details class="advanced-exports"><summary>Advanced tools</summary><p>Reference formats for inspection. MIDI is quantized timing, not a drum transcription.</p><div class="utility-actions"><button id="exportMidi" class="text-button" disabled>Reference MIDI</button><button id="exportCsv" class="text-button" disabled>CSV data</button><button id="exportPng" class="text-button" disabled>Map PNG</button><button id="openProject" class="text-button">Open JSON</button><input id="projectFile" type="file" accept=".json,application/json" hidden></div></details></div>
       </section>
     </div>

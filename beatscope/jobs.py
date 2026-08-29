@@ -1,7 +1,13 @@
-"""In-memory asynchronous job manager for audio analysis and stage progress."""
+"""In-memory asynchronous job manager: queue, state, progress, cancel, cache.
+
+All DSP lives in beatscope.backends; every job runs through
+``pipeline.analyze_track()`` so web uploads and the CLI share one pipeline.
+"""
 from __future__ import annotations
 
 import datetime
+import json
+import shutil
 from dataclasses import dataclass, field
 import hashlib
 from pathlib import Path
@@ -9,11 +15,8 @@ import threading
 from typing import Any, Literal
 from concurrent.futures import ThreadPoolExecutor
 
-from .audio_io import load_analysis_audio
-from .beatgrid import BeatGridAnalyzer
-from .features import compute_multiband_novelty, extract_onsets
-from .structure import analyze_song_structure
-from .schema import SCHEMA_VERSION, ANALYZER_VERSION, validate_rhythm_v3
+from .models import AnalysisConfig
+from .pipeline import AnalysisCancelled, analyze_track
 from .project import ProjectManager, content_hash, compute_cache_key
 
 
@@ -97,22 +100,23 @@ class JobManager:
     ) -> None:
         try:
             job.state = "running"
-            
-            # Stage 1: Decode & SHA256 (0 - 10%)
             job.stage = "decode"
             job.progress = 0.05
             job.message = "正在读取音频并计算哈希..."
-            
+
             if job.cancel_event.is_set():
                 job.state = "cancelled"
+                job.message = "分析已取消"
                 return
 
+            cfg = AnalysisConfig.from_dict(config)
+            cfg.validate()
             sha256 = content_hash(temp_audio_path)
-            cache_key = compute_cache_key(sha256, config)
-            job.project_id = cache_key[:12]
+            cache_key = compute_cache_key(sha256, cfg.to_dict())
+            job.project_id = sha256[:12]
 
-            # Fast path: Check disk cache
-            cached_rhythm = self.project_manager.find_cached_rhythm(cache_key)
+            # Fast path: content-addressed disk cache
+            cached_rhythm = self.project_manager.find_cached_rhythm(sha256, cache_key)
             if cached_rhythm is not None:
                 job.progress = 1.0
                 job.stage = "complete"
@@ -120,161 +124,30 @@ class JobManager:
                 job.message = "命中文档缓存，直接加载"
                 return
 
-            y, sr, duration, audio_warnings = load_analysis_audio(temp_audio_path, target_sr=44100)
-            job.progress = 0.10
+            def update_progress(stage: str, value: float, message: str) -> None:
+                job.stage = stage
+                job.progress = max(job.progress, value)
+                job.message = message
 
-            if job.cancel_event.is_set():
-                job.state = "cancelled"
-                return
-
-            # Stage 2: Separate / Stem preparation (10 - 55%)
-            # If no demucs or separation=off, fast forward to 55%
-            job.stage = "separate"
-            job.progress = 0.30
-            job.message = "检查鼓组音轨..."
-            # Currently fallback/auto without external stem passes audio directly as drums
-            analysis_audio = y
-            separation_used = False
-            job.progress = 0.55
-
-            if job.cancel_event.is_set():
-                job.state = "cancelled"
-                return
-
-            # Stage 3: Beatgrid analysis (55 - 70%)
-            job.stage = "beatgrid"
-            job.progress = 0.60
-            job.message = "计算拍点与网格..."
-            subdivision = int(config.get("subdivision", 16))
-
-            # Beat estimation fallback when no external beat_this file provided
-            # Using onset envelopes for robust tempo & beat grid
-            hop = 256
-            times, novelty = compute_multiband_novelty(analysis_audio, sr=sr, hop=hop)
-            
-            # Estimate BPM from novelty if beat_this is not provided
-            from .analysis import _estimate_bpm
-            bpm = _estimate_bpm(novelty["all"], sr, hop)
-            if bpm <= 0:
-                bpm = 120.0
-            
-            beat_step = 60.0 / bpm
-            downbeat_time = 0.0
-            
-            # Find first significant peak for origin
-            from .features import detect_transient_peaks
-            peaks = detect_transient_peaks(novelty["all"], min_distance_samples=int(0.12 * sr / hop), threshold=0.15)
-            if len(peaks) > 0:
-                downbeat_time = float(times[peaks[0]])
-
-            beats: list[dict[str, Any]] = []
-            cur_time = downbeat_time
-            cur_beat = 1
-            cur_bar = 1
-            while cur_time <= duration + beat_step:
-                beats.append({
-                    "time": round(cur_time, 4),
-                    "beat": cur_beat,
-                    "bar": cur_bar,
-                    "downbeat": bool(cur_beat == 1),
-                    "sequence_gap": False,
-                })
-                cur_time += beat_step
-                cur_beat = (cur_beat % 4) + 1
-                if cur_beat == 1:
-                    cur_bar += 1
-
-            bars = max(1, cur_bar - 1)
-            job.progress = 0.70
-
-            if job.cancel_event.is_set():
-                job.state = "cancelled"
-                return
-
-            # Stage 4: Features & Transients (70 - 88%)
-            job.stage = "features"
-            job.progress = 0.75
-            job.message = "提取多频段瞬态能量..."
-            onsets = extract_onsets(times, novelty, sr=sr, hop=hop, bpm=bpm)
-            job.progress = 0.88
-
-            if job.cancel_event.is_set():
-                job.state = "cancelled"
-                return
-
-            # Stage 5: Song Structure (88 - 96%)
-            job.stage = "structure"
-            job.progress = 0.90
-            job.message = "比对小节相似度与结构..."
-            overview = analyze_song_structure(onsets, beats, bars, subdivision=subdivision)
-            job.progress = 0.96
-
-            if job.cancel_event.is_set():
-                job.state = "cancelled"
-                return
-
-            # Stage 6: Serialization & Save Project (96 - 100%)
-            job.stage = "serialize"
-            job.progress = 0.98
-            job.message = "生成并缓存项目数据..."
-
-            dt = hop / sr
-            fps = int(round(1.0 / dt)) if dt > 0 else 100
-            energy_data = {
-                "fps": fps,
-                "start": 0.0,
-                "bands": {
-                    "all": [round(float(v), 4) for v in novelty["all"]],
-                    "low": [round(float(v), 4) for v in novelty["low"]],
-                    "mid": [round(float(v), 4) for v in novelty["mid"]],
-                    "high": [round(float(v), 4) for v in novelty["high"]],
-                },
-            }
-
-            rhythm_result = {
-                "schema_version": SCHEMA_VERSION,
-                "project_id": job.project_id,
-                "source": {
-                    "display_name": original_filename,
-                    "duration": round(duration, 4),
-                    "sample_rate": sr,
-                    "channels": 2,
-                    "sha256": sha256,
-                },
-                "analysis": {
-                    "pipeline": "multiband-novelty+spectral-flux",
-                    "analyzer_version": ANALYZER_VERSION,
-                    "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                    "warnings": list(audio_warnings),
-                    "separation_used": separation_used,
-                },
-                "tempo": {
-                    "global_bpm": round(bpm, 3),
-                    "confidence": 0.85,
-                    "variable_tempo": False,
-                },
-                "grid": {
-                    "time_signature": [4, 4],
-                    "origin": round(downbeat_time, 4),
-                    "default_subdivision": subdivision,
-                    "bars": bars,
-                },
-                "beats": beats,
-                "onsets": onsets,
-                "energy": energy_data,
-                "overview": overview,
-                "exports": {},
-            }
+            rhythm = analyze_track(
+                temp_audio_path,
+                cfg,
+                display_name=original_filename,
+                progress=update_progress,
+                cancelled=job.cancel_event.is_set,
+            )
 
             # Save project to disk cache and copy audio for playback
-            p_dir = self.project_manager.save_project(job.project_id, temp_audio_path, rhythm_result, config, cache_key)
+            job.stage = "serialize"
+            job.progress = max(job.progress, 0.98)
+            job.message = "生成并缓存项目数据..."
+            p_dir = self.project_manager.save_project(
+                rhythm["project_id"], temp_audio_path, rhythm, cfg.to_dict(), cache_key,
+            )
             audio_dst = p_dir / "source.audio"
             if not audio_dst.is_file():
-                import shutil
                 shutil.copy2(temp_audio_path, audio_dst)
 
-            # Update project.json audio_path
-            import json
             p_json_file = p_dir / "project.json"
             if p_json_file.is_file():
                 p_meta = json.loads(p_json_file.read_text(encoding="utf-8"))
@@ -286,6 +159,9 @@ class JobManager:
             job.state = "complete"
             job.message = "分析完成"
 
+        except AnalysisCancelled:
+            job.state = "cancelled"
+            job.message = "分析已取消"
         except Exception as exc:
             job.state = "failed"
             job.error = str(exc)

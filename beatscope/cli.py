@@ -7,13 +7,35 @@ from pathlib import Path
 import shutil
 import sys
 
-from .analysis import analyze_audio, save_beatmap
+from .benchmark import run_benchmark
+from .models import AnalysisConfig
+from .pipeline import analyze_track
 from .server import serve
-from .midi import write_midi_exports
-from .high_quality import analyze_separated, save_analysis
 from .separation import run_demucs
-from .rhythm import analyze_rhythm, save_rhythm, write_rhythm_midi
+from .rhythm import save_rhythm, write_rhythm_midi
 from .exports import generate_rhythm_midi, generate_rhythm_csv
+from .schema import load_rhythm_project
+
+
+def warn_deprecated(command: str, replacement: str) -> None:
+    print(
+        f"beatscope {command} is deprecated.\nUse: {replacement}",
+        file=sys.stderr,
+    )
+
+
+def print_project_summary(result: dict, output: Path, midi_path: Path) -> None:
+    print(json.dumps({
+        "output": str(output),
+        "midi": str(midi_path),
+        "project_id": result["project_id"],
+        "backend": result["analysis"].get("backend") or result["analysis"].get("pipeline"),
+        "bpm": result["tempo"]["global_bpm"],
+        "origin": result["grid"]["origin"],
+        "bars": result["grid"]["bars"],
+        "onsets": len(result["onsets"]),
+        "overview": len(result.get("patterns", {}).get("bars") or result.get("overview") or []),
+    }, ensure_ascii=False))
 
 
 def run_doctor() -> int:
@@ -99,10 +121,13 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     # analyze
-    analyze = sub.add_parser("analyze", help="analyze an audio file")
+    analyze = sub.add_parser("analyze", help="analyze an audio file into a rhythm project")
     analyze.add_argument("audio", type=Path)
-    analyze.add_argument("-o", "--output", type=Path)
-    analyze.add_argument("--midi-dir", type=Path)
+    analyze.add_argument("-o", "--output", type=Path, help="output rhythm JSON (default: <audio>.rhythm.json)")
+    analyze.add_argument("--backend", choices=("lightweight", "beat-this", "demucs"), default="lightweight")
+    analyze.add_argument("--beats", type=Path, help="Beat This beat file (required for --backend beat-this)")
+    analyze.add_argument("--drums", type=Path, help="drums stem to analyze instead of the full mix (beat-this)")
+    analyze.add_argument("--subdivision", type=int, choices=(16, 32), default=16)
 
     # serve
     run = sub.add_parser("serve", help="start the local web UI")
@@ -117,16 +142,22 @@ def main(argv: list[str] | None = None) -> int:
     separate.add_argument("--model", default="htdemucs")
     separate.add_argument("--device", default="cuda")
 
-    # analyze-separated
-    high = sub.add_parser("analyze-separated", help="analyze Demucs drums/bass stems")
+    # analyze-separated (deprecated)
+    high = sub.add_parser(
+        "analyze-separated",
+        help="deprecated: use 'analyze --backend demucs'",
+    )
     high.add_argument("original", type=Path)
     high.add_argument("--drums", type=Path, required=True)
     high.add_argument("--bass", type=Path, required=True)
     high.add_argument("--output", type=Path, required=True)
     high.add_argument("--model", default="htdemucs")
 
-    # rhythm
-    rhythm = sub.add_parser("rhythm", help="build a fact-based rhythm map from Beat This and a drums stem")
+    # rhythm (deprecated)
+    rhythm = sub.add_parser(
+        "rhythm",
+        help="deprecated: use 'analyze --backend beat-this'",
+    )
     rhythm.add_argument("original", type=Path)
     rhythm.add_argument("--drums", type=Path, required=True)
     rhythm.add_argument("--beat-this", type=Path, required=True)
@@ -140,6 +171,12 @@ def main(argv: list[str] | None = None) -> int:
     export.add_argument("--csv", type=Path, help="Output CSV file path")
     export.add_argument("--subdivision", type=int, choices=(16, 32), default=16)
 
+    # benchmark
+    bench = sub.add_parser("benchmark", help="run the accuracy benchmark against synthetic ground truth")
+    bench.add_argument("--output-dir", type=Path, default=Path("build") / "benchmark")
+    bench.add_argument("--fixtures-dir", type=Path, help="reuse a fixture directory instead of generating one")
+    bench.add_argument("--baseline", type=Path, help="previous benchmark-results.json for the F1 regression gate")
+
     # doctor
     sub.add_parser("doctor", help="check system dependencies and configuration")
 
@@ -149,19 +186,13 @@ def main(argv: list[str] | None = None) -> int:
         return run_doctor()
 
     if args.command == "analyze":
-        result = analyze_audio(args.audio)
-        output = args.output or args.audio.with_suffix(".beatmap.json")
-        save_beatmap(result, output)
-        midi_dir = args.midi_dir or output.parent
-        midi = write_midi_exports(result, midi_dir, output.stem.replace(".beatmap", ""))
-        print(json.dumps({
-            "output": str(output),
-            "duration": result["source"]["duration"],
-            "bpm": result["tempo"]["bpm"],
-            "events": {k: len(v) for k, v in result["events"].items()},
-            "bass_notes": len(result.get("bass_notes", [])),
-            "midi": midi,
-        }, ensure_ascii=False))
+        config = AnalysisConfig(backend=args.backend, subdivision=args.subdivision)
+        result = analyze_track(args.audio, config, beat_file=args.beats, drums_path=args.drums)
+        output = args.output or args.audio.with_suffix(".rhythm.json")
+        save_rhythm(result, output)
+        midi_path = output.with_suffix(".mid")
+        write_rhythm_midi(result, midi_path)
+        print_project_summary(result, output, midi_path)
         return 0
 
     if args.command == "separate":
@@ -169,39 +200,37 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "analyze-separated":
-        result = analyze_separated(args.original, args.drums, args.bass, args.model)
-        save_analysis(result, args.output)
-        midi = write_midi_exports(result, args.output.parent, args.output.stem.replace(".beatmap", ""))
-        print(json.dumps({
-            "output": str(args.output),
-            "bpm": result["tempo"]["bpm"],
-            "origin": result["grid"]["origin"],
-            "bars": result["grid"]["bars"],
-            "events": {k: len(v) for k, v in result["events"].items()},
-            "bass_notes": len(result["bass_notes"]),
-            "midi": midi,
-        }, ensure_ascii=False))
+        warn_deprecated("analyze-separated", "beatscope analyze --backend demucs")
+        config = AnalysisConfig(backend="demucs")
+        result = analyze_track(args.original, config)
+        save_rhythm(result, args.output)
+        midi_path = args.output.with_suffix(".mid")
+        write_rhythm_midi(result, midi_path)
+        print_project_summary(result, args.output, midi_path)
         return 0
 
     if args.command == "rhythm":
-        result = analyze_rhythm(args.original, args.drums, args.beat_this, args.subdivision)
+        warn_deprecated(
+            "rhythm",
+            "beatscope analyze --backend beat-this --beats <file> --drums <stem>",
+        )
+        config = AnalysisConfig(backend="beat-this", subdivision=args.subdivision)
+        result = analyze_track(args.original, config, beat_file=args.beat_this, drums_path=args.drums)
         save_rhythm(result, args.output)
         midi_path = args.output.with_suffix(".rhythm.mid")
         write_rhythm_midi(result, midi_path)
-        bpm_val = result["tempo"].get("global_bpm", result["tempo"].get("bpm"))
-        print(json.dumps({
-            "output": str(args.output),
-            "midi": str(midi_path),
-            "bpm": bpm_val,
-            "origin": result["grid"]["origin"],
-            "bars": result["grid"]["bars"],
-            "onsets": len(result["onsets"]),
-            "overview": len(result["overview"]),
-        }, ensure_ascii=False))
+        print_project_summary(result, args.output, midi_path)
         return 0
 
+    if args.command == "benchmark":
+        results = run_benchmark(args.output_dir, args.fixtures_dir, args.baseline)
+        print(f"Benchmark written to {results['output_dir']}")
+        failed = results["gates"]["failed"]
+        print(f"Gates failed: {', '.join(failed) if failed else 'none'}")
+        return 1 if failed else 0
+
     if args.command == "export":
-        data = json.loads(args.project.read_text(encoding="utf-8"))
+        data = load_rhythm_project(args.project)
         subdiv = args.subdivision
         exported: dict[str, str] = {}
         if args.midi:

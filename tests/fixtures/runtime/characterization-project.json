@@ -1,0 +1,310 @@
+{
+  "schema_version": "4.0",
+  "project_id": "0a1b2c3d4e5f",
+  "source": {
+    "display_name": "characterization.wav",
+    "duration": 8.0,
+    "sample_rate": 44100,
+    "channels": 2,
+    "sha256": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+  },
+  "analysis": {
+    "backend": "lightweight",
+    "pipeline_version": "0.4.0",
+    "created_at": "2026-08-29T00:00:00Z",
+    "warnings": [],
+    "separation_used": false,
+    "provenance": {
+      "beats": {
+        "method": "test"
+      },
+      "onsets": {
+        "method": "test"
+      }
+    }
+  },
+  "tempo": {
+    "global_bpm": 120.0,
+    "segments": [
+      {
+        "start": 0.0,
+        "end": 8.0,
+        "bpm": 120.0,
+        "method": "test",
+        "score": null
+      }
+    ]
+  },
+  "meter": {
+    "numerator": 4,
+    "denominator": 4
+  },
+  "grid": {
+    "origin": 0.0,
+    "default_subdivision": 16,
+    "bars": 2
+  },
+  "beats": [
+    {
+      "time": 0.0,
+      "index": 0,
+      "bar": 1,
+      "beat_in_bar": 1,
+      "downbeat": true
+    },
+    {
+      "time": 0.5,
+      "index": 1,
+      "bar": 1,
+      "beat_in_bar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 1.0,
+      "index": 2,
+      "bar": 1,
+      "beat_in_bar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 1.5,
+      "index": 3,
+      "bar": 1,
+      "beat_in_bar": 4,
+      "downbeat": false
+    },
+    {
+      "time": 2.0,
+      "index": 4,
+      "bar": 2,
+      "beat_in_bar": 1,
+      "downbeat": true
+    },
+    {
+      "time": 2.5,
+      "index": 5,
+      "bar": 2,
+      "beat_in_bar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 3.0,
+      "index": 6,
+      "bar": 2,
+      "beat_in_bar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 3.5,
+      "index": 7,
+      "bar": 2,
+      "beat_in_bar": 4,
+      "downbeat": false
+    }
+  ],
+  "onsets": [
+    {
+      "id": 1,
+      "time": 0.0,
+      "strength": 0.9,
+      "bands": {
+        "all": 0.9,
+        "low": 0.72,
+        "mid": 0.495,
+        "high": 0.27
+      }
+    },
+    {
+      "id": 2,
+      "time": 0.5,
+      "strength": 0.5,
+      "bands": {
+        "all": 0.5,
+        "low": 0.4,
+        "mid": 0.275,
+        "high": 0.15
+      }
+    },
+    {
+      "id": 3,
+      "time": 1.0,
+      "strength": 0.62,
+      "bands": {
+        "all": 0.62,
+        "low": 0.496,
+        "mid": 0.341,
+        "high": 0.186
+      }
+    },
+    {
+      "id": 4,
+      "time": 1.5,
+      "strength": 0.8,
+      "bands": {
+        "all": 0.8,
+        "low": 0.64,
+        "mid": 0.44,
+        "high": 0.24
+      }
+    },
+    {
+      "id": 5,
+      "time": 2.0,
+      "strength": 0.44,
+      "bands": {
+        "all": 0.44,
+        "low": 0.352,
+        "mid": 0.242,
+        "high": 0.132
+      }
+    },
+    {
+      "id": 6,
+      "time": 2.5,
+      "strength": 0.95,
+      "bands": {
+        "all": 0.95,
+        "low": 0.76,
+        "mid": 0.5225,
+        "high": 0.285
+      }
+    },
+    {
+      "id": 7,
+      "time": 3.0,
+      "strength": 0.31,
+      "bands": {
+        "all": 0.31,
+        "low": 0.248,
+        "mid": 0.1705,
+        "high": 0.093
+      }
+    },
+    {
+      "id": 8,
+      "time": 3.5,
+      "strength": 0.77,
+      "bands": {
+        "all": 0.77,
+        "low": 0.616,
+        "mid": 0.4235,
+        "high": 0.231
+      }
+    }
+  ],
+  "energy": {
+    "fps": 100,
+    "start": 0.0,
+    "bands": {
+      "all": [
+        0.1,
+        0.5,
+        0.9,
+        0.4,
+        0.2,
+        0.66,
+        0.8,
+        0.3
+      ],
+      "low": [
+        0.05,
+        0.4,
+        0.7,
+        0.3,
+        0.1,
+        0.5,
+        0.6,
+        0.2
+      ],
+      "mid": [
+        0.08,
+        0.45,
+        0.8,
+        0.35,
+        0.15,
+        0.6,
+        0.7,
+        0.25
+      ],
+      "high": [
+        0.02,
+        0.3,
+        0.6,
+        0.2,
+        0.05,
+        0.4,
+        0.5,
+        0.1
+      ]
+    }
+  },
+  "patterns": {
+    "method": "test",
+    "bars": [
+      {
+        "bar": 1,
+        "label": "A",
+        "group": "A",
+        "mean_strength": 0.7,
+        "similarity_previous": 0.0,
+        "vector": [
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1
+        ]
+      },
+      {
+        "bar": 2,
+        "label": "B",
+        "group": "B",
+        "mean_strength": 0.55,
+        "similarity_previous": 0.42,
+        "vector": [
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2
+        ]
+      }
+    ]
+  },
+  "cues": {
+    "accent": [
+      {
+        "time": 0.5,
+        "onset": 2
+      }
+    ],
+    "impact": [],
+    "scale": [],
+    "flow": [],
+    "flash": [],
+    "bloom": []
+  },
+  "exports": {}
+}

@@ -31,4 +31,4 @@ beatscope = "beatscope.cli:main"
 include = ["beatscope*"]
 
 [tool.setuptools.package-data]
-beatscope = ["web/*.html", "web/*.js", "web/*.css", "agent_skill/*.md", "agent_skill/references/*.md"]
+beatscope = ["web/*.html", "web/*.js", "web/*.css", "runtime/*.js", "agent_skill/*.md", "agent_skill/references/*.md"]

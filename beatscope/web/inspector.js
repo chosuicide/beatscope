@@ -26,7 +26,7 @@ export function updateInspector(state) {
   }
 
   const q = onset
-    ? gridPosition(onset.raw_time, state.project, state.subdivision, state.adjustments)
+    ? gridPosition(onset.time ?? onset.raw_time, state.project, state.subdivision, state.adjustments)
     : cell;
 
   if (cellLabel) {
@@ -36,7 +36,7 @@ export function updateInspector(state) {
   }
 
   if (onset) {
-    if (rawTime) rawTime.textContent = `${Number(onset.raw_time).toFixed(4)} s`;
+    if (rawTime) rawTime.textContent = `${Number(onset.time ?? onset.raw_time).toFixed(4)} s`;
     if (quantizedTime) quantizedTime.textContent = `${Number(q.quantizedTime).toFixed(4)} s`;
     const sign = q.offsetMs >= 0 ? '+' : '';
     if (offset) offset.textContent = `${sign}${Number(q.offsetMs).toFixed(2)} ms`;

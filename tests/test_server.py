@@ -108,7 +108,7 @@ def test_job_analysis_and_range_audio(tmp_path):
         r_resp = conn.getresponse()
         assert r_resp.status == 200
         rhythm = json.loads(r_resp.read().decode())
-        assert rhythm['schema_version'] == '3.0'
+        assert rhythm['schema_version'] == '4.0'
 
         # 4. GET Audio Range request (206)
         conn.request('GET', f'/api/projects/{project_id}/audio', headers={'Range': 'bytes=0-99'})

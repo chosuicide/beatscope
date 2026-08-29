@@ -7,14 +7,16 @@ from pathlib import Path
 import tempfile
 from urllib.parse import parse_qs, urlparse
 
-from .analysis import analyze_audio
 from .midi import build_midi
+from .pipeline import analyze_track
 from .project import ProjectManager
 from .jobs import JobManager
+from .schema import load_rhythm_project
 from .web_api import WebApi, MAX_UPLOAD_BYTES
 from .exports import generate_rhythm_midi, generate_rhythm_csv, generate_codex_export
 
 ROOT = Path(__file__).parent / "web"
+RUNTIME_ROOT = Path(__file__).parent / "runtime"
 PROJECT_FILE: Path | None = None
 PROJECT_MAP: dict | None = None
 
@@ -123,11 +125,15 @@ class Handler(BaseHTTPRequestHandler):
             self._send(status, body, ct, resp_headers)
             return
 
-        # Static assets
+        # Static assets; /runtime/* maps to the shared JS runtime modules.
         clean_path = path.lstrip("/") or "index.html"
-        asset_file = ROOT / clean_path
+        if clean_path.startswith("runtime/"):
+            asset_file = RUNTIME_ROOT / clean_path[len("runtime/"):]
+            resolved_root = RUNTIME_ROOT.resolve()
+        else:
+            asset_file = ROOT / clean_path
+            resolved_root = ROOT.resolve()
         resolved_asset = asset_file.resolve()
-        resolved_root = ROOT.resolve()
         if asset_file.is_file() and (resolved_root in resolved_asset.parents or resolved_asset == resolved_root):
             ext = asset_file.suffix.lower()
             kind_map = {
@@ -256,8 +262,7 @@ class Handler(BaseHTTPRequestHandler):
                             raise ValueError("Upload ended before Content-Length")
                         temp_handle.write(chunk)
                         remaining -= len(chunk)
-                result = analyze_audio(temp)
-                result["source"]["file"] = filename
+                result = analyze_track(temp, display_name=filename)
                 self._send(200, json.dumps(result).encode("utf-8"), "application/json; charset=utf-8")
             except Exception as exc:
                 self._send(400, json.dumps({"error": str(exc)}).encode(), "application/json")
@@ -280,7 +285,7 @@ def serve(host: str = "127.0.0.1", port: int = 8765, project: str | Path | None 
     global PROJECT_FILE, PROJECT_MAP
     if project:
         PROJECT_FILE = Path(project).resolve()
-        PROJECT_MAP = json.loads(PROJECT_FILE.read_text(encoding="utf-8"))
+        PROJECT_MAP = load_rhythm_project(PROJECT_FILE)
     server = ThreadingHTTPServer((host, port), Handler)
     print(f"BeatScope running at http://{host}:{port}")
     try:

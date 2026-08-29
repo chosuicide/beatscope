@@ -1,0 +1,560 @@
+{
+  "schema_version": "3.0",
+  "project_id": "d6abba7436d9",
+  "source": {
+    "display_name": "fixed-120.wav",
+    "duration": 8.0,
+    "sample_rate": 44100,
+    "channels": 2,
+    "sha256": "d6abba7436d90b40d12780f99d013aef001c0b50cdd9481b485bc2fb07d97d06"
+  },
+  "analysis": {
+    "pipeline": "beat-this+demucs-drums+multiband-novelty",
+    "analyzer_version": "0.4.0",
+    "warnings": [],
+    "separation_used": true
+  },
+  "tempo": {
+    "global_bpm": 120.0,
+    "confidence": 0.99,
+    "variable_tempo": false
+  },
+  "grid": {
+    "time_signature": [
+      4,
+      4
+    ],
+    "origin": 0.0,
+    "default_subdivision": 16,
+    "bars": 4
+  },
+  "beats": [
+    {
+      "time": 0.0,
+      "beat": 1,
+      "bar": 1,
+      "downbeat": true,
+      "sequence_gap": false
+    },
+    {
+      "time": 0.5,
+      "beat": 2,
+      "bar": 1,
+      "downbeat": false,
+      "sequence_gap": false
+    },
+    {
+      "time": 1.0,
+      "beat": 3,
+      "bar": 1,
+      "downbeat": false,
+      "sequence_gap": false
+    },
+    {
+      "time": 1.5,
+      "beat": 4,
+      "bar": 1,
+      "downbeat": false,
+      "sequence_gap": false
+    },
+    {
+      "time": 2.0,
+      "beat": 1,
+      "bar": 2,
+      "downbeat": true,
+      "sequence_gap": false
+    },
+    {
+      "time": 2.5,
+      "beat": 2,
+      "bar": 2,
+      "downbeat": false,
+      "sequence_gap": false
+    },
+    {
+      "time": 3.0,
+      "beat": 3,
+      "bar": 2,
+      "downbeat": false,
+      "sequence_gap": false
+    },
+    {
+      "time": 3.5,
+      "beat": 4,
+      "bar": 2,
+      "downbeat": false,
+      "sequence_gap": false
+    },
+    {
+      "time": 4.0,
+      "beat": 1,
+      "bar": 3,
+      "downbeat": true,
+      "sequence_gap": false
+    },
+    {
+      "time": 4.5,
+      "beat": 2,
+      "bar": 3,
+      "downbeat": false,
+      "sequence_gap": false
+    },
+    {
+      "time": 5.0,
+      "beat": 3,
+      "bar": 3,
+      "downbeat": false,
+      "sequence_gap": false
+    },
+    {
+      "time": 5.5,
+      "beat": 4,
+      "bar": 3,
+      "downbeat": false,
+      "sequence_gap": false
+    },
+    {
+      "time": 6.0,
+      "beat": 1,
+      "bar": 4,
+      "downbeat": true,
+      "sequence_gap": false
+    },
+    {
+      "time": 6.5,
+      "beat": 2,
+      "bar": 4,
+      "downbeat": false,
+      "sequence_gap": false
+    },
+    {
+      "time": 7.0,
+      "beat": 3,
+      "bar": 4,
+      "downbeat": false,
+      "sequence_gap": false
+    },
+    {
+      "time": 7.5,
+      "beat": 4,
+      "bar": 4,
+      "downbeat": false,
+      "sequence_gap": false
+    }
+  ],
+  "onsets": [
+    {
+      "id": 1,
+      "raw_time": 0.0058,
+      "strength": 0.6174,
+      "bands": {
+        "all": 0.6174,
+        "low": 0.0,
+        "mid": 0.6207,
+        "high": 0.7865
+      },
+      "accent": false,
+      "confidence": 0.617
+    },
+    {
+      "id": 2,
+      "raw_time": 0.4934,
+      "strength": 1.0,
+      "bands": {
+        "all": 1.0,
+        "low": 1.0,
+        "mid": 1.0,
+        "high": 0.9566
+      },
+      "accent": true,
+      "confidence": 1.0
+    },
+    {
+      "id": 3,
+      "raw_time": 0.9927,
+      "strength": 1.0,
+      "bands": {
+        "all": 1.0,
+        "low": 0.9588,
+        "mid": 1.0,
+        "high": 0.9367
+      },
+      "accent": true,
+      "confidence": 1.0
+    },
+    {
+      "id": 4,
+      "raw_time": 1.4919,
+      "strength": 0.9857,
+      "bands": {
+        "all": 0.9857,
+        "low": 1.0,
+        "mid": 0.9844,
+        "high": 0.9132
+      },
+      "accent": false,
+      "confidence": 0.986
+    },
+    {
+      "id": 5,
+      "raw_time": 1.9969,
+      "strength": 0.971,
+      "bands": {
+        "all": 0.971,
+        "low": 0.8756,
+        "mid": 0.9715,
+        "high": 1.0
+      },
+      "accent": false,
+      "confidence": 0.971
+    },
+    {
+      "id": 6,
+      "raw_time": 2.4961,
+      "strength": 0.9874,
+      "bands": {
+        "all": 0.9874,
+        "low": 0.8977,
+        "mid": 0.9878,
+        "high": 0.9998
+      },
+      "accent": false,
+      "confidence": 0.987
+    },
+    {
+      "id": 7,
+      "raw_time": 2.9954,
+      "strength": 1.0,
+      "bands": {
+        "all": 1.0,
+        "low": 0.945,
+        "mid": 1.0,
+        "high": 0.9919
+      },
+      "accent": true,
+      "confidence": 1.0
+    },
+    {
+      "id": 8,
+      "raw_time": 3.4946,
+      "strength": 1.0,
+      "bands": {
+        "all": 1.0,
+        "low": 0.9581,
+        "mid": 1.0,
+        "high": 0.981
+      },
+      "accent": true,
+      "confidence": 1.0
+    },
+    {
+      "id": 9,
+      "raw_time": 3.9938,
+      "strength": 1.0,
+      "bands": {
+        "all": 1.0,
+        "low": 0.9767,
+        "mid": 1.0,
+        "high": 0.9663
+      },
+      "accent": true,
+      "confidence": 1.0
+    },
+    {
+      "id": 10,
+      "raw_time": 4.4931,
+      "strength": 1.0,
+      "bands": {
+        "all": 1.0,
+        "low": 1.0,
+        "mid": 1.0,
+        "high": 0.9478
+      },
+      "accent": true,
+      "confidence": 1.0
+    },
+    {
+      "id": 11,
+      "raw_time": 4.9923,
+      "strength": 0.9945,
+      "bands": {
+        "all": 0.9945,
+        "low": 1.0,
+        "mid": 0.9936,
+        "high": 0.9243
+      },
+      "accent": false,
+      "confidence": 0.994
+    },
+    {
+      "id": 12,
+      "raw_time": 5.4915,
+      "strength": 0.9752,
+      "bands": {
+        "all": 0.9752,
+        "low": 1.0,
+        "mid": 0.9743,
+        "high": 0.9004
+      },
+      "accent": false,
+      "confidence": 0.975
+    },
+    {
+      "id": 13,
+      "raw_time": 5.9966,
+      "strength": 0.9791,
+      "bands": {
+        "all": 0.9791,
+        "low": 0.8827,
+        "mid": 0.9796,
+        "high": 1.0
+      },
+      "accent": false,
+      "confidence": 0.979
+    },
+    {
+      "id": 14,
+      "raw_time": 6.4958,
+      "strength": 0.9938,
+      "bands": {
+        "all": 0.9938,
+        "low": 0.9184,
+        "mid": 0.9941,
+        "high": 0.9966
+      },
+      "accent": false,
+      "confidence": 0.994
+    },
+    {
+      "id": 15,
+      "raw_time": 6.995,
+      "strength": 1.0,
+      "bands": {
+        "all": 1.0,
+        "low": 0.953,
+        "mid": 1.0,
+        "high": 0.9874
+      },
+      "accent": true,
+      "confidence": 1.0
+    },
+    {
+      "id": 16,
+      "raw_time": 7.4942,
+      "strength": 1.0,
+      "bands": {
+        "all": 1.0,
+        "low": 0.9687,
+        "mid": 1.0,
+        "high": 0.9742
+      },
+      "accent": true,
+      "confidence": 1.0
+    }
+  ],
+  "energy": {
+    "fps": 172,
+    "start": 0.0,
+    "bands": {
+      "all": {
+        "length": 1379,
+        "head": [
+          0.0,
+          0.6174,
+          0.1314,
+          0.035,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "tail": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sha256": "f5f964504a5644ed"
+      },
+      "low": {
+        "length": 1379,
+        "head": [
+          0.0,
+          0.0,
+          0.0,
+          0.3219,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "tail": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sha256": "9786ddcff7c4d1cc"
+      },
+      "mid": {
+        "length": 1379,
+        "head": [
+          0.0,
+          0.6207,
+          0.1321,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "tail": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sha256": "dd15975de1a34f59"
+      },
+      "high": {
+        "length": 1379,
+        "head": [
+          0.0,
+          0.7865,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "tail": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sha256": "0c70b113349e697e"
+      }
+    }
+  },
+  "overview": [
+    {
+      "bar": 1,
+      "label": "change",
+      "group": "A",
+      "mean_strength": 0.9008,
+      "similarity_previous": 0.0,
+      "vector": [
+        0.1713,
+        0.0,
+        0.0,
+        0.0,
+        0.2775,
+        0.0,
+        0.0,
+        0.0,
+        0.2775,
+        0.0,
+        0.0,
+        0.0,
+        0.2735,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "bar": 2,
+      "label": "repeat",
+      "group": "A",
+      "mean_strength": 0.9896,
+      "similarity_previous": 0.9649,
+      "vector": [
+        0.2483,
+        0.0,
+        0.0,
+        0.0,
+        0.2525,
+        0.0,
+        0.0,
+        0.0,
+        0.2557,
+        0.0,
+        0.0,
+        0.0,
+        0.2557,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "bar": 3,
+      "label": "repeat",
+      "group": "A",
+      "mean_strength": 0.9924,
+      "similarity_previous": 0.9986,
+      "vector": [
+        0.2544,
+        0.0,
+        0.0,
+        0.0,
+        0.2544,
+        0.0,
+        0.0,
+        0.0,
+        0.253,
+        0.0,
+        0.0,
+        0.0,
+        0.2481,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "bar": 4,
+      "label": "repeat",
+      "group": "A",
+      "mean_strength": 0.9932,
+      "similarity_previous": 0.9989,
+      "vector": [
+        0.2495,
+        0.0,
+        0.0,
+        0.0,
+        0.2532,
+        0.0,
+        0.0,
+        0.0,
+        0.2548,
+        0.0,
+        0.0,
+        0.0,
+        0.2548,
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "exports": {}
+}

@@ -172,7 +172,7 @@ def quantize_to_beat_grid(
         quantized = beat_times[-1] + steps_after * step_len
         # calculate bar / beat continuation
         total_steps_from_last = steps_after
-        cur_beat_idx = last_beat["beat"] - 1 + (total_steps_from_last // parts_per_beat)
+        cur_beat_idx = (last_beat.get("beat_in_bar", last_beat.get("beat", 1)) or 1) - 1 + (total_steps_from_last // parts_per_beat)
         cur_bar = last_beat["bar"] + (cur_beat_idx // 4)
         cur_beat = (cur_beat_idx % 4) + 1
         cur_step_in_bar = (cur_beat - 1) * parts_per_beat + (total_steps_from_last % parts_per_beat) + 1
@@ -207,7 +207,7 @@ def quantize_to_beat_grid(
         step_in_beat = best_part
 
     bar = target_beat["bar"]
-    beat_num = target_beat["beat"]
+    beat_num = target_beat.get("beat_in_bar", target_beat.get("beat", 1)) or 1
     step_in_bar = (beat_num - 1) * parts_per_beat + step_in_beat + 1
 
     return {

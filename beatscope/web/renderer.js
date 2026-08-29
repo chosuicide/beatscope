@@ -1,4 +1,6 @@
 import { gridPosition, metrics } from './grid.js';
+import { trackForProject } from '../runtime/runtime.js';
+import { createVisualProfile } from '../runtime/visual-profile.js';
 
 const ROWS = ['all', 'low', 'mid', 'high', 'accent'];
 const LABELS = { all: 'IMPACT', low: 'LOW / SCALE', mid: 'MID / FLOW', high: 'HIGH / FLASH', accent: 'ACCENT / BLOOM' };
@@ -61,187 +63,40 @@ function text(ctx, value, x, y, options = {}) {
 }
 
 function energyAt(project, time, name = 'all') {
-  const energy = project?.energy || {};
-  const bands = energy.bands?.[name];
-  if (Array.isArray(bands) && bands.length) {
-    const fps = Number(energy.fps) || 100;
-    const position = clamp((time - (Number(energy.start) || 0)) * fps, 0, bands.length - 1);
-    const left = Math.floor(position);
-    const right = Math.min(bands.length - 1, left + 1);
-    return clamp(mix(Number(bands[left]) || 0, Number(bands[right]) || 0, position - left));
-  }
-  const frames = energy.frames;
-  if (!Array.isArray(frames) || !frames.length) return 0;
-  const start = Number(frames[0]?.time) || 0;
-  const frameStep = frames.length > 1 ? Math.max(.0001, Number(frames[1].time) - start) : .01;
-  const position = clamp((time - start) / frameStep, 0, frames.length - 1);
-  const left = Math.floor(position);
-  const right = Math.min(frames.length - 1, left + 1);
-  return clamp(mix(Number(frames[left]?.[name]) || 0, Number(frames[right]?.[name]) || 0, position - left));
+  return trackForProject(project).energyAt(time, name);
 }
 
-function previousItem(list, time, key) {
-  if (!Array.isArray(list) || !list.length) return null;
-  let low = 0;
-  let high = list.length - 1;
-  let answer = null;
-  while (low <= high) {
-    const middle = (low + high) >> 1;
-    if ((Number(list[middle]?.[key]) || 0) <= time) {
-      answer = list[middle];
-      low = middle + 1;
-    } else {
-      high = middle - 1;
-    }
-  }
-  return answer;
-}
-
-function playbackState(project, time) {
-  const timing = metrics(project, 16, null);
-  const beatLength = 60 / Math.max(1, timing.bpm);
-  const phase = (time - timing.origin) / beatLength;
-  const safePhase = Math.max(0, phase);
-  const beatIndex = Math.floor(safePhase);
-  const explicitBeat = previousItem(project?.beats, time, 'time');
-  const bar = Number(explicitBeat?.bar) || Math.floor(beatIndex / 4) + 1;
-  const beat = Number(explicitBeat?.beat) || (beatIndex % 4) + 1;
-  const beatPhase = safePhase - Math.floor(safePhase);
-  const barPhase = (safePhase / 4) - Math.floor(safePhase / 4);
-  const lastOnset = previousItem(project?.onsets, time, 'raw_time');
-  const onsetAge = lastOnset ? Math.max(0, time - Number(lastOnset.raw_time)) : Infinity;
-  const onset = lastOnset && onsetAge < .24 ? clamp(lastOnset.strength) * Math.exp(-onsetAge * 16) : 0;
-  const accent = lastOnset?.accent ? onset : 0;
+export function playbackState(project, time) {
+  const signal = trackForProject(project).at(time);
   return {
     time,
-    bar,
-    beat,
-    beatPhase,
-    barPhase,
-    low: Math.sqrt(energyAt(project, time, 'low')),
-    mid: Math.sqrt(energyAt(project, time, 'mid')),
-    high: Math.sqrt(energyAt(project, time, 'high')),
-    all: Math.sqrt(energyAt(project, time, 'all')),
-    onset,
-    accent,
-    onsetAge,
-    beatPulse: Math.exp(-beatPhase * 7),
-    section: project?.overview?.[Math.max(0, bar - 1)] || null,
+    bar: signal.bar,
+    beat: signal.beat,
+    beatPhase: signal.beatPhase,
+    barPhase: signal.barPhase,
+    // Playback compression: the runtime reports raw energy; the visual
+    // layer consumes perceptual (sqrt) levels.
+    low: Math.sqrt(signal.low),
+    mid: Math.sqrt(signal.mid),
+    high: Math.sqrt(signal.high),
+    all: Math.sqrt(signal.all),
+    onset: signal.onset.value,
+    accent: signal.accent ? signal.accent.value : 0,
+    onsetAge: signal.onset.age,
+    beatPulse: Math.exp(-signal.beatPhase * 7),
+    section: signal.section,
   };
 }
 
-const motionProfileCache = new WeakMap();
+// Motion-tier budgets live in the shared visual profile; one profile per
+// project object, built over the shared runtime track.
+const visualProfileCache = new WeakMap();
 
-function quantile(sorted, ratio) {
-  if (!sorted.length) return 0;
-  const position = clamp(ratio, 0, 1) * (sorted.length - 1);
-  const left = Math.floor(position);
-  const right = Math.min(sorted.length - 1, left + 1);
-  return mix(sorted[left], sorted[right], position - left);
-}
-
-function motionProfile(project) {
-  if (motionProfileCache.has(project)) return motionProfileCache.get(project);
-  const source = Array.isArray(project?.onsets) ? project.onsets : [];
-  const strengths = source.map((item) => clamp(item.strength)).sort((a, b) => a - b);
-  const p78 = quantile(strengths, .78);
-  const p92 = quantile(strengths, .92);
-  const p98 = quantile(strengths, .98);
-  const timing = metrics(project, 16, null);
-  const beatLength = 60 / Math.max(1, timing.bpm);
-  const overview = Array.isArray(project?.overview) ? project.overview : [];
-  const events = [];
-  let densityLeft = 0;
-  let densityRight = 0;
-  let lastBurst = -Infinity;
-  let lastHero = -Infinity;
-
-  for (let index = 0; index < source.length; index += 1) {
-    const onset = source[index];
-    const time = Number(onset.raw_time) || 0;
-    while (densityLeft < source.length && Number(source[densityLeft].raw_time) < time - 1) densityLeft += 1;
-    while (densityRight < source.length && Number(source[densityRight].raw_time) <= time + 1) densityRight += 1;
-    const density = clamp((densityRight - densityLeft - 3) / 11);
-    const strength = clamp(onset.strength);
-    const computedBar = Math.floor(Math.max(0, time - timing.origin) / (beatLength * 4));
-    const barIndex = Math.max(0, Number(onset.bar) > 0 ? Number(onset.bar) - 1 : computedBar);
-    const section = overview[barIndex]?.group || overview[barIndex]?.label || null;
-    const previousSection = overview[Math.max(0, barIndex - 1)]?.group || overview[Math.max(0, barIndex - 1)]?.label || null;
-    const sectionChanged = barIndex > 0 && section && previousSection && section !== previousSection;
-    const heroCandidate = (strength >= p98 && density < .86)
-      || (sectionChanged && strength >= p92);
-    const burstCandidate = strength >= p92 && density < .72;
-    let tier = 'pulse';
-    if (heroCandidate && time - lastHero >= beatLength * 8) {
-      tier = 'hero';
-      lastHero = time;
-      lastBurst = time;
-    } else if (burstCandidate && time - lastBurst >= beatLength * 2) {
-      tier = 'burst';
-      lastBurst = time;
-    } else if (strength >= p78 || density >= .62) {
-      tier = 'turbulence';
-    }
-    events.push({ time, strength, density, tier });
+function visualProfileFor(project) {
+  if (!visualProfileCache.has(project)) {
+    visualProfileCache.set(project, createVisualProfile(trackForProject(project)));
   }
-
-  const profile = { events, beatLength };
-  motionProfileCache.set(project, profile);
-  return profile;
-}
-
-function motionBudgetAt(project, time) {
-  const profile = motionProfile(project);
-  const events = profile.events;
-  if (!events.length) return { pulse: 0, turbulence: 0, burst: 0, hero: 0, impactAge: Infinity };
-  let low = 0;
-  let high = events.length - 1;
-  let index = -1;
-  while (low <= high) {
-    const middle = (low + high) >> 1;
-    if (events[middle].time <= time) {
-      index = middle;
-      low = middle + 1;
-    } else {
-      high = middle - 1;
-    }
-  }
-  if (index < 0) return { pulse: 0, turbulence: 0, burst: 0, hero: 0, impactAge: Infinity };
-
-  let pulse = 0;
-  let turbulence = 0;
-  let burst = 0;
-  let hero = 0;
-  let impactAge = Infinity;
-  for (let cursor = index; cursor >= 0; cursor -= 1) {
-    const event = events[cursor];
-    const age = Math.max(0, time - event.time);
-    if (age > 1.15) break;
-    pulse = Math.max(pulse, event.strength * Math.exp(-age * 12));
-    turbulence = Math.max(turbulence, event.density * Math.exp(-age * 1.9));
-    if (event.tier === 'turbulence') {
-      turbulence = Math.max(turbulence, event.strength * (.35 + event.density * .65) * Math.exp(-age * 2.6));
-    } else if (event.tier === 'burst') {
-      const value = event.strength * Math.exp(-age * 8);
-      if (value > burst) {
-        burst = value;
-        impactAge = age;
-      }
-    } else if (event.tier === 'hero') {
-      const value = event.strength * Math.exp(-age * 4.5);
-      if (value > hero) {
-        hero = value;
-        impactAge = age;
-      }
-    }
-  }
-  return {
-    pulse: clamp(pulse),
-    turbulence: clamp(turbulence),
-    burst: clamp(burst),
-    hero: clamp(hero),
-    impactAge,
-  };
+  return visualProfileCache.get(project);
 }
 
 const sphereCache = new Map();
@@ -513,7 +368,7 @@ export function renderVisualStage(canvas, state) {
   const renderStarted = performance.now();
 
   const signal = playbackState(project, Number(state.playbackTime) || 0);
-  const motion = motionBudgetAt(project, signal.time);
+  const motion = visualProfileFor(project).at(signal.time);
   ctx.fillStyle = PAPER;
   ctx.fillRect(0, 0, width, height);
 
@@ -716,7 +571,7 @@ export function renderVisualStage(canvas, state) {
 function aggregateSteps(project, subdivision, adjustments) {
   const cells = new Map();
   for (const onset of (project?.onsets || [])) {
-    const position = gridPosition(onset.raw_time, project, subdivision, adjustments);
+    const position = gridPosition(onset.time ?? onset.raw_time, project, subdivision, adjustments);
     if (!cells.has(position.step)) cells.set(position.step, { all: 0, low: 0, mid: 0, high: 0, accent: 0, onsets: [] });
     const cell = cells.get(position.step);
     cell.all = Math.max(cell.all, clamp(onset.strength));
@@ -843,7 +698,7 @@ export function renderStaticMap(canvas, state) {
     const strongest = cell.onsets.slice().sort((a, b) => b.onset.strength - a.onset.strength)[0];
     if (!strongest) continue;
     const timing = metrics(project, subdivision, state.adjustments);
-    const rawRelative = (Number(strongest.onset.raw_time) - timing.origin) / timing.step - startBar * subdivision;
+    const rawRelative = (Number(strongest.onset.time ?? strongest.onset.raw_time) - timing.origin) / timing.step - startBar * subdivision;
     const rawX = left + rawRelative * cellWidth;
     const snappedX = left + (relativeStep + .5) * cellWidth;
     line(ctx, rawX, top - 9, snappedX, top - 9, ACCENT, 1, .6);
@@ -960,7 +815,7 @@ export function renderOverview(canvas, state) {
   if (!project) return;
 
   const duration = Number(project.source?.duration) || 1;
-  const overview = project.overview || [];
+  const overview = project.patterns?.bars || project.overview || [];
   const bars = Number(project.grid?.bars) || Math.max(1, overview.length);
   const left = 18;
   const right = 18;
@@ -1023,11 +878,13 @@ export function renderOverview(canvas, state) {
   // Accented events appear as a sparse visual cue rail beneath the band envelopes.
   const cueY = 164;
   line(ctx, left, cueY, width - right, cueY, LINE, 1, .85);
+  const accentIds = new Set((project.cues?.accent || []).map((c) => c.onset));
   for (const onset of (project.onsets || [])) {
-    if (!onset.accent && Number(onset.strength) < .72) continue;
-    const x = left + clamp(Number(onset.raw_time) / duration) * innerWidth;
+    const isAccent = onset.accent || accentIds.has(onset.id);
+    if (!isAccent && Number(onset.strength) < .72) continue;
+    const x = left + clamp(Number(onset.time ?? onset.raw_time) / duration) * innerWidth;
     const strength = clamp(onset.strength);
-    line(ctx, x, cueY - 3, x, cueY - 3 - strength * 8, onset.accent ? ACCENT : INK, onset.accent ? 1.5 : 1, .35 + strength * .55);
+    line(ctx, x, cueY - 3, x, cueY - 3 - strength * 8, isAccent ? ACCENT : INK, isAccent ? 1.5 : 1, .35 + strength * .55);
   }
 
   for (let index = 0; index <= bars; index += 8) {

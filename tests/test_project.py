@@ -34,19 +34,28 @@ def test_project_manager_lifecycle(tmp_path):
     sha = content_hash(audio)
     cfg = {"subdivision": 16}
     cache_key = compute_cache_key(sha, cfg)
-    project_id = cache_key[:12]
+    project_id = sha[:12]
 
     rhythm_sample = {
-        "schema_version": "3.0",
+        "schema_version": "4.0",
         "project_id": project_id,
         "source": {"display_name": "song.wav", "duration": 10.0, "sample_rate": 44100, "channels": 2, "sha256": sha},
-        "analysis": {"pipeline": "test", "analyzer_version": "0.3.0", "created_at": "2026-08-25T00:00:00Z", "warnings": [], "separation_used": False},
-        "tempo": {"global_bpm": 120.0, "confidence": 0.9, "variable_tempo": False},
-        "grid": {"time_signature": [4, 4], "origin": 0.0, "default_subdivision": 16, "bars": 5},
+        "analysis": {
+            "backend": "test",
+            "pipeline_version": "0.4.0",
+            "created_at": "2026-08-25T00:00:00Z",
+            "warnings": [],
+            "separation_used": False,
+            "provenance": {"beats": {"method": "test-beats"}, "onsets": {"method": "test-onsets"}},
+        },
+        "tempo": {"global_bpm": 120.0, "segments": [{"start": 0.0, "end": 10.0, "bpm": 120.0, "method": "test", "score": None}]},
+        "meter": {"numerator": 4, "denominator": 4},
+        "grid": {"origin": 0.0, "default_subdivision": 16, "bars": 5},
         "beats": [],
         "onsets": [],
         "energy": {"fps": 100, "start": 0.0, "bands": {"all": [], "low": [], "mid": [], "high": []}},
-        "overview": [],
+        "patterns": {"method": "bar-rhythm-cosine-v1", "bars": []},
+        "cues": {"accent": [], "impact": [], "scale": [], "flow": [], "flash": [], "bloom": []},
         "exports": {},
     }
 
@@ -58,13 +67,15 @@ def test_project_manager_lifecycle(tmp_path):
 
     # Retrieve
     loaded = pm.get_project_rhythm(project_id)
-    assert loaded["schema_version"] == "3.0"
+    assert loaded["schema_version"] == "4.0"
     assert loaded["project_id"] == project_id
 
-    # Cache lookup
-    cached = pm.find_cached_rhythm(cache_key)
+    # Cache lookup (content-addressed: same sha, different config -> miss)
+    cached = pm.find_cached_rhythm(sha, cache_key)
     assert cached is not None
     assert cached["project_id"] == project_id
+    assert pm.find_cached_rhythm(sha, "stale-key") is None
+    assert pm.find_cached_rhythm("0" * 64, cache_key) is None
 
     # Adjustments
     pm.save_adjustments(project_id, {"bpm": 122.5, "origin": 0.12})

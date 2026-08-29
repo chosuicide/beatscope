@@ -1,0 +1,64 @@
+"""AnalyzerBackend protocol and the AnalysisEvidence contract.
+
+Backends produce intermediate evidence; they never decide the final schema,
+project id, exports, or visual cues. ``pipeline.build_rhythm_project`` is the
+only place where evidence becomes a RhythmProject.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Callable, Protocol
+
+ProgressCallback = Callable[[str, float, str], None]
+CancelCallback = Callable[[], bool]
+
+
+class AnalysisCancelled(RuntimeError):
+    """Raised inside the pipeline when the caller requests cancellation."""
+
+
+@dataclass
+class AnalysisEvidence:
+    """Intermediate analysis facts produced by one backend run."""
+
+    duration: float
+    sample_rate: int
+    channels: int
+    tempo_bpm: float
+    grid_origin: float
+    bars: int
+    beats: list[dict[str, Any]]
+    onsets: list[dict[str, Any]]
+    energy: dict[str, Any]
+    tempo_score: float | None = None
+    warnings: list[str] = field(default_factory=list)
+    diagnostics: dict[str, Any] = field(default_factory=dict)
+    provenance: dict[str, Any] = field(default_factory=dict)
+
+
+class AnalyzerBackend(Protocol):
+    name: str
+    version: str
+
+    def analyze(
+        self,
+        audio_path: Path,
+        config: "AnalysisConfig",  # noqa: F821 - imported lazily to avoid cycles
+        progress: ProgressCallback,
+        cancelled: CancelCallback,
+    ) -> AnalysisEvidence:
+        ...
+
+
+def noop_progress(stage: str, value: float, message: str) -> None:
+    return None
+
+
+def never_cancelled() -> bool:
+    return False
+
+
+def check_cancelled(cancelled: CancelCallback | None) -> None:
+    if cancelled is not None and cancelled():
+        raise AnalysisCancelled("analysis cancelled by caller")

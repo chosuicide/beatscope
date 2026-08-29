@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .schema import SCHEMA_VERSION, ANALYZER_VERSION, validate_rhythm_v3
+from .schema import ANALYZER_VERSION, SCHEMA_VERSION, normalize_rhythm, validate_rhythm_v4
 
 
 def content_hash(path: str | Path) -> str:
@@ -58,9 +58,9 @@ class ProjectManager:
         p_dir.mkdir(parents=True, exist_ok=True)
         return p_dir
 
-    def find_cached_rhythm(self, cache_key: str) -> dict[str, Any] | None:
-        """Find cached rhythm.json matching the cache_key if it exists and is valid."""
-        p_dir = self.projects_dir / cache_key[:12]
+    def find_cached_rhythm(self, sha256: str, cache_key: str) -> dict[str, Any] | None:
+        """Find cached rhythm.json for this content hash whose config cache_key matches."""
+        p_dir = self.projects_dir / sha256[:12]
         rhythm_file = p_dir / "rhythm.json"
         config_file = p_dir / "analysis-config.json"
         if rhythm_file.is_file() and config_file.is_file():
@@ -68,7 +68,7 @@ class ProjectManager:
                 cfg = json.loads(config_file.read_text(encoding="utf-8"))
                 if cfg.get("cache_key") == cache_key:
                     rhythm_data = json.loads(rhythm_file.read_text(encoding="utf-8"))
-                    if not validate_rhythm_v3(rhythm_data):
+                    if not validate_rhythm_v4(rhythm_data):
                         return rhythm_data
             except Exception:
                 pass
@@ -116,7 +116,9 @@ class ProjectManager:
         p_dir = self.get_project_dir(project_id)
         rhythm_file = p_dir / "rhythm.json"
         if rhythm_file.is_file():
-            return json.loads(rhythm_file.read_text(encoding="utf-8"))
+            # Read-time migration (plan section 24): stored v3 projects are
+            # served as v4; the file on disk is left untouched.
+            return normalize_rhythm(json.loads(rhythm_file.read_text(encoding="utf-8")))
         return None
 
     def get_project_audio_path(self, project_id: str) -> Path | None:

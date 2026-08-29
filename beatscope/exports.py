@@ -27,7 +27,7 @@ def generate_rhythm_midi(rhythm_data: dict[str, Any], subdivision: int = 16) -> 
 
     events: list[tuple[int, int, bytes]] = []
     for onset in rhythm_data.get("onsets", []):
-        raw_t = float(onset.get("raw_time", 0.0))
+        raw_t = float(onset.get("time", onset.get("raw_time", 0.0)))
         q = quantize_to_beat_grid(raw_t, beats, subdivision=subdivision)
         quantized_t = float(q.get("quantized_time", raw_t))
         tick = max(0, int(round((quantized_t - origin) * bpm / 60.0 * TPQ)))
@@ -62,8 +62,14 @@ def generate_rhythm_csv(rhythm_data: dict[str, Any], subdivision: int = 16) -> s
     ])
 
     beats = rhythm_data.get("beats", [])
+    # v4 keeps accents in cues.accent; v3 kept a boolean on the onset itself.
+    accent_ids = {
+        int(cue["onset"])
+        for cue in (rhythm_data.get("cues") or {}).get("accent", [])
+        if isinstance(cue, dict) and isinstance(cue.get("onset"), int)
+    }
     for onset in rhythm_data.get("onsets", []):
-        raw_t = float(onset.get("raw_time", 0.0))
+        raw_t = float(onset.get("time", onset.get("raw_time", 0.0)))
         q = quantize_to_beat_grid(raw_t, beats, subdivision=subdivision)
         bands = onset.get("bands", {})
         writer.writerow([
@@ -77,7 +83,7 @@ def generate_rhythm_csv(rhythm_data: dict[str, Any], subdivision: int = 16) -> s
             f"{float(bands.get('low', 0.0)):.4f}",
             f"{float(bands.get('mid', 0.0)):.4f}",
             f"{float(bands.get('high', 0.0)):.4f}",
-            1 if onset.get("accent") else 0,
+            1 if onset.get("accent") or onset.get("id") in accent_ids else 0,
         ])
 
     return output.getvalue()
@@ -93,12 +99,20 @@ def _codex_rhythm_map(rhythm_data: dict[str, Any]) -> dict[str, Any]:
     source = rhythm_data.get("source", {})
     tempo = rhythm_data.get("tempo", {})
     grid = rhythm_data.get("grid", {})
-    overview = rhythm_data.get("overview", [])
+    overview = rhythm_data.get("overview") or (rhythm_data.get("patterns") or {}).get("bars") or []
     sections = rhythm_data.get("sections") or [
         {k: item[k] for k in ("bar", "label", "group", "mean_strength", "similarity_previous") if k in item}
         for item in overview if isinstance(item, dict)
     ]
     beats = rhythm_data.get("beats", [])
+    onsets = rhythm_data.get("onsets", [])
+    meter = rhythm_data.get("meter") or {}
+    cues = rhythm_data.get("cues")
+    if not cues:
+        cues = {"accent": [
+            {"time": o.get("raw_time"), "onset": o.get("id")}
+            for o in onsets if isinstance(o, dict) and o.get("accent")
+        ]}
     bars = rhythm_data.get("bars") or grid.get("bars_data") or []
     if not isinstance(bars, list):
         bars = []
@@ -122,71 +136,49 @@ def _codex_rhythm_map(rhythm_data: dict[str, Any]) -> dict[str, Any]:
         "duration": float(source.get("duration") or 0),
         "bpm": float(tempo.get("global_bpm") or tempo.get("bpm") or 120),
         "origin": float(grid.get("origin") or 0),
-        "time_signature": grid.get("time_signature", [4, 4]),
+        "time_signature": grid.get("time_signature") or [meter.get("numerator", 4), meter.get("denominator", 4)],
         "subdivision": int(grid.get("default_subdivision") or grid.get("subdivision") or 16),
         "bars_count": int(grid.get("bars") or 0),
         "bars": bars,
         "beats": beats,
-        "onsets": rhythm_data.get("onsets", []),
+        "onsets": onsets,
+        "cues": cues,
         "energy": rhythm_data.get("energy", {}),
         "sections": sections,
         "analysis": {
-            "pipeline": rhythm_data.get("analysis", {}).get("pipeline"),
-            "analyzer_version": rhythm_data.get("analysis", {}).get("analyzer_version"),
+            "pipeline": rhythm_data.get("analysis", {}).get("pipeline") or rhythm_data.get("analysis", {}).get("backend"),
+            "analyzer_version": rhythm_data.get("analysis", {}).get("analyzer_version") or rhythm_data.get("analysis", {}).get("pipeline_version"),
             "created_at": rhythm_data.get("analysis", {}).get("created_at"),
         },
     }
 
 
+def _runtime_source() -> str:
+    """Return the shared rhythm runtime module shipped with every export."""
+    runtime_path = Path(__file__).with_name("runtime") / "runtime.js"
+    return runtime_path.read_text(encoding="utf-8")
+
+
 def _visual_state_source(rhythm_map: dict[str, Any]) -> str:
-    """Build a dependency-free deterministic visual-state.js module."""
+    """Build the visual-state.js module: data plus the shared runtime contract.
+
+    getVisualState is exactly ``track.at(time)`` - the same time-query the
+    web player samples - so both consumers share one implementation and one
+    output shape (plan section 43).
+    """
     data = json.dumps(rhythm_map, ensure_ascii=False, separators=(",", ":"))
-    return f'''// BeatScope visual state contract — deterministic and seek-safe.
-const RHYTHM_MAP = {data};
-const clamp = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, Number(v) || 0));
-const lerp = (a, b, t) => a + (b - a) * t;
-function energyAt(time, name) {{
-  const e = RHYTHM_MAP.energy || {{}};
-  const arr = e.bands?.[name] || [];
-  if (arr.length) {{
-    const fps = Number(e.fps) || 100;
-    const at = clamp((Number(time) - (Number(e.start) || 0)) * fps, 0, arr.length - 1);
-    const i = Math.floor(at), j = Math.min(arr.length - 1, i + 1);
-    return clamp(lerp(arr[i] || 0, arr[j] || 0, at - i));
-  }}
-  const frames = e.frames || [];
-  if (!frames.length) return 0;
-  const start = Number(frames[0]?.time) || 0;
-  const step = frames.length > 1 ? Math.max(0.0001, Number(frames[1].time) - start) : 0.01;
-  const at = clamp((Number(time) - start) / step, 0, frames.length - 1);
-  const i = Math.floor(at), j = Math.min(frames.length - 1, i + 1);
-  return clamp(lerp(frames[i]?.[name] || 0, frames[j]?.[name] || 0, at - i));
-}}
-function nearest(list, time, key) {{
-  let best = null, distance = Infinity;
-  for (const item of (list || [])) {{ const d = Math.abs((Number(item[key]) || 0) - time); if (d < distance) {{ best = item; distance = d; }} }}
-  return {{ item: best, distance }};
-}}
-export function getVisualState(time) {{
-  const t = Math.max(0, Number(time) || 0);
-  const beats = RHYTHM_MAP.beats || [];
-  const bpm = Number(RHYTHM_MAP.bpm) || 120;
-  const beatLength = 60 / bpm;
-  const origin = Number(RHYTHM_MAP.origin) || 0;
-  const phase = ((t - origin) / beatLength);
-  const beatIndex = Math.max(0, Math.floor(phase));
-  const beat = beats[beatIndex] || {{ time: origin + beatIndex * beatLength, beat: (beatIndex % 4) + 1, bar: Math.floor(beatIndex / 4) + 1 }};
-  const beatPhase = phase - Math.floor(phase);
-  const barPhase = (phase / 4) - Math.floor(phase / 4);
-  const onset = nearest(RHYTHM_MAP.onsets, t, 'raw_time');
-  const hit = onset.item && onset.distance <= Math.min(0.16, beatLength * 0.35) ? onset.item : null;
-  const section = (RHYTHM_MAP.sections || []).find(s => Number(s.bar) === Number(beat.bar)) || null;
-  return {{ time: t, bar: Number(beat.bar) || 1, beat: Number(beat.beat) || 1, beatPhase, barPhase,
-    low: energyAt(t, 'low'), mid: energyAt(t, 'mid'), high: energyAt(t, 'high'), all: energyAt(t, 'all'),
-    accent: clamp(hit?.accent ? hit.strength : 0), onset: hit ? clamp(hit.strength) : 0, section }};
-}}
-export {{ RHYTHM_MAP }};
+    head = "// BeatScope visual state contract — deterministic and seek-safe.\n"
+    head += "import { createTrack } from './beatscope-runtime.js';\n\n"
+    head += "export const RHYTHM_MAP = "
+    tail = ''';
+
+const track = createTrack(RHYTHM_MAP);
+
+export function getVisualState(time) {
+  return track.at(time);
+}
 '''
+    return head + data + tail
 
 
 def generate_codex_export(rhythm_data: dict[str, Any], include_preview: bool = False) -> bytes:
@@ -194,11 +186,11 @@ def generate_codex_export(rhythm_data: dict[str, Any], include_preview: bool = F
     rhythm_map = _codex_rhythm_map(rhythm_data)
     display_name = rhythm_map["source"]["display_name"]
     handoff = f'''# BeatScope handoff: {display_name}\n\nThis package is the inspected timing data for one audio file. It is intended to be handed to an agent making an audio-reactive web, video, or motion visual.\n\n## Rules\n\n- Do not re-analyse the audio. Use `rhythm-map.json` as the source of analysed timing facts.\n- Use `audio.currentTime` as the only clock. Call `getVisualState(time)` from `visual-state.js` for animation state.\n- Every animation must remain correct after pause, seek, replay, and rendering a single frame. Do not use wall-clock timers or non-reproducible random motion.\n- Keep playback controls and the visual clock separate: audio controls own transport; the visual samples the current time.\n\n## Suggested mapping\n\n`low`, `mid`, and `high` can drive separate scale, density, or line-weight layers. `onset` and `accent` are short impulses; `beatPhase` and `barPhase` provide repeatable breathing; `section` can change composition density or palette. These are starting points, not instrument labels. The data does not identify kick, snare, or 808.\n\nThe original file name, duration, BPM, origin, beats, raw onsets, energy arrays, and section annotations are recorded in `rhythm-map.json`.\n'''
-    readme = f'''# BeatScope export\n\nFiles in this handoff:\n\n- `rhythm-map.json` — versioned timing data: duration, BPM, origin, bars/beats, raw onsets, accents, low/mid/high energy, and sections.\n- `visual-state.js` — pure `getVisualState(time)` function. It has no random state and is safe to call after seek.\n- `BEATSCOPE.md` — implementation handoff and timing invariants.\n\nThe source audio is not copied into this package. Pair it with the original local file named `{display_name}`.\n'''
-    readme = f'''# BeatScope export\n\nFiles in this handoff:\n\n- `rhythm-map.json` — versioned timing data: duration, BPM, origin, bars/beats, raw onsets, accents, low/mid/high energy, and sections.\n- `visual-state.js` — pure `getVisualState(time)` function. It has no random state and is safe to call after seek.\n- `BEATSCOPE.md` — implementation handoff and timing invariants.\n- `SKILL.md` — portable Codex skill for building a visual from this package.\n- `references/schema.md` — exact field semantics for the skill.\n\nThe source audio is not copied into this package. Pair it with the original local file named `{display_name}`.\n'''
+    readme = f'''# BeatScope export\n\nFiles in this handoff:\n\n- `rhythm-map.json` — versioned timing data: duration, BPM, origin, bars/beats, raw onsets, accents, low/mid/high energy, and sections.\n- `visual-state.js` — pure `getVisualState(time)` function. It has no random state and is safe to call after seek.\n- `beatscope-runtime.js` — the shared runtime module `visual-state.js` builds on (`createTrack`).\n- `BEATSCOPE.md` — implementation handoff and timing invariants.\n- `SKILL.md` — portable Codex skill for building a visual from this package.\n- `references/schema.md` — exact field semantics for the skill.\n\nThe source audio is not copied into this package. Pair it with the original local file named `{display_name}`.\n'''
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("rhythm-map.json", json.dumps(rhythm_map, ensure_ascii=False, indent=2) + "\n")
+        archive.writestr("beatscope-runtime.js", _runtime_source())
         archive.writestr("visual-state.js", _visual_state_source(rhythm_map))
         archive.writestr("BEATSCOPE.md", handoff)
         archive.writestr("SKILL.md", _agent_skill_file("SKILL.md"))

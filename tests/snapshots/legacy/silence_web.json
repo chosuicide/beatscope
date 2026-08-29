@@ -1,0 +1,288 @@
+{
+  "schema_version": "4.0",
+  "project_id": "f863d98220a9",
+  "source": {
+    "display_name": "silence.wav",
+    "duration": 4.0,
+    "sample_rate": 44100,
+    "channels": 2,
+    "sha256": "f863d98220a9f1aa76e43170f4948f0888b2028fcf6b0aae497fde768efca380"
+  },
+  "analysis": {
+    "backend": "lightweight",
+    "pipeline_version": "0.4.0",
+    "warnings": [
+      "Tempo estimation failed; fell back to 120 BPM"
+    ],
+    "separation_used": false,
+    "parameters": {
+      "subdivision": 16,
+      "sample_rate": 44100,
+      "hop_length": 256,
+      "n_fft": 2048
+    },
+    "provenance": {
+      "beats": {
+        "method": "uniform-grid-from-global-bpm",
+        "backend": "lightweight"
+      },
+      "onsets": {
+        "method": "multiband-positive-spectral-flux",
+        "backend": "lightweight"
+      }
+    },
+    "diagnostics": {
+      "tempo_method": "spectral-flux-autocorrelation",
+      "beat_interval_cv": 0.0,
+      "onset_count": 0,
+      "variable_tempo": false,
+      "separated": false
+    }
+  },
+  "tempo": {
+    "global_bpm": 120.0,
+    "segments": [
+      {
+        "start": 0.0,
+        "end": 4.0,
+        "bpm": 120.0,
+        "method": "spectral-flux-autocorrelation",
+        "score": null
+      }
+    ]
+  },
+  "meter": {
+    "numerator": 4,
+    "denominator": 4
+  },
+  "grid": {
+    "origin": 0.0,
+    "default_subdivision": 16,
+    "bars": 2
+  },
+  "beats": [
+    {
+      "time": 0.0,
+      "index": 0,
+      "bar": 1,
+      "beat_in_bar": 1,
+      "downbeat": true
+    },
+    {
+      "time": 0.5,
+      "index": 1,
+      "bar": 1,
+      "beat_in_bar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 1.0,
+      "index": 2,
+      "bar": 1,
+      "beat_in_bar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 1.5,
+      "index": 3,
+      "bar": 1,
+      "beat_in_bar": 4,
+      "downbeat": false
+    },
+    {
+      "time": 2.0,
+      "index": 4,
+      "bar": 2,
+      "beat_in_bar": 1,
+      "downbeat": true
+    },
+    {
+      "time": 2.5,
+      "index": 5,
+      "bar": 2,
+      "beat_in_bar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 3.0,
+      "index": 6,
+      "bar": 2,
+      "beat_in_bar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 3.5,
+      "index": 7,
+      "bar": 2,
+      "beat_in_bar": 4,
+      "downbeat": false
+    }
+  ],
+  "onsets": [],
+  "energy": {
+    "fps": 172,
+    "start": 0.0,
+    "bands": {
+      "all": {
+        "length": 690,
+        "head": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "tail": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sha256": "40acd47d9c399448"
+      },
+      "low": {
+        "length": 690,
+        "head": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "tail": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sha256": "40acd47d9c399448"
+      },
+      "mid": {
+        "length": 690,
+        "head": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "tail": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sha256": "40acd47d9c399448"
+      },
+      "high": {
+        "length": 690,
+        "head": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "tail": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sha256": "40acd47d9c399448"
+      }
+    }
+  },
+  "patterns": {
+    "method": "bar-rhythm-cosine-v1",
+    "bars": [
+      {
+        "bar": 1,
+        "label": "break",
+        "group": "BREAK",
+        "mean_strength": 0.0,
+        "similarity_previous": 0.0,
+        "vector": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "bar": 2,
+        "label": "break",
+        "group": "BREAK",
+        "mean_strength": 0.0,
+        "similarity_previous": 1.0,
+        "vector": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    ]
+  },
+  "cues": {
+    "accent": [],
+    "impact": [],
+    "scale": [],
+    "flow": [],
+    "flash": [],
+    "bloom": []
+  },
+  "exports": {}
+}

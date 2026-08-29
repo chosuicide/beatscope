@@ -23,7 +23,8 @@ const controls = {
   play: $('#play'), stagePlay: $('#stagePlay'), loop: $('#loop'), prev: $('#prev'), next: $('#next'),
   subdivision: $('#subdivision'), range: $('#rangeLabel'), window: $('#windowLabel'), visualReadout: $('#visualReadout'),
   duration: $('#durationLabel'), seekBack: $('#seekBack'), seekForward: $('#seekForward'),
-  stageTrack: $('#stageTrackName'), factBpm: $('#factBpm'), factBars: $('#factBars'), factDuration: $('#factDuration'),
+  stageTrack: $('#stageTrackName'), factBpm: $('#factBpm'), factBars: $('#factBars'), factDuration: $('#factDuration'), factBackend: $('#factBackend'),
+  analysisMeta: $('#analysisMeta'),
   exportMidi: $('#exportMidi'), exportCsv: $('#exportCsv'), exportPng: $('#exportPng'), exportCodex: $('#exportCodex'),
   copyPrompt: $('#copyPrompt'), copyStatus: $('#copyStatus'), openProject: $('#openProject'), projectFile: $('#projectFile'),
   replaceAudio: $('#replaceAudio'), audioInput: $('#audioFileInput'),
@@ -59,6 +60,27 @@ function renderAll() {
   updateInspector(state);
 }
 
+function describeAnalysis(project) {
+  const analysis = project?.analysis;
+  if (!analysis || typeof analysis !== 'object') return '';
+  const parts = [];
+  if (analysis.backend) parts.push(`backend ${analysis.backend}`);
+  if (analysis.pipeline_version) parts.push(`pipeline ${analysis.pipeline_version}`);
+  const provenance = analysis.provenance && typeof analysis.provenance === 'object' ? analysis.provenance : {};
+  for (const fact of ['beats', 'onsets']) {
+    const method = provenance[fact]?.method;
+    if (method && method !== 'unknown') parts.push(`${fact}: ${method}`);
+  }
+  const diagnostics = analysis.diagnostics && typeof analysis.diagnostics === 'object' ? analysis.diagnostics : {};
+  if (diagnostics.migrated_from) parts.push(`migrated from ${diagnostics.migrated_from}`);
+  const pregrid = Number(diagnostics.pregrid_beats_merged) || 0;
+  if (pregrid > 0) parts.push(`${pregrid} pregrid beat${pregrid === 1 ? '' : 's'} merged`);
+  if (analysis.separation_used) parts.push('stems separated');
+  const warnings = Array.isArray(analysis.warnings) ? analysis.warnings.length : 0;
+  if (warnings > 0) parts.push(`${warnings} warning${warnings === 1 ? '' : 's'}`);
+  return parts.join(' · ');
+}
+
 function updateProjectUI() {
   const project = state.project;
   if (!project) {
@@ -71,6 +93,9 @@ function updateProjectUI() {
     controls.factBpm.textContent = '—';
     controls.factBars.textContent = '—';
     controls.factDuration.textContent = '—';
+    controls.factBackend.textContent = '—';
+    controls.analysisMeta.hidden = true;
+    controls.analysisMeta.textContent = '';
     setDisabled(true);
     renderAll();
     return;
@@ -90,6 +115,10 @@ function updateProjectUI() {
   controls.factBpm.textContent = bpm ? bpm.toFixed(1) : '—';
   controls.factBars.textContent = String(bars);
   controls.factDuration.textContent = duration ? formatTime(duration).slice(0, 5) : '—';
+  controls.factBackend.textContent = project.analysis?.backend || '—';
+  const analysisSummary = describeAnalysis(project);
+  controls.analysisMeta.textContent = analysisSummary;
+  controls.analysisMeta.hidden = !analysisSummary;
   setDisabled(false);
   controls.prev.disabled = state.startBar <= 0;
   controls.next.disabled = state.startBar + state.viewBars >= bars;
@@ -205,7 +234,7 @@ function mapHit(event) {
   if (column < 0 || column >= columns) return null;
   const absoluteStep = state.startBar * state.subdivision + column;
   const matches = (state.project.onsets || [])
-    .filter((onset) => gridPosition(onset.raw_time, state.project, state.subdivision, state.adjustments).step === absoluteStep)
+    .filter((onset) => gridPosition(onset.time ?? onset.raw_time, state.project, state.subdivision, state.adjustments).step === absoluteStep)
     .sort((a, b) => Number(b.strength) - Number(a.strength));
   const timing = metrics(state.project, state.subdivision, state.adjustments);
   const quantizedTime = timing.origin + absoluteStep * timing.step;
@@ -248,7 +277,7 @@ if (mapOverlay) {
     const hit = mapHit(event);
     if (pointer && !dragging && hit) {
       setSelectedOnset(hit.onset, hit.cell);
-      previewTransient(hit.onset?.raw_time ?? hit.time);
+      previewTransient(hit.onset?.time ?? hit.onset?.raw_time ?? hit.time);
     }
     try { mapOverlay.releasePointerCapture?.(event.pointerId); } catch (_) { /* already released */ }
     pointer = null;

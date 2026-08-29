@@ -168,3 +168,129 @@ def test_migrate_v2_to_v3():
     assert "quantized_time" not in v3["onsets"][0]  # derived fields not stored in v3 raw onsets
     assert v3["energy"]["fps"] == 100
     assert len(v3["energy"]["bands"]["all"]) == 2
+
+
+def test_migrate_v3_to_v4_validates():
+    from beatscope.schema import migrate_v3_to_v4, validate_rhythm_v4
+
+    v4 = migrate_v3_to_v4(sample_v3_dict(), project_id="a1b2c3d4e5f6")
+    errors = validate_rhythm_v4(v4)
+    assert errors == []
+    assert v4["schema_version"] == "4.0"
+    assert v4["project_id"] == "a1b2c3d4e5f6"
+    assert v4["meter"] == {"numerator": 4, "denominator": 4}
+    assert v4["grid"].get("time_signature") is None
+    assert v4["tempo"]["segments"][0]["method"] == "migrated-global-bpm"
+    assert v4["tempo"]["segments"][0]["score"] is None
+    assert v4["analysis"]["backend"] == "legacy"
+    assert v4["analysis"]["diagnostics"]["migrated_from"] == "beat-this+demucs-drums+multiband-novelty"
+    assert v4["analysis"]["diagnostics"]["legacy_tempo_score"] == 0.95
+    assert v4["analysis"]["diagnostics"]["variable_tempo"] is False
+    assert v4["analysis"]["provenance"]["beats"]["method"] == "unknown"
+
+
+def test_migrate_v3_drops_confidence_and_moves_accent():
+    import json
+
+    from beatscope.schema import migrate_v3_to_v4
+
+    v4 = migrate_v3_to_v4(sample_v3_dict(), project_id="a1b2c3d4e5f6")
+    serialized = json.dumps(v4)
+    for forbidden in ("kick", "snare", "hihat", "bass_808", "confidence"):
+        assert f'"{forbidden}"' not in serialized
+    assert v4["beats"][0]["beat_in_bar"] == 1 and v4["beats"][0]["downbeat"] is True
+    assert v4["beats"][0]["index"] == 0
+    assert v4["beats"][1]["beat_in_bar"] == 2 and v4["beats"][1]["downbeat"] is False
+    assert v4["onsets"][0]["time"] == 0.0
+    assert "accent" not in v4["onsets"][0]
+    assert v4["cues"]["accent"] == [{"time": 0.0, "onset": 1}]
+
+
+def test_migrate_v3_merges_pregrid_beats():
+    from beatscope.schema import migrate_v3_to_v4, validate_rhythm_v4
+
+    data = sample_v3_dict()
+    data["beats"].insert(0, {"time": -0.5, "beat": 0, "bar": 0, "downbeat": False, "confidence": 0.9, "sequence_gap": False})
+    v4 = migrate_v3_to_v4(data, project_id="a1b2c3d4e5f6")
+    assert validate_rhythm_v4(v4) == []
+    assert v4["beats"][0]["bar"] == 1 and v4["beats"][0]["beat_in_bar"] == 1
+    assert v4["analysis"]["diagnostics"]["pregrid_beats_merged"] == 1
+
+
+def test_migrate_v3_overview_becomes_patterns():
+    from beatscope.schema import migrate_v3_to_v4
+
+    data = sample_v3_dict()
+    data["overview"] = [{"bar": 1, "label": "A", "group": "A", "mean_strength": 0.5, "similarity_previous": 0.0, "vector": []}]
+    v4 = migrate_v3_to_v4(data, project_id="a1b2c3d4e5f6")
+    assert v4["patterns"]["method"] == "migrated-from-v3-overview"
+    assert v4["patterns"]["bars"][0]["label"] == "A"
+    assert "overview" not in v4
+
+
+def test_normalize_rhythm_passthrough_and_rejection():
+    import pytest
+
+    from beatscope.schema import UnsupportedSchemaVersion, normalize_rhythm, validate_rhythm_v4
+
+    from beatscope.schema import migrate_v3_to_v4
+
+    v4 = migrate_v3_to_v4(sample_v3_dict(), project_id="a1b2c3d4e5f6")
+    assert normalize_rhythm(v4) is v4  # v4 passthrough, no copy
+    assert validate_rhythm_v4(normalize_rhythm(sample_v3_dict())) == []
+    with pytest.raises(UnsupportedSchemaVersion):
+        normalize_rhythm({"schema_version": "9.9"})
+    with pytest.raises(UnsupportedSchemaVersion):
+        normalize_rhythm("not a dict")
+
+
+def test_migrate_v2_chain_reaches_v4():
+    from beatscope.schema import normalize_rhythm, validate_rhythm_v4
+
+    v2_data = {
+        "version": "2.0",
+        "source": {"file": "night_owl.wav", "sample_rate": 44100, "duration": 10.0},
+        "tempo": {"bpm": 130.0},
+        "grid": {"time_signature": "4/4", "origin": 0.5, "subdivision": 16, "bars": 5},
+        "beats": [{"time": 0.5, "beat": 1, "bar": 1, "sequence_gap": False}],
+        "onsets": [{"raw_time": 0.501, "strength": 0.85, "bands": {"all": 0.85, "low": 0.7, "mid": 0.1, "high": 0.05}, "accent": True, "confidence": 0.85}],
+        "energy": {"frames": [{"time": 0.0, "all": 0.0, "low": 0.0, "mid": 0.0, "high": 0.0}]},
+        "overview": [],
+        "analysis": {"method": "beat-this-grid"},
+    }
+    v4 = normalize_rhythm(v2_data, project_id="a1b2c3d4e5f6")
+    assert v4["schema_version"] == "4.0"
+    assert validate_rhythm_v4(v4) == []
+    assert v4["cues"]["accent"][0]["onset"] == 1
+    assert v4["analysis"]["diagnostics"]["migrated_from"] == "beat-this-grid"
+
+
+def test_load_rhythm_project_migrates_without_rewriting(tmp_path):
+    import json as json_mod
+
+    from beatscope.schema import load_rhythm_project
+
+    path = tmp_path / "old.rhythm.json"
+    path.write_text(json_mod.dumps(sample_v3_dict()), encoding="utf-8")
+    before = path.read_text(encoding="utf-8")
+
+    project = load_rhythm_project(path)
+    assert project["schema_version"] == "4.0"
+    assert path.read_text(encoding="utf-8") == before  # read-time migration only
+    # invalid project id in the v3 sample is re-derived, not trusted
+    assert len(project["project_id"]) == 12
+
+
+def test_load_rhythm_project_rejects_invalid_v4(tmp_path):
+    import json as json_mod
+
+    import pytest
+
+    from beatscope.schema import InvalidRhythmProject, load_rhythm_project
+
+    path = tmp_path / "bad.rhythm.json"
+    bad = {"schema_version": "4.0", "tempo": {"confidence": 0.9}}
+    path.write_text(json_mod.dumps(bad), encoding="utf-8")
+    with pytest.raises(InvalidRhythmProject) as excinfo:
+        load_rhythm_project(path)
+    assert excinfo.value.errors

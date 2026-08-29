@@ -17,6 +17,35 @@ def _require_librosa():
     return librosa
 
 
+def estimate_tempo_from_novelty(values: np.ndarray, rate: int, hop: int) -> float:
+    """Estimate BPM from a novelty curve via onset intervals and autocorrelation.
+
+    Pure NumPy so both the legacy and unified pipelines can use it without librosa.
+    """
+    if len(values) < 4 or not np.any(values > 0):
+        return 0.0
+    onset_threshold = max(0.6, float(np.percentile(values, 78)))
+    onset_peaks = detect_transient_peaks(values, min_distance_samples=max(1, int(0.12 * rate / hop)), threshold=onset_threshold)
+    if len(onset_peaks) < 3:
+        return 0.0
+    intervals = np.diff(onset_peaks).astype(float)
+    median_interval = float(np.median(intervals))
+    if median_interval <= 0 or float(np.median(np.abs(intervals - median_interval))) / median_interval > 0.3:
+        return 0.0
+    centered = values - np.mean(values)
+    corr = np.correlate(centered, centered, mode="full")[len(centered) - 1:]
+    lo = max(1, int(60 * rate / (180 * hop)))
+    hi = min(len(corr) - 1, int(60 * rate / (60 * hop)))
+    if hi <= lo:
+        return 0.0
+    bpm = 60 * rate / ((lo + int(np.argmax(corr[lo:hi + 1]))) * hop)
+    while bpm < 80:
+        bpm *= 2
+    while bpm > 160:
+        bpm /= 2
+    return round(float(bpm), 2)
+
+
 def normalize_band_signal(values: np.ndarray) -> np.ndarray:
     """Robust percentile-based normalization with smooth compression.
     

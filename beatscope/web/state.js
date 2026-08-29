@@ -2,6 +2,8 @@
  * BeatScope single state store and event emitter.
  */
 
+import { trackForProject } from '../runtime/runtime.js';
+
 export const state = {
   project: null,
   projectId: null,
@@ -49,6 +51,7 @@ export function setProject(project, projectId = null) {
     origin: project?.grid?.origin ?? null,
   };
   state.subdivision = project?.grid?.default_subdivision || 16;
+  state.runtimeTrack = trackForProject(project);
   notify('projectLoaded', state.project);
 }
 

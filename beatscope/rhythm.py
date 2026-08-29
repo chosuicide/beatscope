@@ -13,7 +13,7 @@ from .audio_io import load_analysis_audio
 from .beatgrid import BeatGridAnalyzer, parse_beat_this, quantize_to_beat_grid
 from .features import compute_multiband_novelty, extract_onsets
 from .structure import analyze_song_structure
-from .schema import SCHEMA_VERSION, ANALYZER_VERSION, validate_rhythm_v3, migrate_v2_to_v3
+from .schema import V3_SCHEMA_VERSION, ANALYZER_VERSION, validate_rhythm_v3, migrate_v2_to_v3
 
 
 def analyze_rhythm(
@@ -66,7 +66,7 @@ def analyze_rhythm(
     warnings = list(audio_warnings) + list(grid_res.warnings)
 
     result: dict[str, Any] = {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": V3_SCHEMA_VERSION,
         "project_id": project_id,
         "source": {
             "display_name": orig_path.name,
@@ -109,7 +109,9 @@ def analyze_rhythm(
 
 
 def save_rhythm(result: dict[str, Any], destination: str | Path) -> None:
-    Path(destination).write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    out = Path(destination)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def write_rhythm_midi(result: dict[str, Any], destination: str | Path) -> None:

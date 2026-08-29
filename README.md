@@ -33,7 +33,7 @@ BeatScope 尝试把这段工作留下来。Python 负责读取音频、建立节
 1. 用户选择 WAV、FLAC、MP3、OGG 或 M4A 文件。
 2. 本地服务生成节拍、瞬态、LOW / MID / HIGH 能量和段落概览。
 3. 页面平滑移动到播放器，粒子球、频段线和频谱随播放位置变化。
-4. Track structure 用整首歌的视角显示能量与段落，并允许跳转。
+4. Rhythm pattern overview（节奏概览）用整首歌的视角显示能量与段落，并允许跳转。
 5. 8-bar cue map 把当前窗口整理成 impact、scale、flow、flash 和 bloom 参考。
 6. Codex 导出包保存分析数据、视觉状态函数、说明与可移植 Skill。
 
@@ -52,7 +52,7 @@ BeatScope 尝试把这段工作留下来。Python 负责读取音频、建立节
 
 ## 页面不只是一颗会动的球
 
-### Track structure：先看完整首歌
+### Rhythm pattern overview：先看完整首歌
 
 ![BeatScope 全曲结构导航](docs/screenshots/beatscope-track-structure.png)
 
@@ -99,6 +99,35 @@ BeatScope 将原始瞬态对齐到 1/16 或 1/32 网格，同时保留真实发�
 
 单击 cue 可以试听附近瞬态；拖动可以定义循环范围。选择与拖动不会让歌曲从头重新播放。
 
+## Rhythm IR：事实、语义与呈现
+
+v0.4 把所有节奏数据整理成三层结构，每层只依赖上一层：
+
+1. **事实层**：音频直接支持的内容 —— 节拍时间、瞬态（含频段能量与强度）、多频段能量帧。这一层不做任何猜测。
+2. **语义层**：从事实推导的内容 —— 全曲 BPM 与变速段、小节网格、量化位置、段落概览、accent cue。每个字段都能追溯到来源（<code>analysis.provenance</code>）与计算过程（<code>analysis.diagnostics</code>）。
+3. **呈现层**：把语义映射成视觉预算 —— pulse、turbulence、burst、hero 分层由 <code>runtime/visual-profile.js</code> 统一分配，播放器只是它的一个消费者。
+
+项目数据使用 schema v4（<code>schema_version: "4.0"</code>）写入并通过 validator 校验；v3 项目读取时自动迁移。核心输出不包含 kick、snare、hihat 或 808 等乐器身份，也不把强度伪装成 confidence —— 页面显示的是 backend、pipeline 版本和可解释的诊断信息（来源方法、迁移记录、pregrid 合并数量、警告条数）。
+
+共享 JavaScript 运行时 <code>beatscope/runtime/runtime.js</code> 是纯 ESM，不依赖 DOM、Audio、Canvas 或系统时钟；<code>track.at(time)</code> 对相同输入始终返回相同结果，变速段落的小节/拍相位由相邻真实节拍与小节下拍推导，而不是假设全局 BPM。网页播放器、页面诊断与 Codex 导出都构建在它之上。
+
+## 实测精度
+
+以下数字由基准测试自动生成（<code>beatscope benchmark</code>，合成音频 + 人工标注真值，拍匹配容差 70 ms、瞬态容差 50 ms），与 <code>build/benchmark/benchmark-results.md</code> 保持一致；硬门槛未通过时命令会以非零码退出：
+
+| 场景 | BPM 误差 | 拍 MAE | 拍 F1 | 瞬态 F1 |
+| --- | ---: | ---: | ---: | ---: |
+| fixed-120 | 0.19 BPM | 3.17 ms | 0.97 | 1.00 |
+| fixed-90 | 0.12 BPM | 10.70 ms | 1.00 | 1.00 |
+| dense-128 | 0.40 BPM | 18.29 ms | 1.00 | 1.00 |
+| sparse-100 | 0.35 BPM | 9.39 ms | 1.00 | 1.00 |
+| tempo-change | — | 35.20 ms | 0.16 | 1.00 |
+| offgrid | 0.19 BPM | 17.29 ms | 1.00 | 1.00 |
+| bass-heavy | 0.19 BPM | 3.17 ms | 0.97 | 0.27 |
+| silence | — | — | 0.00 | — |
+
+硬门槛（阻断提交）：schema 必须有效、固定 BPM 场景误差 ≤ 5 BPM、拍 F1 ≥ 0.5、静音误报 ≤ 20 个、拍 F1 相对基线回归 ≤ 0.15 —— 当前 8 个场景全部通过（0 gates failed）。变速场景的拍 F1 与 bass-heavy 的瞬态 F1 按计划仅作报告参考（不设门槛）：变速用单段全局 BPM 衡量本来就失真，低频主导混音中的高频瞬态召回受合成素材限制；两者的分段 BPM 误差（19.67 / 0.33 BPM）与量化偏移（33.12 ms / 2.97 ms）在报告中有更合理的度量。
+
 ## 给 Codex 的导出包
 
 ~~~text
@@ -107,22 +136,27 @@ beatscope-codex.zip
 ├── references/schema.md
 ├── rhythm-map.json
 ├── visual-state.js
+├── beatscope-runtime.js
 ├── BEATSCOPE.md
 └── README.md
 ~~~
 
-<code>visual-state.js</code> 根据时间返回确定性的视觉状态。Agent 可以直接读取 cue、频段与段落，不必再次分析音频；暂停、拖动和跳转后仍然由同一个播放时间恢复画面。
+<code>visual-state.js</code> 只做一件事：<code>getVisualState(time)</code> 就是共享运行时的 <code>track.at(time)</code>。网页播放器和导出包使用同一份 <code>beatscope-runtime.js</code>，因此浏览器里看到的状态和 Agent 拿到的状态来自同一个实现。Agent 可以直接读取节拍相位、频段能量、瞬态脉冲与段落，不必再次分析音频；暂停、拖动和跳转后仍然由同一个播放时间恢复画面。
 
 MIDI、CSV、PNG 和原始 JSON 仍然保留在 **Advanced tools** 中。MIDI 只是量化时间参考，不是重建出来的鼓组演奏。
 
 ## 当前实现
 
 - 本地音频读取、格式检查与 FFmpeg 安全回退
-- 节拍网格、瞬态、多频段能量和全曲结构分析
+- 单一分析管线：节拍网格、瞬态、多频段能量和全曲结构分析
+- schema v4 校验、v3 项目迁移与来源/诊断元数据
+- 共享 JavaScript 运行时：网页与导出使用同一份时间查询实现
 - Canvas 2D 粒子球、频段曲线、光晕与频谱面板
 - 根据歌曲分布和节奏密度分配动画层级
 - 播放、暂停、音量、跳转和 8 小节循环
 - 全曲结构导航与 1/16、1/32 cue map
+- 页面显示分析 backend 与可解释诊断，不显示虚假 confidence
+- 带 accuracy gates 的 benchmark，自动生成精度报告
 - Codex ZIP、Skill、JSON、CSV、PNG 和参考 MIDI 导出
 - 请求级临时文件、250 MB 上传限制和本地项目缓存
 - Python、纯 JavaScript 与 GitHub Actions 回归测试
@@ -147,8 +181,14 @@ beatscope/
 ├── rhythm.py               # 事实型节奏项目
 ├── beatgrid.py             # 节拍、量化与偏移
 ├── structure.py            # 全曲段落与模式概览
+├── pipeline.py             # 单一分析管线，组装 schema v4 项目
+├── schema.py               # v4 validator 与 v3 迁移
+├── benchmark.py            # 合成真值基准与 accuracy gates
 ├── exports.py              # Codex、CSV、PNG 与 MIDI 导出
 ├── server.py               # 本地上传、项目与媒体服务
+├── runtime/                # 共享 JavaScript 运行时（网页与导出同源）
+│   ├── runtime.js          #   track.at / quantize 等时间查询
+│   └── visual-profile.js   #   pulse/turbulence/burst/hero 视觉预算
 ├── agent_skill/            # 打入 ZIP 的可移植 Skill
 └── web/
     ├── renderer.js         # 粒子播放器、结构与 cue map
@@ -179,6 +219,7 @@ beatscope serve
 beatscope serve
 beatscope rhythm song.wav --drums drums.wav --beat-this song.beats --output rhythm.json
 beatscope separate song.wav --output-dir .beatscope-cache\song\stems --model htdemucs --device cuda
+beatscope benchmark
 beatscope doctor
 ~~~
 
@@ -199,11 +240,12 @@ beatscope serve --project rhythm.json
 
 ~~~powershell
 pytest -q
-node tests\test_grid.js
-node tests\test_interaction.js
+node --test tests\test_grid.js tests\test_interaction.js
+node --test tests\test_runtime.js tests\test_visual_profile.js tests\test_playback_characterization.js
+beatscope benchmark
 ~~~
 
-GitHub Actions 会在 Windows 与 Ubuntu、Python 3.10 与 3.12 上运行相同的核心检查。
+JavaScript 侧：网格与交互测试覆盖页面行为；runtime 与 visual profile 测试覆盖共享运行时契约和纯度约束；characterization 测试比较网页播放器与 Codex 导出两条路径在同一时间点的输出一致性。GitHub Actions 会在 Windows 与 Ubuntu、Python 3.10 与 3.12 上运行相同的核心检查。
 
 ## 已知限制
 
