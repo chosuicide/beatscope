@@ -51,7 +51,7 @@ class LightweightBackend:
     ) -> AnalysisEvidence:
         check_cancelled(cancelled)
         progress("decode", 0.10, "读取音频...")
-        y, sr, duration, warnings = load_analysis_audio(audio_path, target_sr=config.sample_rate)
+        y, sr, duration, channels, warnings = load_analysis_audio(audio_path, target_sr=config.sample_rate)
 
         check_cancelled(cancelled)
         progress("beatgrid", 0.60, "计算拍点与网格...")
@@ -99,7 +99,7 @@ class LightweightBackend:
         return AnalysisEvidence(
             duration=round(float(duration), 4),
             sample_rate=sr,
-            channels=2,
+            channels=channels,
             tempo_bpm=float(bpm),
             grid_origin=round(origin, 4),
             bars=bars,

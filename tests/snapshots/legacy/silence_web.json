@@ -5,7 +5,7 @@
     "display_name": "silence.wav",
     "duration": 4.0,
     "sample_rate": 44100,
-    "channels": 2,
+    "channels": 1,
     "sha256": "f863d98220a9f1aa76e43170f4948f0888b2028fcf6b0aae497fde768efca380"
   },
   "analysis": {

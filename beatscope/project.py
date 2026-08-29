@@ -58,19 +58,64 @@ class ProjectManager:
         p_dir.mkdir(parents=True, exist_ok=True)
         return p_dir
 
+    @staticmethod
+    def _variant_dir(project_dir: Path, cache_key: str) -> Path:
+        """Return a traversal-safe directory for one analysis configuration."""
+        variant_id = hashlib.sha256(cache_key.encode("utf-8")).hexdigest()
+        return project_dir / "variants" / variant_id
+
+    @staticmethod
+    def _write_json(path: Path, value: Any) -> None:
+        path.write_text(json.dumps(value, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    def _activate_variant(
+        self,
+        project_dir: Path,
+        rhythm_data: dict[str, Any],
+        config_data: dict[str, Any],
+    ) -> None:
+        """Expose a cached variant through the stable project API paths."""
+        self._write_json(project_dir / "rhythm.json", rhythm_data)
+        self._write_json(project_dir / "analysis-config.json", config_data)
+        meta_file = project_dir / "project.json"
+        if meta_file.is_file():
+            try:
+                meta = json.loads(meta_file.read_text(encoding="utf-8"))
+                meta["cache_key"] = config_data.get("cache_key")
+                meta["created_at"] = rhythm_data.get("analysis", {}).get("created_at")
+                self._write_json(meta_file, meta)
+            except (OSError, ValueError, TypeError):
+                pass
+
     def find_cached_rhythm(self, sha256: str, cache_key: str) -> dict[str, Any] | None:
-        """Find cached rhythm.json for this content hash whose config cache_key matches."""
+        """Find and activate the cached variant for an audio/config pair.
+
+        The root project files remain the stable web/API location.  Variant
+        files allow multiple backends and analysis settings for the same audio
+        hash to coexist; a cache hit promotes the requested variant to root.
+        """
         p_dir = self.projects_dir / sha256[:12]
-        rhythm_file = p_dir / "rhythm.json"
-        config_file = p_dir / "analysis-config.json"
-        if rhythm_file.is_file() and config_file.is_file():
+        variant_dir = self._variant_dir(p_dir, cache_key)
+        candidates = [
+            (variant_dir / "rhythm.json", variant_dir / "analysis-config.json", True),
+            (p_dir / "rhythm.json", p_dir / "analysis-config.json", False),
+        ]
+        for rhythm_file, config_file, is_variant in candidates:
+            if not rhythm_file.is_file() or not config_file.is_file():
+                continue
             try:
                 cfg = json.loads(config_file.read_text(encoding="utf-8"))
                 if cfg.get("cache_key") == cache_key:
                     rhythm_data = json.loads(rhythm_file.read_text(encoding="utf-8"))
                     if not validate_rhythm_v4(rhythm_data):
+                        if is_variant:
+                            self._activate_variant(p_dir, rhythm_data, cfg)
+                        else:
+                            variant_dir.mkdir(parents=True, exist_ok=True)
+                            self._write_json(variant_dir / "rhythm.json", rhythm_data)
+                            self._write_json(variant_dir / "analysis-config.json", cfg)
                         return rhythm_data
-            except Exception:
+            except (OSError, ValueError, TypeError):
                 pass
         return None
 
@@ -82,7 +127,11 @@ class ProjectManager:
         config: dict[str, Any],
         cache_key: str,
     ) -> Path:
-        """Save project metadata, config, rhythm JSON, and subdirectories."""
+        """Validate and save the active project plus its config-specific variant."""
+        errors = validate_rhythm_v4(rhythm_data)
+        if errors:
+            raise ValueError("Cannot save invalid Rhythm Project v4: " + "; ".join(errors))
+
         p_dir = self.get_project_dir(project_id)
         (p_dir / "stems").mkdir(exist_ok=True)
         (p_dir / "exports").mkdir(exist_ok=True)
@@ -96,14 +145,21 @@ class ProjectManager:
             "created_at": rhythm_data.get("analysis", {}).get("created_at"),
             "cache_key": cache_key,
         }
-        (p_dir / "project.json").write_text(json.dumps(project_meta, indent=2, ensure_ascii=False), encoding="utf-8")
+        self._write_json(p_dir / "project.json", project_meta)
 
         # 2. analysis-config.json
         cfg_with_key = {**config, "cache_key": cache_key}
-        (p_dir / "analysis-config.json").write_text(json.dumps(cfg_with_key, indent=2, ensure_ascii=False), encoding="utf-8")
+        self._write_json(p_dir / "analysis-config.json", cfg_with_key)
 
         # 3. rhythm.json
-        (p_dir / "rhythm.json").write_text(json.dumps(rhythm_data, indent=2, ensure_ascii=False), encoding="utf-8")
+        self._write_json(p_dir / "rhythm.json", rhythm_data)
+
+        # Keep every analysis configuration for this audio hash.  The root
+        # files above are the currently active variant used by the web API.
+        variant_dir = self._variant_dir(p_dir, cache_key)
+        variant_dir.mkdir(parents=True, exist_ok=True)
+        self._write_json(variant_dir / "analysis-config.json", cfg_with_key)
+        self._write_json(variant_dir / "rhythm.json", rhythm_data)
 
         # 4. adjustments.json (initialize if not present)
         adj_file = p_dir / "adjustments.json"

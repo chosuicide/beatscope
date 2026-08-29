@@ -32,12 +32,53 @@ def to_mono_float32(data: np.ndarray) -> np.ndarray:
     return np.nan_to_num(arr)
 
 
+def probe_audio_channels(path: str | Path) -> int:
+    """Best-effort source channel count without decoding the complete file."""
+    p = Path(path)
+    if sf is not None:
+        try:
+            return max(1, int(sf.info(str(p)).channels))
+        except Exception:
+            pass
+    try:
+        with wave.open(str(p), "rb") as handle:
+            return max(1, int(handle.getnchannels()))
+    except Exception:
+        pass
+    ffprobe = shutil.which("ffprobe")
+    if ffprobe:
+        try:
+            probe = subprocess.run(
+                [
+                    ffprobe,
+                    "-v", "error",
+                    "-select_streams", "a:0",
+                    "-show_entries", "stream=channels",
+                    "-of", "default=noprint_wrappers=1:nokey=1",
+                    str(p),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if probe.returncode == 0 and probe.stdout.strip().isdigit():
+                return max(1, int(probe.stdout.strip()))
+        except (OSError, subprocess.SubprocessError):
+            pass
+    return 1
+
+
 def load_analysis_audio(
     path: str | Path,
     target_sr: int = 44100,
     max_bytes: int = MAX_AUDIO_BYTES,
-) -> tuple[np.ndarray, int, float, list[str]]:
-    """Decode audio to mono float32 at target_sr. Returns (y, sr, duration, warnings)."""
+) -> tuple[np.ndarray, int, float, int, list[str]]:
+    """Decode audio to mono float32 while preserving the source channel count.
+
+    Returns ``(y, sr, duration, channels, warnings)``.  ``y`` is always mono,
+    while ``channels`` describes the uploaded source before downmixing.
+    """
     p = Path(path)
     if not p.is_file():
         raise FileNotFoundError(f"Audio file not found: {path}")
@@ -46,16 +87,18 @@ def load_analysis_audio(
     if file_size > max_bytes:
         raise ValueError(f"Audio file exceeds size limit ({file_size} > {max_bytes} bytes)")
     if file_size == 0:
-        return np.zeros(0, dtype=np.float32), target_sr, 0.0, ["Audio file is empty"]
+        return np.zeros(0, dtype=np.float32), target_sr, 0.0, 1, ["Audio file is empty"]
 
     warnings: list[str] = []
     data: np.ndarray | None = None
     rate: int = target_sr
+    source_channels = probe_audio_channels(p)
 
     # Method 1: soundfile
     if sf is not None:
         try:
             raw_data, rate = sf.read(str(p), always_2d=False, dtype="float32")
+            source_channels = int(raw_data.shape[1]) if raw_data.ndim == 2 else 1
             data = to_mono_float32(raw_data)
         except Exception:
             data = None
@@ -66,6 +109,7 @@ def load_analysis_audio(
             with wave.open(str(p), "rb") as handle:
                 rate = handle.getframerate()
                 channels = handle.getnchannels()
+                source_channels = channels
                 width = handle.getsampwidth()
                 raw_bytes = handle.readframes(handle.getnframes())
             if width == 2:
@@ -127,4 +171,4 @@ def load_analysis_audio(
             warnings.append(f"Audio sample rate is {rate} Hz (target {target_sr} Hz, librosa not installed for resampling)")
 
     duration = round(float(len(data) / rate), 4) if rate > 0 else 0.0
-    return data.astype(np.float32), rate, duration, warnings
+    return data.astype(np.float32), rate, duration, source_channels, warnings

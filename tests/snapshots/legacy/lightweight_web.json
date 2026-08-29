@@ -5,7 +5,7 @@
     "display_name": "fixed-120.wav",
     "duration": 8.0,
     "sample_rate": 44100,
-    "channels": 2,
+    "channels": 1,
     "sha256": "d6abba7436d90b40d12780f99d013aef001c0b50cdd9481b485bc2fb07d97d06"
   },
   "analysis": {

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 import numpy as np
 
-from .audio_io import load_analysis_audio
+from .audio_io import load_analysis_audio, probe_audio_channels
 from .beatgrid import BeatGridAnalyzer, parse_beat_this, quantize_to_beat_grid
 from .features import compute_multiband_novelty, extract_onsets
 from .structure import analyze_song_structure
@@ -31,7 +31,8 @@ def analyze_rhythm(
     beat_this_path = Path(beat_this)
 
     # 1. Load audio for analysis
-    y, sr, duration, audio_warnings = load_analysis_audio(drums_path, target_sr=44100)
+    y, sr, duration, _analysis_channels, audio_warnings = load_analysis_audio(drums_path, target_sr=44100)
+    source_channels = probe_audio_channels(orig_path)
 
     # 2. Beat grid analysis
     grid_analyzer = BeatGridAnalyzer()
@@ -72,7 +73,7 @@ def analyze_rhythm(
             "display_name": orig_path.name,
             "duration": round(duration, 4),
             "sample_rate": sr,
-            "channels": 2,
+            "channels": source_channels,
             "sha256": sha256_hash,
         },
         "analysis": {

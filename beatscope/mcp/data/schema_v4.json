@@ -1,0 +1,47 @@
+{
+  "schema_version": "4.0",
+  "name": "BeatScope Rhythm Project",
+  "description": "Deterministic rhythm intermediate representation. Facts (beats, onsets, energy) are separated from derived semantics (tempo, grid, patterns, cues). Instrument identity (kick, snare, hihat, 808) is intentionally absent, and signal strength is never renamed to confidence.",
+  "top_level_fields": {
+    "schema_version": "const '4.0'",
+    "project_id": "12-char hex (first 12 of source sha256)",
+    "source": {
+      "display_name": "string",
+      "duration": "seconds",
+      "sample_rate": "Hz",
+      "channels": "int",
+      "sha256": "content hash of the analysed audio"
+    },
+    "analysis": {
+      "backend": "lightweight | beat-this | demucs | legacy",
+      "pipeline_version": "analyzer version string",
+      "created_at": "UTC ISO timestamp",
+      "warnings": "list of strings",
+      "separation_used": "bool",
+      "parameters": "subdivision, sample_rate, hop_length, n_fft",
+      "provenance": "per-fact method declaration; beats and onsets must declare a 'method'",
+      "diagnostics": "interpretable extras: pregrid_beats_merged, migrated_from, legacy_tempo_score, variable_tempo"
+    },
+    "tempo": {
+      "global_bpm": "number",
+      "segments": "list of {start, end, bpm, method, score} - score may be null"
+    },
+    "meter": { "numerator": "int (4 in v0.4)", "denominator": "int (4 in v0.4)" },
+    "grid": { "origin": "seconds", "default_subdivision": "16 | 32", "bars": "int" },
+    "beats": "ordered list of {time, index, bar (1-based), beat_in_bar (1-based), downbeat}",
+    "onsets": "ordered list of {id, time, strength, bands: {all, low, mid, high}, accent?} - strength is signal strength, not confidence",
+    "energy": {
+      "fps": "sample rate of the frames",
+      "start": "seconds",
+      "bands": "{all|low|mid|high: list of 0..1} - omitted from MCP timing/summary responses"
+    },
+    "patterns": {
+      "method": "e.g. bar-rhythm-cosine-v1",
+      "bars": "list of {bar, label, group, mean_strength, similarity_previous, vector}"
+    },
+    "cues": "dict of accent|impact|scale|flow|flash|bloom -> list of {time, onset?}",
+    "exports": "reserved"
+  },
+  "forbidden_keys": ["kick", "snare", "hihat", "bass_808", "confidence"],
+  "validation": "beatscope.schema.validate_rhythm_v4 returns a list of error strings; an empty list means valid"
+}

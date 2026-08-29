@@ -1,0 +1,26 @@
+{
+  "data": {
+    "backend": "lightweight",
+    "bars": 2,
+    "beats": 8,
+    "bpm": 120.0,
+    "cues": 1,
+    "display_name": "characterization.wav",
+    "duration": 8.0,
+    "onsets": 8,
+    "pipeline_version": "0.4.0",
+    "project_id": "0a1b2c3d4e5f",
+    "provenance": {
+      "beats": "test",
+      "onsets": "test"
+    },
+    "warnings": []
+  },
+  "detail": "summary",
+  "note": null,
+  "ok": true,
+  "project_id": "0a1b2c3d4e5f",
+  "resource": null,
+  "summary": "120 BPM · 2 bars · 8.00 s · backend lightweight",
+  "truncated": false
+}

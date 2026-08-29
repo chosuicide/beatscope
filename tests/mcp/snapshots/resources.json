@@ -1,0 +1,24 @@
+{
+  "static": [
+    {
+      "description": "BeatScope Rhythm Project schema v4, machine-readable field reference.",
+      "mimeType": "application/json",
+      "name": "beatscope_schema_v4",
+      "uri": "beatscope://schema/v4"
+    }
+  ],
+  "templates": [
+    {
+      "description": "Project summary without energy arrays or private paths.",
+      "mimeType": "application/json",
+      "name": "beatscope_project_manifest",
+      "uriTemplate": "beatscope://projects/{project_id}/manifest"
+    },
+    {
+      "description": "Complete schema v4 rhythm project JSON.",
+      "mimeType": "application/json",
+      "name": "beatscope_project_rhythm",
+      "uriTemplate": "beatscope://projects/{project_id}/rhythm"
+    }
+  ]
+}

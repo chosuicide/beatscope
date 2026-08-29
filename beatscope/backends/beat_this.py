@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ..audio_io import load_analysis_audio
+from ..audio_io import load_analysis_audio, probe_audio_channels
 from ..backends.base import AnalysisEvidence, CancelCallback, ProgressCallback, check_cancelled
 from ..backends.lightweight import compress_energy
 from ..beatgrid import estimate_bpm, parse_beat_this
@@ -36,9 +36,10 @@ class BeatThisBackend:
     ) -> AnalysisEvidence:
         check_cancelled(cancelled)
         progress("decode", 0.10, "读取鼓组音轨...")
-        y, sr, duration, warnings = load_analysis_audio(
+        y, sr, duration, _analysis_channels, warnings = load_analysis_audio(
             self.drums_path or audio_path, target_sr=config.sample_rate,
         )
+        source_channels = probe_audio_channels(audio_path)
 
         check_cancelled(cancelled)
         progress("beatgrid", 0.60, "解析 Beat This 拍点...")
@@ -63,7 +64,7 @@ class BeatThisBackend:
         return AnalysisEvidence(
             duration=round(float(duration), 4),
             sample_rate=sr,
-            channels=2,
+            channels=source_channels,
             tempo_bpm=float(bpm),
             grid_origin=round(float(origin), 4),
             bars=bars,
@@ -77,7 +78,7 @@ class BeatThisBackend:
                 "sequence_gaps": gap_count,
                 "onset_count": len(onsets),
                 "variable_tempo": bool(variable_tempo),
-                "separated": True,
+                "separated": self.drums_path is not None,
             },
             provenance={
                 "beats": {"method": "beat-this-markers", "backend": self.name},

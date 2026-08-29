@@ -34,6 +34,7 @@ def test_lightweight_backend_produces_evidence(fixed_120_audio):
     assert all(beat["time"] < evidence.duration for beat in evidence.beats)
     assert evidence.provenance["beats"]["method"] == "uniform-grid-from-global-bpm"
     assert evidence.tempo_score is None
+    assert evidence.channels == 1
 
 
 def test_beat_this_backend_uses_real_markers(fixed_120_audio, beat_file, synth_audio):
@@ -44,6 +45,7 @@ def test_beat_this_backend_uses_real_markers(fixed_120_audio, beat_file, synth_a
     assert evidence.tempo_bpm == 120.0
     assert evidence.tempo_score is not None and evidence.tempo_score > 0.9
     assert evidence.provenance["beats"]["method"] == "beat-this-markers"
+    assert evidence.diagnostics["separated"] is True
 
 
 def test_analyze_track_lightweight_validates(fixed_120_audio):
@@ -77,7 +79,8 @@ def test_analyze_track_beat_this_route(fixed_120_audio, beat_file):
     assert validate_rhythm_v4(project) == []
     assert len(project["beats"]) == 16
     assert project["tempo"]["global_bpm"] == 120.0
-    assert project["analysis"]["separation_used"] is True
+    assert project["analysis"]["separation_used"] is False
+    assert project["source"]["channels"] == 1
     assert project["analysis"]["provenance"]["beats"]["method"] == "beat-this-markers"
     assert project["beats"][0]["beat_in_bar"] == 1 and project["beats"][0]["downbeat"] is True
 
