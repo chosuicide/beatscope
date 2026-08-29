@@ -16,3 +16,8 @@ videos/
 *.log
 .DS_Store
 Thumbs.db
+
+# Local product and implementation notes (not part of the public package)
+/BEATSCOPE_MCP_IMPLEMENTATION_PLAN.md
+/RHYTHM_IR_IMPLEMENTATION_PLAN.md
+/BUILD_SPEC.md

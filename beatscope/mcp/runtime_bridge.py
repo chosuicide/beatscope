@@ -57,6 +57,8 @@ class RuntimeBridge:
         self._stderr_task: asyncio.Task | None = None
         self._pending: dict[int, asyncio.Future] = {}
         self._next_id = 1
+        self._start_lock = asyncio.Lock()
+        self._write_lock = asyncio.Lock()
 
     @property
     def running(self) -> bool:
@@ -68,24 +70,27 @@ class RuntimeBridge:
     async def _ensure_started(self) -> None:
         if self.running:
             return
-        self._fail_pending(RuntimeUnavailable("BeatScope runtime worker exited."))
-        try:
-            self._process = await asyncio.create_subprocess_exec(
-                self.node_command,
-                str(self.worker_path),
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-        except (OSError, ValueError) as exc:
-            self._process = None
-            raise RuntimeUnavailable(
-                f"Cannot start the BeatScope runtime worker ({self.node_command} "
-                f"{self.worker_path.name}): {exc}. Install Node.js or point "
-                "BEATSCOPE_MCP_NODE at the node binary."
-            ) from None
-        self._reader_task = asyncio.create_task(self._read_loop())
-        self._stderr_task = asyncio.create_task(self._drain_stderr())
+        async with self._start_lock:
+            if self.running:
+                return
+            self._fail_pending(RuntimeUnavailable("BeatScope runtime worker exited."))
+            try:
+                self._process = await asyncio.create_subprocess_exec(
+                    self.node_command,
+                    str(self.worker_path),
+                    stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+            except (OSError, ValueError) as exc:
+                self._process = None
+                raise RuntimeUnavailable(
+                    f"Cannot start the BeatScope runtime worker ({self.node_command} "
+                    f"{self.worker_path.name}): {exc}. Install Node.js or point "
+                    "BEATSCOPE_MCP_NODE at the node binary."
+                ) from None
+            self._reader_task = asyncio.create_task(self._read_loop())
+            self._stderr_task = asyncio.create_task(self._drain_stderr())
 
     async def _read_loop(self) -> None:
         process = self._process
@@ -150,9 +155,12 @@ class RuntimeBridge:
         self._pending[request_id] = future
         payload = json.dumps({"id": request_id, "op": op, **params}, allow_nan=False) + "\n"
         try:
-            process.stdin.write(payload.encode("utf-8"))
-            await process.stdin.drain()
-        except (OSError, RuntimeError, ConnectionError) as exc:
+            async with self._write_lock:
+                process.stdin.write(payload.encode("utf-8"))
+                await process.stdin.drain()
+        except (OSError, RuntimeError, ConnectionError, AttributeError) as exc:
+            # AttributeError: a proactor transport torn down mid-write exposes
+            # the same "worker is gone" condition with a different type.
             self._pending.pop(request_id, None)
             raise _WorkerBroken(
                 f"BeatScope runtime worker rejected '{op}': {exc}"

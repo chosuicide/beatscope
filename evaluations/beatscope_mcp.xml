@@ -1,0 +1,43 @@
+<?xml version="1.0" ?>
+<evaluation>
+  <qa_pair id="visual-position-at-2.5s">
+    <question>For project d6abba7436d9, use beatscope_get_visual_state at time 2.5 seconds: which bar and beat is that?</question>
+    <answer>bar 2, beat 1</answer>
+  </qa_pair>
+  <qa_pair id="onset-count-compare-0-10s">
+    <question>Count the onsets in the interval (0, 10] seconds for project 2d9b2f03501c and project 530d88524448 with beatscope_get_events. Which project id has more onsets there?</question>
+    <answer>530d88524448 (21 vs 16)</answer>
+  </qa_pair>
+  <qa_pair id="accent-nearest-3s">
+    <question>In project d6abba7436d9, which accent cue time is closest to 3.0 seconds?</question>
+    <answer>2.9954 s</answer>
+  </qa_pair>
+  <qa_pair id="strongest-low-onset-1-3s">
+    <question>Among the onsets in (1.0, 3.0] seconds of project d6abba7436d9 (beatscope_get_events), which onset has the highest low-band energy? Break ties by the earliest time and answer with that onset's time.</question>
+    <answer>1.4919 s</answer>
+  </qa_pair>
+  <qa_pair id="grid-affinity-offgrid-onset">
+    <question>In project 2d9b2f03501c, take the onset closest to 2.5 seconds and quantize it against both the 1/16 and the 1/32 grid. Which subdivision does it sit closer to? Answer '1/16' or '1/32'.</question>
+    <answer>1/32</answer>
+  </qa_pair>
+  <qa_pair id="pattern-group-first-bar">
+    <question>In project 530d88524448, in which bar does the last distinct pattern group (patterns.bars[].group) appear for the first time?</question>
+    <answer>bar 6</answer>
+  </qa_pair>
+  <qa_pair id="global-bpm-compare">
+    <question>Which global BPM does project d6abba7436d9 report, and which does project 530d88524448 report, in that order?</question>
+    <answer>120.19 BPM and 139.67 BPM</answer>
+  </qa_pair>
+  <qa_pair id="only-downbeat-0-2s">
+    <question>What is the only downbeat time in the interval (0.0, 2.0] seconds of project d6abba7436d9?</question>
+    <answer>0.0058 s</answer>
+  </qa_pair>
+  <qa_pair id="dominant-band-at-4s">
+    <question>At time 4.0 seconds in project 530d88524448, which frequency band has the highest energy: low, mid, or high?</question>
+    <answer>mid</answer>
+  </qa_pair>
+  <qa_pair id="beat-provenance-method">
+    <question>According to its provenance, which analysis method produced the beats of project 2d9b2f03501c?</question>
+    <answer>uniform-grid-from-global-bpm</answer>
+  </qa_pair>
+</evaluation>

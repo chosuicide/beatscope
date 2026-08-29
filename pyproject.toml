@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "beatscope"
-version = "0.4.0"
+version = "0.5.0"
 description = "Local, editable rhythm maps from audio"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -18,11 +18,11 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
 ]
-dependencies = ["numpy>=1.24", "soundfile>=0.12"]
+dependencies = ["numpy>=1.24", "soundfile>=0.12", "librosa>=0.10"]
 
 [project.optional-dependencies]
 dev = ["pytest>=7", "mcp>=2,<3", "anyio>=4"]
-high-quality = ["librosa>=1.0", "demucs>=4.1"]
+high-quality = ["demucs>=4.1"]
 mcp = ["mcp>=2,<3"]
 
 [project.scripts]

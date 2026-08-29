@@ -122,6 +122,47 @@ async def test_beat_this_with_beat_file(mcp_env, fixed_120_audio, beat_file):
         assert result["counts"]["beats"] > 0
 
 
+async def test_changed_beat_file_does_not_reuse_stale_cache(
+    mcp_env, fixed_120_audio, beat_file
+):
+    alternate = mcp_env.tmp_path / "alternate.beats"
+    lines = beat_file.read_text(encoding="utf-8").splitlines()
+    timestamp, beat_number = lines[1].split(maxsplit=1)
+    lines[1] = f"{float(timestamp) + 0.01:.6f} {beat_number}"
+    alternate.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    settings = mcp_env.settings(
+        allowed_roots=_audio_roots(mcp_env, fixed_120_audio, beat_file, alternate)
+    )
+    async with Client(create_server_for_settings(settings), raise_exceptions=True) as client:
+        first = await _analyze(
+            client,
+            audio_path=str(fixed_120_audio),
+            backend="beat-this",
+            beat_file=str(beat_file),
+        )
+        repeated = await _analyze(
+            client,
+            audio_path=str(fixed_120_audio),
+            backend="beat-this",
+            beat_file=str(beat_file),
+        )
+        changed = await _analyze(
+            client,
+            audio_path=str(fixed_120_audio),
+            backend="beat-this",
+            beat_file=str(alternate),
+        )
+
+    assert first["cache_hit"] is False
+    assert repeated["cache_hit"] is True
+    assert changed["cache_hit"] is False
+
+
+def test_drums_path_requires_beat_this_backend():
+    with pytest.raises(ValueError, match="drums_path is only valid"):
+        AnalyzeAudioInput(audio_path="song.wav", drums_path="drums.wav")
+
+
 async def test_path_outside_allowed_roots_is_rejected(mcp_env, fixed_120_audio):
     # Deliberately do NOT include the fixture directory in the roots.
     settings = mcp_env.settings(allowed_roots=(mcp_env.tmp_path,))

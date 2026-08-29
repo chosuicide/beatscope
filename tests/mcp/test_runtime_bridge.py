@@ -43,6 +43,16 @@ async def test_ping_roundtrip(bridge):
     assert result["node"].startswith("v")
 
 
+async def test_concurrent_first_calls_share_one_worker():
+    bridge = RuntimeBridge()
+    try:
+        results = await asyncio.gather(*(bridge.call("ping") for _ in range(8)))
+        assert all(result["pong"] is True for result in results)
+        assert bridge.running is True
+    finally:
+        await bridge.close()
+
+
 async def test_at_returns_runtime_state(bridge, tmp_path):
     path = tmp_path / "rhythm.json"
     path.write_text(FIXTURE_RHYTHM.read_text(encoding="utf-8"), encoding="utf-8")

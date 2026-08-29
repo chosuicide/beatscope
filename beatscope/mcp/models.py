@@ -35,6 +35,8 @@ class AnalyzeAudioInput(StrictModel):
             )
         if self.backend != "beat-this" and self.beat_file:
             raise ValueError("beat_file is only valid with backend 'beat-this'.")
+        if self.backend != "beat-this" and self.drums_path:
+            raise ValueError("drums_path is only valid with backend 'beat-this'.")
         return self
 
 

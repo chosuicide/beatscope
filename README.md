@@ -186,6 +186,8 @@ beatscope/
 ├── benchmark.py            # 合成真值基准与 accuracy gates
 ├── exports.py              # Codex、CSV、PNG 与 MIDI 导出
 ├── server.py               # 本地上传、项目与媒体服务
+├── mcp/                    # MCP 服务器（service、PathPolicy、runtime bridge）
+│   └── runtime_worker.mjs  #   Node worker：共享运行时的时间查询
 ├── runtime/                # 共享 JavaScript 运行时（网页与导出同源）
 │   ├── runtime.js          #   track.at / quantize 等时间查询
 │   └── visual-profile.js   #   pulse/turbulence/burst/hero 视觉预算
@@ -197,7 +199,8 @@ beatscope/
     └── index.html
 skills/beatscope-visualizer/ # 仓库内 Skill
 tests/                       # Python 与 JavaScript 回归测试
-docs/                        # README 截图和演示视频
+evaluations/                 # MCP evaluation 问答与固定 fixture
+docs/                        # 截图、演示视频与 docs/mcp.md 契约文档
 ~~~
 
 ## 本地运行
@@ -223,6 +226,57 @@ beatscope benchmark
 beatscope doctor
 ~~~
 
+## MCP 服务器：让 Agent 直接使用节奏事实
+
+BeatScope 内置本地 MCP 服务器（`beatscope_mcp`）。Codex、Claude Desktop 等 MCP 客户端可以不经网页、不读源码，直接分析本地歌曲、按时间窗查询节拍、瞬态与 cue，并导出供 Agent 使用的 handoff ZIP。时间语义（bar/beat 相位、能量插值、onset 脉冲、量化）由与网页播放器和导出包完全相同的 JavaScript 运行时计算，三条路径不会各说各话。
+
+安装与启动：
+
+~~~powershell
+pip install -e ".[mcp]"
+beatscope-mcp
+~~~
+
+服务器走 stdio；分析在本机完成，不向网络发送音频或任何数据。
+
+| 工具 | 作用 |
+| --- | --- |
+| `beatscope_list_projects` | 列出缓存项目（BPM、小节、backend、provenance） |
+| `beatscope_get_project` | 读取项目 summary / timing / 完整 JSON |
+| `beatscope_analyze_audio` | 分析音频并缓存；支持进度与取消，多配置可共存 |
+| `beatscope_get_visual_state` | 某一时刻的完整视觉状态，与网页播放器一致 |
+| `beatscope_get_events` | (start, end] 区间内的 beats / onsets / cues / patterns |
+| `beatscope_export_package` | 导出便携 Agent ZIP（原子写入，含 SKILL 与 schema） |
+
+安全模型：所有输入输出路径必须位于 `BEATSCOPE_ALLOWED_ROOTS` 白名单内（默认当前目录），越界请求会被直接拒绝；导出目标必须是 `.zip`。
+
+Codex CLI（`~/.codex/config.toml`）：
+
+~~~toml
+[mcp_servers.beatscope]
+command = "C:\\src\\beatscope\\.venv\\Scripts\\beatscope-mcp.exe"
+
+[mcp_servers.beatscope.env]
+BEATSCOPE_ALLOWED_ROOTS = "C:\\Users\\me\\Music;D:\\work\\videos"
+~~~
+
+Claude Desktop（`claude_desktop_config.json`）：
+
+~~~json
+{
+  "mcpServers": {
+    "beatscope": {
+      "command": "C:\\src\\beatscope\\.venv\\Scripts\\beatscope-mcp.exe",
+      "env": { "BEATSCOPE_ALLOWED_ROOTS": "C:\\Users\\me\\Music" }
+    }
+  }
+}
+~~~
+
+语义声明：MCP 只暴露瞬态与频段事实，不识别 kick、snare、hihat 或 808；服务器 instructions 也会向 Agent 重复这一点。
+
+常见问题：报 "runtime bridge unavailable" → 安装 Node.js 20+，或用 `BEATSCOPE_MCP_NODE` 指向 node 可执行文件；报 "outside BeatScope's allowed roots" → 把文件所在目录加入 `BEATSCOPE_ALLOWED_ROOTS` 后重启；报 "does not exist" → 先 `beatscope_list_projects` 查看，或用 `beatscope_analyze_audio` 生成。完整契约见 [docs/mcp.md](docs/mcp.md)。
+
 ## 可选高质量流程
 
 内置分析器足够体验播放器。对于鼓组埋在完整混音中的歌曲，可以安装额外依赖并提供 Beat This 时间与 Demucs drums stem：
@@ -240,12 +294,13 @@ beatscope serve --project rhythm.json
 
 ~~~powershell
 pytest -q
+python -m pytest tests\mcp -q
 node --test tests\test_grid.js tests\test_interaction.js
 node --test tests\test_runtime.js tests\test_visual_profile.js tests\test_playback_characterization.js
 beatscope benchmark
 ~~~
 
-JavaScript 侧：网格与交互测试覆盖页面行为；runtime 与 visual profile 测试覆盖共享运行时契约和纯度约束；characterization 测试比较网页播放器与 Codex 导出两条路径在同一时间点的输出一致性。GitHub Actions 会在 Windows 与 Ubuntu、Python 3.10 与 3.12 上运行相同的核心检查。
+JavaScript 侧：网格与交互测试覆盖页面行为；runtime 与 visual profile 测试覆盖共享运行时契约和纯度约束；characterization 测试比较网页播放器与 Codex 导出两条路径在同一时间点的输出一致性。MCP 测试覆盖工具契约、路径安全、运行时一致性与导出。GitHub Actions 会在 Windows 与 Ubuntu、Python 3.10 与 3.12 上运行相同的核心检查。
 
 ## 已知限制
 

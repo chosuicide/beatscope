@@ -186,6 +186,8 @@ beatscope/
 ├── benchmark.py            # synthetic ground-truth benchmark with accuracy gates
 ├── exports.py              # Codex, CSV, PNG, and MIDI exports
 ├── server.py               # local upload, project, and media service
+├── mcp/                    # MCP server (service, PathPolicy, runtime bridge)
+│   └── runtime_worker.mjs  #   Node worker: shared-runtime time queries
 ├── runtime/                # shared JavaScript runtime (web and export share it)
 │   ├── runtime.js          #   track.at / quantize and other time queries
 │   └── visual-profile.js   #   pulse/turbulence/burst/hero visual budget
@@ -197,7 +199,8 @@ beatscope/
     └── index.html
 skills/beatscope-visualizer/ # repository Skill
 tests/                       # Python and JavaScript regression tests
-docs/                        # README images and demo video
+evaluations/                 # MCP evaluation Q&A and fixed fixture
+docs/                        # screenshots, demo video, and docs/mcp.md contract
 ~~~
 
 ## Run locally
@@ -223,6 +226,73 @@ beatscope benchmark
 beatscope doctor
 ~~~
 
+## MCP server: let agents use the rhythm facts directly
+
+BeatScope ships a local MCP server (`beatscope_mcp`). MCP clients such as
+Codex or Claude Desktop can analyze a local song, query beats, onsets, and
+cues in precise time windows, and export the agent handoff ZIP - without
+the web page and without reading the source. Timing semantics (bar/beat
+phases, energy interpolation, onset impulse, quantisation) are computed by
+the same JavaScript runtime the web player and the export package use, so
+all three paths agree by construction.
+
+Install and start:
+
+~~~powershell
+pip install -e ".[mcp]"
+beatscope-mcp
+~~~
+
+The server speaks stdio; analysis happens locally and no audio or other
+data is ever sent over the network.
+
+| Tool | Purpose |
+| --- | --- |
+| `beatscope_list_projects` | List cached projects (BPM, bars, backend, provenance) |
+| `beatscope_get_project` | Read a project as summary / timing / full JSON |
+| `beatscope_analyze_audio` | Analyze and cache audio; progress and cancellation, multi-config coexistence |
+| `beatscope_get_visual_state` | Full visual state at one instant, identical to the web player |
+| `beatscope_get_events` | beats / onsets / cues / patterns in a (start, end] window |
+| `beatscope_export_package` | Export the portable agent ZIP (atomic write, SKILL and schema included) |
+
+Security model: every input and output path must live inside the
+`BEATSCOPE_ALLOWED_ROOTS` allowlist (default: the current directory);
+anything else is rejected up front. Export destinations must end in `.zip`.
+
+Codex CLI (`~/.codex/config.toml`):
+
+~~~toml
+[mcp_servers.beatscope]
+command = "C:\\src\\beatscope\\.venv\\Scripts\\beatscope-mcp.exe"
+
+[mcp_servers.beatscope.env]
+BEATSCOPE_ALLOWED_ROOTS = "C:\\Users\\me\\Music;D:\\work\\videos"
+~~~
+
+Claude Desktop (`claude_desktop_config.json`):
+
+~~~json
+{
+  "mcpServers": {
+    "beatscope": {
+      "command": "C:\\src\\beatscope\\.venv\\Scripts\\beatscope-mcp.exe",
+      "env": { "BEATSCOPE_ALLOWED_ROOTS": "C:\\Users\\me\\Music" }
+    }
+  }
+}
+~~~
+
+Semantics statement: the MCP surface exposes transient and band facts only;
+it does not identify kick, snare, hi hat, or 808. The server's instructions
+repeat this to the agent.
+
+Troubleshooting: "runtime bridge unavailable" → install Node.js 20+ or set
+`BEATSCOPE_MCP_NODE` to the node binary; "outside BeatScope's allowed
+roots" → add the file's directory to `BEATSCOPE_ALLOWED_ROOTS` and restart;
+"does not exist" → check `beatscope_list_projects` first or create the
+project with `beatscope_analyze_audio`. The full contract lives in
+[docs/mcp.md](docs/mcp.md).
+
 ## Optional high-quality path
 
 The built-in analyser is enough to try the player. For a dense mix, install the optional dependencies and provide Beat This timing with a Demucs drums stem:
@@ -240,12 +310,13 @@ When <code>--device cuda</code> is selected, BeatScope does not silently fall ba
 
 ~~~powershell
 pytest -q
+python -m pytest tests\mcp -q
 node --test tests\test_grid.js tests\test_interaction.js
 node --test tests\test_runtime.js tests\test_visual_profile.js tests\test_playback_characterization.js
 beatscope benchmark
 ~~~
 
-On the JavaScript side the grid and interaction tests cover page behaviour; the runtime and visual profile tests cover the shared runtime contract and purity constraints; the characterisation test compares the web player and the Codex export paths at the same instants. GitHub Actions runs the core checks on Windows and Ubuntu with Python 3.10 and 3.12.
+On the JavaScript side the grid and interaction tests cover page behaviour; the runtime and visual profile tests cover the shared runtime contract and purity constraints; the characterisation test compares the web player and the Codex export paths at the same instants. The MCP tests cover the tool contract, path safety, runtime parity, and export. GitHub Actions runs the core checks on Windows and Ubuntu with Python 3.10 and 3.12.
 
 ## Known limits
 

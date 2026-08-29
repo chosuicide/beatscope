@@ -1,0 +1,36 @@
+{
+  "schema_version": "4.0",
+  "analyzer_version": "0.4.0",
+  "created_at": "2026-08-29T00:00:00Z",
+  "fixture_cache": "fixtures/mcp-eval-cache",
+  "projects": [
+    {
+      "name": "fixed-120",
+      "project_id": "d6abba7436d9",
+      "display_name": "fixed-120.wav",
+      "backend": "lightweight",
+      "subdivision": 16,
+      "created_at": "2026-08-29T00:00:00Z",
+      "rhythm_sha256": "28971924d7d0ea4032813948df73b85ef7a043bfe3ee79d114a790fdcfd3f6b8"
+    },
+    {
+      "name": "offgrid",
+      "project_id": "2d9b2f03501c",
+      "display_name": "offgrid.wav",
+      "backend": "lightweight",
+      "subdivision": 32,
+      "created_at": "2026-08-29T00:00:00Z",
+      "rhythm_sha256": "ee409ff01d30dba9af2f41a2feaeb7dc41c50bff4aaf7ef765218aac227850b4"
+    },
+    {
+      "name": "tempo-change",
+      "project_id": "530d88524448",
+      "display_name": "tempo-change.wav",
+      "backend": "lightweight",
+      "subdivision": 16,
+      "created_at": "2026-08-29T00:00:00Z",
+      "rhythm_sha256": "4d7b2f65a6455064ff348e7c7792346c0bdde675cb3ae5652ccf1a6197e3accc"
+    }
+  ],
+  "questions_file": "beatscope_mcp.xml"
+}

@@ -143,7 +143,7 @@ def test_wheel_ships_mcp_package_data(tmp_path: Path):
     dist.mkdir()
     subprocess.run(
         [sys.executable, "-m", "pip", "wheel", str(repo_root), "--no-deps",
-         "--no-build-isolation", "-w", str(dist)],
+         "-w", str(dist)],
         check=True, capture_output=True, timeout=240,
     )
     (wheel,) = dist.glob("beatscope-*.whl")

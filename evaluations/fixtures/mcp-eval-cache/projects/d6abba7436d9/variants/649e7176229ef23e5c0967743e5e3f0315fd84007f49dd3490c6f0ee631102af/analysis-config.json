@@ -1,0 +1,9 @@
+{
+  "backend": "lightweight",
+  "subdivision": 16,
+  "separation": "auto",
+  "sample_rate": 44100,
+  "hop_length": 256,
+  "n_fft": 2048,
+  "cache_key": "be07b39bab795b27477d986cb0e543f67dd70f5118f2f39860fced723a6a3edc"
+}

@@ -181,7 +181,20 @@ class BeatScopeService:
 
         display_name = audio_path.name
         sha256 = await anyio.to_thread.run_sync(content_hash, audio_path)
-        cache_key = compute_cache_key(sha256, cfg.to_dict())
+        cache_config = cfg.to_dict()
+        # External timing/stem evidence changes the analysis just as much as a
+        # backend option does. Address it by content, not by path, so renamed
+        # identical files hit the cache while changed files never reuse stale
+        # rhythm data.
+        if beat_file is not None:
+            cache_config["beat_file_sha256"] = await anyio.to_thread.run_sync(
+                content_hash, beat_file
+            )
+        if drums_path is not None:
+            cache_config["drums_sha256"] = await anyio.to_thread.run_sync(
+                content_hash, drums_path
+            )
+        cache_key = compute_cache_key(sha256, cache_config)
         project_id = sha256[:12]
 
         if not request.force and self.projects.find_cached_rhythm(sha256, cache_key) is not None:
@@ -228,7 +241,7 @@ class BeatScopeService:
 
         def persist() -> None:
             project_dir = self.projects.save_project(
-                project_id, audio_path, rhythm, cfg.to_dict(), cache_key,
+                project_id, audio_path, rhythm, cache_config, cache_key,
             )
             audio_dst = project_dir / "source.audio"
             if not audio_dst.is_file():

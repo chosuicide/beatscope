@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main, rhythm-ir-v0.4]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install BeatScope with MCP support
+        run: python -m pip install -e ".[dev,mcp]"
+
+      - name: Python tests
+        run: python -m pytest -q
+
+      - name: MCP contract tests
+        run: python -m pytest tests/mcp -q
+
+      - name: JavaScript tests
+        run: node --test tests/test_grid.js tests/test_interaction.js tests/test_runtime.js tests/test_visual_profile.js tests/test_playback_characterization.js
+
+      - name: Benchmark gates
+        run: python -m beatscope.cli benchmark --output-dir build/benchmark-ci
+
+      - name: MCP stdio smoke
+        run: python -m pytest tests/mcp/test_stdio.py -q
