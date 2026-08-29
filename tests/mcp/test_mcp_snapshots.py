@@ -34,8 +34,10 @@ async def test_snapshots_pin_tools_resources_and_project_response(tmp_path: Path
 async def test_captured_surface_leaks_no_private_paths(tmp_path: Path):
     captured = await capture_snapshots(tmp_path)
     text = json.dumps(captured, ensure_ascii=False)
-    assert "audio_path" not in text
+    # The analyze tool's input schema legitimately names an audio_path
+    # *parameter*; what must never appear is a private local path value.
     assert "X:/private" not in text
+    assert "audio.wav" not in text
     assert str(tmp_path) not in text
 
 

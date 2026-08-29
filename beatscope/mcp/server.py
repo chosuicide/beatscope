@@ -20,7 +20,14 @@ from pydantic import ValidationError
 
 from ..project import ProjectManager
 from .errors import BeatScopeMCPError, RuntimeUnavailable
-from .models import EventsInput, GetProjectInput, ListProjectsInput, VisualStateInput
+from .models import (
+    AnalyzeAudioInput,
+    EventsInput,
+    ExportInput,
+    GetProjectInput,
+    ListProjectsInput,
+    VisualStateInput,
+)
 from .paths import MCPSettings, PathPolicy
 from .runtime_bridge import RuntimeBridge
 from .service import BeatScopeService
@@ -244,6 +251,86 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
         if cue_types is not None:
             kwargs["cue_types"] = set(cue_types)
         return await _acall(lambda: _service(ctx).get_events(EventsInput(**kwargs)))
+
+    @mcp.tool(
+        name="beatscope_analyze_audio",
+        description=(
+            "Analyze an audio file into a cached BeatScope rhythm project (beats, "
+            "bars, onsets, energy bands, cues) and return its project id with a "
+            "tempo/grid summary. Paths must live under the server's allowed roots. "
+            "Results are cached per audio content and configuration; pass "
+            "force=true to re-analyze anyway. backend='beat-this' requires a .beats "
+            "beat_file. Reports progress and honours cancellation - a cancelled "
+            "analysis writes nothing."
+        ),
+        annotations=ToolAnnotations(
+            title="Analyze audio with BeatScope",
+            read_only_hint=False,
+            destructive_hint=False,
+            idempotent_hint=True,
+            open_world_hint=False,
+        ),
+    )
+    async def beatscope_analyze_audio(
+        ctx: Context = None,
+        audio_path: str = "",
+        backend: str = "lightweight",
+        subdivision: int = 16,
+        beat_file: str | None = None,
+        drums_path: str | None = None,
+        force: bool = False,
+    ) -> dict:
+        service = _service(ctx)
+
+        async def report(value: float, message: str | None = None) -> None:
+            try:
+                await ctx.report_progress(value, 1.0, message)
+            except Exception:
+                pass  # progress is best-effort; the outcome must not depend on it
+
+        return await _acall(
+            lambda: service.analyze_audio(
+                AnalyzeAudioInput(
+                    audio_path=audio_path,
+                    backend=backend,
+                    subdivision=subdivision,
+                    beat_file=beat_file,
+                    drums_path=drums_path,
+                    force=force,
+                ),
+                progress=report,
+            )
+        )
+
+    @mcp.tool(
+        name="beatscope_export_package",
+        description=(
+            "Export a BeatScope project as the portable agent handoff ZIP "
+            "(rhythm-map.json, shared runtime, visual-state.js, BEATSCOPE.md, "
+            "SKILL.md, schema reference) and return its path, size, SHA-256, "
+            "and ZIP manifest - not the binary. WRITES a local file: the "
+            "destination must end in .zip and live under the server's allowed "
+            "roots. An existing destination is kept unless overwrite=true."
+        ),
+        annotations=ToolAnnotations(
+            title="Export BeatScope agent package",
+            read_only_hint=False,
+            destructive_hint=False,
+            idempotent_hint=True,
+            open_world_hint=False,
+        ),
+    )
+    async def beatscope_export_package(
+        ctx: Context = None,
+        project_id: str = "",
+        destination: str = "",
+        overwrite: bool = False,
+    ) -> dict:
+        return _call(
+            lambda: _service(ctx).export_package(
+                ExportInput(project_id=project_id, destination=destination, overwrite=overwrite)
+            )
+        )
 
     return mcp
 

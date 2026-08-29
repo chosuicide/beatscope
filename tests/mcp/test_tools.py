@@ -14,7 +14,11 @@ TOOL_NAMES = {
     "beatscope_get_project",
     "beatscope_get_visual_state",
     "beatscope_get_events",
+    "beatscope_analyze_audio",
+    "beatscope_export_package",
 }
+
+READ_ONLY_TOOLS = TOOL_NAMES - {"beatscope_analyze_audio", "beatscope_export_package"}
 
 
 @pytest.fixture
@@ -27,7 +31,6 @@ async def test_tool_surface_is_prefixed_and_readonly(server):
         tools = (await client.list_tools()).tools
     assert {t.name for t in tools} == TOOL_NAMES
     for tool in tools:
-        assert tool.annotations.read_only_hint is True
         assert tool.annotations.destructive_hint is False
         assert tool.annotations.idempotent_hint is True
         assert tool.annotations.open_world_hint is False
@@ -36,6 +39,15 @@ async def test_tool_surface_is_prefixed_and_readonly(server):
         schema = tool.input_schema
         assert schema["type"] == "object"
         assert schema["properties"], tool.name
+    for tool in tools:
+        if tool.name in READ_ONLY_TOOLS:
+            assert tool.annotations.read_only_hint is True, tool.name
+    writing = TOOL_NAMES - READ_ONLY_TOOLS
+    for tool in tools:
+        if tool.name in READ_ONLY_TOOLS:
+            assert tool.annotations.read_only_hint is True, tool.name
+        if tool.name in writing:
+            assert tool.annotations.read_only_hint is False, tool.name
 
 
 async def test_list_projects_returns_envelope(server):

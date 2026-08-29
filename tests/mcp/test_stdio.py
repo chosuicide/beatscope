@@ -32,6 +32,8 @@ async def test_stdio_smoke() -> None:
                 "beatscope_get_project",
                 "beatscope_get_visual_state",
                 "beatscope_get_events",
+                "beatscope_analyze_audio",
+                "beatscope_export_package",
             }
             result = await client.read_resource("beatscope://schema/v4")
             assert json.loads(result.contents[0].text)["schema_version"].startswith("4.")

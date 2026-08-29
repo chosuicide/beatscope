@@ -22,6 +22,8 @@ async def test_client_connects_and_reads_schema_resource() -> None:
             "beatscope_get_project",
             "beatscope_get_visual_state",
             "beatscope_get_events",
+            "beatscope_analyze_audio",
+            "beatscope_export_package",
         }
 
         resources = (await client.list_resources()).resources

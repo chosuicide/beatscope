@@ -24,3 +24,15 @@ class RuntimeUnavailable(BeatScopeMCPError):
 
 class InvalidTimeRange(BeatScopeMCPError):
     pass
+
+
+class AnalysisFailed(BeatScopeMCPError):
+    """The pipeline could not produce a valid project for this input."""
+
+
+class AnalysisCancelledError(BeatScopeMCPError):
+    """A running analysis was cancelled; nothing was written."""
+
+
+class ExportTargetExists(BeatScopeMCPError):
+    """The destination ZIP already exists and overwrite was not requested."""

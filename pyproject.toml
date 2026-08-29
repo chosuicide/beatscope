@@ -33,4 +33,9 @@ beatscope-mcp = "beatscope.mcp.server:main"
 include = ["beatscope*"]
 
 [tool.setuptools.package-data]
-beatscope = ["web/*.html", "web/*.js", "web/*.css", "runtime/*.js", "agent_skill/*.md", "agent_skill/references/*.md"]
+beatscope = [
+  "web/*.html", "web/*.js", "web/*.css",
+  "runtime/*.js",
+  "agent_skill/*.md", "agent_skill/references/*.md",
+  "mcp/*.mjs", "mcp/data/*.json",
+]

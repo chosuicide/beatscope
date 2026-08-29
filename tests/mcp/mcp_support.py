@@ -73,15 +73,16 @@ class McpEnv:
             mutate=mutate,
         )
 
-    def service(self, max_response_chars: int = 25000) -> BeatScopeService:
+    def service(self, max_response_chars: int = 25000, allowed_roots=None) -> BeatScopeService:
+        roots = allowed_roots if allowed_roots is not None else (self.tmp_path,)
         return BeatScopeService(
-            self.projects, self.paths, runtime=None, max_response_chars=max_response_chars
+            self.projects, PathPolicy(roots), runtime=None, max_response_chars=max_response_chars
         )
 
-    def settings(self, max_response_chars: int = 25000) -> MCPSettings:
+    def settings(self, max_response_chars: int = 25000, allowed_roots=None) -> MCPSettings:
         return MCPSettings(
             cache_root=self.cache_root,
-            allowed_roots=(self.tmp_path,),
+            allowed_roots=(allowed_roots if allowed_roots is not None else (self.tmp_path,)),
             node_command="node",
             max_response_chars=max_response_chars,
             log_level="WARNING",

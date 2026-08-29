@@ -4,6 +4,99 @@
       "destructiveHint": false,
       "idempotentHint": true,
       "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Analyze audio with BeatScope"
+    },
+    "description": "Analyze an audio file into a cached BeatScope rhythm project (beats, bars, onsets, energy bands, cues) and return its project id with a tempo/grid summary. Paths must live under the server's allowed roots. Results are cached per audio content and configuration; pass force=true to re-analyze anyway. backend='beat-this' requires a .beats beat_file. Reports progress and honours cancellation - a cancelled analysis writes nothing.",
+    "inputSchema": {
+      "properties": {
+        "audio_path": {
+          "default": "",
+          "title": "Audio Path",
+          "type": "string"
+        },
+        "backend": {
+          "default": "lightweight",
+          "title": "Backend",
+          "type": "string"
+        },
+        "beat_file": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Beat File"
+        },
+        "drums_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Drums Path"
+        },
+        "force": {
+          "default": false,
+          "title": "Force",
+          "type": "boolean"
+        },
+        "subdivision": {
+          "default": 16,
+          "title": "Subdivision",
+          "type": "integer"
+        }
+      },
+      "title": "beatscope_analyze_audioArguments",
+      "type": "object"
+    },
+    "name": "beatscope_analyze_audio"
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Export BeatScope agent package"
+    },
+    "description": "Export a BeatScope project as the portable agent handoff ZIP (rhythm-map.json, shared runtime, visual-state.js, BEATSCOPE.md, SKILL.md, schema reference) and return its path, size, SHA-256, and ZIP manifest - not the binary. WRITES a local file: the destination must end in .zip and live under the server's allowed roots. An existing destination is kept unless overwrite=true.",
+    "inputSchema": {
+      "properties": {
+        "destination": {
+          "default": "",
+          "title": "Destination",
+          "type": "string"
+        },
+        "overwrite": {
+          "default": false,
+          "title": "Overwrite",
+          "type": "boolean"
+        },
+        "project_id": {
+          "default": "",
+          "title": "Project Id",
+          "type": "string"
+        }
+      },
+      "title": "beatscope_export_packageArguments",
+      "type": "object"
+    },
+    "name": "beatscope_export_package"
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
       "readOnlyHint": true,
       "title": "Read BeatScope events"
     },
