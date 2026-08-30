@@ -520,6 +520,12 @@ def apply_baseline_gates(
         change_point_error = (case.get("tempo_segments") or {}).get("change_point_error_s")
         if change_point_max is not None and change_point_error is not None and change_point_error > change_point_max:
             gates.append("change-point-error-above-baseline-maximum")
+        segment_bpm_max = declared.get("segment_bpm_error_bpm_max")
+        segment_errors = (case.get("tempo_segments") or {}).get("segment_bpm_errors") or []
+        if segment_bpm_max is not None and any(
+            error is not None and error > segment_bpm_max for error in segment_errors
+        ):
+            gates.append("segment-bpm-error-above-baseline-maximum")
         seam_missing_max = declared.get("seam_missing_beats_max")
         for seam in case.get("seams") or []:
             if seam_missing_max is not None and seam["missing_beats"] > seam_missing_max:

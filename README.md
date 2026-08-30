@@ -18,7 +18,7 @@ The difficult part of music visualisation is usually not drawing a shape that mo
 
 A direct peak-to-explosion mapping works for sparse music and quickly falls apart on a dense track. Looking only at total volume loses low-frequency weight, high-frequency detail, and section changes. Handing the same song to another agent later also means repeating those decisions from the beginning.
 
-BeatScope keeps that work. Python reads the audio, builds the beat grid, and extracts multiband energy. The browser uses <code>audio.currentTime</code> as its only clock. The particle system separates ordinary pulse, sustained turbulence, local impact, and rare hero events. The result can be watched directly or reused as timing evidence in the next creative build.
+BeatScope keeps that work. Python reads the audio, tracks beats and tempo changes, and extracts multiband energy. The browser uses <code>audio.currentTime</code> as its only clock. The particle system separates ordinary pulse, sustained turbulence, local impact, and rare hero events. The result can be watched directly or reused as timing evidence in the next creative build.
 
 ## What one session looks like
 
@@ -31,7 +31,7 @@ Upload local audio → build beats and multiband energy
 ~~~
 
 1. Choose a WAV, FLAC, MP3, OGG, or M4A file.
-2. The local service derives beats, transients, LOW / MID / HIGH energy, and a structural overview.
+2. The local service tracks beats and tempo changes, then derives transients, LOW / MID / HIGH energy, and a structural overview.
 3. The page moves into the player, where the particle sphere, traces, and spectrum follow playback.
 4. The rhythm pattern overview provides a whole-song view and direct navigation.
 5. The eight-bar cue map translates the current window into impact, scale, flow, flash, and bloom references.
@@ -56,7 +56,7 @@ Upload local audio → build beats and multiband energy
 
 ![BeatScope whole-song structure navigator](docs/screenshots/beatscope-track-structure.png)
 
-This navigator compresses the complete track into sections, LOW / MID / HIGH energy traces, and transient density. Clicking a bar seeks directly to it. The red frame always marks the eight bars currently shown in the cue map, so changes do not have to be found by scrubbing blindly through one long timeline.
+This navigator compresses the complete track into sections, LOW / MID / HIGH energy traces, and transient density. The sections are rhythm-similarity groups, not Verse/Chorus recognition. Clicking a bar seeks directly to it. The red frame always marks the eight bars currently shown in the cue map, so changes do not have to be found by scrubbing blindly through one long timeline.
 
 ### Eight-bar cue map: turn listening into usable timing
 
@@ -101,7 +101,7 @@ Click a cue to audition its nearby transient. Drag to define a loop range. Selec
 
 ## Rhythm IR: facts, semantics, and presentation
 
-v0.4 arranges all rhythm data into three layers, each depending only on the one above it:
+v0.6 tracks beats and tempo on the real timeline: beats come from novelty-guided tracking (local tempo candidates, a global tempo path, per-beat reconstruction, and piecewise-constant tempo segments), not from a uniform global-BPM grid. All rhythm data is arranged into three layers, each depending only on the one above it:
 
 1. **Facts**: what the audio directly supports — beat times, transients (with band energy and strength), and multiband energy frames. No guessing happens here.
 2. **Semantics**: derived from facts — global BPM and tempo segments, the bar grid, quantised positions, the section overview, and accent cues. Every field can be traced to its source (<code>analysis.provenance</code>) and its computation (<code>analysis.diagnostics</code>).
@@ -109,24 +109,27 @@ v0.4 arranges all rhythm data into three layers, each depending only on the one 
 
 Project data is written as schema v4 (<code>schema_version: "4.0"</code>) and validated; v3 projects are migrated on load. Core output contains no kick, snare, hihat, or 808 identity, and strength is never renamed into confidence — the page shows the backend, pipeline version, and interpretable diagnostics (provenance methods, migration notes, pregrid merge counts, warning counts).
 
-The shared JavaScript runtime <code>beatscope/runtime/runtime.js</code> is dependency-free ESM with no DOM, Audio, Canvas, or wall-clock access; <code>track.at(time)</code> always returns the same result for the same input, and bar/beat phase in variable-tempo material is derived from adjacent real beats and downbeat spans instead of assuming a global BPM. The web player, the page diagnostics, and the Codex export are all built on it.
+The shared JavaScript runtime <code>beatscope/runtime/runtime.js</code> is dependency-free ESM with no DOM, Audio, Canvas, or wall-clock access; <code>track.at(time)</code> always returns the same result for the same input, and bar/beat phase in variable-tempo material is derived from adjacent real beats and downbeat spans instead of assuming a global BPM. Meter phase itself remains heuristic continuous numbering from the first tracked beat (provenance marks it as inferred), not a dedicated downbeat model. The web player, the page diagnostics, and the Codex export are all built on it.
 
 ## Measured accuracy
 
-The numbers below are generated by the benchmark harness (<code>beatscope benchmark</code>: synthetic audio with ground truth, 70 ms beat and 50 ms onset tolerance) and match <code>build/benchmark/benchmark-results.md</code>; the command exits non-zero when a hard gate fails:
+The numbers below are generated by the benchmark harness (<code>beatscope benchmark</code>: synthetic audio with ground truth, 70 ms beat and 50 ms onset tolerance) and match <code>build/benchmark-v06/benchmark-results.md</code>; the command exits non-zero when a hard gate fails:
 
-| Case | BPM error | Beat MAE | Beat F1 | Onset F1 |
-| --- | ---: | ---: | ---: | ---: |
-| fixed-120 | 0.19 BPM | 3.17 ms | 0.97 | 1.00 |
-| fixed-90 | 0.12 BPM | 10.70 ms | 1.00 | 1.00 |
-| dense-128 | 0.40 BPM | 18.29 ms | 1.00 | 1.00 |
-| sparse-100 | 0.35 BPM | 9.39 ms | 1.00 | 1.00 |
-| tempo-change | — | 35.20 ms | 0.16 | 1.00 |
-| offgrid | 0.19 BPM | 17.29 ms | 1.00 | 1.00 |
-| bass-heavy | 0.19 BPM | 3.17 ms | 0.97 | 0.27 |
-| silence | — | — | 0.00 | — |
+| Case | BPM error | Beat MAE | Beat F1 | Tempo MAE | Segments | Onset F1 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| fixed-120 | 0.18 BPM | 5.78 ms | 1.00 | 0.18 BPM | 1 | 1.00 |
+| fixed-90 | 0.16 BPM | 5.65 ms | 1.00 | 0.12 BPM | 1 | 1.00 |
+| dense-128 | 0.16 BPM | 5.07 ms | 1.00 | 0.40 BPM | 1 | 1.00 |
+| sparse-100 | 0.20 BPM | 9.83 ms | 1.00 | 0.35 BPM | 1 | 1.00 |
+| tempo-change | — | 5.79 ms | 1.00 | 0.25 BPM | 2 | 1.00 |
+| offgrid | 0.75 BPM | 29.41 ms | 1.00 | 0.73 BPM | 1 | 1.00 |
+| bass-heavy | 0.27 BPM | 3.13 ms | 0.97 | 0.18 BPM | 1 | 0.28 |
+| silence | — | — | — | — | 1 | — |
+| gradual-drift | — | 5.85 ms | 1.00 | 1.74 BPM | 6 | 1.00 |
+| micro-drift | — | 5.69 ms | 1.00 | 1.28 BPM | 1 | 1.00 |
+| octave-trap | 0.18 BPM | 6.14 ms | 1.00 | 0.18 BPM | 1 | 1.00 |
 
-Hard gates (commit-blocking): a valid schema, fixed-BPM error ≤ 5 BPM, beat F1 ≥ 0.5, at most 20 false events on silence, and no more than 0.15 beat-F1 regression against the baseline — all 8 cases currently pass (0 gates failed). Tempo-change beat F1 and bass-heavy onset F1 are report-only by design: measuring variable tempo with one global segment is inherently unfair, and high-frequency onset recall in a bass-dominated synthetic mix is limited by the fixture itself. The report carries the more meaningful measurements for those cases (segment BPM errors 19.67 / 0.33 BPM, quantisation offsets 33.12 ms / 2.97 ms).
+Hard gates (commit-blocking): a valid schema, fixed-BPM error ≤ 5 BPM, beat F1 ≥ 0.5, at most 20 false events on silence, plus baseline regression windows for the fixed-tempo cases (beat F1 may not drop more than 0.03 and beat MAE may not worsen more than 15 ms) and declared floors for the variable cases — tempo-change must reach beat F1 ≥ 0.55 with per-segment BPM error ≤ 5 BPM, change-point error ≤ 1 s, and at most one missing or extra beat at the seam; gradual-drift needs beat F1 ≥ 0.65 and tempo MAE ≤ 6 BPM; micro-drift allows no octave errors and at most 3 segments; octave-trap allows no octave errors. All 11 cases currently pass (0 gates failed). The v0.5 → v0.6 change is concentrated where it should be: tempo-change beat F1 went from 0.16 to 1.00 (two segments, segment BPM errors 0.185 / 0.325 BPM, change-point error 0.01 s, seam missing 0 / extra 0) while every fixed-tempo case held its ground. Bass-heavy onset F1 is report-only by design: high-frequency onset recall in a bass-dominated synthetic mix is limited by the fixture itself.
 
 ## The Codex package
 

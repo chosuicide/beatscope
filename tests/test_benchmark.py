@@ -101,6 +101,7 @@ def test_apply_baseline_gates_enforce_declared_gates():
             "beat_f1": 0.7, "beat_mae_ms": 30.0,
             "gates": {
                 "beat_f1_min": 0.55,
+                "segment_bpm_error_bpm_max": 5.0,
                 "change_point_error_s_max": 1.0,
                 "seam_missing_beats_max": 1,
                 "seam_extra_beats_max": 1,
@@ -131,6 +132,12 @@ def test_apply_baseline_gates_enforce_declared_gates():
                      tempo_segments={"change_point_error_s": 1.5}, seams=[])
     apply_baseline_gates(cases, baseline)
     assert "change-point-error-above-baseline-maximum" in cases[0]["gates_failed"]
+
+    cases[0] = _case("tempo-change", 0.7, 30.0,
+                     tempo_segments={"change_point_error_s": 0.4, "segment_bpm_errors": [0.2, 6.1]},
+                     seams=[])
+    apply_baseline_gates(cases, baseline)
+    assert "segment-bpm-error-above-baseline-maximum" in cases[0]["gates_failed"]
 
     cases[0] = _case("tempo-change", 0.7, 30.0,
                      tempo_segments={"change_point_error_s": 0.4},

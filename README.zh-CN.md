@@ -18,7 +18,7 @@ BeatScope 允许用户上传一首歌，在浏览器里一边播放，一边查�
 
 直接把每个峰值映射成一次爆炸，很快会遇到问题：稀疏歌曲看起来有冲击，密集歌曲却会让球体持续炸开；只看总音量又会丢失低频重量、高频细节和段落转换。下一次把音乐交给另一个 Agent 时，这些判断还要重新做一遍。
 
-BeatScope 尝试把这段工作留下来。Python 负责读取音频、建立节拍网格和提取多频段能量；浏览器使用 <code>audio.currentTime</code> 作为唯一时钟；粒子动画把普通节拍、连续湍流、局部冲击和稀有重击分成不同层级。最终结果既可以直接观看，也可以作为下一次创作的时间参考。
+BeatScope 尝试把这段工作留下来。Python 负责读取音频、追踪节拍与速度变化并提取多频段能量；浏览器使用 <code>audio.currentTime</code> 作为唯一时钟；粒子动画把普通节拍、连续湍流、局部冲击和稀有重击分成不同层级。最终结果既可以直接观看，也可以作为下一次创作的时间参考。
 
 ## 一次使用怎样展开
 
@@ -31,7 +31,7 @@ BeatScope 尝试把这段工作留下来。Python 负责读取音频、建立节
 ~~~
 
 1. 用户选择 WAV、FLAC、MP3、OGG 或 M4A 文件。
-2. 本地服务生成节拍、瞬态、LOW / MID / HIGH 能量和段落概览。
+2. 本地服务追踪节拍与速度变化，生成瞬态、LOW / MID / HIGH 能量和段落概览。
 3. 页面平滑移动到播放器，粒子球、频段线和频谱随播放位置变化。
 4. Rhythm pattern overview（节奏概览）用整首歌的视角显示能量与段落，并允许跳转。
 5. 8-bar cue map 把当前窗口整理成 impact、scale、flow、flash 和 bloom 参考。
@@ -56,7 +56,7 @@ BeatScope 尝试把这段工作留下来。Python 负责读取音频、建立节
 
 ![BeatScope 全曲结构导航](docs/screenshots/beatscope-track-structure.png)
 
-这条导航把整首歌压缩成段落、LOW / MID / HIGH 能量曲线与瞬态分布。点击任意小节即可跳转，红色框始终标出 cue map 当前查看的八小节，因此不用在一条长时间轴里盲目寻找变化。
+这条导航把整首歌压缩成段落、LOW / MID / HIGH 能量曲线与瞬态分布。段落来自节奏相似度分组，不是 Verse/Chorus 识别。点击任意小节即可跳转，红色框始终标出 cue map 当前查看的八小节，因此不用在一条长时间轴里盲目寻找变化。
 
 ### 8-bar cue map：把听感拆成可操作时间点
 
@@ -101,7 +101,7 @@ BeatScope 将原始瞬态对齐到 1/16 或 1/32 网格，同时保留真实发�
 
 ## Rhythm IR：事实、语义与呈现
 
-v0.4 把所有节奏数据整理成三层结构，每层只依赖上一层：
+v0.6 在真实时间轴上追踪节拍与速度：拍点来自 novelty 引导的追踪（局部速度候选、全局速度路径、逐拍重建与分段恒速 tempo segments），而不是全局 BPM 均匀网格。所有节奏数据整理成三层结构，每层只依赖上一层：
 
 1. **事实层**：音频直接支持的内容 —— 节拍时间、瞬态（含频段能量与强度）、多频段能量帧。这一层不做任何猜测。
 2. **语义层**：从事实推导的内容 —— 全曲 BPM 与变速段、小节网格、量化位置、段落概览、accent cue。每个字段都能追溯到来源（<code>analysis.provenance</code>）与计算过程（<code>analysis.diagnostics</code>）。
@@ -109,24 +109,27 @@ v0.4 把所有节奏数据整理成三层结构，每层只依赖上一层：
 
 项目数据使用 schema v4（<code>schema_version: "4.0"</code>）写入并通过 validator 校验；v3 项目读取时自动迁移。核心输出不包含 kick、snare、hihat 或 808 等乐器身份，也不把强度伪装成 confidence —— 页面显示的是 backend、pipeline 版本和可解释的诊断信息（来源方法、迁移记录、pregrid 合并数量、警告条数）。
 
-共享 JavaScript 运行时 <code>beatscope/runtime/runtime.js</code> 是纯 ESM，不依赖 DOM、Audio、Canvas 或系统时钟；<code>track.at(time)</code> 对相同输入始终返回相同结果，变速段落的小节/拍相位由相邻真实节拍与小节下拍推导，而不是假设全局 BPM。网页播放器、页面诊断与 Codex 导出都构建在它之上。
+共享 JavaScript 运行时 <code>beatscope/runtime/runtime.js</code> 是纯 ESM，不依赖 DOM、Audio、Canvas 或系统时钟；<code>track.at(time)</code> 对相同输入始终返回相同结果，变速段落的小节/拍相位由相邻真实节拍与小节下拍推导，而不是假设全局 BPM。小节相位本身仍然是从第一个追踪拍开始的启发式连续编号（provenance 已标记为推断值），不是专用 downbeat 模型。网页播放器、页面诊断与 Codex 导出都构建在它之上。
 
 ## 实测精度
 
-以下数字由基准测试自动生成（<code>beatscope benchmark</code>，合成音频 + 人工标注真值，拍匹配容差 70 ms、瞬态容差 50 ms），与 <code>build/benchmark/benchmark-results.md</code> 保持一致；硬门槛未通过时命令会以非零码退出：
+以下数字由基准测试自动生成（<code>beatscope benchmark</code>，合成音频 + 人工标注真值，拍匹配容差 70 ms、瞬态容差 50 ms），与 <code>build/benchmark-v06/benchmark-results.md</code> 保持一致；硬门槛未通过时命令会以非零码退出：
 
-| 场景 | BPM 误差 | 拍 MAE | 拍 F1 | 瞬态 F1 |
-| --- | ---: | ---: | ---: | ---: |
-| fixed-120 | 0.19 BPM | 3.17 ms | 0.97 | 1.00 |
-| fixed-90 | 0.12 BPM | 10.70 ms | 1.00 | 1.00 |
-| dense-128 | 0.40 BPM | 18.29 ms | 1.00 | 1.00 |
-| sparse-100 | 0.35 BPM | 9.39 ms | 1.00 | 1.00 |
-| tempo-change | — | 35.20 ms | 0.16 | 1.00 |
-| offgrid | 0.19 BPM | 17.29 ms | 1.00 | 1.00 |
-| bass-heavy | 0.19 BPM | 3.17 ms | 0.97 | 0.27 |
-| silence | — | — | 0.00 | — |
+| 场景 | BPM 误差 | 拍 MAE | 拍 F1 | Tempo MAE | Segments | 瞬态 F1 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| fixed-120 | 0.18 BPM | 5.78 ms | 1.00 | 0.18 BPM | 1 | 1.00 |
+| fixed-90 | 0.16 BPM | 5.65 ms | 1.00 | 0.12 BPM | 1 | 1.00 |
+| dense-128 | 0.16 BPM | 5.07 ms | 1.00 | 0.40 BPM | 1 | 1.00 |
+| sparse-100 | 0.20 BPM | 9.83 ms | 1.00 | 0.35 BPM | 1 | 1.00 |
+| tempo-change | — | 5.79 ms | 1.00 | 0.25 BPM | 2 | 1.00 |
+| offgrid | 0.75 BPM | 29.41 ms | 1.00 | 0.73 BPM | 1 | 1.00 |
+| bass-heavy | 0.27 BPM | 3.13 ms | 0.97 | 0.18 BPM | 1 | 0.28 |
+| silence | — | — | — | — | 1 | — |
+| gradual-drift | — | 5.85 ms | 1.00 | 1.74 BPM | 6 | 1.00 |
+| micro-drift | — | 5.69 ms | 1.00 | 1.28 BPM | 1 | 1.00 |
+| octave-trap | 0.18 BPM | 6.14 ms | 1.00 | 0.18 BPM | 1 | 1.00 |
 
-硬门槛（阻断提交）：schema 必须有效、固定 BPM 场景误差 ≤ 5 BPM、拍 F1 ≥ 0.5、静音误报 ≤ 20 个、拍 F1 相对基线回归 ≤ 0.15 —— 当前 8 个场景全部通过（0 gates failed）。变速场景的拍 F1 与 bass-heavy 的瞬态 F1 按计划仅作报告参考（不设门槛）：变速用单段全局 BPM 衡量本来就失真，低频主导混音中的高频瞬态召回受合成素材限制；两者的分段 BPM 误差（19.67 / 0.33 BPM）与量化偏移（33.12 ms / 2.97 ms）在报告中有更合理的度量。
+硬门槛（阻断提交）：schema 必须有效、固定 BPM 场景误差 ≤ 5 BPM、拍 F1 ≥ 0.5、静音误报 ≤ 20 个；固定速度场景相对基线的回归窗口（拍 F1 下降不超过 0.03、拍 MAE 恶化不超过 15 ms）；变速场景的声明下限 —— tempo-change 拍 F1 ≥ 0.55、分段 BPM 误差 ≤ 5 BPM、变速点误差 ≤ 1 s、接缝漏拍/多拍各 ≤ 1；gradual-drift 拍 F1 ≥ 0.65 且 tempo MAE ≤ 6 BPM；micro-drift 不允许八度错误且 tempo segments ≤ 3；octave-trap 不允许八度错误。当前 11 个场景全部通过（0 gates failed）。v0.5 → v0.6 的提升集中在该出现的地方：tempo-change 拍 F1 从 0.16 提升到 1.00（两段 tempo segments，分段 BPM 误差 0.185 / 0.325 BPM，变速点误差 0.01 s，接缝漏拍 0 / 多拍 0），所有固定速度场景保持原有水平。bass-heavy 的瞬态 F1 按计划仅作报告参考：低频主导混音中的高频瞬态召回受合成素材本身限制。
 
 ## 给 Codex 的导出包
 

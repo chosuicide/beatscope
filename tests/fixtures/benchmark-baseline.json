@@ -37,7 +37,13 @@
       "beat_mae_ms": 35.2,
       "bpm_error": null,
       "segment_count": 1,
-      "gates": {}
+      "gates": {
+        "beat_f1_min": 0.55,
+        "segment_bpm_error_bpm_max": 5.0,
+        "change_point_error_s_max": 1.0,
+        "seam_missing_beats_max": 1,
+        "seam_extra_beats_max": 1
+      }
     },
     "offgrid": {
       "beat_f1": 1.0,
@@ -65,21 +71,29 @@
       "beat_mae_ms": 30.01,
       "bpm_error": null,
       "segment_count": 1,
-      "gates": {}
+      "gates": {
+        "beat_f1_min": 0.65,
+        "tempo_mae_bpm_max": 6.0
+      }
     },
     "micro-drift": {
       "beat_f1": 0.9897,
       "beat_mae_ms": 25.09,
       "bpm_error": null,
       "segment_count": 1,
-      "gates": {}
+      "gates": {
+        "octave_errors_max": 0,
+        "segments_max": 3
+      }
     },
     "octave-trap": {
       "beat_f1": 0.9697,
       "beat_mae_ms": 3.17,
       "bpm_error": 0.19,
       "segment_count": 1,
-      "gates": {}
+      "gates": {
+        "octave_errors_max": 0
+      }
     }
   }
 }
