@@ -283,6 +283,7 @@ def test_committed_truth_matches_generator(tmp_path):
 
     generate_all(tmp_path / "a")
     generated = (tmp_path / "a" / "ground-truth.json").read_bytes()
+    assert b"\r\n" not in generated
     assert TRUTH_PATH.read_bytes() == generated
 
 

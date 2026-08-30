@@ -347,6 +347,7 @@ def generate_all(output_dir: str | Path) -> dict[str, dict[str, Any]]:
     (out / "ground-truth.json").write_text(
         json.dumps({name: item["truth"] for name, item in results.items()}, indent=2),
         encoding="utf-8",
+        newline="\n",
     )
     return results
 

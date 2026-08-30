@@ -21,7 +21,7 @@ classifiers = [
 dependencies = ["numpy>=1.24", "soundfile>=0.12", "librosa>=0.10"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7", "mcp>=2,<3", "anyio>=4"]
+dev = ["pytest>=7", "mcp>=2,<3", "anyio>=4", "setuptools>=68"]
 high-quality = ["demucs>=4.1"]
 mcp = ["mcp>=2,<3"]
 

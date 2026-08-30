@@ -1,7 +1,7 @@
 {
   "schema": "beatscope-benchmark-baseline-1",
   "fixture_generator_version": "2",
-  "fixture_manifest_sha256": "957a69812168b9aabc461b82a16fb2bd259c4ae423dc6620ebcf2d5acefce757",
+  "fixture_manifest_sha256": "c8c948f3f22c534a6a35f448da17fc132889cf149a64b6e8e26c1705a772c46a",
   "analyzer_version": "0.4.0",
   "cases": {
     "fixed-120": {
