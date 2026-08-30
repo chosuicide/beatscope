@@ -39,6 +39,7 @@ const layout = { width: 1400, height: 520 };
     ambient: -1,
     anticipation: 2.5, hold: 3, impact: 2.5, recoil: -0.5, aftershock: 9,
     tension: -4, hero: 2, shockProgress: 17,
+    beatWave: 8, waveProgress: -2, coreAperture: 4, diffusion: 7, beatExpand: 3,
     lobeWeights: [1.4, -0.2, 0.5],
     direction: [9, 0, 0],
   };
@@ -55,6 +56,11 @@ const layout = { width: 1400, height: 520 };
   assert.equal(uniforms.uTension, 0);
   assert.equal(uniforms.uHero, 1);
   assert.equal(uniforms.uShockProgress, 1);
+  assert.equal(uniforms.uBeatWave, 1);
+  assert.equal(uniforms.uWaveProgress, 0);
+  assert.equal(uniforms.uCoreAperture, 1);
+  assert.equal(uniforms.uDiffusion, 1);
+  assert.equal(uniforms.uBeatExpand, 1);
   assert.equal(uniforms.uLobeWeights0, 1);
   assert.equal(uniforms.uLobeWeights1, 0);
   // Direction renormalizes to a unit vector no matter the input magnitude.
@@ -69,6 +75,11 @@ const layout = { width: 1400, height: 520 };
   assert.equal(uniforms.uLow, frame.low);
   assert.equal(uniforms.uMid, frame.mid);
   assert.equal(uniforms.uHigh, frame.high);
+  // The per-beat breath channel maps through unchanged on real frames
+  // (t=2.6 sits at phase 0.2 inside the beat, on the expansion plateau).
+  const breathing = director.at(2.6);
+  assert.ok(breathing.beatExpand > 0);
+  assert.equal(frameToUniforms(breathing, layout).uBeatExpand, breathing.beatExpand);
 }
 
 // Hero asymmetry: the hero flag and rotated asymmetric lobe weights survive.
@@ -101,10 +112,12 @@ const layout = { width: 1400, height: 520 };
   const small = frameToUniforms(frame, { width: 640, height: 360, radiusPx: 90 });
   const large = frameToUniforms(frame, { width: 2560, height: 1440, radiusPx: 420 });
   for (const key of ['uLow', 'uMid', 'uHigh', 'uAmbient', 'uAnticipation', 'uHold',
-    'uImpact', 'uRecoil', 'uAftershock', 'uTension', 'uHero', 'uShockProgress']) {
+    'uImpact', 'uRecoil', 'uAftershock', 'uTension', 'uHero', 'uShockProgress',
+    'uBeatWave', 'uWaveProgress', 'uCoreAperture', 'uDiffusion', 'uBeatExpand']) {
     assert.equal(small[key], large[key], `layout changed ${key}`);
   }
   assert.ok(small.uRadiusPx !== large.uRadiusPx);
+  assert.ok(small.uWorldScale !== large.uWorldScale);
 }
 
 // Stable output for fixed input, including the reused-target path.

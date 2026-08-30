@@ -19,7 +19,7 @@ import {
 } from './renderer.js';
 import { trackForProject } from '../runtime/runtime.js';
 import { createMotionDirector } from '../runtime/visual-profile.js';
-import { createParticleGeometry } from './particle-geometry.js';
+import { createParticleGeometry, RING_DEFS } from './particle-geometry.js';
 import { createParticleField } from './particle-field.js';
 
 // Tier presets (plan section 7.3): DPR cap and particle budget per tier.
@@ -119,9 +119,10 @@ export function createVisualStage({ particleCanvas = null, overlayCanvas = null 
 
   stage.field = createParticleField({
     canvas: particleCanvas,
-    geometry: particleCanvas ? createParticleGeometry({ count: QUALITY_TIERS.high.count }) : null,
+    geometry: particleCanvas
+      ? createParticleGeometry({ count: QUALITY_TIERS.high.count, rings: RING_DEFS.length })
+      : null,
   });
-
   function overlayContext() {
     if (typeof overlayCanvas.getContext !== 'function') return null;
     try {
@@ -153,7 +154,7 @@ export function createVisualStage({ particleCanvas = null, overlayCanvas = null 
     stage.sizedDpr = 0;
     // Buffer swap happens between frames, never inside a draw call (section 8.2).
     if (particleCanvas && stage.field?.available) {
-      stage.field.updateGeometry(createParticleGeometry({ count: preset.count }));
+      stage.field.updateGeometry(createParticleGeometry({ count: preset.count, rings: RING_DEFS.length }));
     }
   }
 
@@ -185,7 +186,7 @@ export function createVisualStage({ particleCanvas = null, overlayCanvas = null 
     const mainHeight = mainBottom - mainTop;
     const hasSideMeters = width >= 900;
     const meterWidth = hasSideMeters ? Math.min(94, width * .082) : 0;
-    return {
+    const layout = {
       width,
       height,
       margin,
@@ -202,9 +203,24 @@ export function createVisualStage({ particleCanvas = null, overlayCanvas = null 
         right: width - margin - (hasSideMeters ? meterWidth + 34 : 0),
       },
       centreX: width * .5,
-      centreY: mainTop + mainHeight * .54,
-      baseRadius: Math.min(width * .18, mainHeight * .335),
+      centreY: mainTop + mainHeight * .5,
+      // The WebGL field now honours this radius directly. Keep enough scale
+      // for the three petals to read as the hero, while the scissor rect
+      // prevents even the close orbit layer from entering the spectrum deck.
+      baseRadius: Math.min(width * .17, mainHeight * .42),
     };
+    // Relaxed field rect (user-approved ring spec): the orbit rings may reach
+    // past the band-chart lines and toward the top edge, but never into the
+    // spectrum deck. Screen size derives from radiusPx alone, so widening the
+    // viewport/scissor does not rescale the instrument.
+    const ringSpan = 2.3 * layout.baseRadius;
+    layout.fieldRect = {
+      left: Math.min(layout.traceBounds.left, Math.max(0, layout.centreX - ringSpan)),
+      right: Math.max(layout.traceBounds.right, Math.min(width, layout.centreX + ringSpan)),
+      top: Math.max(0, layout.centreY - ringSpan),
+      bottom: Math.min(spectrumTop - 8, layout.centreY + ringSpan),
+    };
+    return layout;
   }
 
   function clearOverlay() {
@@ -264,11 +280,11 @@ export function createVisualStage({ particleCanvas = null, overlayCanvas = null 
     // One sample per layer, all taken here (plan section 7.1).
     const time = Number(state.playbackTime) || 0;
     const signal = playbackState(project, time);
-    const frame = stage.director.at(time);
     const motion = stage.compatProfile.at(time);
     const reducedMotion = state.reducedMotion === undefined
       ? prefersReducedMotion()
       : Boolean(state.reducedMotion);
+    const frame = stage.director.at(time, { reducedMotion });
     const layout = computeLayout(width, height);
     const shared = { ...frame, signal, motion, layout, reducedMotion };
     stage.playing = Boolean(state.isPlaying);
@@ -279,6 +295,12 @@ export function createVisualStage({ particleCanvas = null, overlayCanvas = null 
         quality: 1,
         reducedMotion,
         radiusPx: layout.baseRadius * deviceScale,
+        viewportRect: {
+          x: layout.fieldRect.left * deviceScale,
+          y: (height - layout.fieldRect.bottom) * deviceScale,
+          width: (layout.fieldRect.right - layout.fieldRect.left) * deviceScale,
+          height: (layout.fieldRect.bottom - layout.fieldRect.top) * deviceScale,
+        },
       });
       stage.backend = 'webgl2';
     } else {
@@ -299,6 +321,7 @@ export function createVisualStage({ particleCanvas = null, overlayCanvas = null 
       lastFrameCostMs: Number(stage.lastFrameCostMs.toFixed(3)),
       visible: stage.visible,
       particleCount: stage.field?.count || 0,
+      ringUniforms: stage.field?.diagnostics ? stage.field.diagnostics().ringUniforms : undefined,
       fieldReason: stage.field?.available ? null : stage.field?.reason || 'unavailable',
       tier: stage.fixedTier || stage.tier,
       appliedTier: stage.appliedTier,

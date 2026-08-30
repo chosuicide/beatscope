@@ -11,16 +11,19 @@
  */
 
 import { PARTICLE_VERTEX_SOURCE, PARTICLE_FRAGMENT_SOURCE } from './particle-shaders.js';
+import { RING_DEFS } from './particle-geometry.js';
 
 export const CAMERA_Z = 4.4;
 export const FOV_Y = (35 * Math.PI) / 180;
 
 const UNIFORM_NAMES = [
-  'uTime', 'uViewport', 'uRadiusPx', 'uCameraZ', 'uProjection',
+  'uTime', 'uViewport', 'uRadiusPx', 'uWorldScale', 'uCameraZ', 'uProjection',
   'uLow', 'uMid', 'uHigh', 'uAmbient',
   'uAnticipation', 'uHold', 'uImpact', 'uRecoil', 'uAftershock',
   'uTension', 'uHero', 'uLobeWeights', 'uDirection',
-  'uShockProgress', 'uReducedMotion', 'uQuality',
+  'uShockProgress', 'uBeatWave', 'uWaveProgress', 'uCoreAperture', 'uDiffusion',
+  'uBeatExpand', 'uReducedMotion', 'uQuality',
+  'uRingA', 'uRingE', 'uRingSpeed', 'uRingColor', 'uRingMat',
 ];
 
 const clamp = (value, low, high) => Math.min(high, Math.max(low, Number(value) || 0));
@@ -75,6 +78,7 @@ export function frameToUniforms(frame, layout, { quality = 1, reducedMotion = fa
   uniforms.uViewportX = width;
   uniforms.uViewportY = height;
   uniforms.uRadiusPx = radiusPx;
+  uniforms.uWorldScale = radiusPx * CAMERA_Z * 2 * Math.tan(FOV_Y / 2) / height;
   uniforms.uCameraZ = CAMERA_Z;
   uniforms.uLow = clamp(frame?.low, 0, 1);
   uniforms.uMid = clamp(frame?.mid, 0, 1);
@@ -94,6 +98,11 @@ export function frameToUniforms(frame, layout, { quality = 1, reducedMotion = fa
   uniforms.uDirection1 = direction[1];
   uniforms.uDirection2 = direction[2];
   uniforms.uShockProgress = clamp(frame?.shockProgress, 0, 1);
+  uniforms.uBeatWave = clamp(frame?.beatWave, 0, 1);
+  uniforms.uWaveProgress = clamp(frame?.waveProgress, 0, 1);
+  uniforms.uCoreAperture = clamp(frame?.coreAperture, 0, 1);
+  uniforms.uDiffusion = clamp(frame?.diffusion, 0, 1);
+  uniforms.uBeatExpand = clamp(frame?.beatExpand, 0, 1);
   uniforms.uReducedMotion = reducedMotion ? 1 : 0;
   uniforms.uQuality = clamp(quality, 0.5, 1);
 
@@ -201,6 +210,52 @@ export function createParticleField({ canvas, geometry = null } = {}) {
     state.count = geometry.count;
   }
 
+  /**
+   * Ring constants never change per frame: upload them once per program
+   * (and again on context restore, which re-runs initGL). The ring basis is
+   * the column-major mat3 of Rx(incl) * Rz(phi) matching ringPointLocal().
+   */
+  function uploadRingUniforms() {
+    if (!state.locations.uRingMat) {
+      state.ringUniforms = { uploaded: false, reason: 'no-location', basis00: null };
+      return;
+    }
+    const count = RING_DEFS.length;
+    const ringA = new Float32Array(count);
+    const ringE = new Float32Array(count);
+    const ringSpeed = new Float32Array(count);
+    const colors = new Float32Array(count * 3);
+    const bases = new Float32Array(count * 9);
+    RING_DEFS.forEach((def, index) => {
+      ringA[index] = def.a;
+      ringE[index] = def.squash;
+      ringSpeed[index] = def.speed;
+      colors.set(def.color, index * 3);
+      const cosPhi = Math.cos(def.phi);
+      const sinPhi = Math.sin(def.phi);
+      const cosI = Math.cos(def.incl);
+      const sinI = Math.sin(def.incl);
+      bases.set([
+        cosPhi, cosI * sinPhi, sinI * sinPhi,
+        -sinPhi, cosI * cosPhi, sinI * cosPhi,
+        0, -sinI, cosI,
+      ], index * 9);
+    });
+    gl.uniform3fv(state.locations.uRingA, ringA);
+    gl.uniform3fv(state.locations.uRingE, ringE);
+    gl.uniform3fv(state.locations.uRingSpeed, ringSpeed);
+    gl.uniform3fv(state.locations.uRingColor, colors);
+    gl.uniformMatrix3fv(state.locations.uRingMat, false, bases);
+    // Read one value back so diagnostics can prove the upload landed on the
+    // live program (cos(phi) of ring 0 when healthy).
+    const probe = gl.getUniform(state.program, state.locations.uRingMat);
+    state.ringUniforms = {
+      uploaded: true,
+      reason: null,
+      basis00: probe ? Number(probe[0]?.toFixed?.(4) ?? probe[0]) : null,
+    };
+  }
+
   function initGL() {
     const vertexShader = compileShader(gl.VERTEX_SHADER, PARTICLE_VERTEX_SOURCE);
     const fragmentShader = compileShader(gl.FRAGMENT_SHADER, PARTICLE_FRAGMENT_SOURCE);
@@ -222,6 +277,7 @@ export function createParticleField({ canvas, geometry = null } = {}) {
     for (const name of UNIFORM_NAMES) {
       state.locations[name] = gl.getUniformLocation(program, name);
     }
+    uploadRingUniforms();
     gl.enable(gl.BLEND);
     gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.DEPTH_TEST);
@@ -268,14 +324,29 @@ export function createParticleField({ canvas, geometry = null } = {}) {
       gl.viewport(0, 0, w, h);
       perspectiveMatrix(state.projection, FOV_Y, w / h);
     },
-    render(frame, { quality = 1, reducedMotion = false, radiusPx = 0 } = {}) {
+    render(frame, { quality = 1, reducedMotion = false, radiusPx = 0, viewportRect = null } = {}) {
       if (state.contextLost || !state.count) return;
+      gl.disable(gl.SCISSOR_TEST);
+      gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
       gl.clear(gl.COLOR_BUFFER_BIT);
+      const rect = viewportRect || {
+        x: 0,
+        y: 0,
+        width: gl.drawingBufferWidth,
+        height: gl.drawingBufferHeight,
+      };
+      const viewX = Math.max(0, Math.floor(Number(rect.x) || 0));
+      const viewY = Math.max(0, Math.floor(Number(rect.y) || 0));
+      const viewWidth = Math.max(1, Math.min(gl.drawingBufferWidth - viewX, Math.floor(Number(rect.width) || 1)));
+      const viewHeight = Math.max(1, Math.min(gl.drawingBufferHeight - viewY, Math.floor(Number(rect.height) || 1)));
+      gl.enable(gl.SCISSOR_TEST);
+      gl.scissor(viewX, viewY, viewWidth, viewHeight);
+      gl.viewport(viewX, viewY, viewWidth, viewHeight);
       const uniforms = frameToUniforms(
         frame,
         {
-          width: gl.drawingBufferWidth,
-          height: gl.drawingBufferHeight,
+          width: viewWidth,
+          height: viewHeight,
           ...(radiusPx > 0 ? { radiusPx } : {}),
         },
         { quality, reducedMotion },
@@ -289,6 +360,7 @@ export function createParticleField({ canvas, geometry = null } = {}) {
       gl.uniform1f(loc.uTime, uniforms.uTime);
       gl.uniform2f(loc.uViewport, uniforms.uViewportX, uniforms.uViewportY);
       gl.uniform1f(loc.uRadiusPx, uniforms.uRadiusPx);
+      gl.uniform1f(loc.uWorldScale, uniforms.uWorldScale);
       gl.uniform1f(loc.uCameraZ, uniforms.uCameraZ);
       gl.uniformMatrix4fv(loc.uProjection, false, state.projection);
       gl.uniform1f(loc.uLow, uniforms.uLow);
@@ -305,9 +377,15 @@ export function createParticleField({ canvas, geometry = null } = {}) {
       gl.uniform3f(loc.uLobeWeights, uniforms.uLobeWeights0, uniforms.uLobeWeights1, uniforms.uLobeWeights2);
       gl.uniform3f(loc.uDirection, uniforms.uDirection0, uniforms.uDirection1, uniforms.uDirection2);
       gl.uniform1f(loc.uShockProgress, uniforms.uShockProgress);
+      gl.uniform1f(loc.uBeatWave, uniforms.uBeatWave);
+      gl.uniform1f(loc.uWaveProgress, uniforms.uWaveProgress);
+      gl.uniform1f(loc.uCoreAperture, uniforms.uCoreAperture);
+      gl.uniform1f(loc.uDiffusion, uniforms.uDiffusion);
+      gl.uniform1f(loc.uBeatExpand, uniforms.uBeatExpand);
       gl.uniform1f(loc.uReducedMotion, uniforms.uReducedMotion);
       gl.uniform1f(loc.uQuality, uniforms.uQuality);
       gl.drawArrays(gl.POINTS, 0, state.count);
+      gl.disable(gl.SCISSOR_TEST);
     },
     updateGeometry(nextGeometry) {
       geometry = nextGeometry;
@@ -323,6 +401,7 @@ export function createParticleField({ canvas, geometry = null } = {}) {
         reason: null,
         contextLost: state.contextLost,
         count: state.count,
+        ringUniforms: state.ringUniforms || null,
       };
     },
     dispose() {

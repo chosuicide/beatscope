@@ -179,6 +179,20 @@ function easeOutExpo(p) {
 }
 
 /**
+ * Per-beat expand-contract breath (phase 0..1 inside the local beat): the
+ * form snaps outward immediately after the beat and releases early enough
+ * to recover negative space before the next hit. Exact zero endpoints keep
+ * the beat boundary deterministic while the short attack makes the visual
+ * accent feel attached to the transient instead of lagging behind it.
+ */
+function beatPulseEnvelope(phase) {
+  const p = clamp01(phase);
+  const attack = easeOutExpo(Math.min(1, p / 0.10));
+  const release = 1 - smoothstepBetween(0.32, 0.74, p);
+  return attack * release;
+}
+
+/**
  * Phase lengths for one event's phrase (plan section 6.4), derived from the
  * ADJACENT beat duration so variable-tempo tracks stretch and compress the
  * phrase with the local groove, clamped to human-readable ranges. Dense
@@ -204,6 +218,7 @@ export const envelopeMath = {
   smoothstepBetween,
   easeInCubic,
   easeOutExpo,
+  beatPulseEnvelope,
   phaseDurations,
 };
 
@@ -255,6 +270,7 @@ function sampleBandStatistics(track, duration) {
 
 const TIER_RANK = { pulse: 0, turbulence: 1, burst: 2, hero: 3 };
 const TIER_SCALE = { pulse: 0.35, turbulence: 0.5, burst: 1, hero: 1 };
+const DIFFUSION_SCALE = { pulse: 0.30, turbulence: 0.46, burst: 0.78, hero: 1 };
 const MEMORY_WEIGHT = { pulse: 0.35, turbulence: 0.45, burst: 0.7, hero: 0.9 };
 
 function beatSpanAt(beatTimes, beatIndex, fallback) {
@@ -385,8 +401,15 @@ function buildEvents(track, options) {
       impactDuration: durations.impact,
       recoilDuration: durations.recoil,
       aftershockDuration: durations.aftershock,
-      lobeWeights: rotateWeights(lobeBase(tier), id),
+      // Ordinary hits travel around the three lobes with the musical grid.
+      // Falling back to the stable onset id keeps grid-less projects seek-safe.
+      lobeWeights: rotateWeights(lobeBase(tier), hasBeatIndex ? Math.floor(beatIndex) : id),
       direction: goldenDirection(id),
+      waveDuration: clampBetween(
+        beatSpanAt(beatTimes, beatIndex, globalBeatLength) * 0.58,
+        0.20,
+        0.38,
+      ),
     });
   }
   return events;
@@ -448,6 +471,15 @@ export function createMotionDirector(track, options = {}) {
   const statistics = sampleBandStatistics(track, projectDuration(track));
   const events = buildEvents(track, options);
   const defaultReducedMotion = Boolean(options.reducedMotion);
+  // Per-beat strength table for the expand-contract breath: the strongest
+  // onset that lands on each beat sets that beat's amplitude. Beats without
+  // onsets stay absent and fall back to the quiet-breathing floor.
+  const beatStrengths = new Map();
+  for (const event of events) {
+    const index = Math.floor(Number(event.beatIndex));
+    if (!Number.isFinite(index)) continue;
+    if (event.strength > (beatStrengths.get(index) ?? 0)) beatStrengths.set(index, event.strength);
+  }
 
   function eventsInWindow(from, to) {
     let low = 0;
@@ -492,6 +524,7 @@ export function createMotionDirector(track, options = {}) {
     let aftershock = 0;
     let primary = null;
     let primaryDominance = 0;
+    let recent = null;
     let memorySum = 0;
 
     for (const event of relevant) {
@@ -505,6 +538,9 @@ export function createMotionDirector(track, options = {}) {
         primaryDominance = channels.dominance;
         primary = event;
       }
+      const waveAge = t - event.time;
+      if (waveAge >= 0 && waveAge <= event.waveDuration
+        && (!recent || event.time > recent.time)) recent = event;
       const age = t - event.time;
       // Symmetric exponential weight: continuous across age=0, so an event
       // contributes the same surface memory a moment before and after it.
@@ -529,9 +565,39 @@ export function createMotionDirector(track, options = {}) {
 
     const memory = 1 - Math.exp(-memorySum);
     const tension = clamp01(anticipationValue + 0.35 * memory);
-    const shockSpan = primary
-      ? primary.impactDuration + primary.recoilDuration + primary.aftershockDuration
+    const driver = primary || recent;
+    const waveProgress = recent
+      ? clamp01((t - recent.time) / Math.max(1e-6, recent.waveDuration))
+      : 0;
+    // A narrow, damped wave continues after the short strike envelope. It
+    // creates readable motion inside the body without changing its silhouette.
+    const rawBeatWave = recent
+      ? Math.sin(Math.PI * waveProgress) * Math.exp(-1.35 * waveProgress)
+        * (0.42 + 0.58 * recent.strength)
+      : 0;
+    const beatWave = rawBeatWave * (reducedMotion ? 0.25 : 1);
+    const rawCoreAperture = clamp01(
+      impact + rawBeatWave * 0.46 + (primary?.tier === 'hero' ? anticipation * 0.2 : 0),
+    );
+    const coreAperture = rawCoreAperture * (reducedMotion ? 0.25 : 1);
+    const diffusionDriver = driver
+      ? Math.max(rawBeatWave, impact * 0.82) * DIFFUSION_SCALE[driver.tier]
+        * (1 - 0.68 * driver.density)
+      : 0;
+    const diffusion = clamp01(diffusionDriver) * (reducedMotion ? 0.20 : 1);
+    const shockSpan = driver
+      ? driver.impactDuration + driver.recoilDuration + driver.aftershockDuration
       : 1;
+
+    // Per-beat expand-contract: amplitude comes from the onsets landing on
+    // THIS beat and the current energy, so strong beats diffuse visibly,
+    // weak beats breathe gently, and near-silence stays almost still.
+    const beatInteger = Math.floor(Number(position.beatIndex));
+    const beatStrength = Number.isFinite(beatInteger) ? (beatStrengths.get(beatInteger) ?? 0) : 0;
+    const beatExpandAmplitude = (0.18 + 0.82 * beatStrength) * (0.40 + 0.60 * bands.all);
+    const beatExpand = beatPulseEnvelope(position.beatPhase)
+      * beatExpandAmplitude
+      * (reducedMotion ? 0.25 : 1);
 
     const frame = {
       time: t,
@@ -539,8 +605,8 @@ export function createMotionDirector(track, options = {}) {
       mid: bands.mid,
       high: bands.high,
       all: bands.all,
-      tier: primary ? primary.tier : 'ambient',
-      eventId: primary ? primary.id : -1,
+      tier: driver ? driver.tier : 'ambient',
+      eventId: driver ? driver.id : -1,
       ambient: ambientValue,
       anticipation: anticipationValue,
       hold: holdValue,
@@ -549,10 +615,16 @@ export function createMotionDirector(track, options = {}) {
       aftershock: aftershockValue,
       tension,
       memory,
-      hero: primary && primary.tier === 'hero' ? 1 : 0,
-      lobeWeights: primary ? primary.lobeWeights.slice() : [0.34, 0.33, 0.33],
-      direction: primary ? primary.direction.slice() : [0, 1, 0],
-      shockProgress: primary ? clamp01((t - primary.time) / Math.max(1e-6, shockSpan)) : 0,
+      hero: driver && driver.tier === 'hero' ? 1 : 0,
+      lobeWeights: driver ? driver.lobeWeights.slice() : [0.34, 0.33, 0.33],
+      direction: driver ? driver.direction.slice() : [0, 1, 0],
+      shockProgress: driver ? clamp01((t - driver.time) / Math.max(1e-6, shockSpan)) : 0,
+      beatWave,
+      waveProgress,
+      coreAperture,
+      diffusion,
+      beatExpand,
+      beatIndex: Number.isFinite(Number(position.beatIndex)) ? Number(position.beatIndex) : 0,
       beatPhase: position.beatPhase,
       barPhase: position.barPhase,
     };

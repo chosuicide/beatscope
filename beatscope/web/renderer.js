@@ -1,6 +1,8 @@
 import { gridPosition, metrics } from './grid.js';
 import { trackForProject } from '../runtime/runtime.js';
 import { createVisualProfile } from '../runtime/visual-profile.js';
+import { RING_DEFS, RING_SLOTS, findRingCrossings, ringPointLocal } from './particle-geometry.js';
+import { CAMERA_Z } from './particle-field.js';
 
 const ROWS = ['all', 'low', 'mid', 'high', 'accent'];
 const LABELS = { all: 'IMPACT', low: 'LOW / SCALE', mid: 'MID / FLOW', high: 'HIGH / FLASH', accent: 'ACCENT / BLOOM' };
@@ -146,6 +148,83 @@ function rotatePoint(point, angleX, angleY) {
   const cosX = Math.cos(angleX);
   const sinX = Math.sin(angleX);
   return { x: x1, y: point.y * cosX - z1 * sinX, z: point.y * sinX + z1 * cosX };
+}
+
+// --- Orbit rings (layer 3; definitions live in particle-geometry.js) --------
+const RING_CSS_COLORS = RING_DEFS.map((def) => `rgb(${Math.round(def.color[0] * 255)}, ${Math.round(def.color[1] * 255)}, ${Math.round(def.color[2] * 255)})`);
+
+/** Delayed beat ripple shared by WebGL parity markers and Canvas fallback. */
+function ringRipple(frame, ringIndex) {
+  const delay = .12 + .16 * ringIndex;
+  return clamp((Number(frame.beatWave) || 0) * 1.8
+    * Math.exp(-Math.pow(((Number(frame.waveProgress) || 0) - delay) * 8.5, 2)));
+}
+
+/** Canvas-compat ring dots: same RING_DEFS, seeded dashes, slow revolution. */
+function drawFallbackRings(ctx, frame, layout, baseRadius, angleX, angleY, reducedMotion) {
+  const time = frame.signal.time;
+  const revolution = reducedMotion ? 0 : 1;
+  for (let r = 0; r < RING_DEFS.length; r += 1) {
+    const def = RING_DEFS[r];
+    const pulse = ringRipple(frame, r);
+    const rippleScale = 1 + pulse * (.045 + .015 * r);
+    for (let slot = 0; slot < RING_SLOTS; slot += 1) {
+      if (hash01(slot * 7.31 + r * 131.7, 2.17) < .04) continue;
+      const theta = ((slot + .5) / RING_SLOTS) * Math.PI * 2
+        + (hash01(slot * 3.7 + r * 17.3, 5.19) - .5) * ((Math.PI * 2 / RING_SLOTS) * .55)
+        + def.speed * time * revolution;
+      const bandCoordinate = (hash01(slot * 4.91 + r * 83.2, 7.13) - .5) * 2;
+      const bandCore = 1 - smoothstep(Math.max(0, (Math.abs(bandCoordinate) - .08) / .92));
+      const bandOffset = bandCoordinate * (.060 + .035 * pulse);
+      const local = ringPointLocal(def, theta)
+        .map((value) => value * rippleScale * (1 + bandOffset / def.a));
+      const rotated = rotatePoint({ x: local[0], y: local[1], z: local[2] }, angleX, angleY);
+      const perspective = 3.15 / (3.15 - rotated.z);
+      const depth = clamp((rotated.z + 2.3) / 4.6);
+      ctx.beginPath();
+      ctx.arc(
+        layout.centreX + rotated.x * baseRadius * perspective,
+        layout.centreY + rotated.y * baseRadius * perspective,
+        (.75 + bandCore * 1.15 + depth * .55) * (1 + pulse * .42), 0, Math.PI * 2,
+      );
+      ctx.fillStyle = RING_CSS_COLORS[r];
+      ctx.globalAlpha = clamp((.08 + bandCore * .40 + depth * .14) * (1 + pulse * .52));
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** ◉ nodes where each ring's dashed path crosses the screen vertical. */
+function drawOrbitRingNodes(ctx, frame, layout) {
+  const time = Number(frame.time) || 0;
+  const rotationScale = mix(1, .22, clamp(frame.hold));
+  const yaw = (0.09 * time + 0.035 * Math.sin(0.17 * time)) * rotationScale;
+  const pitch = -.2 + 0.045 * Math.sin(0.13 * time);
+  const roll = 0.025 * Math.sin(0.11 * time) * rotationScale;
+  for (let r = 0; r < RING_DEFS.length; r += 1) {
+    const pulse = ringRipple(frame, r);
+    const scale = 1 + pulse * (.045 + .015 * r);
+    for (const world of findRingCrossings(RING_DEFS[r], yaw, pitch, roll, scale)) {
+      const persp = CAMERA_Z / Math.max(0.1, CAMERA_Z - world[2]);
+      const x = layout.centreX + world[0] * layout.baseRadius * persp;
+      const y = layout.centreY - world[1] * layout.baseRadius * persp;
+      const depth = clamp((world[2] + 2.3) / 4.6);
+      const radius = 2.3 + depth * 2.3;
+      ctx.save();
+      ctx.strokeStyle = RING_CSS_COLORS[r];
+      ctx.fillStyle = RING_CSS_COLORS[r];
+      ctx.globalAlpha = .3 + depth * .45;
+      ctx.lineWidth = depth > .55 ? 1.4 : 1;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(1, radius * .36), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
 }
 
 function drawFrequencyLine(ctx, project, signal, width, baseY, band, color, amplitude, lineWidth, alpha, bounds = null) {
@@ -370,11 +449,98 @@ export function renderVisualBackdrop(canvas, state, frame) {
   if (!ctx || !state.project || !frame?.layout) return;
   const { layout, signal, motion } = frame;
   const reducedMotion = Boolean(frame.reducedMotion);
+  ctx.save();
+  // The relaxed field rect lets the orbit rings leave the main chart area;
+  // without one (older layouts) the historical main-area clip applies.
+  const fieldBox = layout.fieldRect || {
+    left: layout.traceBounds.left,
+    top: layout.mainTop,
+    right: layout.traceBounds.right,
+    bottom: layout.mainBottom,
+  };
+  ctx.beginPath();
+  ctx.rect(fieldBox.left, fieldBox.top, fieldBox.right - fieldBox.left, fieldBox.bottom - fieldBox.top);
+  ctx.clip();
   drawReactiveLight(ctx, layout.centreX, layout.centreY, layout.baseRadius, signal, motion, reducedMotion);
   drawArcTicks(ctx, layout.centreX, layout.centreY, layout.baseRadius, signal);
   renderCanvasParticleFallback(ctx, frame, layout);
+  ctx.restore();
 }
 
+/**
+ * Three-lobe light spill composited above the WebGL field. This deliberately
+ * avoids a single circular halo: each soft ellipse belongs to one particle
+ * lobe, while the active lobe receives the transient energy. The glow is
+ * short-lived and spatially biased, so it reads as emitted light rather than
+ * a decorative ring around the instrument.
+ */
+function drawParticleHalo(ctx, frame, layout) {
+  const reduced = frame.reducedMotion ? 0.25 : 1;
+  const impact = clamp(frame.impact) * reduced;
+  const wave = clamp(frame.beatWave) * reduced;
+  const expand = clamp(frame.beatExpand) * reduced;
+  const anticipation = clamp(frame.anticipation) * reduced;
+  const low = clamp(frame.low);
+  const weights = Array.isArray(frame.lobeWeights) ? frame.lobeWeights : [1 / 3, 1 / 3, 1 / 3];
+  const { centreX, centreY, baseRadius } = layout;
+  const fieldBox = layout.fieldRect || {
+    left: layout.traceBounds.left,
+    top: layout.mainTop,
+    right: layout.traceBounds.right,
+    bottom: layout.mainBottom,
+  };
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(fieldBox.left, fieldBox.top, fieldBox.right - fieldBox.left, fieldBox.bottom - fieldBox.top);
+  ctx.clip();
+
+  for (let index = 0; index < 3; index += 1) {
+    const angle = -Math.PI / 2 + index * Math.PI * 2 / 3;
+    const selected = clamp(weights[index]);
+    const energy = clamp(.045 + low * .075 + expand * .16 + wave * (.09 + selected * .16)
+      + impact * (.16 + selected * .54));
+    const pullIn = 1 - anticipation * (.10 + selected * .10);
+    const offset = baseRadius * (.14 + impact * selected * .10) * pullIn;
+    const radius = baseRadius * (.66 + expand * .28 + impact * selected * .38) * pullIn;
+    const x = centreX + Math.cos(angle) * offset;
+    const y = centreY + Math.sin(angle) * offset;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle + .22);
+    ctx.scale(1, .62 + selected * .08);
+    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+    glow.addColorStop(0, `rgba(255,247,218,${energy * .72})`);
+    glow.addColorStop(.26, `rgba(240,154,94,${energy * .38})`);
+    glow.addColorStop(.62, `rgba(198,80,50,${energy * .13})`);
+    glow.addColorStop(1, 'rgba(198,80,50,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // A compact hot core appears on the transient, then disappears before the
+  // lobe spill finishes. It supplies a clear strike without becoming a ring.
+  const coreEnergy = clamp(low * .12 + wave * .22 + impact * .88);
+  if (coreEnergy > .01) {
+    const coreRadius = baseRadius * (.20 + impact * .20 + wave * .08);
+    const core = ctx.createRadialGradient(centreX, centreY, 0, centreX, centreY, coreRadius);
+    core.addColorStop(0, `rgba(255,255,240,${coreEnergy * .78})`);
+    core.addColorStop(.22, `rgba(255,214,158,${coreEnergy * .44})`);
+    core.addColorStop(.58, `rgba(198,80,50,${coreEnergy * .16})`);
+    core.addColorStop(1, 'rgba(198,80,50,0)');
+    ctx.fillStyle = core;
+    ctx.beginPath();
+    ctx.arc(centreX, centreY, coreRadius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/** Persistent black/white composition beneath the particle field. */
 export function renderCanvasParticleFallback(ctx, frame, layout) {
   const signal = frame.signal;
   const motion = frame.motion;
@@ -382,8 +548,11 @@ export function renderCanvasParticleFallback(ctx, frame, layout) {
   const centreX = layout.centreX;
   const centreY = layout.centreY;
   const width = layout.width;
+  // The per-beat breath matches the WebGL field: expand after the strike,
+  // contract before the next beat (shared director frame field).
+  const beatExpand = clamp(frame.beatExpand);
   const baseRadius = layout.baseRadius
-    * (1 + signal.low * .07 + motion.pulse * .018 + motion.turbulence * .012);
+    * (1 + signal.low * .07 + motion.pulse * .018 + motion.turbulence * .012 + beatExpand * .09);
 
   const angleY = signal.time * (.12 + signal.mid * .09);
   const angleX = -.22 + Math.sin(signal.time * .16) * .055;
@@ -487,6 +656,9 @@ export function renderCanvasParticleFallback(ctx, frame, layout) {
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
 
+  // Orbit rings under the same breath scale as the WebGL field.
+  drawFallbackRings(ctx, frame, layout, layout.baseRadius, angleX, angleY, reducedMotion);
+
   // A small inner core gives low frequencies a visible centre of gravity.
   const coreRadius = baseRadius * (.055 + signal.low * .08 + signal.beatPulse * .025);
   const core = ctx.createRadialGradient(centreX, centreY, 0, centreX, centreY, coreRadius * 2.6);
@@ -507,6 +679,7 @@ export function renderVisualOverlay(canvas, state, frame) {
     drawEmptyCanvas(ctx, canvas.clientWidth || 1200, canvas.clientHeight || 520, 'LOAD AUDIO');
     return;
   }
+  ctx.save();
   const { layout, signal, motion } = frame;
   const width = layout.width;
   const margin = layout.margin;
@@ -523,6 +696,8 @@ export function renderVisualOverlay(canvas, state, frame) {
   const centreY = layout.centreY;
   const baseRadius = layout.baseRadius;
 
+  drawParticleHalo(ctx, frame, layout);
+
   // Instrument grid and the local eight-bar ruler.
   for (let index = 0; index <= 8; index += 1) {
     const x = traceBounds.left + (traceBounds.right - traceBounds.left) * index / 8;
@@ -536,25 +711,14 @@ export function renderVisualOverlay(canvas, state, frame) {
     line(ctx, x, mainTop + 14, x, mainTop + (index === 4 ? 23 : 19), index === 4 ? ACCENT : LINE, index === 4 ? 1.5 : 1, .8);
   }
 
-  // Onset ring: the only transient flash allowed over the calm interface.
-  const impact = Math.max(motion.burst * .48, motion.hero);
-  if (signal.onset > .025) {
-    ctx.save();
-    ctx.strokeStyle = ACCENT;
-    ctx.globalAlpha = .12 + signal.onset * .55;
-    ctx.lineWidth = 1 + signal.onset * 8;
-    ctx.shadowColor = ACCENT;
-    ctx.shadowBlur = 14 + signal.onset * 30;
-    ctx.beginPath();
-    ctx.arc(centreX, centreY, baseRadius * (1.02 + signal.onsetAge * 1.5), 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-  }
-
   // The original three-band chart stays in the foreground of the instrument.
   drawFrequencyLine(ctx, project, signal, width, mainTop + mainHeight * .34, 'low', INK, mainHeight * .12, 1.35, .62, traceBounds);
   drawFrequencyLine(ctx, project, signal, width, mainTop + mainHeight * .57, 'mid', '#77756c', mainHeight * .11, 1.15, .62, traceBounds);
   drawFrequencyLine(ctx, project, signal, width, mainTop + mainHeight * .8, 'high', ACCENT, mainHeight * .095, 1.1, .78, traceBounds);
+
+  // ◉ node markers: where each orbit ring's dashed path crosses the screen
+  // vertical through the instrument centre (mockup detail).
+  drawOrbitRingNodes(ctx, frame, layout);
 
   if (hasSideMeters) {
     const boxHeight = Math.min(76, mainHeight * .205);
@@ -579,6 +743,7 @@ export function renderVisualOverlay(canvas, state, frame) {
   ctx.fillRect(playheadX - 2, mainTop, 4, 6);
   text(ctx, `BAR ${String(signal.bar).padStart(2, '0')} / BEAT ${signal.beat}`, margin, margin + 10, { color: MUTED });
   text(ctx, `${signal.section?.group || signal.section?.label || '—'} / 08 BARS`, width - margin, margin + 10, { color: MUTED, align: 'right' });
+  ctx.restore();
 }
 
 function aggregateSteps(project, subdivision, adjustments) {

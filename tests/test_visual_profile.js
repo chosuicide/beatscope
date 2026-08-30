@@ -176,6 +176,16 @@ const MOTION_CHANNELS = ['ambient', 'anticipation', 'hold', 'impact', 'recoil', 
   });
   // Dense passages stretch only the aftershock (plan section 6.6).
   assert.ok(Math.abs(envelopeMath.phaseDurations(3, 1).aftershock - 0.82 * 1.15) < 1e-12);
+
+  // Per-beat expand-contract breath: exact zero at the beat and before the
+  // next one, a full plateau across the first half, fast attack.
+  assert.equal(envelopeMath.beatPulseEnvelope(0), 0);
+  assert.equal(envelopeMath.beatPulseEnvelope(0.3), 1);
+  assert.equal(envelopeMath.beatPulseEnvelope(0.88), 0);
+  assert.equal(envelopeMath.beatPulseEnvelope(1), 0);
+  assert.ok(envelopeMath.beatPulseEnvelope(0.05) > 0.5);
+  assert.ok(envelopeMath.beatPulseEnvelope(0.6) > 0);
+  assert.ok(envelopeMath.beatPulseEnvelope(0.6) < 1);
 }
 
 // One silent hero at t=20 on a 120 BPM fallback grid: beatSpan 0.5 s gives
@@ -216,6 +226,8 @@ const boundaryDirector = createMotionDirector(createTrack(boundaryProject()));
   assert.equal(strike.aftershock, 0);
   assert.equal(strike.hero, 1);
   assert.equal(strike.tier, 'hero');
+
+  const negative = d.at(20.08);
 
   const handover = d.at(20.06); // impact window end
   assert.equal(handover.impact, 0);
@@ -259,7 +271,9 @@ const boundaryDirector = createMotionDirector(createTrack(boundaryProject()));
       low: [0, 1], mid: [0, 1], high: [0, 1], all: [0, 1], ambient: [0, 1],
       anticipation: [0, 1], hold: [0, 1], impact: [0, 1], recoil: [0, 1],
       aftershock: [-1, 1], tension: [0, 1], memory: [0, 1], hero: [0, 1],
-      shockProgress: [0, 1], beatPhase: [0, 1], barPhase: [0, 1],
+      shockProgress: [0, 1], beatWave: [0, 1], waveProgress: [0, 1],
+      coreAperture: [0, 1], diffusion: [0, 1], beatExpand: [0, 1],
+      beatPhase: [0, 1], barPhase: [0, 1],
     }, `director.at(${time})`);
     assert.equal(frame.tier, 'ambient');
   }
@@ -310,7 +324,7 @@ const boundaryDirector = createMotionDirector(createTrack(boundaryProject()));
   assert.ok(denseMemory > sparseMemory + 0.1);
 }
 
-// 7. Ordinary pulses rotate deterministic lobe assignment from onset id.
+// 7. Ordinary pulses rotate deterministic lobe assignment from the beat grid.
 {
   const pulseDirector = createMotionDirector(createTrack({
     tempo: { global_bpm: 120 },
@@ -324,9 +338,9 @@ const boundaryDirector = createMotionDirector(createTrack(boundaryProject()));
     energy: makeEnergy(),
   }));
   const rotations = [
-    { id: 11, time: 0, weights: [0, 1, 0] },
-    { id: 12, time: 2, weights: [1, 0, 0] },
-    { id: 13, time: 4, weights: [0, 0, 1] },
+    { id: 11, time: 0, weights: [1, 0, 0] },
+    { id: 12, time: 2, weights: [0, 0, 1] },
+    { id: 13, time: 4, weights: [0, 1, 0] },
   ];
   for (const { id, time, weights } of rotations) {
     const frame = pulseDirector.at(time + 0.01);
@@ -417,6 +431,11 @@ const boundaryDirector = createMotionDirector(createTrack(boundaryProject()));
   assert.equal(calm.eventId, -1);
   for (const channel of MOTION_CHANNELS) assert.equal(calm[channel], 0);
   assert.equal(calm.hero, 0);
+  assert.equal(calm.beatWave, 0);
+  assert.equal(calm.waveProgress, 0);
+  assert.equal(calm.coreAperture, 0);
+  assert.equal(calm.diffusion, 0);
+  assert.equal(calm.beatExpand, 0);
   assert.deepEqual(calm.lobeWeights, [0.34, 0.33, 0.33]);
 
   // With energy but no nearby events the director stays ambient and reports
@@ -444,6 +463,11 @@ const boundaryDirector = createMotionDirector(createTrack(boundaryProject()));
   }
   assert.deepEqual(calm.lobeWeights, frame.lobeWeights);
   assert.deepEqual(calm.direction, frame.direction);
+  assert.ok(Math.abs(calm.beatWave - frame.beatWave * 0.25) < 1e-12);
+  assert.ok(Math.abs(calm.coreAperture - frame.coreAperture * 0.25) < 1e-12);
+  assert.ok(Math.abs(calm.beatExpand - frame.beatExpand * 0.25) < 1e-12);
+  assert.ok(calm.diffusion <= frame.diffusion * 0.21 + 1e-12);
+  assert.equal(calm.waveProgress, frame.waveProgress);
 
   // Recoil and aftershock scale on their own windows.
   const recoilFrame = boundaryDirector.at(20.15);
@@ -457,6 +481,58 @@ const boundaryDirector = createMotionDirector(createTrack(boundaryProject()));
 
   // The creation option applies the same scaling by default.
   assert.deepEqual(createMotionDirector(createTrack(boundaryProject()), { reducedMotion: true }).at(time), calm);
+}
+
+// 13. Per-beat expand-contract: every beat diffuses outward and recovers
+// before the next one; the onsets landing on a beat set its amplitude and
+// the current energy gates the floor. Flat energy isolates the strength
+// ladder from band movement (bands normalize to 0 on constant energy).
+{
+  const flatEnergy = (seconds = 26, value = 0.5) => ({
+    start: 0,
+    fps: 20,
+    bands: {
+      low: Array.from({ length: seconds * 20 + 1 }, () => value),
+      mid: Array.from({ length: seconds * 20 + 1 }, () => value),
+      high: Array.from({ length: seconds * 20 + 1 }, () => value),
+      all: Array.from({ length: seconds * 20 + 1 }, () => value),
+    },
+  });
+  const pulseDirector = createMotionDirector(createTrack({
+    tempo: { global_bpm: 120 },
+    grid: { origin: 0 },
+    beats: [],
+    onsets: [
+      { id: 1, time: 10, strength: 1 },
+      { id: 2, time: 12.5, strength: 0.3 },
+      { id: 3, time: 15, strength: 0 },
+    ],
+    energy: flatEnergy(),
+  }));
+
+  // Same phase (0.2 into the beat), three different beat strengths.
+  const strong = pulseDirector.at(10.1);
+  const weak = pulseDirector.at(12.6);
+  const quiet = pulseDirector.at(15.1);
+  assert.ok(strong.beatExpand > 0.35);                 // full-beat diffusion
+  assert.ok(weak.beatExpand < strong.beatExpand * 0.5);
+  assert.ok(quiet.beatExpand < weak.beatExpand * 0.6); // breath floor remains
+  assert.ok(quiet.beatExpand > 0.02);
+
+  // The envelope contracts within the beat: late in the beat the form is
+  // most of the way back to rest (band movement cannot hide the ratio).
+  const hit = boundaryDirector.at(20.1);
+  const late = boundaryDirector.at(20.425); // phase 0.85
+  assert.ok(late.beatExpand < 0.08);
+  assert.ok(late.beatExpand < hit.beatExpand * 0.3);
+
+  // Silent on both sides of the beat boundary: the amplitude switch from
+  // one beat's strength to the next happens while the envelope is zero.
+  assert.equal(boundaryDirector.at(20 - 1e-8).beatExpand, 0);
+  assert.ok(boundaryDirector.at(20 + 1e-8).beatExpand < 1e-4);
+
+  // Deterministic and frozen like every other channel.
+  assert.deepEqual(pulseDirector.at(10.1), strong);
 }
 
 // Purity: frozen director, frozen frame, frozen project.
