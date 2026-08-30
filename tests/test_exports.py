@@ -1,3 +1,4 @@
+import csv
 import json
 import io
 import struct
@@ -89,3 +90,161 @@ def test_codex_export_contains_portable_skill():
         names = set(archive.namelist())
         assert {"SKILL.md", "references/schema.md", "rhythm-map.json", "visual-state.js", "BEATSCOPE.md"} <= names
         assert "name: beatscope-visualizer" in archive.read("SKILL.md").decode("utf-8")
+
+
+# --- variable-tempo MIDI tempo map (plan sections 19.2 / 19.4 / 22.6) -------
+
+def _parse_midi(data: bytes) -> dict:
+    """Minimal SMF reader: returns per-track [(tick, kind, a, b)] event lists."""
+    assert data[:4] == b"MThd"
+    header_len = struct.unpack(">I", data[4:8])[0]
+    n_tracks = struct.unpack(">H", data[10:12])[0]
+    division = struct.unpack(">H", data[12:14])[0]
+    pos = 8 + header_len
+    tracks = []
+    for _ in range(n_tracks):
+        assert data[pos:pos + 4] == b"MTrk"
+        length = struct.unpack(">I", data[pos + 4:pos + 8])[0]
+        chunk = data[pos + 8:pos + 8 + length]
+        pos += 8 + length
+        events = []
+        tick = 0
+        i = 0
+        while i < len(chunk):
+            delta = 0
+            while True:
+                byte = chunk[i]
+                i += 1
+                delta = (delta << 7) | (byte & 0x7F)
+                if not byte & 0x80:
+                    break
+            tick += delta
+            status = chunk[i]
+            i += 1
+            if status == 0xFF:
+                meta_type = chunk[i]
+                i += 1
+                payload_len = chunk[i]
+                i += 1
+                events.append((tick, "meta", meta_type, chunk[i:i + payload_len]))
+                i += payload_len
+            else:
+                events.append((tick, "note", status, chunk[i], chunk[i + 1]))
+                i += 2
+        tracks.append(events)
+    return {"division": division, "tracks": tracks}
+
+
+def _note_on_ticks(parsed: dict) -> list[int]:
+    ticks = []
+    for track in parsed["tracks"]:
+        for event in track:
+            if (
+                len(event) == 5
+                and event[1] == "note"
+                and (event[2] & 0xF0) == 0x90
+                and event[4] > 0
+            ):
+                ticks.append(event[0])
+    return sorted(ticks)
+
+
+def _tempo_events(parsed: dict) -> list[tuple[int, int]]:
+    """(tick, microseconds_per_quarter) for every FF 51 meta event."""
+    found = []
+    for track in parsed["tracks"]:
+        for event in track:
+            if len(event) == 4 and event[1] == "meta" and event[2] == 0x51:
+                found.append((event[0], int.from_bytes(event[3], "big")))
+    return found
+
+
+def _variable_rhythm(origin: float = 0.0, segments: list | None = None) -> dict:
+    """Tempo-map rhythm: onsets quantize exactly onto the stored beats."""
+    if segments is None:
+        segments = [
+            {"start": 0.0, "end": 8.0, "bpm": 120.0, "method": "test", "score": None},
+            {"start": 8.0, "end": 16.0, "bpm": 140.0, "method": "test", "score": None},
+        ]
+    return {
+        "tempo": {
+            "global_bpm": 129.9,
+            "segments": segments,
+        },
+        "grid": {"origin": origin},
+        "beats": [{"time": t, "bar": 1, "beat": 1} for t in (0.0, 4.0, 8.0, 12.0, 16.0)],
+        "onsets": [
+            {"id": i, "raw_time": t, "strength": 0.8, "bands": {"all": 0.8, "low": 0, "mid": 0, "high": 0}}
+            for i, t in enumerate((2.0, 8.0, 10.0), 1)
+        ],
+    }
+
+
+def test_midi_single_segment_matches_v0_5_ticks():
+    from beatscope.midi import TPQ
+
+    single = [{"start": 0.0, "end": 16.0, "bpm": 120.0, "method": "test", "score": None}]
+    parsed = _parse_midi(generate_rhythm_midi(_variable_rhythm(origin=0.5, segments=single), subdivision=16))
+    # v0.5 formula: (t - origin) * bpm / 60 * TPQ, still exact for one segment.
+    assert _note_on_ticks(parsed) == [
+        int(round((t - 0.5) * 120.0 / 60.0 * TPQ)) for t in (2.0, 8.0, 10.0)
+    ]
+    assert _tempo_events(parsed) == [(0, 500_000)]
+
+
+def test_midi_change_point_tempo_event_and_post_change_integration():
+    from beatscope.midi import TPQ
+
+    parsed = _parse_midi(generate_rhythm_midi(_variable_rhythm(), subdivision=16))
+    seam_tick = int(round(8.0 * 120.0 / 60.0 * TPQ))
+    # The tempo meta event sits exactly at the change point tick.
+    assert (seam_tick, int(round(60_000_000 / 140.0))) in _tempo_events(parsed)
+    assert (0, 500_000) in _tempo_events(parsed)
+    # Post-change events integrate at 140 BPM from the seam.
+    assert seam_tick in _note_on_ticks(parsed)
+    assert int(seam_tick + 2.0 * 140.0 / 60.0 * TPQ) in _note_on_ticks(parsed)
+    # Pre-change event still uses the 120 BPM segment.
+    assert int(2.0 * 120.0 / 60.0 * TPQ) in _note_on_ticks(parsed)
+
+
+def test_midi_event_ticks_are_monotonic_and_roundtrip_parses():
+    parsed = _parse_midi(generate_rhythm_midi(_variable_rhythm(), subdivision=16))
+    for track in parsed["tracks"]:
+        ticks = [tick for tick, *_rest in track]
+        assert ticks == sorted(ticks)
+    assert len(_tempo_events(parsed)) == 2  # round-trip: both tempo meta events
+
+
+def test_csv_quantizes_against_adjacent_real_beats():
+    rhythm = {
+        "tempo": {"global_bpm": 120.0},
+        "grid": {"origin": 0.0},
+        # Non-uniform beats: a global 120 BPM grid would quantize 0.85 to
+        # 0.84375; real adjacent beats (0.5 -> 0.9, 4 parts) give 0.8.
+        "beats": [
+            {"time": 0.0, "bar": 1, "beat": 1},
+            {"time": 0.5, "bar": 1, "beat": 2},
+            {"time": 0.9, "bar": 1, "beat": 3},
+            {"time": 1.4, "bar": 2, "beat": 1},
+        ],
+        "onsets": [{"id": 1, "raw_time": 0.85, "strength": 0.5, "bands": {"all": 0.5, "low": 0, "mid": 0, "high": 0}}],
+        "cues": {"accent": []},
+    }
+    rows = list(csv.reader(io.StringIO(generate_rhythm_csv(rhythm, subdivision=16))))
+    assert rows[1][1] == "0.8000"  # quantized_time
+
+
+def test_codex_export_keeps_tempo_segments_and_no_local_paths(tmp_path):
+    rhythm = _variable_rhythm()
+    rhythm["source"] = {"display_name": "demo.wav", "duration": 16.0, "sample_rate": 44100}
+    rhythm["schema_version"] = "4.0"
+    payload = generate_codex_export(rhythm)
+    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+        rhythm_map = json.loads(archive.read("rhythm-map.json").decode("utf-8"))
+        assert rhythm_map["tempo"]["global_bpm"] == 129.9
+        assert [s["bpm"] for s in rhythm_map["tempo"]["segments"]] == [120.0, 140.0]
+        assert len(rhythm_map["beats"]) == 5
+        for name in archive.namelist():
+            text = archive.read(name).decode("utf-8", errors="replace")
+            assert str(tmp_path) not in text
+            assert r"X:\private" not in text

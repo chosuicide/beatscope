@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .beatgrid import quantize_to_beat_grid
-from .midi import TPQ, _meta_track, _track
+from .midi import TPQ, _meta_track, _meta_track_tempo_map, _tempo_map_tick, _track
 
 
 def _agent_skill_file(relative_path: str) -> str:
@@ -20,9 +20,17 @@ def _agent_skill_file(relative_path: str) -> str:
 
 
 def generate_rhythm_midi(rhythm_data: dict[str, Any], subdivision: int = 16) -> bytes:
-    """Generate SMF MIDI for rhythm reference (note 60, velocity from strength)."""
-    bpm = float(rhythm_data.get("tempo", {}).get("global_bpm") or rhythm_data.get("tempo", {}).get("bpm") or 120.0)
+    """Generate SMF MIDI for rhythm reference (note 60, velocity from strength).
+
+    Event ticks come from the piecewise tempo map when the project carries
+    ``tempo.segments``, so variable-tempo projects stay aligned in a DAW
+    (plan section 19). The grid origin stays pinned to tick 0, matching the
+    v0.5 single-BPM convention for single-segment projects.
+    """
+    tempo = rhythm_data.get("tempo", {}) or {}
+    bpm = float(tempo.get("global_bpm") or tempo.get("bpm") or 120.0)
     origin = float(rhythm_data.get("grid", {}).get("origin", 0.0))
+    segments = tempo.get("segments") or []
     beats = rhythm_data.get("beats", [])
 
     events: list[tuple[int, int, bytes]] = []
@@ -30,7 +38,10 @@ def generate_rhythm_midi(rhythm_data: dict[str, Any], subdivision: int = 16) -> 
         raw_t = float(onset.get("time", onset.get("raw_time", 0.0)))
         q = quantize_to_beat_grid(raw_t, beats, subdivision=subdivision)
         quantized_t = float(q.get("quantized_time", raw_t))
-        tick = max(0, int(round((quantized_t - origin) * bpm / 60.0 * TPQ)))
+        if segments:
+            tick = _tempo_map_tick(quantized_t, segments, origin)
+        else:
+            tick = max(0, int(round((quantized_t - origin) * bpm / 60.0 * TPQ)))
         str_val = float(onset.get("strength", 0.8))
         velocity = min(127, max(1, int(round(str_val * 126.0)) + 1))
         events += [
@@ -40,7 +51,8 @@ def generate_rhythm_midi(rhythm_data: dict[str, Any], subdivision: int = 16) -> 
 
     track = _track(events, "BeatScope Rhythm Reference")
     header = b"MThd" + struct.pack(">IHHH", 6, 1, 2, TPQ)
-    return header + _meta_track(bpm) + track
+    meta = _meta_track_tempo_map(segments, origin) if segments else _meta_track(bpm)
+    return header + meta + track
 
 
 def generate_rhythm_csv(rhythm_data: dict[str, Any], subdivision: int = 16) -> str:
@@ -135,6 +147,12 @@ def _codex_rhythm_map(rhythm_data: dict[str, Any]) -> dict[str, Any]:
         },
         "duration": float(source.get("duration") or 0),
         "bpm": float(tempo.get("global_bpm") or tempo.get("bpm") or 120),
+        # Variable-tempo facts ride along (plan section 18.4): the exported
+        # runtime reads real beats; segments document the piecewise tempo.
+        "tempo": {
+            "global_bpm": float(tempo.get("global_bpm") or tempo.get("bpm") or 120),
+            "segments": tempo.get("segments") or [],
+        },
         "origin": float(grid.get("origin") or 0),
         "time_signature": grid.get("time_signature") or [meter.get("numerator", 4), meter.get("denominator", 4)],
         "subdivision": int(grid.get("default_subdivision") or grid.get("subdivision") or 16),

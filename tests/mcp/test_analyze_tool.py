@@ -96,6 +96,49 @@ async def test_subdivision_variants_coexist(mcp_env, fixed_120_audio):
         assert again16["grid"]["subdivision"] == 16
         assert await root_subdivision() == 16  # re-hit re-activated the 16 variant
 
+        # Subdivision only changes quantization configuration; re-analysis
+        # must produce identical tracked beats (plan section 22.5).
+        async def stored_beats() -> list[float]:
+            project = await client.call_tool(
+                "beatscope_get_project",
+                {"project_id": p16["project_id"], "detail": "full"},
+            )
+            data = json.loads(project.content[0].text)["data"]
+            return [beat["time"] for beat in data["beats"]]
+
+        beats_16 = await stored_beats()  # variant 16 is active here
+        again32 = await _analyze(client, audio_path=str(fixed_120_audio), subdivision=32)
+        assert again32["cache_hit"] is True
+        assert await stored_beats() == beats_16
+
+
+async def test_analyze_cache_preserves_variable_tempo_segments(mcp_env, synth_audio):
+    audio = synth_audio["tempo-change"]["audio"]
+    # Full detail reads energy arrays, so the budget must cover the whole document.
+    settings = mcp_env.settings(
+        max_response_chars=500000, allowed_roots=_audio_roots(mcp_env, audio)
+    )
+    async with Client(create_server_for_settings(settings), raise_exceptions=True) as client:
+        first = await _analyze(client, audio_path=str(audio))
+        assert first["ok"] is True
+        assert first["cache_hit"] is False
+        assert first["tempo"]["segments"] >= 2
+
+        hit = await _analyze(client, audio_path=str(audio))
+        assert hit["cache_hit"] is True
+        assert hit["tempo"]["segments"] == first["tempo"]["segments"]
+
+        # The stored project keeps the full segment list, not just a count.
+        project = await client.call_tool(
+            "beatscope_get_project", {"project_id": first["project_id"], "detail": "full"},
+        )
+        data = json.loads(project.content[0].text)["data"]
+        segments = data["tempo"]["segments"]
+        assert len(segments) == first["tempo"]["segments"]
+        bpms = [segment["bpm"] for segment in segments]
+        assert any(abs(bpm - 120.0) < 5.0 for bpm in bpms)
+        assert any(abs(bpm - 140.0) < 5.0 for bpm in bpms)
+
 
 async def test_beat_this_requires_beat_file(mcp_env, fixed_120_audio):
     settings = mcp_env.settings(allowed_roots=_audio_roots(mcp_env, fixed_120_audio))

@@ -27,6 +27,40 @@ def _meta_track(bpm: float) -> bytes:
     events = [(0, 0, b"\xff\x51\x03" + micros.to_bytes(3, "big")), (0, 0, b"\xff\x58\x04\x04\x02\x18\x08")]
     return _track(events, "BeatScope")
 
+def seconds_to_ticks(time_s: float, segments: list[dict[str, Any]], tpq: int = TPQ) -> int:
+    """Integrate a piecewise-constant tempo map from second 0 up to ``time_s``.
+
+    Segments must be the v4 ``tempo.segments`` (contiguous, ordered, each with
+    start/end/bpm). This is the single seconds-to-ticks conversion for every
+    v4 consumer; per-event global-BPM formulas must not be reintroduced.
+    """
+    ticks = 0.0
+    for segment in segments:
+        start = float(segment["start"])
+        end = float(segment["end"])
+        bpm = float(segment["bpm"])
+        if time_s <= start:
+            break
+        span = min(time_s, end) - start
+        if span > 0:
+            ticks += span * bpm / 60.0 * tpq
+        if time_s <= end:
+            break
+    return max(0, round(ticks))
+
+def _tempo_map_tick(seconds: float, segments: list[dict[str, Any]], origin: float) -> int:
+    """Tick of ``seconds`` with the grid origin pinned to tick 0 (v0.5 convention)."""
+    return max(0, seconds_to_ticks(seconds, segments) - seconds_to_ticks(origin, segments))
+
+def _meta_track_tempo_map(segments: list[dict[str, Any]], origin: float = 0.0) -> bytes:
+    """Meta track carrying one FF 51 tempo event per segment start."""
+    events: list[tuple[int, int, bytes]] = [(0, 0, b"\xff\x58\x04\x04\x02\x18\x08")]
+    for segment in segments:
+        tick = _tempo_map_tick(float(segment["start"]), segments, origin)
+        micros = int(round(60_000_000 / float(segment["bpm"]))) if segment["bpm"] else 500_000
+        events.append((tick, 0, b"\xff\x51\x03" + micros.to_bytes(3, "big")))
+    return _track(events, "BeatScope")
+
 def _tick(seconds: float, bpm: float, origin: float) -> int:
     return max(0, int(round((seconds - origin) * bpm / 60 * TPQ))) if bpm else 0
 

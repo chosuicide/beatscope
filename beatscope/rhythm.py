@@ -117,21 +117,10 @@ def save_rhythm(result: dict[str, Any], destination: str | Path) -> None:
 
 def write_rhythm_midi(result: dict[str, Any], destination: str | Path) -> None:
     """Write a portable rhythm-reference Standard MIDI File (SMF), note 60, not a drum transcription."""
-    from .midi import TPQ, _meta_track, _track
-    bpm = float(result.get("tempo", {}).get("global_bpm") or result.get("tempo", {}).get("bpm") or 120.0)
-    origin = float(result.get("grid", {}).get("origin", 0.0))
-    events: list[tuple[int, int, bytes]] = []
+    from .exports import generate_rhythm_midi
 
-    for onset in result.get("onsets", []):
-        raw_t = float(onset.get("raw_time", 0.0))
-        quantized_t = float(onset.get("quantized_time", raw_t))
-        tick = max(0, int(round((quantized_t - origin) * bpm / 60.0 * TPQ)))
-        velocity = min(127, max(1, int(round(float(onset.get("strength", 0.8)) * 126.0)) + 1))
-        events += [(tick, 1, bytes((0x90, 60, velocity))), (tick + 30, 0, bytes((0x80, 60, 0)))]
-
-    track = _track(events, "BeatScope Rhythm Reference")
-    header = b"MThd" + struct.pack(">IHHH", 6, 1, 2, TPQ)
-    Path(destination).write_bytes(header + _meta_track(bpm) + track)
+    subdivision = int(result.get("grid", {}).get("default_subdivision") or 16)
+    Path(destination).write_bytes(generate_rhythm_midi(result, subdivision=subdivision))
 
 
 # Backwards compatibility helpers for legacy tests and older code

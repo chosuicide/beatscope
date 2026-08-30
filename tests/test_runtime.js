@@ -313,6 +313,68 @@ const track = createTrack(project);
   assert.equal(trackForProject(project).map.bpm, 120);
 }
 
+// --- variable-tempo characterization fixture (plan section 18.2) -----------
+{
+  const variableProject = JSON.parse(
+    await readFile(new URL('./fixtures/runtime/variable-tempo-project.json', import.meta.url), 'utf-8'),
+  );
+  const untouched = JSON.stringify(variableProject);
+  const variableTrack = createTrack(variableProject);
+
+  const segments = variableProject.tempo.segments;
+  assert.equal(segments.length, 2);
+  const boundary = segments[1].start; // 7.9935: the last beat of segment 1
+
+  // Checkpoints: middle of segment 1, boundary +/- 1 ms, midpoint between two
+  // non-uniform adjacent beats, and past the last real beat.
+  const beats = variableProject.beats.map((beat) => beat.time);
+  const lastBeat = beats[beats.length - 1];
+  const prevBeat = beats[beats.length - 2];
+  const checkpoints = [
+    ['mid-segment-1', segments[0].start + (segments[0].end - segments[0].start) / 2],
+    ['before-change', boundary - 0.001],
+    ['at-change', boundary],
+    ['after-change', boundary + 0.001],
+    ['midpoint-unequal-beats', (lastBeat + prevBeat) / 2],
+    ['past-last-beat', lastBeat + 0.5],
+  ];
+
+  let lastBar = 0;
+  const positions = new Map();
+  for (const [name, time] of checkpoints) {
+    const state = variableTrack.at(time);
+    const position = variableTrack.positionAt(time);
+    positions.set(name, position);
+
+    assert.ok(
+      Number.isFinite(state.beatPhase) && state.beatPhase >= 0 && state.beatPhase < 1,
+      `${name}: beatPhase ${state.beatPhase} must stay in [0, 1)`,
+    );
+    assert.ok(position.beatIndex >= 0, `${name}: beatIndex must stay valid`);
+    assert.ok(position.bar >= lastBar, `${name}: bar must never go backwards`);
+    lastBar = position.bar;
+
+    // Seek safety: repeated queries return identical state.
+    assert.deepEqual(variableTrack.at(time), state);
+    assert.deepEqual(variableTrack.positionAt(time), position);
+  }
+
+  // The beat index runs on continuously through the segment boundary: the
+  // boundary beat follows its predecessor and nothing resets to bar 1.
+  const before = positions.get('before-change');
+  const atChange = positions.get('at-change');
+  const after = positions.get('after-change');
+  assert.equal(atChange.beatIndex, before.beatIndex + 1);
+  assert.equal(after.beatIndex, atChange.beatIndex);
+  assert.ok(atChange.bar > 1);
+
+  // Phase is continuous across the boundary (no snap at the tempo seam).
+  assert.ok(Math.abs(after.beatPhase - atChange.beatPhase) < 0.01);
+
+  // The runtime never mutates the input project.
+  assert.equal(JSON.stringify(variableProject), untouched);
+}
+
 // --- determinism + purity ---------------------------------------------------
 {
   assert.deepEqual(track.at(1.375), track.at(1.375));
