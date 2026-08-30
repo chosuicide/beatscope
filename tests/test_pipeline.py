@@ -1,7 +1,8 @@
-"""Tests for the unified analysis pipeline (commit a: contract + backends)."""
+"""Tests for the unified analysis pipeline (contract, backends, tempo segments)."""
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -13,8 +14,14 @@ from beatscope.backends import (
     LightweightBackend,
 )
 from beatscope.models import AnalysisConfig
-from beatscope.pipeline import InvalidRhythmProject, analyze_track, resolve_backend
-from beatscope.schema import validate_rhythm_v4
+from beatscope.pipeline import (
+    InvalidRhythmProject,
+    analyze_track,
+    build_rhythm_project,
+    resolve_backend,
+)
+from beatscope.schema import ANALYZER_VERSION, validate_rhythm_v4
+from fixtures.generate_audio import beats_file_content
 
 try:
     import demucs  # noqa: F401
@@ -23,18 +30,195 @@ except ImportError:
     _HAS_DEMUCS = False
 
 
+def _no_op_progress(*_args: Any) -> None:
+    return None
+
+
+def _never_cancelled() -> bool:
+    return False
+
+
 def test_lightweight_backend_produces_evidence(fixed_120_audio):
-    evidence = LightweightBackend().analyze(fixed_120_audio, AnalysisConfig(), lambda *a: None, lambda: False)
+    evidence = LightweightBackend().analyze(fixed_120_audio, AnalysisConfig(), _no_op_progress, _never_cancelled)
     assert isinstance(evidence, AnalysisEvidence)
     assert abs(evidence.tempo_bpm - 120.0) < 1.5
     assert evidence.bars == 4
-    step = 60.0 / evidence.tempo_bpm
-    expected = int((evidence.duration - evidence.grid_origin) / step) + 1
-    assert len(evidence.beats) == expected
+    assert 15 <= len(evidence.beats) <= 17  # tracked beats, not a forced uniform count
     assert all(beat["time"] < evidence.duration for beat in evidence.beats)
-    assert evidence.provenance["beats"]["method"] == "uniform-grid-from-global-bpm"
-    assert evidence.tempo_score is None
+    assert evidence.provenance["beats"]["method"] == "novelty-guided-dynamic-programming"
+    assert evidence.tempo_score is not None and evidence.tempo_score > 0.5
     assert evidence.channels == 1
+
+
+def test_lightweight_evidence_contains_tempo_segments(fixed_120_audio):
+    evidence = LightweightBackend().analyze(fixed_120_audio, AnalysisConfig(), _no_op_progress, _never_cancelled)
+    assert len(evidence.tempo_segments) == 1
+    segment = evidence.tempo_segments[0]
+    assert segment["start"] == 0.0
+    assert abs(segment["end"] - evidence.duration) < 1e-6
+    assert abs(segment["bpm"] - 120.0) < 2.0
+    assert segment["method"] == "local-autocorrelation-viterbi+beat-dp"
+    assert segment["score"] is not None
+    assert evidence.diagnostics["variable_tempo"] is False
+
+
+def test_tempo_change_produces_multiple_segments_that_survive_the_pipeline(synth_audio):
+    audio = synth_audio["tempo-change"]["audio"]
+    evidence = LightweightBackend().analyze(audio, AnalysisConfig(), _no_op_progress, _never_cancelled)
+    assert evidence.diagnostics["variable_tempo"] is True
+    assert len(evidence.tempo_segments) >= 2
+    bpms = [segment["bpm"] for segment in evidence.tempo_segments]
+    assert any(abs(bpm - 120.0) < 5.0 for bpm in bpms)
+    assert any(abs(bpm - 140.0) < 5.0 for bpm in bpms)
+
+    project = analyze_track(audio)
+    assert validate_rhythm_v4(project) == []
+    # The pipeline must carry backend segments through untouched, not flatten
+    # them into one full-length segment (plan section 16.2).
+    assert len(project["tempo"]["segments"]) == len(evidence.tempo_segments)
+    assert [round(s["bpm"], 3) for s in project["tempo"]["segments"]] == [
+        round(s["bpm"], 3) for s in evidence.tempo_segments
+    ]
+
+
+def test_no_track_fallback_keeps_schema_legal(silence_audio):
+    evidence = LightweightBackend().analyze(silence_audio, AnalysisConfig(), _no_op_progress, _never_cancelled)
+    assert evidence.beats == []
+    assert evidence.tempo_segments == []
+    assert evidence.bars == 1
+    assert "Insufficient rhythmic evidence; no tracked beats emitted" in evidence.warnings
+    assert evidence.provenance["beats"]["method"] == "no-track-global-tempo-fallback"
+
+    project = analyze_track(silence_audio)
+    assert validate_rhythm_v4(project) == []
+    assert project["beats"] == []
+    assert project["grid"]["bars"] == 1
+    assert project["tempo"]["segments"] == [{
+        "start": 0.0,
+        "end": project["source"]["duration"],
+        "bpm": 120.0,
+        "method": "no-track-global-tempo-fallback",
+        "score": None,
+    }]
+
+
+def _evidence_with_segments(
+    segments: list[dict[str, Any]],
+    duration: float = 16.0,
+    **overrides: Any,
+) -> AnalysisEvidence:
+    fields: dict[str, Any] = {
+        "duration": duration,
+        "sample_rate": 44100,
+        "channels": 1,
+        "tempo_bpm": 120.0,
+        "grid_origin": 0.0,
+        "bars": 1,
+        "beats": [],
+        "onsets": [],
+        "energy": {"fps": 100, "start": 0.0, "bands": {"all": [], "low": [], "mid": [], "high": []}},
+        "provenance": {"beats": {"method": "test"}, "onsets": {"method": "test"}},
+    }
+    fields.update(overrides)
+    return AnalysisEvidence(tempo_segments=segments, **fields)
+
+
+def _step_segment_evidence() -> AnalysisEvidence:
+    return _evidence_with_segments([
+        {"start": 0.0, "end": 8.0, "bpm": 120.0, "method": "test-tracker", "score": 0.5},
+        {"start": 8.0, "end": 12.0, "bpm": 139.9999, "method": "test-tracker", "score": None},
+        {"start": 12.0, "end": 16.0, "bpm": 90.0, "method": "test-tracker", "score": 0.75},
+    ])
+
+
+def test_pipeline_preserves_backend_segments_without_flattening():
+    project = build_rhythm_project(
+        Path("x.wav"), "a" * 64, AnalysisConfig(), LightweightBackend(), _step_segment_evidence(),
+    )
+    assert validate_rhythm_v4(project) == []
+    segments = project["tempo"]["segments"]
+    assert [ (s["start"], s["end"], s["bpm"]) for s in segments ] == [
+        (0.0, 8.0, 120.0), (8.0, 12.0, 140.0), (12.0, 16.0, 90.0),
+    ]
+    assert segments[1]["score"] is None and segments[2]["score"] == 0.75
+
+
+def test_illegal_evidence_segments_raise_instead_of_being_repaired():
+    cases = [
+        # overlapping coverage
+        [
+            {"start": 0.0, "end": 9.0, "bpm": 120.0, "method": "m", "score": None},
+            {"start": 8.0, "end": 16.0, "bpm": 140.0, "method": "m", "score": None},
+        ],
+        # gap in coverage
+        [{"start": 0.5, "end": 16.0, "bpm": 120.0, "method": "m", "score": None}],
+        # illegal BPM
+        [{"start": 0.0, "end": 16.0, "bpm": 500.0, "method": "m", "score": None}],
+        # does not reach the duration
+        [{"start": 0.0, "end": 15.0, "bpm": 120.0, "method": "m", "score": None}],
+        # unordered
+        [
+            {"start": 4.0, "end": 8.0, "bpm": 120.0, "method": "m", "score": None},
+            {"start": 0.0, "end": 4.0, "bpm": 120.0, "method": "m", "score": None},
+        ],
+        # missing method
+        [{"start": 0.0, "end": 16.0, "bpm": 120.0, "score": None}],
+    ]
+    for segments in cases:
+        evidence = _evidence_with_segments(segments)
+        with pytest.raises(ValueError):
+            build_rhythm_project(
+                Path("x.wav"), "a" * 64, AnalysisConfig(), LightweightBackend(), evidence,
+            )
+
+
+def test_beat_this_markers_keep_tempo_changes(synth_audio, tmp_path):
+    case = synth_audio["tempo-change"]
+    beats_path = tmp_path / "tempo-change.beats"
+    beats_path.write_text(beats_file_content(case["truth"]["beats"]), encoding="utf-8")
+    evidence = BeatThisBackend(beats_path, drums_path=case["audio"]).analyze(
+        case["audio"], AnalysisConfig(), _no_op_progress, _never_cancelled,
+    )
+    assert len(evidence.tempo_segments) == 2
+    assert abs(evidence.tempo_segments[0]["bpm"] - 120.0) < 1.0
+    assert abs(evidence.tempo_segments[1]["bpm"] - 140.0) < 1.0
+    assert evidence.diagnostics["variable_tempo"] is True
+    assert evidence.tempo_segments[0]["method"] == "beat-marker-intervals"
+
+
+def test_lightweight_provenance_and_diagnostics_are_real(fixed_120_audio):
+    project = analyze_track(fixed_120_audio)
+    provenance = project["analysis"]["provenance"]
+    assert provenance["beats"]["tempo_source"] == "local-autocorrelation-viterbi"
+    assert provenance["beats"]["onset_alignment"] == "bounded-local-maximum"
+    assert provenance["meter_phase"]["method"] == "four-four-cycle-from-first-tracked-beat"
+    assert provenance["meter_phase"]["inferred"] is True
+
+    diagnostics = project["analysis"]["diagnostics"]
+    assert diagnostics["beat_method"] == "novelty-guided-dynamic-programming"
+    assert diagnostics["candidate_windows"] > 0
+    assert diagnostics["tracked_beats"] == len(project["beats"])
+    assert diagnostics["tempo_path_changes"] == len(project["tempo"]["segments"]) - 1
+    assert diagnostics["score_semantics"] == "normalized path support; not probability"
+    assert diagnostics["tracking_parameters"]["min_bpm"] == 50.0
+    assert diagnostics["tracking_parameters"]["max_bpm"] == 220.0
+    assert diagnostics["tracking_parameters"]["tempo_window_seconds"] == 6.0
+    assert LightweightBackend.version == "2.0"
+    # No absolute paths or debug arrays leak into diagnostics.
+    serialized = str(diagnostics)
+    assert str(fixed_120_audio) not in serialized
+
+
+def test_analyzer_version_bump_changes_cache_key():
+    from beatscope.project import compute_cache_key
+
+    assert ANALYZER_VERSION == "0.6.0"
+    sha = "0" * 64
+    config = {"subdivision": 16}
+    assert (
+        compute_cache_key(sha, config, analyzer_ver="0.4.0")
+        != compute_cache_key(sha, config, analyzer_ver=ANALYZER_VERSION)
+    )
 
 
 def test_beat_this_backend_uses_real_markers(fixed_120_audio, beat_file, synth_audio):

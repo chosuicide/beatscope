@@ -32,6 +32,10 @@ class AnalysisEvidence:
     onsets: list[dict[str, Any]]
     energy: dict[str, Any]
     tempo_score: float | None = None
+    # Piecewise-constant tempo segments covering [0, duration]; empty when the
+    # backend has no variable-tempo evidence (the pipeline then falls back to
+    # a single global-tempo segment, plan section 16.2).
+    tempo_segments: list[dict[str, Any]] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     diagnostics: dict[str, Any] = field(default_factory=dict)
     provenance: dict[str, Any] = field(default_factory=dict)

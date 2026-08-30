@@ -294,3 +294,99 @@ def test_load_rhythm_project_rejects_invalid_v4(tmp_path):
     with pytest.raises(InvalidRhythmProject) as excinfo:
         load_rhythm_project(path)
     assert excinfo.value.errors
+
+
+# --- schema v4 tempo segments and provenance extensions (plan section 22.3) ---
+
+def _minimal_v4_project(**tempo_overrides):
+    from beatscope.schema import SCHEMA_VERSION
+
+    tempo = {
+        "global_bpm": 120.0,
+        "segments": [{
+            "start": 0.0, "end": 12.0, "bpm": 120.0, "method": "test", "score": None,
+        }],
+    }
+    tempo.update(tempo_overrides)
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "project_id": "a1b2c3d4e5f6",
+        "source": {"display_name": "s.wav", "duration": 12.0, "sample_rate": 44100, "channels": 1, "sha256": "ab" * 32},
+        "analysis": {
+            "backend": "lightweight",
+            "pipeline_version": "0.6.0",
+            "created_at": "2026-08-30T00:00:00Z",
+            "warnings": [],
+            "separation_used": False,
+            "provenance": {"beats": {"method": "test"}, "onsets": {"method": "test"}},
+        },
+        "tempo": tempo,
+        "meter": {"numerator": 4, "denominator": 4},
+        "grid": {"origin": 0.0, "default_subdivision": 16, "bars": 3},
+        "beats": [],
+        "onsets": [],
+        "energy": {"fps": 100, "start": 0.0, "bands": {"all": [], "low": [], "mid": [], "high": []}},
+        "patterns": {"method": "test", "bars": []},
+        "cues": {"accent": [], "impact": [], "scale": [], "flow": [], "flash": [], "bloom": []},
+        "exports": {},
+    }
+
+
+def test_v4_multi_segment_tempo_is_legal():
+    from beatscope.schema import validate_rhythm_v4
+
+    project = _minimal_v4_project(
+        segments=[
+            {"start": 0.0, "end": 6.0, "bpm": 118.5, "method": "a", "score": 0.5},
+            {"start": 6.0, "end": 9.0, "bpm": 140.0, "method": "a", "score": None},
+            {"start": 9.0, "end": 12.0, "bpm": 92.25, "method": "a", "score": 0.75},
+        ],
+    )
+    assert validate_rhythm_v4(project) == []
+
+
+def test_v4_optional_provenance_extensions_are_legal():
+    from beatscope.schema import validate_rhythm_v4
+
+    project = _minimal_v4_project()
+    project["analysis"]["provenance"]["meter_phase"] = {
+        "method": "four-four-cycle-from-first-tracked-beat",
+        "backend": "lightweight",
+        "inferred": True,
+    }
+    project["analysis"]["provenance"]["beats"]["tempo_source"] = "local-autocorrelation-viterbi"
+    assert validate_rhythm_v4(project) == []
+
+
+def test_v4_still_rejects_forbidden_confidence_in_segments():
+    from beatscope.schema import validate_rhythm_v4
+
+    project = _minimal_v4_project()
+    project["tempo"]["segments"][0]["confidence"] = 0.9
+    errors = validate_rhythm_v4(project)
+    assert any("confidence" in error for error in errors)
+
+
+def test_v4_rejects_segment_overlap_reverse_and_illegal_bpm():
+    from beatscope.schema import validate_rhythm_v4
+
+    overlap = _minimal_v4_project(
+        segments=[
+            {"start": 0.0, "end": 8.0, "bpm": 120.0, "method": "a", "score": None},
+            {"start": 7.0, "end": 12.0, "bpm": 140.0, "method": "a", "score": None},
+        ],
+    )
+    assert any("overlaps" in error for error in validate_rhythm_v4(overlap))
+
+    reverse = _minimal_v4_project(
+        segments=[
+            {"start": 0.0, "end": 8.0, "bpm": 120.0, "method": "a", "score": None},
+            {"start": 9.0, "end": 12.0, "bpm": 140.0, "method": "a", "score": None},
+            {"start": 6.0, "end": 12.0, "bpm": 100.0, "method": "a", "score": None},
+        ],
+    )
+    assert any("overlaps" in error for error in validate_rhythm_v4(reverse))
+
+    illegal_bpm = _minimal_v4_project()
+    illegal_bpm["tempo"]["segments"][0]["bpm"] = 500.0
+    assert any("bpm" in error for error in validate_rhythm_v4(illegal_bpm))

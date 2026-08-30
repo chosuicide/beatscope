@@ -49,6 +49,84 @@ def resolve_backend(
     return LightweightBackend()
 
 
+def canonicalize_evidence_segments(
+    raw_segments: list[dict[str, Any]],
+    duration: float,
+) -> list[dict[str, Any]]:
+    """Normalize backend tempo segments for the Rhythm IR (plan section 16.2).
+
+    Only type conversion, output rounding, and structural checks happen here.
+    Illegal evidence raises an internal error instead of being silently
+    repaired: masking a tracker bug at this boundary would hide the regression
+    from the benchmark crash gate (plan section 21.2).
+    """
+    if not raw_segments:
+        raise ValueError("evidence.tempo_segments must not be empty when present")
+
+    duration = round(float(duration), 4)
+    segments: list[dict[str, Any]] = []
+    for index, raw in enumerate(raw_segments):
+        if not isinstance(raw, dict):
+            raise ValueError(f"evidence tempo segment {index} must be an object")
+        try:
+            start = round(float(raw["start"]), 4)
+            end = round(float(raw["end"]), 4)
+            bpm = round(float(raw["bpm"]), 3)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"evidence tempo segment {index} has invalid fields: {exc}") from exc
+        method = raw.get("method")
+        if not isinstance(method, str) or not method:
+            raise ValueError(f"evidence tempo segment {index} must declare a non-empty 'method'")
+        score = raw.get("score")
+        if score is not None:
+            try:
+                score = round(float(score), 4)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"evidence tempo segment {index} score is not numeric: {exc}") from exc
+        segments.append({
+            "start": start,
+            "end": end,
+            "bpm": bpm,
+            "method": method,
+            "score": score,
+        })
+
+    previous_end = 0.0
+    for index, segment in enumerate(segments):
+        if segment["start"] > segment["end"]:
+            raise ValueError(f"evidence tempo segment {index} has start after end")
+        # Contiguous ordered coverage: each segment starts where the previous
+        # one ends, the first starts at 0, and the last ends at the duration.
+        if abs(segment["start"] - previous_end) > 1e-6:
+            raise ValueError(
+                f"evidence tempo segment {index} must start at {previous_end}, got {segment['start']}"
+            )
+        if not 20.0 < segment["bpm"] < 400.0:
+            raise ValueError(f"evidence tempo segment {index} bpm {segment['bpm']} is outside (20, 400)")
+        previous_end = segment["end"]
+    if abs(segments[-1]["end"] - duration) > 1e-6:
+        raise ValueError(
+            f"evidence tempo segments must end at the duration {duration}, got {segments[-1]['end']}"
+        )
+    return segments
+
+
+def single_segment_from_global_tempo(
+    tempo_bpm: float,
+    duration: float,
+    method: str,
+    score: float | None,
+) -> list[dict[str, Any]]:
+    """v0.4-style fallback for backends that produced no tempo segments."""
+    return [{
+        "start": 0.0,
+        "end": round(float(duration), 4),
+        "bpm": round(float(tempo_bpm), 3),
+        "method": method,
+        "score": round(float(score), 4) if score is not None else None,
+    }]
+
+
 def build_rhythm_project(
     source_path: Path,
     sha256: str,
@@ -66,15 +144,18 @@ def build_rhythm_project(
     diagnostics = dict(evidence.diagnostics)
     tempo_score = evidence.tempo_score
 
-    # v0.4 emits a single full-length tempo segment; score exists only when a
-    # real algorithm produced it (never a synthetic confidence value).
-    segments = [{
-        "start": 0.0,
-        "end": duration,
-        "bpm": round(float(evidence.tempo_bpm), 3),
-        "method": str(diagnostics.get("tempo_method", "unknown")),
-        "score": round(float(tempo_score), 4) if tempo_score is not None else None,
-    }]
+    # Backend tempo segments pass through when present; the single-segment
+    # fallback exists only for backends without variable-tempo evidence. A
+    # score exists only when a real algorithm produced it.
+    if evidence.tempo_segments:
+        segments = canonicalize_evidence_segments(evidence.tempo_segments, duration)
+    else:
+        segments = single_segment_from_global_tempo(
+            evidence.tempo_bpm,
+            duration,
+            str(diagnostics.get("tempo_method", "unknown")),
+            tempo_score,
+        )
 
     # Facts and cues are separated: accents become cues, not onset identity.
     v4_onsets: list[dict[str, Any]] = []
@@ -203,5 +284,7 @@ __all__ = [
     "InvalidRhythmProject",
     "analyze_track",
     "build_rhythm_project",
+    "canonicalize_evidence_segments",
     "resolve_backend",
+    "single_segment_from_global_tempo",
 ]

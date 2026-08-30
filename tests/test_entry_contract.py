@@ -43,20 +43,20 @@ def test_web_project_is_content_addressed_and_honest(fixed_120_audio, run_web_an
     assert project["project_id"] == content_hash(fixed_120_audio)[:12]
     assert project["schema_version"] == "4.0"
     assert project["analysis"]["backend"] == "lightweight"
-    assert project["analysis"]["pipeline_version"] == "0.4.0"
+    assert project["analysis"]["pipeline_version"] == "0.6.0"
 
     # No uncalibrated tempo confidence on the lightweight path.
     assert "confidence" not in project["tempo"]
     assert project["analysis"]["diagnostics"]["variable_tempo"] is False
-    assert project["tempo"]["segments"][0]["method"] == "spectral-flux-autocorrelation"
+    assert project["tempo"]["segments"][0]["method"] == "local-autocorrelation-viterbi+beat-dp"
 
     # v4 facts/cues separation: no instrument labels or confidence anywhere.
     serialized = json.dumps(project)
     for forbidden in ("kick", "snare", "hihat", "bass_808", "confidence"):
         assert f'"{forbidden}"' not in serialized
 
-    # Honest provenance: beats are a uniform grid, not real markers.
-    assert project["analysis"]["provenance"]["beats"]["method"] == "uniform-grid-from-global-bpm"
+    # Honest provenance: beats come from the tracked DP chain, not a uniform grid.
+    assert project["analysis"]["provenance"]["beats"]["method"] == "novelty-guided-dynamic-programming"
     assert project["cues"]["accent"] and all(
         isinstance(cue.get("onset"), int) for cue in project["cues"]["accent"]
     )

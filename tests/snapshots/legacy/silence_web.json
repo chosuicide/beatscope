@@ -10,9 +10,10 @@
   },
   "analysis": {
     "backend": "lightweight",
-    "pipeline_version": "0.4.0",
+    "pipeline_version": "0.6.0",
     "warnings": [
-      "Tempo estimation failed; fell back to 120 BPM"
+      "Tempo estimation failed; fell back to 120 BPM",
+      "Insufficient rhythmic evidence; no tracked beats emitted"
     ],
     "separation_used": false,
     "parameters": {
@@ -23,7 +24,7 @@
     },
     "provenance": {
       "beats": {
-        "method": "uniform-grid-from-global-bpm",
+        "method": "no-track-global-tempo-fallback",
         "backend": "lightweight"
       },
       "onsets": {
@@ -32,10 +33,35 @@
       }
     },
     "diagnostics": {
-      "tempo_method": "spectral-flux-autocorrelation",
+      "tempo_method": "no-track-global-tempo-fallback",
+      "beat_method": "no-track-global-tempo-fallback",
+      "candidate_windows": 9,
+      "tempo_path_changes": 0,
+      "tracked_beats": 0,
+      "beats_snapped": 0,
+      "duplicates_removed": 0,
+      "missing_beats_inserted": 0,
+      "unrepaired_gaps": 0,
       "beat_interval_cv": 0.0,
-      "onset_count": 0,
       "variable_tempo": false,
+      "score_semantics": "normalized path support; not probability",
+      "tracking_parameters": {
+        "min_bpm": 50.0,
+        "max_bpm": 220.0,
+        "tempo_window_seconds": 6.0,
+        "tempo_hop_seconds": 0.5,
+        "candidates_per_window": 5,
+        "min_segment_beats": 4,
+        "snap_limit_seconds": 0.07,
+        "tempo_drift_scale_log2": 0.06,
+        "octave_switch_penalty": 1.5,
+        "beat_dp_tightness": 55.0,
+        "beat_lag_ratio": [
+          0.67,
+          1.5
+        ]
+      },
+      "onset_count": 0,
       "separated": false
     }
   },
@@ -46,7 +72,7 @@
         "start": 0.0,
         "end": 4.0,
         "bpm": 120.0,
-        "method": "spectral-flux-autocorrelation",
+        "method": "no-track-global-tempo-fallback",
         "score": null
       }
     ]
@@ -58,66 +84,9 @@
   "grid": {
     "origin": 0.0,
     "default_subdivision": 16,
-    "bars": 2
+    "bars": 1
   },
-  "beats": [
-    {
-      "time": 0.0,
-      "index": 0,
-      "bar": 1,
-      "beat_in_bar": 1,
-      "downbeat": true
-    },
-    {
-      "time": 0.5,
-      "index": 1,
-      "bar": 1,
-      "beat_in_bar": 2,
-      "downbeat": false
-    },
-    {
-      "time": 1.0,
-      "index": 2,
-      "bar": 1,
-      "beat_in_bar": 3,
-      "downbeat": false
-    },
-    {
-      "time": 1.5,
-      "index": 3,
-      "bar": 1,
-      "beat_in_bar": 4,
-      "downbeat": false
-    },
-    {
-      "time": 2.0,
-      "index": 4,
-      "bar": 2,
-      "beat_in_bar": 1,
-      "downbeat": true
-    },
-    {
-      "time": 2.5,
-      "index": 5,
-      "bar": 2,
-      "beat_in_bar": 2,
-      "downbeat": false
-    },
-    {
-      "time": 3.0,
-      "index": 6,
-      "bar": 2,
-      "beat_in_bar": 3,
-      "downbeat": false
-    },
-    {
-      "time": 3.5,
-      "index": 7,
-      "bar": 2,
-      "beat_in_bar": 4,
-      "downbeat": false
-    }
-  ],
+  "beats": [],
   "onsets": [],
   "energy": {
     "fps": 172,
@@ -230,31 +199,6 @@
         "group": "BREAK",
         "mean_strength": 0.0,
         "similarity_previous": 0.0,
-        "vector": [
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      {
-        "bar": 2,
-        "label": "break",
-        "group": "BREAK",
-        "mean_strength": 0.0,
-        "similarity_previous": 1.0,
         "vector": [
           0.0,
           0.0,

@@ -5,5 +5,5 @@
   "sample_rate": 44100,
   "hop_length": 256,
   "n_fft": 2048,
-  "cache_key": "675a9cf1b2c25fcf30c7160f6427918ce56f4bfe3ed5e79a57a46c88f77d56dc"
+  "cache_key": "9ab729fcb3f98fefbd142df4e82c391a8fa126a2390f4a74e3b02511da2660eb"
 }

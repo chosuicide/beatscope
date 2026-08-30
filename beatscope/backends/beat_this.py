@@ -11,13 +11,16 @@ from ..backends.lightweight import compress_energy
 from ..beatgrid import estimate_bpm, parse_beat_this
 from ..features import compute_multiband_novelty, extract_onsets
 from ..models import AnalysisConfig
+from ..tempo_tracking import build_tempo_segments_from_beats
 
 
 class BeatThisBackend:
     """Analyze a drums stem (or the full mix) using externally provided beat markers.
 
     Beats come from the marker file; the global BPM is derived from marker
-    intervals and never regenerates the grid.
+    intervals and never regenerates the grid. Marker timestamps are real
+    beats, so tempo segments are built directly from their intervals and
+    marker tempo changes survive the pipeline (plan section 15.5).
     """
 
     name = "beat-this"
@@ -44,7 +47,14 @@ class BeatThisBackend:
         check_cancelled(cancelled)
         progress("beatgrid", 0.60, "解析 Beat This 拍点...")
         beats = parse_beat_this(self.beat_file)
-        bpm, tempo_score, variable_tempo = estimate_bpm([b["time"] for b in beats])
+        marker_times = [b["time"] for b in beats]
+        bpm, tempo_score, _estimator_variable = estimate_bpm(marker_times)
+        tracked_duration = round(float(duration), 4)
+        tempo_segments = list(
+            build_tempo_segments_from_beats(
+                marker_times, tracked_duration, method="beat-marker-intervals",
+            )
+        )
 
         gap_count = sum(1 for b in beats if b["sequence_gap"])
         if gap_count > 0:
@@ -62,7 +72,7 @@ class BeatThisBackend:
         onsets = extract_onsets(times, novelty, sr=sr, hop=hop, bpm=bpm)
 
         return AnalysisEvidence(
-            duration=round(float(duration), 4),
+            duration=tracked_duration,
             sample_rate=sr,
             channels=source_channels,
             tempo_bpm=float(bpm),
@@ -72,16 +82,21 @@ class BeatThisBackend:
             onsets=onsets,
             energy=compress_energy(novelty, sr, hop),
             tempo_score=float(tempo_score),
+            tempo_segments=tempo_segments,
             warnings=warnings,
             diagnostics={
                 "tempo_method": "beat-marker-intervals",
                 "sequence_gaps": gap_count,
                 "onset_count": len(onsets),
-                "variable_tempo": bool(variable_tempo),
+                "variable_tempo": len(tempo_segments) > 1,
                 "separated": self.drums_path is not None,
             },
             provenance={
-                "beats": {"method": "beat-this-markers", "backend": self.name},
+                "beats": {
+                    "method": "beat-this-markers",
+                    "backend": self.name,
+                    "tempo_source": "beat-marker-intervals",
+                },
                 "onsets": {"method": "multiband-positive-spectral-flux", "backend": self.name},
             },
         )

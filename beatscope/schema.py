@@ -10,7 +10,7 @@ from typing import Any
 
 SCHEMA_VERSION = "4.0"
 V3_SCHEMA_VERSION = "3.0"
-ANALYZER_VERSION = "0.4.0"
+ANALYZER_VERSION = "0.6.0"
 
 
 class InvalidRhythmProject(ValueError):

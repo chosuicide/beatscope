@@ -175,7 +175,16 @@ def main(argv: list[str] | None = None) -> int:
     bench = sub.add_parser("benchmark", help="run the accuracy benchmark against synthetic ground truth")
     bench.add_argument("--output-dir", type=Path, default=Path("build") / "benchmark")
     bench.add_argument("--fixtures-dir", type=Path, help="reuse a fixture directory instead of generating one")
-    bench.add_argument("--baseline", type=Path, help="previous benchmark-results.json for the F1 regression gate")
+    bench.add_argument(
+        "--baseline",
+        type=Path,
+        help="accepted baseline JSON to compare against (default: tests/fixtures/benchmark-baseline.json)",
+    )
+    bench.add_argument(
+        "--accept-baseline",
+        action="store_true",
+        help="explicitly re-record the baseline after reviewing the metric diff; refuses while any absolute gate fails",
+    )
 
     # doctor
     sub.add_parser("doctor", help="check system dependencies and configuration")
@@ -223,8 +232,26 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "benchmark":
-        results = run_benchmark(args.output_dir, args.fixtures_dir, args.baseline)
+        results = run_benchmark(
+            args.output_dir, args.fixtures_dir, args.baseline,
+            accept_baseline=args.accept_baseline,
+        )
         print(f"Benchmark written to {results['output_dir']}")
+        baseline = results.get("baseline") or {}
+        if args.accept_baseline:
+            if baseline.get("accepted"):
+                print(f"Baseline accepted ({baseline.get('analyzer_version')}):")
+                for entry in baseline.get("diff", []):
+                    old_f1, new_f1 = entry["beat_f1"]
+                    old_mae, new_mae = entry["beat_mae_ms"]
+                    print(
+                        f"  {entry['name']}: beat F1 {old_f1} -> {new_f1},"
+                        f" MAE {old_mae} -> {new_mae} ms"
+                    )
+                return 0
+            print(f"Baseline NOT accepted: {baseline.get('reason')}")
+            print(f"Gates failed: {', '.join(baseline.get('gates_failed', []))}")
+            return 1
         failed = results["gates"]["failed"]
         print(f"Gates failed: {', '.join(failed) if failed else 'none'}")
         return 1 if failed else 0

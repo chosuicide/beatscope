@@ -1,8 +1,8 @@
-"""Lightweight backend: multiband novelty, autocorrelation tempo, uniform beat grid."""
+"""Lightweight backend: multiband novelty, variable-tempo tracking, beat DP."""
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable
+from typing import Any
 
 import numpy as np
 
@@ -10,11 +10,11 @@ from ..audio_io import load_analysis_audio
 from ..backends.base import AnalysisEvidence, CancelCallback, ProgressCallback, check_cancelled
 from ..features import (
     compute_multiband_novelty,
-    detect_transient_peaks,
     estimate_tempo_from_novelty,
     extract_onsets,
 )
 from ..models import AnalysisConfig
+from ..tempo_tracking import TRACKING_PARAMETERS, number_beats, track_tempo_and_beats
 
 ENERGY_BANDS = ("all", "low", "mid", "high")
 
@@ -35,12 +35,14 @@ def compress_energy(novelty: dict[str, np.ndarray], sr: int, hop: int) -> dict:
 class LightweightBackend:
     """Analyze the full mix (or a provided stem) without external beat markers.
 
-    Beat placement stays a uniform grid derived from one global BPM estimate;
-    provenance records this honestly instead of implying real beat tracking.
+    Tempo is tracked as a piecewise-constant path over local autocorrelation
+    candidates, and beats come from a novelty-guided dynamic program anchored
+    on that path — a uniform grid is never regenerated from one global BPM.
+    Provenance records which algorithm produced each fact (plan section 16.3).
     """
 
     name = "lightweight"
-    version = "1.0"
+    version = "2.0"
 
     def analyze(
         self,
@@ -54,69 +56,104 @@ class LightweightBackend:
         y, sr, duration, channels, warnings = load_analysis_audio(audio_path, target_sr=config.sample_rate)
 
         check_cancelled(cancelled)
-        progress("beatgrid", 0.60, "计算拍点与网格...")
+        progress("beatgrid", 0.60, "追踪局部速度与拍点...")
         hop = config.hop_length
         times, novelty = compute_multiband_novelty(y, sr=sr, hop=hop, n_fft=config.n_fft)
 
-        bpm = estimate_tempo_from_novelty(novelty["all"], sr, hop)
-        if bpm <= 0:
-            bpm = 120.0
+        prior_bpm = estimate_tempo_from_novelty(novelty["all"], sr, hop)
+        if prior_bpm <= 0:
+            prior_bpm = 120.0
             warnings.append("Tempo estimation failed; fell back to 120 BPM")
 
-        beat_step = 60.0 / bpm
-        peaks = detect_transient_peaks(
-            novelty["all"],
-            min_distance_samples=max(1, int(0.12 * sr / hop)),
-            threshold=0.15,
+        tracked_duration = round(float(duration), 4)
+        result = track_tempo_and_beats(
+            novelty["all"], sr, hop,
+            global_prior_bpm=prior_bpm,
+            duration=tracked_duration,
         )
-        origin = float(times[peaks[0]]) if len(peaks) > 0 else 0.0
 
-        beats: list[dict] = []
-        cur_time, cur_beat, cur_bar = origin, 1, 1
-        while cur_time < duration:
-            beats.append({
-                "time": round(cur_time, 4),
-                "beat": cur_beat,
-                "bar": cur_bar,
-                "downbeat": bool(cur_beat == 1),
-                "sequence_gap": False,
-            })
-            cur_time += beat_step
-            cur_beat = (cur_beat % 4) + 1
-            if cur_beat == 1:
-                cur_bar += 1
-        bars = max(1, cur_bar - 1)
+        if result.beat_times:
+            beats = number_beats(result.beat_times)
+            grid_origin = round(float(result.beat_times[0]), 4)
+            bars = max(1, (len(beats) - 1) // 4 + 1)
+            tempo_segments: list[dict[str, Any]] = list(result.tempo_segments)
+        else:
+            # Plan section 12.5: keep a numeric global BPM, but emit no fake
+            # uniform grid just because a fallback tempo exists.
+            beats = []
+            grid_origin = 0.0
+            bars = 1
+            tempo_segments = []
+            warnings.append("Insufficient rhythmic evidence; no tracked beats emitted")
 
         check_cancelled(cancelled)
         progress("features", 0.75, "提取多频段瞬态能量...")
-        onsets = extract_onsets(times, novelty, sr=sr, hop=hop, bpm=bpm)
+        onsets = extract_onsets(times, novelty, sr=sr, hop=hop, bpm=result.global_bpm)
 
         check_cancelled(cancelled)
         intervals = np.diff([b["time"] for b in beats]) if len(beats) > 1 else np.zeros(0)
         mean_interval = float(np.mean(intervals)) if len(intervals) else 0.0
         interval_cv = float(np.std(intervals) / mean_interval) if mean_interval > 0 else 0.0
 
+        path_diagnostics = result.diagnostics
+        diagnostics: dict[str, Any] = {
+            "tempo_method": (
+                "local-autocorrelation-viterbi"
+                if beats else "no-track-global-tempo-fallback"
+            ),
+            "beat_method": (
+                "novelty-guided-dynamic-programming"
+                if beats else "no-track-global-tempo-fallback"
+            ),
+            "candidate_windows": int(path_diagnostics.get("tempo_path_anchors", 0)),
+            "tempo_path_changes": max(0, len(tempo_segments) - 1),
+            "tracked_beats": len(beats),
+            "beats_snapped": int(path_diagnostics.get("snapped_beats", 0)),
+            "duplicates_removed": int(path_diagnostics.get("duplicates_removed", 0)),
+            "missing_beats_inserted": int(path_diagnostics.get("beats_inserted", 0)),
+            "unrepaired_gaps": int(path_diagnostics.get("unrepairable_gaps", 0)),
+            "beat_interval_cv": round(interval_cv, 4),
+            "variable_tempo": len(tempo_segments) > 1,
+            "score_semantics": "normalized path support; not probability",
+            "tracking_parameters": dict(TRACKING_PARAMETERS),
+            "onset_count": len(onsets),
+            "separated": False,
+        }
+
+        if beats:
+            provenance: dict[str, Any] = {
+                "beats": {
+                    "method": "novelty-guided-dynamic-programming",
+                    "backend": self.name,
+                    "tempo_source": "local-autocorrelation-viterbi",
+                    "onset_alignment": "bounded-local-maximum",
+                },
+                "onsets": {"method": "multiband-positive-spectral-flux", "backend": self.name},
+                "meter_phase": {
+                    "method": "four-four-cycle-from-first-tracked-beat",
+                    "backend": self.name,
+                    "inferred": True,
+                },
+            }
+        else:
+            provenance = {
+                "beats": {"method": "no-track-global-tempo-fallback", "backend": self.name},
+                "onsets": {"method": "multiband-positive-spectral-flux", "backend": self.name},
+            }
+
         return AnalysisEvidence(
-            duration=round(float(duration), 4),
+            duration=tracked_duration,
             sample_rate=sr,
             channels=channels,
-            tempo_bpm=float(bpm),
-            grid_origin=round(origin, 4),
+            tempo_bpm=float(result.global_bpm),
+            grid_origin=grid_origin,
             bars=bars,
             beats=beats,
             onsets=onsets,
             energy=compress_energy(novelty, sr, hop),
-            tempo_score=None,
+            tempo_score=result.path_score,
+            tempo_segments=tempo_segments,
             warnings=warnings,
-            diagnostics={
-                "tempo_method": "spectral-flux-autocorrelation",
-                "beat_interval_cv": round(interval_cv, 4),
-                "onset_count": len(onsets),
-                "variable_tempo": False,
-                "separated": False,
-            },
-            provenance={
-                "beats": {"method": "uniform-grid-from-global-bpm", "backend": self.name},
-                "onsets": {"method": "multiband-positive-spectral-flux", "backend": self.name},
-            },
+            diagnostics=diagnostics,
+            provenance=provenance,
         )

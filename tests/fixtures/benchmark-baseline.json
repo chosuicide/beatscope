@@ -1,0 +1,85 @@
+{
+  "schema": "beatscope-benchmark-baseline-1",
+  "fixture_generator_version": "2",
+  "fixture_manifest_sha256": "957a69812168b9aabc461b82a16fb2bd259c4ae423dc6620ebcf2d5acefce757",
+  "analyzer_version": "0.4.0",
+  "cases": {
+    "fixed-120": {
+      "beat_f1": 0.9697,
+      "beat_mae_ms": 3.17,
+      "bpm_error": 0.19,
+      "segment_count": 1,
+      "gates": {}
+    },
+    "fixed-90": {
+      "beat_f1": 1.0,
+      "beat_mae_ms": 10.7,
+      "bpm_error": 0.12,
+      "segment_count": 1,
+      "gates": {}
+    },
+    "dense-128": {
+      "beat_f1": 1.0,
+      "beat_mae_ms": 18.29,
+      "bpm_error": 0.4,
+      "segment_count": 1,
+      "gates": {}
+    },
+    "sparse-100": {
+      "beat_f1": 1.0,
+      "beat_mae_ms": 9.39,
+      "bpm_error": 0.35,
+      "segment_count": 1,
+      "gates": {}
+    },
+    "tempo-change": {
+      "beat_f1": 0.1644,
+      "beat_mae_ms": 35.2,
+      "bpm_error": null,
+      "segment_count": 1,
+      "gates": {}
+    },
+    "offgrid": {
+      "beat_f1": 1.0,
+      "beat_mae_ms": 17.29,
+      "bpm_error": 0.19,
+      "segment_count": 1,
+      "gates": {}
+    },
+    "bass-heavy": {
+      "beat_f1": 0.9697,
+      "beat_mae_ms": 3.17,
+      "bpm_error": 0.19,
+      "segment_count": 1,
+      "gates": {}
+    },
+    "silence": {
+      "beat_f1": 0.0,
+      "beat_mae_ms": null,
+      "bpm_error": null,
+      "segment_count": 1,
+      "gates": {}
+    },
+    "gradual-drift": {
+      "beat_f1": 0.2178,
+      "beat_mae_ms": 30.01,
+      "bpm_error": null,
+      "segment_count": 1,
+      "gates": {}
+    },
+    "micro-drift": {
+      "beat_f1": 0.9897,
+      "beat_mae_ms": 25.09,
+      "bpm_error": null,
+      "segment_count": 1,
+      "gates": {}
+    },
+    "octave-trap": {
+      "beat_f1": 0.9697,
+      "beat_mae_ms": 3.17,
+      "bpm_error": 0.19,
+      "segment_count": 1,
+      "gates": {}
+    }
+  }
+}

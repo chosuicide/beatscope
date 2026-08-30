@@ -1,16 +1,16 @@
 {
   "schema_version": "3.0",
-  "project_id": "d6abba7436d9",
+  "project_id": "7bde5dd0afda",
   "source": {
     "display_name": "fixed-120.wav",
     "duration": 8.0,
     "sample_rate": 44100,
     "channels": 1,
-    "sha256": "d6abba7436d90b40d12780f99d013aef001c0b50cdd9481b485bc2fb07d97d06"
+    "sha256": "7bde5dd0afdad054f3526d04c7171e6af3e1bdfbb4c45eeb550436d8c893e4f5"
   },
   "analysis": {
     "pipeline": "beat-this+demucs-drums+multiband-novelty",
-    "analyzer_version": "0.4.0",
+    "analyzer_version": "0.6.0",
     "warnings": [],
     "separation_used": true
   },
@@ -146,12 +146,12 @@
     {
       "id": 1,
       "raw_time": 0.0058,
-      "strength": 0.6174,
+      "strength": 0.6175,
       "bands": {
-        "all": 0.6174,
+        "all": 0.6175,
         "low": 0.0,
         "mid": 0.6207,
-        "high": 0.7865
+        "high": 0.8117
       },
       "accent": false,
       "confidence": 0.617
@@ -164,7 +164,7 @@
         "all": 1.0,
         "low": 1.0,
         "mid": 1.0,
-        "high": 0.9566
+        "high": 0.9488
       },
       "accent": true,
       "confidence": 1.0
@@ -175,9 +175,9 @@
       "strength": 1.0,
       "bands": {
         "all": 1.0,
-        "low": 0.9588,
+        "low": 0.9583,
         "mid": 1.0,
-        "high": 0.9367
+        "high": 0.9314
       },
       "accent": true,
       "confidence": 1.0
@@ -190,7 +190,7 @@
         "all": 0.9857,
         "low": 1.0,
         "mid": 0.9844,
-        "high": 0.9132
+        "high": 0.9076
       },
       "accent": false,
       "confidence": 0.986
@@ -201,7 +201,7 @@
       "strength": 0.971,
       "bands": {
         "all": 0.971,
-        "low": 0.8756,
+        "low": 0.8764,
         "mid": 0.9715,
         "high": 1.0
       },
@@ -214,9 +214,9 @@
       "strength": 0.9874,
       "bands": {
         "all": 0.9874,
-        "low": 0.8977,
+        "low": 0.8981,
         "mid": 0.9878,
-        "high": 0.9998
+        "high": 0.9966
       },
       "accent": false,
       "confidence": 0.987
@@ -227,9 +227,9 @@
       "strength": 1.0,
       "bands": {
         "all": 1.0,
-        "low": 0.945,
+        "low": 0.9457,
         "mid": 1.0,
-        "high": 0.9919
+        "high": 0.9872
       },
       "accent": true,
       "confidence": 1.0
@@ -240,9 +240,9 @@
       "strength": 1.0,
       "bands": {
         "all": 1.0,
-        "low": 0.9581,
+        "low": 0.9585,
         "mid": 1.0,
-        "high": 0.981
+        "high": 0.9751
       },
       "accent": true,
       "confidence": 1.0
@@ -253,9 +253,9 @@
       "strength": 1.0,
       "bands": {
         "all": 1.0,
-        "low": 0.9767,
+        "low": 0.9771,
         "mid": 1.0,
-        "high": 0.9663
+        "high": 0.9605
       },
       "accent": true,
       "confidence": 1.0
@@ -268,7 +268,7 @@
         "all": 1.0,
         "low": 1.0,
         "mid": 1.0,
-        "high": 0.9478
+        "high": 0.9404
       },
       "accent": true,
       "confidence": 1.0
@@ -281,7 +281,7 @@
         "all": 0.9945,
         "low": 1.0,
         "mid": 0.9936,
-        "high": 0.9243
+        "high": 0.9178
       },
       "accent": false,
       "confidence": 0.994
@@ -294,7 +294,7 @@
         "all": 0.9752,
         "low": 1.0,
         "mid": 0.9743,
-        "high": 0.9004
+        "high": 0.8937
       },
       "accent": false,
       "confidence": 0.975
@@ -305,7 +305,7 @@
       "strength": 0.9791,
       "bands": {
         "all": 0.9791,
-        "low": 0.8827,
+        "low": 0.8832,
         "mid": 0.9796,
         "high": 1.0
       },
@@ -318,9 +318,9 @@
       "strength": 0.9938,
       "bands": {
         "all": 0.9938,
-        "low": 0.9184,
+        "low": 0.919,
         "mid": 0.9941,
-        "high": 0.9966
+        "high": 0.9931
       },
       "accent": false,
       "confidence": 0.994
@@ -331,9 +331,9 @@
       "strength": 1.0,
       "bands": {
         "all": 1.0,
-        "low": 0.953,
+        "low": 0.9535,
         "mid": 1.0,
-        "high": 0.9874
+        "high": 0.9824
       },
       "accent": true,
       "confidence": 1.0
@@ -344,9 +344,9 @@
       "strength": 1.0,
       "bands": {
         "all": 1.0,
-        "low": 0.9687,
+        "low": 0.9691,
         "mid": 1.0,
-        "high": 0.9742
+        "high": 0.9678
       },
       "accent": true,
       "confidence": 1.0
@@ -360,9 +360,9 @@
         "length": 1379,
         "head": [
           0.0,
-          0.6174,
+          0.6175,
           0.1314,
-          0.035,
+          0.0371,
           0.0,
           0.0,
           0.0,
@@ -378,7 +378,7 @@
           0.0,
           0.0
         ],
-        "sha256": "f5f964504a5644ed"
+        "sha256": "3721adf3cccd21db"
       },
       "low": {
         "length": 1379,
@@ -386,7 +386,7 @@
           0.0,
           0.0,
           0.0,
-          0.3219,
+          0.3443,
           0.0,
           0.0,
           0.0,
@@ -402,14 +402,14 @@
           0.0,
           0.0
         ],
-        "sha256": "9786ddcff7c4d1cc"
+        "sha256": "47ac8fd51172ac6b"
       },
       "mid": {
         "length": 1379,
         "head": [
           0.0,
           0.6207,
-          0.1321,
+          0.132,
           0.0,
           0.0,
           0.0,
@@ -426,14 +426,14 @@
           0.0,
           0.0
         ],
-        "sha256": "dd15975de1a34f59"
+        "sha256": "5a568b348caecd8f"
       },
       "high": {
         "length": 1379,
         "head": [
           0.0,
-          0.7865,
-          0.0,
+          0.8117,
+          0.1995,
           0.0,
           0.0,
           0.0,
@@ -450,7 +450,7 @@
           0.0,
           0.0
         ],
-        "sha256": "0c70b113349e697e"
+        "sha256": "2b96af246f1d92e5"
       }
     }
   },
@@ -485,21 +485,21 @@
       "label": "repeat",
       "group": "A",
       "mean_strength": 0.9896,
-      "similarity_previous": 0.9649,
+      "similarity_previous": 0.9651,
       "vector": [
-        0.2483,
+        0.2485,
         0.0,
         0.0,
         0.0,
-        0.2525,
+        0.2527,
         0.0,
         0.0,
         0.0,
-        0.2557,
+        0.2559,
         0.0,
         0.0,
         0.0,
-        0.2557,
+        0.2559,
         0.0,
         0.0,
         0.0
@@ -512,19 +512,19 @@
       "mean_strength": 0.9924,
       "similarity_previous": 0.9986,
       "vector": [
-        0.2544,
+        0.2548,
         0.0,
         0.0,
         0.0,
-        0.2544,
+        0.2548,
         0.0,
         0.0,
         0.0,
-        0.253,
+        0.2534,
         0.0,
         0.0,
         0.0,
-        0.2481,
+        0.2485,
         0.0,
         0.0,
         0.0
@@ -537,19 +537,19 @@
       "mean_strength": 0.9932,
       "similarity_previous": 0.9989,
       "vector": [
-        0.2495,
+        0.2497,
         0.0,
         0.0,
         0.0,
-        0.2532,
+        0.2534,
         0.0,
         0.0,
         0.0,
-        0.2548,
+        0.255,
         0.0,
         0.0,
         0.0,
-        0.2548,
+        0.255,
         0.0,
         0.0,
         0.0
