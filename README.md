@@ -4,7 +4,7 @@ English | [简体中文](README.zh-CN.md)
 
 A local personal project that turns a song's rhythm into a playable visual reference and a reusable timing package for coding agents.
 
-BeatScope lets you upload a track, play it in the browser, and watch a particle sphere, frequency traces, and a whole-song structure view respond to LOW, MID, HIGH, transients, and section changes. The same analysis is arranged into an eight-bar cue map and exported as a Codex package with its own <code>SKILL.md</code>, so the next visual project does not have to guess the timing of the same song again.
+BeatScope lets you upload a track, play it in the browser, and watch a flowing particle instrument, delayed orbit belts, frequency traces, and a whole-song structure view respond to LOW, MID, HIGH, transients, and section changes. The same analysis is arranged into an eight-bar cue map and exported as a Codex package with its own <code>SKILL.md</code>, so the next visual project does not have to guess the timing of the same song again.
 
 [![BeatScope animated preview; click to play with sound](docs/demo/beatscope-preview.gif)](docs/demo/beatscope-demo.mp4)
 
@@ -70,20 +70,30 @@ The same eight-bar window exposes IMPACT, LOW / SCALE, MID / FLOW, HIGH / FLASH,
 
 The package contains more than analysis JSON. It also carries a seek-safe <code>visual-state.js</code>, usage notes, the schema, and a project-level <code>SKILL.md</code>. Drop the ZIP into a new Codex project and the agent can reuse the same timing and visual semantics instead of listening and guessing again.
 
+### The particle instrument
+
+![BeatScope particle instrument at a transient impact](docs/screenshots/particle-impact.png)
+
+The player's central body is an organic three-lobed particle field drawn beneath the instrument chrome. Tension gathers the cloud before a locally distinct hit; the body then moves as one coherent form around a local hot core while stable edge particles extend into flow-guided streamers. Three surrounding orbit belts receive the same beat later in sequence, so an impact travels outwards instead of making every layer jump at once.
+
+![BeatScope particle instrument during anticipation](docs/screenshots/particle-anticipation.png)
+
+Every phase comes from the tempo-aware motion director and the playback clock alone: the same instant of a song always produces the same frame. Particle seeds may change a streamer's reach or grain size, but never its timing. Fixed-time captures of the other states — rest, recoil, dense passage, a variable-tempo boundary, and reduced motion — live in <code>docs/screenshots/</code>.
+
 ## How music changes the scene
 
 The player does not treat every strong beat as the same event. It compares transient strength and local density inside the current song, then spends a limited visual budget.
 
 | Musical state | Visual response |
 | --- | --- |
-| Ordinary beat | Small sphere breath and short core response |
-| Continuous strong rhythm | More surface motion and turbulence, without repeated explosions |
-| Locally distinct transient | Limited particle separation and a short impact |
-| Rare hit or section change | Full expansion when the cooldown allows it |
+| Ordinary beat | Coherent body breath, a short local core response, then a restrained belt ripple |
+| Continuous strong rhythm | Macro flow and surface travel increase without repeated explosions |
+| Locally distinct transient | The three lobes separate briefly and edge streamers carry motion outwards |
+| Rare hit or section change | Full body expansion and a delayed three-belt propagation when the cooldown allows it |
 | LOW / MID / HIGH | Weight and scale, surface flow, detail and brightness |
 | Playback position | One clock for particles, traces, structure, and cue map |
 
-Particle count adapts to the measured render cost of a frame. The structure navigator and cue overlay update less often than the main instrument so they do not compete with recording performance; the audio clock itself is never downsampled.
+The scene is rendered by a deterministic WebGL2 instrument in one draw call: up to 18,000 body points plus three seeded orbit belts of roughly 690 grains each. Anticipation, impact, recoil, aftershock, the continuous macro flow field, lobe-local halo, streamers, and delayed belt ripples are all computed from playback time — never from wall-clock physics. The belts receive one event at three bounded delays instead of mirroring the body on the same frame. The renderer tracks measured cost in rolling 180-frame windows and moves between three body-quality tiers (18,000 / 11,000 / 6,000 points with device-pixel-ratio caps) only after sustained over- or under-load, with a cooldown between changes. When WebGL2 is unavailable or the context is lost, a Canvas 2D fallback with a fixed 680-point body budget keeps the scene alive, and <code>prefers-reduced-motion</code> switches to the restrained variant live. The structure navigator and cue overlay update less often than the main instrument so they do not compete with recording performance; the audio clock itself is never downsampled.
 
 ## How the eight-bar reference works
 
@@ -154,7 +164,8 @@ MIDI, CSV, PNG, and raw JSON remain under **Advanced tools**. MIDI is a quantise
 - One analysis pipeline: beat grid, transients, multiband energy, and whole-song structure
 - Schema v4 validation, v3 project migration, and provenance/diagnostics metadata
 - A shared JavaScript runtime: web and export query time through one implementation
-- Canvas 2D particle sphere, frequency traces, light field, and spectrum deck
+- A deterministic WebGL2 particle instrument with coherent lobe motion, flow-guided streamers, delayed orbit belts, adaptive quality tiers, and a Canvas 2D fallback
+- Canvas 2D frequency traces, light field, and spectrum deck
 - Motion tiers derived from within-song distribution and rhythmic density
 - Playback, volume, seek, and eight-bar looping
 - Whole-song structure navigation and 1/16 or 1/32 cue maps
@@ -172,7 +183,7 @@ MIDI, CSV, PNG, and raw JSON remain under **Advanced tools**. MIDI is a quantise
 | Optional high-quality path | librosa, Demucs, Beat This |
 | Local service | Python HTTP server |
 | Playback | HTML Audio, audio.currentTime |
-| Visuals | Canvas 2D, vanilla JavaScript, CSS |
+| Visuals | WebGL2 particles, Canvas 2D, vanilla JavaScript, CSS |
 | Exports | JSON, CSV, PNG, Standard MIDI, ZIP Skill package |
 | Verification | pytest, Node Test Runner, GitHub Actions |
 
@@ -196,9 +207,13 @@ beatscope/
 │   └── visual-profile.js   #   pulse/turbulence/burst/hero visual budget
 ├── agent_skill/            # portable Skill included in each ZIP
 └── web/
-    ├── renderer.js         # player, structure, and cue-map rendering
-    ├── audio.js            # single audio clock and transport
     ├── app.js              # page state and interaction
+    ├── visual-stage.js     # stage controller: layers, director frames, quality tiers
+    ├── particle-geometry.js# deterministic three-lobe body and orbit-belt point sets
+    ├── particle-shaders.js # WebGL2 vertex/fragment sources
+    ├── particle-field.js   # one-draw-call WebGL2 particle renderer
+    ├── renderer.js         # instrument chrome, structure, and cue-map rendering
+    ├── audio.js            # single audio clock and transport
     └── index.html
 skills/beatscope-visualizer/ # repository Skill
 tests/                       # Python and JavaScript regression tests
@@ -314,24 +329,23 @@ When <code>--device cuda</code> is selected, BeatScope does not silently fall ba
 ~~~powershell
 pytest -q
 python -m pytest tests\mcp -q
-node --test tests\test_grid.js tests\test_interaction.js
-node --test tests\test_runtime.js tests\test_visual_profile.js tests\test_playback_characterization.js
+node --test tests\test_grid.js tests\test_interaction.js tests\test_runtime.js tests\test_visual_profile.js tests\test_playback_characterization.js tests\test_visual_stage.js tests\test_particle_geometry.js tests\test_particle_uniforms.js
 beatscope benchmark
 ~~~
 
-On the JavaScript side the grid and interaction tests cover page behaviour; the runtime and visual profile tests cover the shared runtime contract and purity constraints; the characterisation test compares the web player and the Codex export paths at the same instants. The MCP tests cover the tool contract, path safety, runtime parity, and export. GitHub Actions runs the core checks on Windows and Ubuntu with Python 3.10 and 3.12.
+On the JavaScript side the grid and interaction tests cover page behaviour; the runtime and visual profile tests cover the shared runtime contract and purity constraints; the characterisation test compares the web player and the Codex export paths at the same instants; the visual-stage, particle-geometry, and particle-uniform tests pin the deterministic director frames, point-set determinism, and uniform conversion, including the adaptive quality tiers and the forced-fallback paths. The Python suite additionally asserts that the built wheel ships the particle modules. The MCP tests cover the tool contract, path safety, runtime parity, and export. GitHub Actions runs the core checks on Windows and Ubuntu with Python 3.10 and 3.12.
 
 ## Known limits
 
 - The built-in analysis does not reliably identify kick, snare, or 808 identity. It reports transient and frequency evidence.
-- Canvas 2D particles are still limited by browser and GPU performance during high-resolution recording. WebGL is the next step for consistently high frame rates.
+- The WebGL2 particle instrument renders up to 18,000 body points plus three orbit belts; where WebGL2 is unavailable the Canvas 2D fallback keeps a deliberately small fixed body budget (at most 680 points), so very high-resolution recording still favours a WebGL2-capable browser.
 - Automatic section labels describe energy and repetition, not human arrangement notation.
 - MP3 support depends on local libsndfile or FFmpeg.
 - BeatScope is a local creative reference, not a DAW, FLP generator, or exact drum transcription tool.
 
 ## Project status
 
-BeatScope now covers the complete local path from audio upload and playable visualisation to whole-song structure, an eight-bar cue map, and a Codex Skill export. It remains a personal experiment in progress. The next priority is not adding more file formats, but keeping the same visual language stable across more songs, devices, and recording conditions.
+BeatScope now covers the complete local path from audio upload and playable visualisation to whole-song structure, an eight-bar cue map, and a Codex Skill export. v0.6.0 added real-timeline variable-tempo tracking and preserved tempo segments through runtime, MIDI, MCP, and Codex export. v0.6.1 rebuilt the player around a deterministic WebGL2 particle instrument with coherent body motion, flow-guided streamers, delayed orbit belts, adaptive budgets, and a safe fallback. The package is v0.6.1 while the analysis pipeline deliberately remains versioned 0.6.0. BeatScope is still a personal experiment in progress; the next priority is keeping this visual language stable across more songs, devices, and recording conditions.
 
 ## License
 

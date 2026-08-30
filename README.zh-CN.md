@@ -4,7 +4,7 @@
 
 一个把歌曲节奏变成可播放视觉参考与 Agent 可复用时序包的本地个人项目。
 
-BeatScope 允许用户上传一首歌，在浏览器里一边播放，一边查看随 LOW、MID、HIGH、瞬态与段落变化运动的粒子球、频段曲线和全曲结构。分析结果还会整理成 8 小节 cue map，并导出为带 <code>SKILL.md</code> 的 Codex 包，让后续视觉项目不必重新猜测同一首歌的节奏。
+BeatScope 允许用户上传一首歌，在浏览器里一边播放，一边查看随 LOW、MID、HIGH、瞬态与段落变化运动的流动粒子乐器、延迟轨道带、频段曲线和全曲结构。分析结果还会整理成 8 小节 cue map，并导出为带 <code>SKILL.md</code> 的 Codex 包，让后续视觉项目不必重新猜测同一首歌的节奏。
 
 [![BeatScope 动态演示；点击播放原声视频](docs/demo/beatscope-preview.gif)](docs/demo/beatscope-demo.mp4)
 
@@ -70,20 +70,30 @@ BeatScope 尝试把这段工作留下来。Python 负责读取音频、追踪节
 
 导出包不仅包含分析 JSON，还包含 seek-safe 的 <code>visual-state.js</code>、使用说明、Schema 与项目级 <code>SKILL.md</code>。把 ZIP 放进新的 Codex 项目，Agent 就能沿用同一套时间与视觉语义，而不是重新听歌猜节奏。
 
+### 粒子乐器
+
+![BeatScope 瞬态冲击时刻的粒子乐器](docs/screenshots/particle-impact.png)
+
+播放器的主体是一片有机的三叶粒子场，绘制在仪表刻度层之下。局部突出的重击到来之前，张力先把粒子云收拢；随后主体作为一个整体围绕局部光核运动，边缘的一组稳定粒子沿流场延伸成拖尾。外围三条轨道带会稍晚、依次接住同一个拍子，让冲击向外传递，而不是所有图层在同一帧一起跳动。
+
+![BeatScope 预备阶段的粒子乐器](docs/screenshots/particle-anticipation.png)
+
+每个阶段都只由 tempo-aware motion director 和播放时钟推导：同一首歌的同一时刻永远渲染出同一帧。粒子 seed 可以改变拖尾长度或颗粒大小，但不会改变动作时机。其余状态（安静段、recoil、高密度段、变速边界、reduced motion）的固定时刻截图保存在 <code>docs/screenshots/</code>。
+
 ## 音乐怎样影响画面
 
 播放器不会把所有强拍都当成同一种事件。它先在当前歌曲内部比较瞬态强度和局部密度，再给动画分配有限的视觉预算。
 
 | 音乐状态 | 视觉反应 |
 | --- | --- |
-| 普通节拍 | 球体轻微呼吸，中心与频段线短促响应 |
-| 连续强拍 | 表面波动与粒子湍流增加，不连续炸开 |
-| 局部突出瞬态 | 少量粒子脱离，并出现短冲击 |
-| 稀有重击或段落变化 | 在冷却间隔允许时触发完整展开 |
+| 普通节拍 | 主体整体呼吸、局部光核短促响应，随后出现克制的轨道波纹 |
+| 连续强拍 | 宏观流动与表面行波增加，但不会连续炸开 |
+| 局部突出瞬态 | 三个叶瓣短暂分离，边缘拖尾把运动带向外围 |
+| 稀有重击或段落变化 | 冷却允许时触发主体完整展开与三条轨道带的延迟传播 |
 | LOW / MID / HIGH | 分别控制重量与尺度、表面流动、细节与亮度 |
 | 播放位置 | 粒子、曲线、结构导航和 cue map 使用同一时间来源 |
 
-粒子数量会根据单帧渲染耗时自动调整。结构导航与 cue map 使用较低刷新频率，避免它们与主动画争抢录屏资源；音频时间本身不会因此降采样。
+整个场景由确定性的 WebGL2 乐器一次 draw call 渲染：最多 18,000 个主体点，再加上三条每条约 690 个颗粒的 seeded 轨道带。anticipation、impact、recoil、aftershock、连续宏观流场、叶瓣局部光核、拖尾和轨道延迟波纹都完全由播放时间计算，不依赖系统时钟物理；三条轨道带以三个受控延迟接住同一个事件，而不是和主体同时响应。渲染器用滚动 180 帧窗口统计实测开销，只在持续过载或欠载时于三档主体质量（18,000 / 11,000 / 6,000 点，各带设备像素比上限）之间移动，且两次调整之间有冷却间隔。WebGL2 不可用或上下文丢失时，固定 680 个主体点预算的 Canvas 2D 回退继续维持画面；<code>prefers-reduced-motion</code> 变化时会实时切换到克制版本。结构导航与 cue map 使用较低刷新频率，避免它们与主动画争抢录屏资源；音频时间本身不会因此降采样。
 
 ## 8 小节参考怎样工作
 
@@ -154,7 +164,8 @@ MIDI、CSV、PNG 和原始 JSON 仍然保留在 **Advanced tools** 中。MIDI �
 - 单一分析管线：节拍网格、瞬态、多频段能量和全曲结构分析
 - schema v4 校验、v3 项目迁移与来源/诊断元数据
 - 共享 JavaScript 运行时：网页与导出使用同一份时间查询实现
-- Canvas 2D 粒子球、频段曲线、光晕与频谱面板
+- 确定性的 WebGL2 粒子乐器：整体叶瓣运动、流场拖尾、延迟轨道带、自适应质量分级与 Canvas 2D 回退
+- Canvas 2D 频段曲线、光晕与频谱面板
 - 根据歌曲分布和节奏密度分配动画层级
 - 播放、暂停、音量、跳转和 8 小节循环
 - 全曲结构导航与 1/16、1/32 cue map
@@ -172,7 +183,7 @@ MIDI、CSV、PNG 和原始 JSON 仍然保留在 **Advanced tools** 中。MIDI �
 | 高质量可选流程 | librosa、Demucs、Beat This |
 | 本地服务 | Python HTTP server |
 | 播放 | HTML Audio、audio.currentTime |
-| 视觉 | Canvas 2D、原生 JavaScript、CSS |
+| 视觉 | WebGL2 粒子、Canvas 2D、原生 JavaScript、CSS |
 | 导出 | JSON、CSV、PNG、Standard MIDI、ZIP Skill package |
 | 验证 | pytest、Node Test Runner、GitHub Actions |
 
@@ -196,9 +207,13 @@ beatscope/
 │   └── visual-profile.js   #   pulse/turbulence/burst/hero 视觉预算
 ├── agent_skill/            # 打入 ZIP 的可移植 Skill
 └── web/
-    ├── renderer.js         # 粒子播放器、结构与 cue map
-    ├── audio.js            # 单一音频时钟与播放控制
     ├── app.js              # 页面状态和交互
+    ├── visual-stage.js     # 舞台控制器：图层、director 帧、质量分级
+    ├── particle-geometry.js# 确定性三叶主体与轨道带点集
+    ├── particle-shaders.js # WebGL2 顶点/片段着色器
+    ├── particle-field.js   # 单 draw call 的 WebGL2 粒子渲染器
+    ├── renderer.js         # 仪表刻度、结构与 cue map 渲染
+    ├── audio.js            # 单一音频时钟与播放控制
     └── index.html
 skills/beatscope-visualizer/ # 仓库内 Skill
 tests/                       # Python 与 JavaScript 回归测试
@@ -298,24 +313,23 @@ beatscope serve --project rhythm.json
 ~~~powershell
 pytest -q
 python -m pytest tests\mcp -q
-node --test tests\test_grid.js tests\test_interaction.js
-node --test tests\test_runtime.js tests\test_visual_profile.js tests\test_playback_characterization.js
+node --test tests\test_grid.js tests\test_interaction.js tests\test_runtime.js tests\test_visual_profile.js tests\test_playback_characterization.js tests\test_visual_stage.js tests\test_particle_geometry.js tests\test_particle_uniforms.js
 beatscope benchmark
 ~~~
 
-JavaScript 侧：网格与交互测试覆盖页面行为；runtime 与 visual profile 测试覆盖共享运行时契约和纯度约束；characterization 测试比较网页播放器与 Codex 导出两条路径在同一时间点的输出一致性。MCP 测试覆盖工具契约、路径安全、运行时一致性与导出。GitHub Actions 会在 Windows 与 Ubuntu、Python 3.10 与 3.12 上运行相同的核心检查。
+JavaScript 侧：网格与交互测试覆盖页面行为；runtime 与 visual profile 测试覆盖共享运行时契约和纯度约束；characterization 测试比较网页播放器与 Codex 导出两条路径在同一时间点的输出一致性；visual-stage、particle-geometry 与 particle-uniform 测试固定了确定性 director 帧、点集确定性与 uniform 转换，并覆盖自适应质量分级与强制回退路径。Python 套件还会断言构建出的 wheel 包含粒子模块。MCP 测试覆盖工具契约、路径安全、运行时一致性与导出。GitHub Actions 会在 Windows 与 Ubuntu、Python 3.10 与 3.12 上运行相同的核心检查。
 
 ## 已知限制
 
 - 内置分析不会可靠识别 kick、snare 或 808 身份，只报告瞬态和频段事实。
-- Canvas 2D 粒子在高分辨率录屏时仍受浏览器和 GPU 性能影响；稳定高帧率的下一步是迁移到 WebGL。
+- WebGL2 粒子乐器最多渲染 18,000 个主体点外加三条轨道带；WebGL2 不可用时 Canvas 2D 回退保持刻意较小的固定主体预算（最多 680 点），因此极高分辨率录屏仍建议使用支持 WebGL2 的浏览器。
 - 自动段落标签来自能量与重复关系，不等同于人工编曲标注。
 - MP3 支持取决于本机 libsndfile 或 FFmpeg。
 - 这是本地创作与参考工具，不是 DAW、FLP 生成器或精确鼓组转录器。
 
 ## 项目状态
 
-BeatScope 已完成从音频上传、播放式可视化、全曲结构、8 小节 cue map 到 Codex Skill 导出的完整本地流程。它仍是一个持续调整的个人实验；后续重点不是增加更多导出格式，而是让同一套视觉语法在更多歌曲、设备和录制环境中保持稳定。
+BeatScope 已完成从音频上传、播放式可视化、全曲结构、8 小节 cue map 到 Codex Skill 导出的完整本地流程。v0.6.0 增加了真实时间轴上的变速追踪，并把 tempo segments 保留到 runtime、MIDI、MCP 和 Codex 导出；v0.6.1 则把播放器重建为确定性的 WebGL2 粒子乐器，加入主体整体运动、流场拖尾、延迟轨道带、自适应预算和安全回退。软件包版本是 v0.6.1，分析管线版本仍刻意保持为 0.6.0。它仍是一个持续调整的个人实验；后续重点是让这套视觉语法在更多歌曲、设备和录制环境中保持稳定。
 
 ## License
 
