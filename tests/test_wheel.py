@@ -26,7 +26,7 @@ def test_wheel_contains_particle_modules(tmp_path: Path) -> None:
     result = subprocess.run(
         [
             sys.executable, "-m", "pip", "wheel", ".",
-            "--no-deps", "--no-build-isolation",
+            "--no-deps",
             "--wheel-dir", str(tmp_path),
         ],
         cwd=REPO_ROOT,
