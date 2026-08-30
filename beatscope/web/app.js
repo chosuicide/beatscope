@@ -1,7 +1,8 @@
 import { state, subscribe, setProject, setSubdivision, setStartBar, setSelectedOnset, toggleLoop } from './state.js';
 import { fetchProject, getAudioUrl, getMidiExportUrl, getCsvExportUrl, getCodexExportUrl } from './api.js';
 import { initAudio, setAudioSource, togglePlay, seek, previewTransient } from './audio.js';
-import { renderStaticMap, renderOverlay, renderOverview, renderVisualStage, exportStaticPng } from './renderer.js';
+import { renderStaticMap, renderOverlay, renderOverview, exportStaticPng } from './renderer.js';
+import { createVisualStage, installVisualDebug } from './visual-stage.js';
 import { updateInspector } from './inspector.js';
 import { initImportHandlers, showEmptyState, showErrorState } from './import.js';
 import { gridPosition, metrics, formatTime, timeAtBar } from './grid.js';
@@ -13,7 +14,16 @@ const mapStatic = $('#mapStatic');
 const mapOverlay = $('#mapOverlay');
 const mapStack = $('#mapStack');
 const overviewCanvas = $('#overview');
+const visualStageStack = $('#visualStageStack');
 const visualStage = $('#visualStage');
+const particleStage = $('#particleStage');
+// Layered signal player (plan section 7.2): the controller owns the render
+// call order; app.js keeps the single rAF loop and the audio clock.
+const visualStageController = createVisualStage({ particleCanvas: particleStage, overlayCanvas: visualStage });
+// Localhost-only deterministic snapshot/forcing entry (plan section 12).
+if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+  window.__BEATSCOPE_VISUAL_DEBUG__ = installVisualDebug(visualStageController);
+}
 const seekRange = $('#seekRange');
 const volumeRange = $('#volumeRange');
 const followPlayback = $('#followPlayback');
@@ -52,11 +62,20 @@ function setDisabled(disabled) {
     controls.seekBack, controls.seekForward].forEach((element) => { if (element) element.disabled = disabled; });
 }
 
+let stagedProjectRef = null;
+
+function syncStageProject() {
+  if (stagedProjectRef === state.project) return;
+  stagedProjectRef = state.project;
+  visualStageController.setProject(state.project);
+}
+
 function renderAll() {
+  syncStageProject();
   renderStaticMap(mapStatic, state);
   renderOverlay(mapOverlay, state);
   renderOverview(overviewCanvas, state);
-  renderVisualStage(visualStage, state);
+  visualStageController.render(state);
   updateInspector(state);
 }
 
@@ -157,7 +176,7 @@ function animate(timestamp = performance.now()) {
     renderOverlay(mapOverlay, state);
     lastOverlayFrame = timestamp;
   }
-  if (visualStageVisible) renderVisualStage(visualStage, state);
+  if (visualStageVisible) visualStageController.render(state);
   if (timestamp - lastOverviewFrame >= 100) {
     renderOverview(overviewCanvas, state);
     lastOverviewFrame = timestamp;
@@ -174,7 +193,7 @@ function stopAnimation() {
   animationFrame = null;
   updatePlaybackUI();
   renderOverlay(mapOverlay, state);
-  if (visualStageVisible) renderVisualStage(visualStage, state);
+  if (visualStageVisible) visualStageController.render(state);
   renderOverview(overviewCanvas, state);
 }
 
@@ -200,6 +219,13 @@ if (mapStack && 'ResizeObserver' in window) {
   mapResizeObserver.observe(mapStack);
 }
 
+// One ResizeObserver owns stage sizing (plan section 7.3): both canvases
+// update inside the controller's resize() and the paused frame is repainted.
+if (visualStageStack && 'ResizeObserver' in window) {
+  const stageResizeObserver = new ResizeObserver(() => visualStageController.resize());
+  stageResizeObserver.observe(visualStageStack);
+}
+
 if (mapStack && 'IntersectionObserver' in window) {
   const mapVisibilityObserver = new IntersectionObserver((entries) => {
     if (entries.some((entry) => entry.isIntersecting)) queueMapRefresh();
@@ -212,9 +238,10 @@ if (visualStage && 'IntersectionObserver' in window) {
     const visible = entries.some((entry) => entry.isIntersecting);
     if (visible === visualStageVisible) return;
     visualStageVisible = visible;
-    if (visible && state.project) renderVisualStage(visualStage, state);
+    visualStageController.setVisible(visible);
+    if (visible && state.project) visualStageController.render(state);
   }, { rootMargin: '140px 0px' });
-  visualStageObserver.observe(visualStage);
+  visualStageObserver.observe(visualStageStack);
 }
 
 window.addEventListener('resize', queueMapRefresh, { passive: true });

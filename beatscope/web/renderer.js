@@ -21,8 +21,10 @@ const smoothstep = (value) => {
 };
 const hash01 = (index, salt = 0) => fract(Math.sin(index * 12.9898 + salt * 78.233) * 43758.5453123);
 
-export function resizeCanvas(canvas, cssWidth, cssHeight) {
-  const dprLimit = canvas.id === 'visualStage' ? 1 : 2;
+export function resizeCanvas(canvas, cssWidth, cssHeight, dprCapOverride = null) {
+  // Non-stage canvases keep their historical 2x cap; the visual-stage stack
+  // receives its tier's cap from the quality controller (plan section 7.3).
+  const dprLimit = dprCapOverride ?? (canvas.id === 'visualStage' || canvas.id === 'particleStage' ? 1 : 2);
   const dpr = Math.min(window.devicePixelRatio || 1, dprLimit);
   const physicalWidth = Math.round(cssWidth * dpr);
   const physicalHeight = Math.round(cssHeight * dpr);
@@ -89,10 +91,12 @@ export function playbackState(project, time) {
 }
 
 // Motion-tier budgets live in the shared visual profile; one profile per
-// project object, built over the shared runtime track.
+// project object, built over the shared runtime track. Exported so the
+// visual-stage controller — not the drawing layers — samples it once per
+// frame (plan section 3.3: one already-computed frame object per layer).
 const visualProfileCache = new WeakMap();
 
-function visualProfileFor(project) {
+export function visualProfileFor(project) {
   if (!visualProfileCache.has(project)) {
     visualProfileCache.set(project, createVisualProfile(trackForProject(project)));
   }
@@ -352,81 +356,40 @@ function drawEmptyCanvas(ctx, width, height, label) {
   text(ctx, label, 24, height / 2 - 14, { color: MUTED });
 }
 
-let visualQuality = .9;
-let averageVisualCost = 12;
+// --- Layered signal player (v0.6.1 plan section 3.3). -----------------------
+//
+// visual-stage.js samples the runtime and the compat profile ONCE per tick
+// and hands every layer the same shared frame. renderVisualBackdrop paints
+// the retained Canvas body beneath the chrome (only while the WebGL2 field
+// is unavailable); renderVisualOverlay paints the instrument chrome above
+// the particle layer. Neither layer resizes or clears the canvas — the
+// stage controller owns sizing and the per-frame clear.
 
-export function renderVisualStage(canvas, state) {
-  if (!canvas) return;
-  const width = canvas.clientWidth || 1200;
-  const height = canvas.clientHeight || 520;
-  const { ctx } = resizeCanvas(canvas, width, height);
-  const project = state.project;
-  if (!project) {
-    drawEmptyCanvas(ctx, width, height, 'LOAD AUDIO');
-    return;
-  }
-  const renderStarted = performance.now();
+export function renderVisualBackdrop(canvas, state, frame) {
+  const ctx = canvas.getContext ? canvas.getContext('2d') : null;
+  if (!ctx || !state.project || !frame?.layout) return;
+  const { layout, signal, motion } = frame;
+  const reducedMotion = Boolean(frame.reducedMotion);
+  drawReactiveLight(ctx, layout.centreX, layout.centreY, layout.baseRadius, signal, motion, reducedMotion);
+  drawArcTicks(ctx, layout.centreX, layout.centreY, layout.baseRadius, signal);
+  renderCanvasParticleFallback(ctx, frame, layout);
+}
 
-  const signal = playbackState(project, Number(state.playbackTime) || 0);
-  const motion = visualProfileFor(project).at(signal.time);
-  ctx.fillStyle = PAPER;
-  ctx.fillRect(0, 0, width, height);
-
-  const margin = Math.max(24, width * .035);
-  const innerWidth = width - margin * 2;
-  const spectrumTop = height * (width < 700 ? .72 : .73);
-  const spectrumBottom = height - margin;
-  const mainTop = margin + 24;
-  const mainBottom = spectrumTop - 16;
-  const mainHeight = mainBottom - mainTop;
-  const hasSideMeters = width >= 900;
-  const meterWidth = hasSideMeters ? Math.min(94, width * .082) : 0;
-  const traceBounds = {
-    left: margin + (hasSideMeters ? meterWidth + 34 : 0),
-    right: width - margin - (hasSideMeters ? meterWidth + 34 : 0),
-  };
-  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-
-  // Instrument grid and the local eight-bar ruler.
-  for (let index = 0; index <= 8; index += 1) {
-    const x = traceBounds.left + (traceBounds.right - traceBounds.left) * index / 8;
-    line(ctx, x, mainTop + 16, x, mainBottom, INK, .5, .052);
-    const bar = Math.max(1, signal.bar - 4 + index);
-    text(ctx, String(bar).padStart(2, '0'), x, mainTop + 7, {
-      color: index === 4 ? ACCENT : MUTED,
-      align: 'center',
-      font: index === 4 ? '700 9px monospace' : '9px monospace',
-    });
-    line(ctx, x, mainTop + 14, x, mainTop + (index === 4 ? 23 : 19), index === 4 ? ACCENT : LINE, index === 4 ? 1.5 : 1, .8);
-  }
-
-  const centreX = width * .5;
-  const centreY = mainTop + mainHeight * .54;
-  const baseRadius = Math.min(width * .18, mainHeight * .335)
+export function renderCanvasParticleFallback(ctx, frame, layout) {
+  const signal = frame.signal;
+  const motion = frame.motion;
+  const reducedMotion = Boolean(frame.reducedMotion);
+  const centreX = layout.centreX;
+  const centreY = layout.centreY;
+  const width = layout.width;
+  const baseRadius = layout.baseRadius
     * (1 + signal.low * .07 + motion.pulse * .018 + motion.turbulence * .012);
-  drawReactiveLight(ctx, centreX, centreY, baseRadius, signal, motion, reducedMotion);
-  drawArcTicks(ctx, centreX, centreY, baseRadius, signal);
-
-  // Keep the original breathing ring response; particle separation is budgeted independently.
-  const impact = Math.max(motion.burst * .48, motion.hero);
-  if (signal.onset > .025) {
-    ctx.save();
-    ctx.strokeStyle = ACCENT;
-    ctx.globalAlpha = .12 + signal.onset * .55;
-    ctx.lineWidth = 1 + signal.onset * 8;
-    ctx.shadowColor = ACCENT;
-    ctx.shadowBlur = 14 + signal.onset * 30;
-    ctx.beginPath();
-    ctx.arc(centreX, centreY, baseRadius * (1.02 + signal.onsetAge * 1.5), 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-  }
 
   const angleY = signal.time * (.12 + signal.mid * .09);
   const angleX = -.22 + Math.sin(signal.time * .16) * .055;
-  const cores = Number(navigator.hardwareConcurrency) || 4;
-  const baseParticleCount = width < 650 ? 480 : width < 1000 || cores <= 4 ? 680 : 920;
-  const particleCount = Math.max(380, Math.round(baseParticleCount * visualQuality));
+  // Fixed fallback budget (plan section 9): at most 680 points, no shadow
+  // blur in the loop; only the WebGL2 tiers adapt.
+  const particleCount = width < 650 ? 480 : 680;
   const projected = [];
   for (const point of spherePoints(particleCount)) {
     const surfaceWave = Math.sin(point.y * 8 + point.x * 3.5 + signal.time * (1.35 + motion.turbulence * 1.4))
@@ -485,6 +448,7 @@ export function renderVisualStage(canvas, state) {
   }
   ctx.restore();
 
+  const impact = Math.max(motion.burst * .48, motion.hero);
   const shockPosition = motion.impactAge < .32 ? 1 - motion.impactAge / .32 * 2 : 4;
   ctx.shadowBlur = 0;
   for (const particle of projected) {
@@ -533,6 +497,59 @@ export function renderVisualStage(canvas, state) {
   ctx.beginPath();
   ctx.arc(centreX, centreY, coreRadius * 2.6, 0, Math.PI * 2);
   ctx.fill();
+}
+
+export function renderVisualOverlay(canvas, state, frame) {
+  const ctx = canvas.getContext ? canvas.getContext('2d') : null;
+  if (!ctx) return;
+  const project = state.project;
+  if (!project || !frame?.layout) {
+    drawEmptyCanvas(ctx, canvas.clientWidth || 1200, canvas.clientHeight || 520, 'LOAD AUDIO');
+    return;
+  }
+  const { layout, signal, motion } = frame;
+  const width = layout.width;
+  const margin = layout.margin;
+  const innerWidth = layout.innerWidth;
+  const spectrumTop = layout.spectrumTop;
+  const spectrumBottom = layout.spectrumBottom;
+  const mainTop = layout.mainTop;
+  const mainBottom = layout.mainBottom;
+  const mainHeight = layout.mainHeight;
+  const hasSideMeters = layout.hasSideMeters;
+  const meterWidth = layout.meterWidth;
+  const traceBounds = layout.traceBounds;
+  const centreX = layout.centreX;
+  const centreY = layout.centreY;
+  const baseRadius = layout.baseRadius;
+
+  // Instrument grid and the local eight-bar ruler.
+  for (let index = 0; index <= 8; index += 1) {
+    const x = traceBounds.left + (traceBounds.right - traceBounds.left) * index / 8;
+    line(ctx, x, mainTop + 16, x, mainBottom, INK, .5, .052);
+    const bar = Math.max(1, signal.bar - 4 + index);
+    text(ctx, String(bar).padStart(2, '0'), x, mainTop + 7, {
+      color: index === 4 ? ACCENT : MUTED,
+      align: 'center',
+      font: index === 4 ? '700 9px monospace' : '9px monospace',
+    });
+    line(ctx, x, mainTop + 14, x, mainTop + (index === 4 ? 23 : 19), index === 4 ? ACCENT : LINE, index === 4 ? 1.5 : 1, .8);
+  }
+
+  // Onset ring: the only transient flash allowed over the calm interface.
+  const impact = Math.max(motion.burst * .48, motion.hero);
+  if (signal.onset > .025) {
+    ctx.save();
+    ctx.strokeStyle = ACCENT;
+    ctx.globalAlpha = .12 + signal.onset * .55;
+    ctx.lineWidth = 1 + signal.onset * 8;
+    ctx.shadowColor = ACCENT;
+    ctx.shadowBlur = 14 + signal.onset * 30;
+    ctx.beginPath();
+    ctx.arc(centreX, centreY, baseRadius * (1.02 + signal.onsetAge * 1.5), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
 
   // The original three-band chart stays in the foreground of the instrument.
   drawFrequencyLine(ctx, project, signal, width, mainTop + mainHeight * .34, 'low', INK, mainHeight * .12, 1.35, .62, traceBounds);
@@ -562,10 +579,6 @@ export function renderVisualStage(canvas, state) {
   ctx.fillRect(playheadX - 2, mainTop, 4, 6);
   text(ctx, `BAR ${String(signal.bar).padStart(2, '0')} / BEAT ${signal.beat}`, margin, margin + 10, { color: MUTED });
   text(ctx, `${signal.section?.group || signal.section?.label || '—'} / 08 BARS`, width - margin, margin + 10, { color: MUTED, align: 'right' });
-
-  averageVisualCost = averageVisualCost * .92 + (performance.now() - renderStarted) * .08;
-  const targetQuality = averageVisualCost > 18 ? .58 : averageVisualCost > 13 ? .74 : averageVisualCost < 9 ? 1 : .9;
-  visualQuality += (targetQuality - visualQuality) * .06;
 }
 
 function aggregateSteps(project, subdivision, adjustments) {

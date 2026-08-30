@@ -88,7 +88,8 @@ button:active:not(:disabled) { transform: translateY(1px); }
 .stage-meta { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem 1rem; border-bottom: 1px solid var(--ink); font-size: .72rem; }
 .stage-meta strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stage-meta span { color: var(--muted); }
-#visualStage { display: block; width: 100%; height: clamp(34rem, 56vw, 46rem); background: var(--paper); }
+.visual-stage-stack { position: relative; display: block; height: clamp(34rem, 56vw, 46rem); background: var(--paper); }
+.visual-stage-stack canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; background: transparent; }
 .stage-transport { display: grid; grid-template-columns: 3.4rem 6.6rem minmax(5rem, 1fr) 6.6rem auto auto auto; align-items: center; gap: .75rem; min-height: 5rem; padding: .7rem 1rem; border-top: 1px solid var(--ink); }
 .stage-play { position: relative; display: grid; place-items: center; width: 3.15rem; height: 3.15rem; padding-left: .2rem; border: .32rem solid var(--paper); border-radius: 50%; outline: 1px solid var(--accent); color: white; background: var(--accent); box-shadow: 0 0 0 1px rgba(198,80,50,.18), 0 0 1.4rem rgba(198,80,50,.16); font-size: .85rem; }
 .stage-play:hover:not(:disabled) { background: var(--ink); }
@@ -169,7 +170,7 @@ input[type="range"] { height: 1rem; accent-color: var(--accent); }
   .section-heading { align-items: flex-start; flex-direction: column; }
   .track-facts { width: 100%; justify-content: space-between; }
   .grid-tools { width: 100%; }
-  #visualStage { height: 34rem; }
+  .visual-stage-stack { height: 34rem; }
   .overview-meta { flex-direction: column; }
 }
 

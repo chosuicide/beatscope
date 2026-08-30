@@ -31,7 +31,10 @@
         <div class="section-heading stage-heading"><div><h2 id="visual-title">Signal player</h2></div><div class="track-facts"><span><b id="factBpm">—</b> BPM</span><span><b id="factBars">—</b> bars</span><span><b id="factDuration">—</b></span><span><b id="factBackend">—</b> backend</span></div></div>
         <div class="visual-stage-shell">
           <div class="stage-meta"><strong id="stageTrackName">No track</strong><span id="visualReadout" class="mono">BAR — · BEAT —</span></div>
-          <canvas id="visualStage" width="1400" height="520" aria-label="Audio-reactive composition driven by playback time"></canvas>
+          <div id="visualStageStack" class="visual-stage-stack" role="img" aria-label="Audio-reactive particle instrument driven by playback time">
+            <canvas id="particleStage" aria-hidden="true"></canvas>
+            <canvas id="visualStage" aria-hidden="true"></canvas>
+          </div>
           <div class="stage-transport"><button id="stagePlay" class="stage-play" disabled aria-label="Play">▶</button><span id="currentTime" class="mono">00:00.000</span><input id="seekRange" type="range" min="0" max="0" step="0.001" value="0" disabled aria-label="Seek audio"><span id="durationLabel" class="mono">00:00.000</span><button id="seekBack" class="icon-button" disabled aria-label="Back five seconds">−5</button><button id="seekForward" class="icon-button" disabled aria-label="Forward five seconds">+5</button><label class="volume-control"><span>VOL</span><input id="volumeRange" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume"></label></div>
         </div>
       </section>
