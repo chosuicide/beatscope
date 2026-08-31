@@ -102,6 +102,8 @@ input[type="range"] { height: 1rem; accent-color: var(--accent); }
 .compact-heading { margin-bottom: .8rem; }
 .follow-control { display: inline-flex; align-items: center; gap: .45rem; color: var(--muted); font-size: .68rem; }
 .follow-control input { accent-color: var(--accent); }
+.follow-structure { flex: none; white-space: nowrap; cursor: pointer; }
+.readout-motif { color: var(--accent); }
 .overview-shell { overflow: hidden; border-block: 1px solid var(--ink); background: var(--paper); }
 #overview { display: block; width: 100%; height: 12rem; cursor: crosshair; }
 .overview-meta { display: flex; justify-content: space-between; gap: 1rem; margin-top: .65rem; color: var(--muted); font: .64rem/1.4 monospace; }
@@ -157,6 +159,9 @@ input[type="range"] { height: 1rem; accent-color: var(--accent); }
   .intake { grid-template-columns: 1fr; min-height: 30rem; }
   .stage-transport { grid-template-columns: 2.8rem 5.6rem 1fr 5.6rem; }
   .stage-transport .icon-button, .volume-control { display: none; }
+  /* Plan section 12.3: on narrow layouts hide the motif first and preserve
+     family/progress in the structure readout. */
+  .readout-motif { display: none; }
   .selection-strip { grid-template-columns: 1fr; }
   .selection-strip dl { grid-template-columns: repeat(2, 1fr); }
   .selection-strip dl > div { border-top: 1px solid var(--line); border-left: 0; }

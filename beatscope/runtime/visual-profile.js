@@ -655,3 +655,51 @@ export function createMotionDirector(track, options = {}) {
 
   return Object.freeze({ events, statistics, at });
 }
+
+// ---------------------------------------------------------------------------
+// v0.8 scene/beat combination (plan section 10): the scene owns the baseline
+// lobe spread, heavy beats add a scene-aware capped amount, and the active
+// transition adds its slow radial parting. The combined translation must
+// never exceed the visual limits (plan section 11), so the scene+beat body
+// absorbs the cap and the radial language keeps its own 0.10 world units.
+// ---------------------------------------------------------------------------
+
+export const SPREAD_LIMITS = Object.freeze({
+  /** Maximum steady (scene-only) lobe translation, world units. */
+  steadyMax: 0.32,
+  /** Maximum combined scene + beat + transition translation, world units. */
+  combinedMax: 0.46,
+  /** World-unit scale of the radial-part channel (plan section 10). */
+  radialWorld: 0.10,
+});
+
+/**
+ * Pure combination of one scene frame and one beat frame. `sceneFrame` is
+ * the scene director frame (or null/undefined for legacy projects);
+ * `beatFrame` is the motion director frame (or a bare {lobeSplit} for
+ * tests). Returns { sceneSpread, radialPart } in world units / channel
+ * units, ready for uSceneSpread / uRadialPart.
+ */
+export function combinedSpread(sceneFrame, beatFrame) {
+  const spread = clamp01(sceneFrame?.composition?.spread);
+  const lobeSplit = clamp01(beatFrame?.lobeSplit);
+  const radialPart = clamp01(sceneFrame?.transition?.channels?.radialPart);
+  const radialWorld = radialPart * SPREAD_LIMITS.radialWorld;
+  const sceneBeat = spread + lobeSplit * (0.24 - spread * 0.12);
+  const sceneSpread = Math.max(0, Math.min(
+    Math.max(0, SPREAD_LIMITS.combinedMax - radialWorld),
+    sceneBeat,
+  ));
+  return { sceneSpread, radialPart };
+}
+
+/**
+ * Legacy translation parity (plan section 12.2): without a scene frame the
+ * shader's single lobe-translation line must reproduce the v0.7 heavy-beat
+ * split exactly — lobeSplit * (0.20 + 0.08 * hero) world units.
+ */
+export function legacySpread(beatFrame) {
+  const lobeSplit = clamp01(beatFrame?.lobeSplit);
+  const hero = clamp01(beatFrame?.hero);
+  return lobeSplit * (0.20 + 0.08 * hero);
+}

@@ -12,6 +12,7 @@
 
 import { PARTICLE_VERTEX_SOURCE, PARTICLE_FRAGMENT_SOURCE } from './particle-shaders.js';
 import { RING_DEFS } from './particle-geometry.js';
+import { combinedSpread, legacySpread } from '../runtime/visual-profile.js';
 
 export const CAMERA_Z = 4.4;
 export const FOV_Y = (35 * Math.PI) / 180;
@@ -23,6 +24,10 @@ const UNIFORM_NAMES = [
   'uTension', 'uHero', 'uLobeWeights', 'uDirection',
   'uShockProgress', 'uBeatWave', 'uWaveProgress', 'uCoreAperture', 'uDiffusion',
   'uBeatExpand', 'uLobeSplit', 'uReducedMotion', 'uQuality',
+  // v0.8 scene uniforms (plan section 11).
+  'uSceneSpread', 'uSceneTwist', 'uSceneFlow', 'uSceneOrbit', 'uSceneVoid',
+  'uSceneContrast', 'uPaletteMix', 'uPhaseTurn', 'uRadialPart',
+  'uApertureTransition', 'uFlowShear',
   'uRingA', 'uRingE', 'uRingSpeed', 'uRingColor', 'uRingMat',
 ];
 
@@ -59,9 +64,11 @@ export function perspectiveMatrix(out, fovy = FOV_Y, aspect = 1, near = 0.1, far
 }
 
 /**
- * Pure director-frame -> shader-uniform conversion (plan section 13.3).
- * `layout` is { width, height, radiusPx? } in device pixels; the optional
- * radiusPx overrides the projection-derived body radius. When ``target`` is
+ * Pure combined-frame -> shader-uniform conversion (plan sections 10-11).
+ * The frame may be the plain motion director frame (legacy callers and
+ * tests) or the combined visual-stage frame `{..., motion, scene, ...}`;
+ * beat channels are read from `frame.motion` when present, scene channels
+ * from `frame.scene` (null = legacy neutral behavior). When ``target`` is
  * given the result is written into it so render loops allocate nothing.
  */
 export function frameToUniforms(frame, layout, { quality = 1, reducedMotion = false } = {}, target = null) {
@@ -70,42 +77,65 @@ export function frameToUniforms(frame, layout, { quality = 1, reducedMotion = fa
   const radiusPx = Number(layout?.radiusPx) > 0
     ? Number(layout.radiusPx)
     : (height * 0.5 / Math.tan(FOV_Y / 2)) / CAMERA_Z;
-  const weights = finiteVec3(frame?.lobeWeights, [0.34, 0.33, 0.33]).map((value) => clamp(value, 0, 1));
-  const direction = normalizeVec3(frame?.direction, [0, 1, 0]);
+  const beat = frame?.motion ?? frame ?? {};
+  const scene = frame?.scene ?? null;
+  const composition = scene?.composition ?? null;
+  const channels = scene?.transition?.channels ?? null;
+  const weights = finiteVec3(beat?.lobeWeights, [0.34, 0.33, 0.33]).map((value) => clamp(value, 0, 1));
+  const direction = normalizeVec3(beat?.direction, [0, 1, 0]);
 
   const uniforms = target || {};
-  uniforms.uTime = Number(frame?.time) || 0;
+  uniforms.uTime = Number(beat?.time) || 0;
   uniforms.uViewportX = width;
   uniforms.uViewportY = height;
   uniforms.uRadiusPx = radiusPx;
   uniforms.uWorldScale = radiusPx * CAMERA_Z * 2 * Math.tan(FOV_Y / 2) / height;
   uniforms.uCameraZ = CAMERA_Z;
-  uniforms.uLow = clamp(frame?.low, 0, 1);
-  uniforms.uMid = clamp(frame?.mid, 0, 1);
-  uniforms.uHigh = clamp(frame?.high, 0, 1);
-  uniforms.uAmbient = clamp(frame?.ambient, 0, 1);
-  uniforms.uAnticipation = clamp(frame?.anticipation, 0, 1);
-  uniforms.uHold = clamp(frame?.hold, 0, 1);
-  uniforms.uImpact = clamp(frame?.impact, 0, 1);
-  uniforms.uRecoil = clamp(frame?.recoil, 0, 1);
-  uniforms.uAftershock = clamp(frame?.aftershock, -1, 1);
-  uniforms.uTension = clamp(frame?.tension, 0, 1);
-  uniforms.uHero = clamp(frame?.hero, 0, 1);
+  uniforms.uLow = clamp(beat?.low, 0, 1);
+  uniforms.uMid = clamp(beat?.mid, 0, 1);
+  uniforms.uHigh = clamp(beat?.high, 0, 1);
+  uniforms.uAmbient = clamp(beat?.ambient, 0, 1);
+  uniforms.uAnticipation = clamp(beat?.anticipation, 0, 1);
+  uniforms.uHold = clamp(beat?.hold, 0, 1);
+  uniforms.uImpact = clamp(beat?.impact, 0, 1);
+  uniforms.uRecoil = clamp(beat?.recoil, 0, 1);
+  uniforms.uAftershock = clamp(beat?.aftershock, -1, 1);
+  uniforms.uTension = clamp(beat?.tension, 0, 1);
+  uniforms.uHero = clamp(beat?.hero, 0, 1);
   uniforms.uLobeWeights0 = weights[0];
   uniforms.uLobeWeights1 = weights[1];
   uniforms.uLobeWeights2 = weights[2];
   uniforms.uDirection0 = direction[0];
   uniforms.uDirection1 = direction[1];
   uniforms.uDirection2 = direction[2];
-  uniforms.uShockProgress = clamp(frame?.shockProgress, 0, 1);
-  uniforms.uBeatWave = clamp(frame?.beatWave, 0, 1);
-  uniforms.uWaveProgress = clamp(frame?.waveProgress, 0, 1);
-  uniforms.uCoreAperture = clamp(frame?.coreAperture, 0, 1);
-  uniforms.uDiffusion = clamp(frame?.diffusion, 0, 1);
-  uniforms.uBeatExpand = clamp(frame?.beatExpand, 0, 1);
-  uniforms.uLobeSplit = clamp(frame?.lobeSplit, 0, 1);
+  uniforms.uShockProgress = clamp(beat?.shockProgress, 0, 1);
+  uniforms.uBeatWave = clamp(beat?.beatWave, 0, 1);
+  uniforms.uWaveProgress = clamp(beat?.waveProgress, 0, 1);
+  uniforms.uCoreAperture = clamp(beat?.coreAperture, 0, 1);
+  uniforms.uDiffusion = clamp(beat?.diffusion, 0, 1);
+  uniforms.uBeatExpand = clamp(beat?.beatExpand, 0, 1);
+  uniforms.uLobeSplit = clamp(beat?.lobeSplit, 0, 1);
   uniforms.uReducedMotion = reducedMotion ? 1 : 0;
   uniforms.uQuality = clamp(quality, 0.5, 1);
+
+  // Scene block (plan section 10): the combined spread folds the scene
+  // baseline, the scene-aware heavy-beat additive, and the radial parting
+  // into one capped translation; without a scene frame the v0.7 heavy-beat
+  // split is reproduced exactly so legacy projects keep their visuals.
+  const spread = scene
+    ? combinedSpread(scene, beat)
+    : { sceneSpread: legacySpread(beat), radialPart: 0 };
+  uniforms.uSceneSpread = spread.sceneSpread;
+  uniforms.uRadialPart = spread.radialPart;
+  uniforms.uSceneTwist = clamp(composition?.twist, 0, 1);
+  uniforms.uSceneFlow = clamp(composition?.flow, 0, 1);
+  uniforms.uSceneOrbit = clamp(composition?.orbit, 0, 1);
+  uniforms.uSceneVoid = clamp(composition?.void, 0, 1);
+  uniforms.uSceneContrast = clamp(composition?.contrast, 0, 1);
+  uniforms.uPaletteMix = clamp(composition?.paletteMix, 0, 1);
+  uniforms.uPhaseTurn = clamp(channels?.phaseTurn, 0, 1);
+  uniforms.uApertureTransition = clamp(channels?.aperture, 0, 1);
+  uniforms.uFlowShear = clamp(channels?.flowShear, -1, 1);
 
   // Aspect feeds the projection; recomputed with the caller's scratch matrix.
   uniforms.aspect = width / height;
@@ -386,6 +416,17 @@ export function createParticleField({ canvas, geometry = null } = {}) {
       gl.uniform1f(loc.uLobeSplit, uniforms.uLobeSplit);
       gl.uniform1f(loc.uReducedMotion, uniforms.uReducedMotion);
       gl.uniform1f(loc.uQuality, uniforms.uQuality);
+      gl.uniform1f(loc.uSceneSpread, uniforms.uSceneSpread);
+      gl.uniform1f(loc.uSceneTwist, uniforms.uSceneTwist);
+      gl.uniform1f(loc.uSceneFlow, uniforms.uSceneFlow);
+      gl.uniform1f(loc.uSceneOrbit, uniforms.uSceneOrbit);
+      gl.uniform1f(loc.uSceneVoid, uniforms.uSceneVoid);
+      gl.uniform1f(loc.uSceneContrast, uniforms.uSceneContrast);
+      gl.uniform1f(loc.uPaletteMix, uniforms.uPaletteMix);
+      gl.uniform1f(loc.uPhaseTurn, uniforms.uPhaseTurn);
+      gl.uniform1f(loc.uRadialPart, uniforms.uRadialPart);
+      gl.uniform1f(loc.uApertureTransition, uniforms.uApertureTransition);
+      gl.uniform1f(loc.uFlowShear, uniforms.uFlowShear);
       gl.drawArrays(gl.POINTS, 0, state.count);
       gl.disable(gl.SCISSOR_TEST);
     },

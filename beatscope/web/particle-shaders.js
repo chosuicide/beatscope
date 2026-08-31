@@ -43,6 +43,20 @@ uniform float uBeatExpand;
 uniform float uLobeSplit;
 uniform float uReducedMotion;
 uniform float uQuality;
+// v0.8 scene uniforms (plan section 11): structure owns the baseline
+// composition, transitions enter through bounded abstract channels. The
+// shader never branches on driver strings — only on these channels.
+uniform float uSceneSpread;        // combined lobe translation, world units
+uniform float uSceneTwist;         // scene baseline twist, 0..1 -> 0.28 rad
+uniform float uSceneFlow;          // scene baseline macro-flow scale, 0..1
+uniform float uSceneOrbit;         // orbit belt width amplitude, 0..1
+uniform float uSceneVoid;          // central negative space, 0..1
+uniform float uSceneContrast;      // opacity/size contrast, 0..1
+uniform float uPaletteMix;         // reviewed palette crossfade, 0..1
+uniform float uPhaseTurn;          // transition phase turn, 0..1 -> 0.12 rad
+uniform float uRadialPart;         // transition lobe parting, 0..1
+uniform float uApertureTransition; // transition core aperture, 0..1
+uniform float uFlowShear;          // signed transition flow shear, -1..1
 uniform vec3 uRingA;          // ring semi-major axes (world units)
 uniform vec3 uRingE;          // ring Y-squash factors
 uniform vec3 uRingSpeed;      // signed revolution speed, rad/s
@@ -112,7 +126,9 @@ void main() {
     // the belt's darker spine; samples toward either edge fade into dust.
     float bandCoordinate = (aSeed.x - 0.5) * 2.0;
     ringBandCore = 1.0 - smoothstep(0.08, 1.0, abs(bandCoordinate));
-    float bandOffset = bandCoordinate * (0.060 + 0.035 * ringPulse);
+    // uSceneOrbit widens the belt's cross-track scatter without touching the
+    // ellipse identity: same path, same speed, same tint (plan section 11).
+    float bandOffset = bandCoordinate * (0.060 + 0.035 * ringPulse + uSceneOrbit * 0.045);
     position = ringBasis * vec3(
       (ringA + bandOffset) * cos(theta),
       (ringA * ringSquash + bandOffset) * sin(theta),
@@ -159,9 +175,21 @@ void main() {
     position.xy += lobeTangent * alongLobe * (idleTurn + impactTurn);
     position.xy += lobeAxis * alongLobe * lobeOpen;
     position.xy += lobeAxis * uImpact * (0.025 + 0.040 * selected);
-    // One coherent translation per petal: heavy beats open a clear centre
-    // without introducing independent particle timing or a random explosion.
-    position.xy += lobeAxis * uLobeSplit * (0.20 + 0.08 * uHero);
+    // One coherent translation per petal. v0.8 (plan section 10): the scene
+    // owns the baseline spread, the heavy beat adds a scene-aware capped
+    // amount, and the CPU folds both into uSceneSpread via the combination
+    // rule; uRadialPart repeats the same parting language at the slower
+    // transition scale. No per-particle temporal offsets are introduced.
+    position.xy += lobeAxis * uSceneSpread;
+    position.xy += lobeAxis * uRadialPart * 0.10;
+
+    // Scene void (plan section 11): coherent negative space — the core layer
+    // retreats outward while the whole body contracts slightly. Every
+    // particle of a layer receives the same transform on the same frame.
+    if (layer > 0.5 && layer < 1.5) {
+      position += normal * uSceneVoid * 0.05;
+    }
+    position *= 1.0 - uSceneVoid * 0.022;
 
     // Continuous macro flow: neighbouring particles sample the same smooth
     // spatial field, so the centre rolls and folds as one material instead of
@@ -178,8 +206,11 @@ void main() {
     vec3 macroFlow = cross(flowAxisA, position) * flowBandA
       + cross(flowAxisB, position) * flowBandB * 0.58;
     float flowAmount = (0.018 + 0.036 * uMid + 0.075 * uBeatWave
-      + 0.060 * abs(uAftershock)) * mix(1.0, 0.24, uReducedMotion);
+      + 0.060 * abs(uAftershock) + uSceneFlow * 0.05) * mix(1.0, 0.24, uReducedMotion);
     position += macroFlow * flowAmount;
+    // Signed transition shear rides the same smooth field: the sign flips
+    // the fold direction, the magnitude only deepens it (plan section 11).
+    position += macroFlow * uFlowShear * 0.045;
     position.z += sin(position.x * 2.8 - position.y * 2.15 + uTime * 0.63)
       * flowAmount * (0.32 + 0.28 * uHigh);
 
@@ -210,6 +241,13 @@ void main() {
     float ct = cos(twistAngle), st = sin(twistAngle);
     position.xz = mat2(ct, -st, st, ct) * position.xz;
 
+    // Scene twist (plan section 11): each lobe rotates coherently with an
+    // alternating sign; the whole-body transition turn rides uPhaseTurn in
+    // the camera yaw below. Both stay inside the plan's radian limits.
+    float sceneTwistAngle = uSceneTwist * (aMeta.y - 1.0) * 0.28;
+    float cs = cos(sceneTwistAngle), ss = sin(sceneTwistAngle);
+    position.xz = mat2(cs, -ss, ss, cs) * position.xz;
+
     float fold = sin(lobePhase + atan(base.z, base.x) * 1.4 + uTime * 0.9);
     position += normal * fold * uMid * (0.012 + 0.035 * uAftershock);
 
@@ -231,6 +269,9 @@ void main() {
       + tangent * (aSeed.z - 0.5) * 0.065) * edgeSpark;
     if (layer > 0.5 && layer < 1.5) {
       position += normal * uCoreAperture * (0.055 + 0.035 * uHero);
+      // The aperture transition reuses the core-opening language during the
+      // boundary window (plan section 11), bounded like the beat channel.
+      position += normal * uApertureTransition * 0.06;
     }
 
     // Controlled diffusion: at most 4–8% of body particles leave the form,
@@ -274,7 +315,9 @@ void main() {
   float coherentBreath = layer > 2.5 ? 0.0 : 0.20;
   position *= 1.0 + uBeatExpand * coherentBreath;
 
-  float yaw = (0.09 * uTime + 0.035 * sin(0.17 * uTime)) * rotationScale;
+  // uPhaseTurn (plan section 11): one bounded whole-body turn during the
+  // transition window — the "maximum transition twist: 0.12 radians" limit.
+  float yaw = (0.09 * uTime + 0.035 * sin(0.17 * uTime)) * rotationScale + uPhaseTurn * 0.12;
   float pitch = -0.20 + 0.045 * sin(0.13 * uTime);
   float roll = 0.025 * sin(0.11 * uTime) * rotationScale;
   vec3 rotated = rotationXYZ(yaw, pitch, roll) * position * uWorldScale;
@@ -302,6 +345,9 @@ void main() {
       * (1.0 + 0.42 * ringPulse);
   }
   float pointSize = worldSize * uRadiusPx * uCameraZ / depth * aMeta.w * uQuality;
+  // uSceneContrast (plan section 11): seeded point-size contrast inside
+  // bounded limits; the seed keeps membership stable across frames.
+  pointSize *= 1.0 + uSceneContrast * 0.18 * (aSeed.y * 2.0 - 1.0);
   gl_PointSize = clamp(pointSize, 0.8, 12.0);
 
   // --- Colour (plan section 5.6): stable seeded membership. ----------------
@@ -333,6 +379,12 @@ void main() {
     * (0.72 + 0.28 * uImpact), 0.0, 1.0);
   color = mix(color, vec3(1.0), negativeCut * 0.92);
 
+  // uPaletteMix (plan section 11): the only palette crossfade — body colors
+  // warm toward the reviewed accent/warm pair, ring dots shift a little.
+  // Bounded so family identity stays recognizable at every mix level.
+  color = mix(color, mix(accent, warmWhite, 0.35),
+    uPaletteMix * (layer > 2.5 ? 0.10 : 0.30));
+
   float depthShade = 0.78 + 0.22 * clamp((rotated.z + 1.0) * 0.5, 0.0, 1.0);
   float alpha;
   if (layer < 0.5) {
@@ -358,6 +410,9 @@ void main() {
   alpha *= 1.0 - 0.14 * streamer;
   alpha *= 1.0 + 0.18 * uBeatExpand * bodyResponse;
   alpha *= 1.0 - negativeCut * 0.36;
+  // uSceneContrast (plan section 11): seeded alpha contrast for body layers,
+  // clamped with vAlpha below so the accent never blows out.
+  alpha *= 1.0 + uSceneContrast * 0.26 * (aSeed.x * 2.0 - 1.0) * bodyResponse;
 
   vColor = color;
   vAlpha = clamp(alpha, 0.0, 1.0);

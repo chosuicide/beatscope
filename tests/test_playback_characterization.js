@@ -35,6 +35,9 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { playbackState } from '../beatscope/web/renderer.js';
+import { createTrack } from '../beatscope/runtime/runtime.js';
+import { createMotionDirector } from '../beatscope/runtime/visual-profile.js';
+import { frameToUniforms } from '../beatscope/web/particle-field.js';
 
 const project = JSON.parse(
   await readFile(new URL('./fixtures/runtime/characterization-project.json', import.meta.url), 'utf-8'),
@@ -146,5 +149,18 @@ assert.equal(offAccentExport.accent, null);
 // Determinism: identical calls return identical objects.
 assert.deepEqual(playbackState(project, 1.375), playbackState(project, 1.375));
 assert.deepEqual(getVisualState(1.375), getVisualState(1.375));
+
+// v0.8 (plan section 10): the stage frame wraps the beat director frame in a
+// `motion` slot. The uniform conversion must treat bare frames and wrapped
+// frames identically, so v0.7-era callers keep byte-identical GPU behavior.
+{
+  const director = createMotionDirector(createTrack(project));
+  for (const time of [0, 0.5, 2.5, 3.3]) {
+    const beat = director.at(time);
+    const bare = frameToUniforms(beat, { width: 800, height: 400 });
+    const wrapped = frameToUniforms({ motion: beat }, { width: 800, height: 400 });
+    assert.deepEqual(wrapped, bare, `uniform parity at t=${time}`);
+  }
+}
 
 console.log('Characterization OK: shared runtime pinned at both carriers (D1/D2/D3/D5 documented).');

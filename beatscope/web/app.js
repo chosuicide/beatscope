@@ -1,5 +1,5 @@
 import { state, subscribe, setProject, setSubdivision, setStartBar, setSelectedOnset, toggleLoop } from './state.js';
-import { fetchProject, getAudioUrl, getMidiExportUrl, getCsvExportUrl, getCodexExportUrl } from './api.js';
+import { fetchProject, fetchVisualArtifacts, getAudioUrl, getMidiExportUrl, getCsvExportUrl, getCodexExportUrl } from './api.js';
 import { initAudio, setAudioSource, togglePlay, seek, previewTransient } from './audio.js';
 import { renderStaticMap, renderOverlay, renderOverview, exportStaticPng, structuralSegmentAt, structureSummary } from './renderer.js';
 import { createVisualStage, installVisualDebug } from './visual-stage.js';
@@ -27,6 +27,8 @@ if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
 const seekRange = $('#seekRange');
 const volumeRange = $('#volumeRange');
 const followPlayback = $('#followPlayback');
+const followStructureControl = $('#followStructureControl');
+const followStructure = $('#followStructure');
 
 const controls = {
   filename: $('#filename'), status: $('#status'), timecode: $('#timecode'), currentTime: $('#currentTime'),
@@ -46,6 +48,53 @@ let mapRefreshFrame = null;
 let visualStageVisible = true;
 let lastOverlayFrame = 0;
 let lastOverviewFrame = 0;
+
+// v0.8 structure-following visuals (plan section 12): artifacts ride the
+// project load, the preference lives only for this browser session, and the
+// readout/aria labels refresh only when the scene identity changes.
+const FOLLOW_STRUCTURE_KEY = 'beatscope.followStructure';
+const BASE_STAGE_ARIA = 'Audio-reactive particle instrument driven by playback time';
+let sceneArtifactsAvailable = false;
+let artifactsLoadToken = 0;
+let lastReadoutKey = null;
+let lastSceneKey = null;
+
+function followStructurePreference() {
+  try {
+    return sessionStorage.getItem(FOLLOW_STRUCTURE_KEY) !== 'off';
+  } catch (_) {
+    return true;
+  }
+}
+
+async function loadVisualArtifacts() {
+  const token = ++artifactsLoadToken;
+  let artifacts = null;
+  try {
+    artifacts = await fetchVisualArtifacts(state.projectId);
+  } catch (_) {
+    artifacts = null;
+  }
+  let available = false;
+  try {
+    visualStageController.setVisualArtifacts(artifacts?.recipe ?? null, artifacts?.timeline ?? null);
+    available = Boolean(artifacts);
+  } catch (_) {
+    // Malformed artifacts must never take the player down; fall back to
+    // the neutral legacy composition (plan section 12.1).
+    visualStageController.setVisualArtifacts(null, null);
+    available = false;
+  }
+  if (token !== artifactsLoadToken) return; // a newer project load won the race
+  sceneArtifactsAvailable = available;
+  lastReadoutKey = null;
+  lastSceneKey = null;
+  if (followStructureControl) followStructureControl.hidden = !available;
+  if (available) {
+    visualStageController.render(state);
+    updatePlaybackUI();
+  }
+}
 
 function queueMapRefresh() {
   if (mapRefreshFrame !== null) cancelAnimationFrame(mapRefreshFrame);
@@ -119,6 +168,10 @@ function updateProjectUI() {
     controls.structureHint.hidden = true;
     controls.structureReadout.hidden = true;
     overviewCanvas.setAttribute('aria-label', 'Song structure and whole-track energy navigation');
+    if (visualStageStack) {
+      visualStageStack.setAttribute('aria-label', BASE_STAGE_ARIA);
+      lastSceneKey = null;
+    }
     setDisabled(true);
     renderAll();
     return;
@@ -160,8 +213,9 @@ function updatePlaybackUI() {
   seekRange.value = String(state.playbackTime);
   const position = state.project ? gridPosition(state.playbackTime, state.project, state.subdivision, state.adjustments) : null;
   controls.visualReadout.textContent = position ? `BAR ${String(position.bar || 1).padStart(2, '0')} · BEAT ${position.beat || 1}` : 'BAR — · BEAT —';
-  // Signal player structure label (plan 15.2): the active segment label and
-  // how far through it we are — never a confidence figure.
+  // Signal player structure label (plan 15.2), extended in v0.8 (plan 12.3):
+  // `A′ · 42% THROUGH · OPEN TRIAD`. The motif is visual vocabulary, not a
+  // musical role, and hides first on narrow layouts (CSS).
   const structureSegments = state.project?.patterns?.segments;
   if (Array.isArray(structureSegments) && structureSegments.length) {
     const segment = structuralSegmentAt(state.project, state.playbackTime);
@@ -169,8 +223,29 @@ function updatePlaybackUI() {
       const start = Number(segment.start_time) || 0;
       const end = Number(segment.end_time) || start;
       const through = Math.round(Math.max(0, Math.min(1, (state.playbackTime - start) / (end - start || 1))) * 100);
+      const prefix = `${segment.display_label || segment.family || '—'} · ${through}% THROUGH`;
+      const sceneFrame = sceneArtifactsAvailable
+        ? visualStageController.sceneAt(state.playbackTime)
+        : null;
+      const sceneBlock = sceneFrame?.scene || null;
+      const motif = sceneBlock?.motif ? sceneBlock.motif.toUpperCase().replaceAll('-', ' ') : '';
+      const readoutKey = `${prefix}|${motif}`;
+      if (readoutKey !== lastReadoutKey) {
+        lastReadoutKey = readoutKey;
+        const motifSpan = document.createElement('span');
+        motifSpan.className = 'readout-motif';
+        motifSpan.textContent = motif ? ` · ${motif}` : '';
+        controls.structureReadout.replaceChildren(document.createTextNode(prefix), motifSpan);
+      }
       controls.structureReadout.hidden = false;
-      controls.structureReadout.textContent = `${segment.display_label || segment.family || '—'} · ${through}% THROUGH`;
+      // Canvas aria-label (plan 12.5): family + motif when a scene is known.
+      const sceneKey = sceneBlock ? `${sceneBlock.id}|${motif}` : '';
+      if (sceneKey !== lastSceneKey) {
+        lastSceneKey = sceneKey;
+        visualStageStack.setAttribute('aria-label', sceneBlock
+          ? `Audio-reactive particle instrument — scene ${sceneBlock.family}${motif ? `, ${motif}` : ''}, driven by playback time`
+          : BASE_STAGE_ARIA);
+      }
     } else {
       controls.structureReadout.hidden = true;
     }
@@ -227,6 +302,7 @@ subscribe((event, payload) => {
   if (['projectLoaded', 'startBarChanged', 'viewBarsChanged', 'subdivisionChanged', 'adjustmentsChanged'].includes(event)) {
     updateProjectUI();
     queueMapRefresh();
+    if (event === 'projectLoaded') loadVisualArtifacts();
   } else if (event === 'selectionChanged') {
     updateInspector(state);
     renderOverlay(mapOverlay, state);
@@ -360,6 +436,19 @@ controls.prev.onclick = () => setStartBar(state.startBar - state.viewBars);
 controls.next.onclick = () => setStartBar(state.startBar + state.viewBars);
 controls.subdivision.onchange = (event) => setSubdivision(Number(event.target.value));
 followPlayback.onchange = () => { if (followPlayback.checked) keepWindowFollowing(); };
+// FOLLOW STRUCTURE toggle (plan section 12.2): session-only preference, a
+// real checkbox with accessible name/state, no artifacts are modified.
+if (followStructure) {
+  followStructure.checked = followStructurePreference();
+  visualStageController.setFollowStructure(followStructure.checked);
+  followStructure.onchange = () => {
+    const enabled = Boolean(followStructure.checked);
+    visualStageController.setFollowStructure(enabled);
+    try {
+      sessionStorage.setItem(FOLLOW_STRUCTURE_KEY, enabled ? 'on' : 'off');
+    } catch (_) { /* preference is session-only by design */ }
+  };
+}
 seekRange.oninput = (event) => seek(Number(event.target.value));
 controls.seekBack.onclick = () => seek(state.playbackTime - 5);
 controls.seekForward.onclick = () => seek(state.playbackTime + 5);

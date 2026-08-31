@@ -135,4 +135,71 @@ const layout = { width: 1400, height: 520 };
   assert.deepEqual({ ...scratch }, first);
 }
 
+// --- v0.8 commit 4: scene uniforms (plan section 11). -----------------------
+// The combined stage frame carries a scene block; the conversion must clamp
+// every scene channel and follow the spread combination rule exactly.
+{
+  const sceneBlock = {
+    composition: { spread: 0.14, twist: 0.5, flow: 0.32, orbit: 0.44, void: 0.18, contrast: 0.72, paletteMix: 0.3 },
+    transition: { channels: { phaseTurn: 0.6, radialPart: 0.4, aperture: 0.8, flowShear: -1 } },
+  };
+  const beat = director.at(2.5);
+  const uniforms = frameToUniforms({ ...beat, scene: sceneBlock }, layout);
+  const expectedSpread = Math.max(0, Math.min(
+    0.46 - sceneBlock.transition.channels.radialPart * 0.10,
+    sceneBlock.composition.spread + beat.lobeSplit * (0.24 - sceneBlock.composition.spread * 0.12),
+  ));
+  assert.ok(Math.abs(uniforms.uSceneSpread - expectedSpread) < 1e-12);
+  assert.ok(Math.abs(uniforms.uRadialPart - 0.4) < 1e-12);
+  assert.equal(uniforms.uSceneTwist, 0.5);
+  assert.equal(uniforms.uSceneFlow, 0.32);
+  assert.equal(uniforms.uSceneOrbit, 0.44);
+  assert.equal(uniforms.uSceneVoid, 0.18);
+  assert.equal(uniforms.uSceneContrast, 0.72);
+  assert.equal(uniforms.uPaletteMix, 0.3);
+  assert.equal(uniforms.uPhaseTurn, 0.6);
+  assert.equal(uniforms.uApertureTransition, 0.8);
+  assert.equal(uniforms.uFlowShear, -1);
+
+  // The wrapped form ({motion, scene}) produces identical uniforms.
+  const wrapped = frameToUniforms({ motion: beat, scene: sceneBlock }, layout);
+  assert.deepEqual(wrapped, uniforms);
+
+  // Wild scene values clamp exactly like the beat channels do.
+  const wildScene = {
+    composition: { spread: 5, twist: -3, flow: 2, orbit: -1, void: 9, contrast: 4, paletteMix: -2 },
+    transition: { channels: { phaseTurn: 7, radialPart: -1, aperture: 3, flowShear: 5 } },
+  };
+  const wild = frameToUniforms({ ...beat, scene: wildScene }, layout);
+  assert.equal(wild.uSceneSpread, 0.46); // spread 1 + beat term, under the combined cap
+  assert.equal(wild.uRadialPart, 0);
+  assert.equal(wild.uSceneTwist, 0);
+  assert.equal(wild.uSceneFlow, 1);
+  assert.equal(wild.uSceneOrbit, 0);
+  assert.equal(wild.uSceneVoid, 1);
+  assert.equal(wild.uSceneContrast, 1);
+  assert.equal(wild.uPaletteMix, 0);
+  assert.equal(wild.uPhaseTurn, 1);
+  assert.equal(wild.uApertureTransition, 1);
+  assert.equal(wild.uFlowShear, 1);
+}
+
+// Scene absent (structure off / bare director frames): the scene translation
+// falls back to the exact v0.7 lobe shape and every other scene channel is 0.
+{
+  const beat = director.at(2.5);
+  const bare = frameToUniforms(beat, layout);
+  assert.ok(Math.abs(bare.uSceneSpread - beat.lobeSplit * (0.20 + 0.08 * beat.hero)) < 1e-12);
+  assert.equal(bare.uRadialPart, 0);
+  assert.equal(bare.uSceneTwist, 0);
+  assert.equal(bare.uSceneFlow, 0);
+  assert.equal(bare.uSceneOrbit, 0);
+  assert.equal(bare.uSceneVoid, 0);
+  assert.equal(bare.uSceneContrast, 0);
+  assert.equal(bare.uPaletteMix, 0);
+  assert.equal(bare.uPhaseTurn, 0);
+  assert.equal(bare.uApertureTransition, 0);
+  assert.equal(bare.uFlowShear, 0);
+}
+
 console.log('Particle uniforms OK: finite, clamped, layout-independent, stable.');

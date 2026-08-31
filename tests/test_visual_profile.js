@@ -8,9 +8,12 @@ import { readFile } from 'node:fs/promises';
 
 import { createTrack } from '../beatscope/runtime/runtime.js';
 import {
+  SPREAD_LIMITS,
+  combinedSpread,
   createMotionDirector,
   createVisualProfile,
   envelopeMath,
+  legacySpread,
 } from '../beatscope/runtime/visual-profile.js';
 import { assertBounded, assertFiniteFrame, deepFreeze } from './helpers/visual-frame.js';
 
@@ -570,3 +573,61 @@ const boundaryDirector = createMotionDirector(createTrack(boundaryProject()));
 }
 
 console.log('Motion director OK: phrase boundaries, continuity, beat-index cooldowns, reduced motion.');
+
+// --- v0.8 commit 4: the spread combination rule (plan section 10). -----------
+//
+// The scene composition spread and the heavy-beat lobe split share one
+// budget; the radial-part world extension is subtracted from the cap before
+// clamping so the shader's total lobe translation never exceeds combinedMax.
+{
+  const sceneFrame = { composition: { spread: 0.30 }, transition: { channels: { radialPart: 1 } } };
+  const beatFrame = { lobeSplit: 1, hero: 1 };
+  const combined = combinedSpread(sceneFrame, beatFrame);
+  // 0.30 + 1*(0.24 - 0.30*0.12) = 0.504 -> clamped to combinedMax - radialWorld.
+  assert.ok(Math.abs(combined.sceneSpread - (SPREAD_LIMITS.combinedMax - SPREAD_LIMITS.radialWorld)) < 1e-12);
+  assert.equal(combined.radialPart, 1);
+  // Shader total (sceneSpread + radialPart*radialWorld) respects the cap.
+  assert.ok(combined.sceneSpread + combined.radialPart * SPREAD_LIMITS.radialWorld <= SPREAD_LIMITS.combinedMax + 1e-12);
+
+  // Mid-range inputs follow the plan formula exactly.
+  const mid = combinedSpread({ composition: { spread: 0.14 } }, { lobeSplit: 0.5 });
+  assert.ok(Math.abs(mid.sceneSpread - (0.14 + 0.5 * (0.24 - 0.14 * 0.12))) < 1e-12);
+  assert.equal(mid.radialPart, 0);
+
+  // Extreme and missing inputs stay finite, non-negative, and under the cap.
+  for (const spread of [-1, 0, 0.14, 0.9, NaN, undefined]) {
+    for (const lobeSplit of [-1, 0, 0.5, 1, NaN, undefined]) {
+      for (const radialPart of [-1, 0, 1, NaN, undefined]) {
+        const result = combinedSpread(
+          { composition: { spread }, transition: { channels: { radialPart } } },
+          { lobeSplit },
+        );
+        assert.ok(Number.isFinite(result.sceneSpread), `sceneSpread finite for ${spread}/${lobeSplit}/${radialPart}`);
+        assert.ok(result.sceneSpread >= 0 && result.sceneSpread <= SPREAD_LIMITS.combinedMax,
+          `sceneSpread in range for ${spread}/${lobeSplit}/${radialPart}`);
+        assert.ok(result.radialPart >= 0 && result.radialPart <= 1);
+      }
+    }
+  }
+
+  // No scene state (structure off / bare frames): the beat term alone,
+  // capped by the same combined budget.
+  const noScene = combinedSpread(null, { lobeSplit: 1 });
+  assert.ok(Math.abs(noScene.sceneSpread - 0.24) < 1e-12);
+  assert.equal(noScene.radialPart, 0);
+}
+
+// v0.7 parity: legacySpread reproduces lobeSplit * (0.20 + 0.08 * hero).
+{
+  assert.ok(Math.abs(legacySpread({ lobeSplit: 0.5, hero: 1 }) - 0.14) < 1e-12);
+  assert.ok(Math.abs(legacySpread({ lobeSplit: 1, hero: 0 }) - 0.20) < 1e-12);
+  assert.equal(legacySpread({}), 0);
+  assert.equal(legacySpread(null), 0);
+  assert.ok(legacySpread({ lobeSplit: 2, hero: 2 }) <= 0.28 + 1e-12);
+}
+
+assert.ok(Object.isFrozen(SPREAD_LIMITS));
+assert.ok(SPREAD_LIMITS.steadyMax < SPREAD_LIMITS.combinedMax);
+assert.equal(SPREAD_LIMITS.radialWorld, 0.10);
+
+console.log('Spread combination OK: cap enforced, plan formula exact, v0.7 parity.');

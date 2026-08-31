@@ -19,6 +19,7 @@ import {
 } from './renderer.js';
 import { trackForProject } from '../runtime/runtime.js';
 import { createMotionDirector } from '../runtime/visual-profile.js';
+import { createSceneDirector } from '../runtime/scene-director.js';
 import { createParticleGeometry, RING_DEFS } from './particle-geometry.js';
 import { createParticleField } from './particle-field.js';
 
@@ -88,13 +89,17 @@ function prefersReducedMotion() {
   );
 }
 
-export function createVisualStage({ particleCanvas = null, overlayCanvas = null } = {}) {
+export function createVisualStage({ particleCanvas = null, overlayCanvas = null, onFrame = null } = {}) {
   if (!overlayCanvas) throw new Error('createVisualStage requires an overlayCanvas');
 
   const stage = {
     project: null,
     director: null,
     compatProfile: null,
+    sceneDirector: null,
+    // FOLLOW STRUCTURE (plan section 12.2): defaults to on; with no scene
+    // director the scene block stays null either way (legacy visuals).
+    followStructure: true,
     field: null,
     visible: true,
     backend: 'canvas-compat',
@@ -115,6 +120,7 @@ export function createVisualStage({ particleCanvas = null, overlayCanvas = null 
     overWindows: 0,
     underWindows: 0,
     lastTierChangeAt: typeof performance !== 'undefined' ? performance.now() : 0,
+    onFrame: typeof onFrame === 'function' ? onFrame : null,
   };
 
   stage.field = createParticleField({
@@ -277,16 +283,31 @@ export function createVisualStage({ particleCanvas = null, overlayCanvas = null 
       return;
     }
 
-    // One sample per layer, all taken here (plan section 7.1).
+    // One sample per layer, all taken here (plan section 7.1); v0.8 builds
+    // the frame from three pure sources (plan section 10): the runtime
+    // signal, the beat motion director, and the scene director. FOLLOW
+    // STRUCTURE OFF (or a project without visual artifacts) keeps the scene
+    // block null so every consumer keeps neutral legacy behavior.
     const time = Number(state.playbackTime) || 0;
     const signal = playbackState(project, time);
-    const motion = stage.compatProfile.at(time);
+    const compat = stage.compatProfile.at(time);
     const reducedMotion = state.reducedMotion === undefined
       ? prefersReducedMotion()
       : Boolean(state.reducedMotion);
-    const frame = stage.director.at(time, { reducedMotion });
+    const beatMotion = stage.director.at(time, { reducedMotion });
+    const sceneMotion = stage.sceneDirector && stage.followStructure
+      ? stage.sceneDirector.at(time, { reducedMotion })
+      : null;
     const layout = computeLayout(width, height);
-    const shared = { ...frame, signal, motion, layout, reducedMotion };
+    const frame = Object.freeze({
+      ...beatMotion,
+      signal,
+      motion: beatMotion,
+      scene: sceneMotion,
+      compat,
+      layout,
+      reducedMotion,
+    });
     stage.playing = Boolean(state.isPlaying);
 
     if (fieldReady()) {
@@ -304,10 +325,11 @@ export function createVisualStage({ particleCanvas = null, overlayCanvas = null 
       });
       stage.backend = 'webgl2';
     } else {
-      renderVisualBackdrop(overlayCanvas, state, shared);
+      renderVisualBackdrop(overlayCanvas, state, frame);
       stage.backend = 'canvas-compat';
     }
-    renderVisualOverlay(overlayCanvas, state, shared);
+    renderVisualOverlay(overlayCanvas, state, frame);
+    if (stage.onFrame) stage.onFrame(frame);
 
     stage.framesRendered += 1;
     if (typeof performance !== 'undefined') stage.lastFrameCostMs = performance.now() - started;
@@ -329,6 +351,8 @@ export function createVisualStage({ particleCanvas = null, overlayCanvas = null 
       windowP95Ms: stage.windowP95Ms === null ? null : Number(stage.windowP95Ms.toFixed(3)),
       qualitySource: stage.fixedTier ? 'fixed' : 'adaptive',
       contextLost: Boolean(stage.field?.contextLost),
+      followStructure: stage.followStructure,
+      sceneAvailable: Boolean(stage.sceneDirector),
     };
   }
 
@@ -353,10 +377,26 @@ export function createVisualStage({ particleCanvas = null, overlayCanvas = null 
       stage.project = project || null;
       stage.director = null;
       stage.compatProfile = null;
+      stage.sceneDirector = null;
       if (stage.project) {
         stage.director = createMotionDirector(trackForProject(stage.project));
         stage.compatProfile = visualProfileFor(stage.project);
       }
+    },
+    /** Attach compiled visual artifacts (plan section 12.1); null clears. */
+    setVisualArtifacts(recipe, timeline) {
+      stage.sceneDirector = recipe && timeline ? createSceneDirector(recipe, timeline) : null;
+      return getDiagnostics();
+    },
+    /** FOLLOW STRUCTURE toggle (plan section 12.2); does not touch artifacts. */
+    setFollowStructure(enabled) {
+      stage.followStructure = Boolean(enabled);
+      return getDiagnostics();
+    },
+    /** Scene block at an arbitrary time, for readouts and aria labels. */
+    sceneAt(time) {
+      if (!stage.sceneDirector) return null;
+      return stage.sceneDirector.at(Number(time) || 0);
     },
     render(state) {
       if (!stage.visible) return;
@@ -402,6 +442,7 @@ export function createVisualStage({ particleCanvas = null, overlayCanvas = null 
       stage.project = null;
       stage.director = null;
       stage.compatProfile = null;
+      stage.sceneDirector = null;
       stage.lastState = null;
       stage.windowCosts = [];
     },

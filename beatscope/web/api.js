@@ -60,6 +60,25 @@ export async function fetchProject(projectId) {
   return await res.json();
 }
 
+/**
+ * v0.8 visual artifacts (plan section 12.1): recipe + timeline for a saved
+ * project. Any failure — missing project, endpoints absent, malformed
+ * response — resolves to null so the player silently stays in legacy mode.
+ */
+export async function fetchVisualArtifacts(projectId) {
+  if (!projectId) return null;
+  try {
+    const [recipeRes, timelineRes] = await Promise.all([
+      fetch(`/api/projects/${projectId}/visual-recipe`),
+      fetch(`/api/projects/${projectId}/visual-timeline`),
+    ]);
+    if (!recipeRes.ok || !timelineRes.ok) return null;
+    return { recipe: await recipeRes.json(), timeline: await timelineRes.json() };
+  } catch (_) {
+    return null;
+  }
+}
+
 export async function fetchRecentProjects() {
   const res = await fetch('/api/projects');
   if (!res.ok) return [];

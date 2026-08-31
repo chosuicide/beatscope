@@ -1,6 +1,6 @@
 import { gridPosition, metrics } from './grid.js';
 import { trackForProject } from '../runtime/runtime.js';
-import { createVisualProfile } from '../runtime/visual-profile.js';
+import { createVisualProfile, combinedSpread, legacySpread } from '../runtime/visual-profile.js';
 import { RING_DEFS, RING_SLOTS, findRingCrossings, ringPointLocal } from './particle-geometry.js';
 import { CAMERA_Z } from './particle-field.js';
 
@@ -27,7 +27,8 @@ export function resizeCanvas(canvas, cssWidth, cssHeight, dprCapOverride = null)
   // Non-stage canvases keep their historical 2x cap; the visual-stage stack
   // receives its tier's cap from the quality controller (plan section 7.3).
   const dprLimit = dprCapOverride ?? (canvas.id === 'visualStage' || canvas.id === 'particleStage' ? 1 : 2);
-  const dpr = Math.min(window.devicePixelRatio || 1, dprLimit);
+  const deviceRatio = typeof window === 'undefined' ? 1 : window.devicePixelRatio;
+  const dpr = Math.min(deviceRatio || 1, dprLimit);
   const physicalWidth = Math.round(cssWidth * dpr);
   const physicalHeight = Math.round(cssHeight * dpr);
   if (canvas.width !== physicalWidth || canvas.height !== physicalHeight) {
@@ -397,14 +398,20 @@ function drawSpectrumDeck(ctx, project, signal, width, top, bottom, margin) {
   }
 }
 
-function drawReactiveLight(ctx, cx, cy, radius, signal, motion, reducedMotion) {
-  const flash = reducedMotion ? 0 : clamp(motion.burst * .34 + motion.hero);
+function drawReactiveLight(ctx, cx, cy, radius, signal, motion, reducedMotion, scene = null) {
+  // v0.8 scene parity (plan section 11): contrast accents and the boundary
+  // impulse join the flash language; the palette crossfade warms the spill.
+  const channels = scene?.transition?.channels || null;
+  const contrastHit = clamp(channels?.contrastHit);
+  const impulse = clamp(scene?.transition?.impulse) * (reducedMotion ? 0.15 : 1);
+  const paletteMix = clamp(scene?.composition?.paletteMix);
+  const flash = reducedMotion ? 0 : clamp(motion.burst * .34 + motion.hero + contrastHit * .3 + impulse * .35);
   const breath = .1 + signal.low * .38 + motion.pulse * .1 + motion.turbulence * .08;
   const bloomRadius = radius * (1.05 + breath * .45 + flash * .38);
   const bloom = ctx.createRadialGradient(cx - radius * .18, cy - radius * .2, 0, cx, cy, bloomRadius);
   bloom.addColorStop(0, `rgba(255,255,244,${.74 + flash * .24})`);
-  bloom.addColorStop(.18, `rgba(255,218,136,${.18 + breath * .3 + flash * .28})`);
-  bloom.addColorStop(.52, `rgba(220,92,44,${.035 + flash * .16})`);
+  bloom.addColorStop(.18, `rgba(255,218,136,${.18 + breath * .3 + flash * .28 + paletteMix * .1})`);
+  bloom.addColorStop(.52, `rgba(220,92,44,${.035 + flash * .16 + paletteMix * .05})`);
   bloom.addColorStop(1, 'rgba(198,80,50,0)');
   ctx.fillStyle = bloom;
   ctx.fillRect(cx - bloomRadius, cy - bloomRadius, bloomRadius * 2, bloomRadius * 2);
@@ -447,7 +454,7 @@ function drawEmptyCanvas(ctx, width, height, label) {
 export function renderVisualBackdrop(canvas, state, frame) {
   const ctx = canvas.getContext ? canvas.getContext('2d') : null;
   if (!ctx || !state.project || !frame?.layout) return;
-  const { layout, signal, motion } = frame;
+  const { layout, signal, compat } = frame;
   const reducedMotion = Boolean(frame.reducedMotion);
   ctx.save();
   // The relaxed field rect lets the orbit rings leave the main chart area;
@@ -461,7 +468,7 @@ export function renderVisualBackdrop(canvas, state, frame) {
   ctx.beginPath();
   ctx.rect(fieldBox.left, fieldBox.top, fieldBox.right - fieldBox.left, fieldBox.bottom - fieldBox.top);
   ctx.clip();
-  drawReactiveLight(ctx, layout.centreX, layout.centreY, layout.baseRadius, signal, motion, reducedMotion);
+  drawReactiveLight(ctx, layout.centreX, layout.centreY, layout.baseRadius, signal, compat, reducedMotion, frame.scene);
   drawArcTicks(ctx, layout.centreX, layout.centreY, layout.baseRadius, signal);
   renderCanvasParticleFallback(ctx, frame, layout);
   ctx.restore();
@@ -544,16 +551,34 @@ function drawParticleHalo(ctx, frame, layout) {
 /** Persistent black/white composition beneath the particle field. */
 export function renderCanvasParticleFallback(ctx, frame, layout) {
   const signal = frame.signal;
-  const motion = frame.motion;
+  // The compat tier budget (pulse/turbulence/burst/hero) rides frame.compat;
+  // frame.motion is the v0.8 beat director frame (plan section 10).
+  const motion = frame.compat || frame.motion;
   const reducedMotion = Boolean(frame.reducedMotion);
+  // v0.8 scene parity (plan section 11): family spread, boundary timing,
+  // palette crossfade and contrast accents come from the exact scene state.
+  const scene = frame.scene || null;
+  const paletteMix = clamp(scene?.composition?.paletteMix);
+  const channels = scene?.transition?.channels || null;
+  const contrastHit = clamp(channels?.contrastHit);
+  const stageName = scene?.transition?.stage;
+  const boundaryTone = stageName === 'approach' ? clamp(scene?.transition?.approach)
+    : stageName === 'settle' ? clamp(scene?.transition?.settle) : 0;
+  // Scene spread follows the same combination rule as the shader; with
+  // structure off (or no artifacts) it falls back to the v0.7 lobe shape.
+  const sceneSpread = scene
+    ? combinedSpread(scene, frame).sceneSpread
+    : legacySpread(frame);
   const centreX = layout.centreX;
   const centreY = layout.centreY;
   const width = layout.width;
   // The per-beat breath matches the WebGL field: expand after the strike,
-  // contract before the next beat (shared director frame field).
+  // contract before the next beat (shared director frame field). The scene
+  // spread widens compact/open silhouettes; approach contracts slightly.
   const beatExpand = clamp(frame.beatExpand);
   const baseRadius = layout.baseRadius
-    * (1 + signal.low * .07 + motion.pulse * .018 + motion.turbulence * .012 + beatExpand * .09);
+    * (1 + signal.low * .07 + motion.pulse * .018 + motion.turbulence * .012 + beatExpand * .09)
+    * (1 + sceneSpread * 0.30 - boundaryTone * 0.03);
 
   const angleY = signal.time * (.12 + signal.mid * .09);
   const angleX = -.22 + Math.sin(signal.time * .16) * .055;
@@ -618,7 +643,9 @@ export function renderCanvasParticleFallback(ctx, frame, layout) {
   }
   ctx.restore();
 
-  const impact = Math.max(motion.burst * .48, motion.hero);
+  // Boundary contrast accents join the impact language (shader parity:
+  // uSceneContrast scales point presence at boundaries).
+  const impact = Math.max(motion.burst * .48, motion.hero, contrastHit * .5);
   const shockPosition = motion.impactAge < .32 ? 1 - motion.impactAge / .32 * 2 : 4;
   ctx.shadowBlur = 0;
   for (const particle of projected) {
@@ -660,11 +687,13 @@ export function renderCanvasParticleFallback(ctx, frame, layout) {
   // Orbit rings under the same breath scale as the WebGL field.
   drawFallbackRings(ctx, frame, layout, layout.baseRadius, angleX, angleY, reducedMotion);
 
-  // A small inner core gives low frequencies a visible centre of gravity.
+  // A small inner core gives low frequencies a visible centre of gravity;
+  // the scene palette crossfade warms it the way uPaletteMix lifts the
+  // shader body color toward mix(accent, warmWhite, .35).
   const coreRadius = baseRadius * (.055 + signal.low * .08 + signal.beatPulse * .025);
   const core = ctx.createRadialGradient(centreX, centreY, 0, centreX, centreY, coreRadius * 2.6);
-  core.addColorStop(0, `rgba(198,80,50,${.48 + motion.pulse * .22 + impact * .22})`);
-  core.addColorStop(.28, `rgba(255,244,207,${.42 + signal.low * .3})`);
+  core.addColorStop(0, `rgba(198,80,50,${.48 + motion.pulse * .22 + impact * .22 + paletteMix * .08})`);
+  core.addColorStop(.28, `rgba(255,244,207,${.42 + signal.low * .3 + paletteMix * .16})`);
   core.addColorStop(1, 'rgba(255,244,207,0)');
   ctx.fillStyle = core;
   ctx.beginPath();
