@@ -223,6 +223,17 @@ function stubStageCanvas() {
   accessStage.render({ playbackTime: 4, isPlaying: false, reducedMotion: false });
   assert.equal(frames[0].reducedMotion, false);
 
+  // Live preference changes must reach the scene director, not merely ride
+  // along as a frame marker for the renderer.
+  frames.length = 0;
+  accessStage.render({ playbackTime: 7.75, isPlaying: false, reducedMotion: false });
+  const fullPhaseTurn = frames[0].scene.transition.channels.phaseTurn;
+  frames.length = 0;
+  accessStage.render({ playbackTime: 7.75, isPlaying: false, reducedMotion: true });
+  const reducedPhaseTurn = frames[0].scene.transition.channels.phaseTurn;
+  assert.ok(fullPhaseTurn > 0);
+  assert.ok(Math.abs(reducedPhaseTurn - fullPhaseTurn * 0.2) < 1e-12);
+
   // Canvas fallback still renders the scene-driven frame (plan section 9).
   const accessDebug = installVisualDebug(accessStage, { isLocal: () => true });
   assert.equal(accessDebug.forceBackend('canvas').backend, 'canvas');

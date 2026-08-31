@@ -279,19 +279,29 @@ export function buildSceneIndexes(timeline) {
     }
   }
   return Object.freeze({
-    sceneStartTimes: Object.freeze(scenes.map((scene) => finiteNumber(scene?.start_time, 0))),
-    sceneEndTimes: Object.freeze(scenes.map((scene) => finiteNumber(scene?.end_time, 0))),
+    sceneStartTimes: Object.freeze(
+      scenes.map((scene) => finiteNumber(scene?.startTime ?? scene?.start_time, 0)),
+    ),
+    sceneEndTimes: Object.freeze(
+      scenes.map((scene) => finiteNumber(scene?.endTime ?? scene?.end_time, 0)),
+    ),
     transitionTimes: Object.freeze(transitions.map((transition) => finiteNumber(transition?.time, 0))),
     transitionStartTimes: Object.freeze(
       transitions.map((transition) => {
         const time = finiteNumber(transition?.time, 0);
-        return time - Math.max(0, finiteNumber(transition?.lead_seconds, 0));
+        return time - Math.max(
+          0,
+          finiteNumber(transition?.leadSeconds ?? transition?.lead_seconds, 0),
+        );
       }),
     ),
     transitionEndTimes: Object.freeze(
       transitions.map((transition) => {
         const time = finiteNumber(transition?.time, 0);
-        return time + Math.max(0, finiteNumber(transition?.settle_seconds, 0));
+        return time + Math.max(
+          0,
+          finiteNumber(transition?.settleSeconds ?? transition?.settle_seconds, 0),
+        );
       }),
     ),
     familyByName: Object.freeze(familyByName),
@@ -498,12 +508,11 @@ function frozenFrame(artifacts, time, sceneState, transitionState, composition, 
   });
 }
 
-function buildFrame(artifacts, indexes, time, settings) {
-  const sceneState = sceneStateAt(artifacts, indexes, time, settings.clamp);
+function buildFrame(artifacts, indexes, time, reducedMotion, clampAfterEnd) {
+  const sceneState = sceneStateAt(artifacts, indexes, time, clampAfterEnd);
   const transitionState = transitionStateAt(artifacts, indexes, time);
   if (!sceneState) return null;
 
-  const reducedMotion = settings.reducedMotion;
   const sceneCompositionValues = sceneComposition(artifacts, sceneState.scene);
 
   // Composition interpolation (plan section 9.4): before the boundary the
@@ -545,7 +554,21 @@ export function createSceneDirector(recipe, timeline, options = {}) {
     clamp: options.clamp === true,
   });
   return Object.freeze({
-    at: (time) => buildFrame(artifacts, indexes, Number(time) || 0, settings),
+    at: (time, queryOptions = null) => {
+      const reducedMotion = queryOptions?.reducedMotion === undefined
+        ? settings.reducedMotion
+        : queryOptions.reducedMotion === true;
+      const clampAfterEnd = queryOptions?.clamp === undefined
+        ? settings.clamp
+        : queryOptions.clamp === true;
+      return buildFrame(
+        artifacts,
+        indexes,
+        Number(time) || 0,
+        reducedMotion,
+        clampAfterEnd,
+      );
+    },
     options: settings,
     recipe,
     timeline,

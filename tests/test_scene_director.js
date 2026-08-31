@@ -311,6 +311,7 @@ function makeLegacyArtifacts() {
 
   const fullMid = full.at(8.375);
   const reducedMid = reduced.at(8.375);
+  const liveReducedMid = full.at(8.375, { reducedMotion: true });
   // spread interpolates at 20%: 0.14 + (0.26-0.14) * 0.5 * 0.2
   assert.ok(Math.abs(reducedMid.composition.spread - 0.152) < 1e-12);
   const fullDisplacement = Math.abs(fullMid.composition.spread - COMPOSITION_A.spread);
@@ -319,6 +320,16 @@ function makeLegacyArtifacts() {
   // contrast still crossfades fully.
   assert.ok(Math.abs(reducedMid.composition.contrast - 0.73) < 1e-12);
   assert.ok(Math.abs(reducedMid.composition.paletteMix - fullMid.composition.paletteMix) < 1e-12);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(liveReducedMid)),
+    JSON.parse(JSON.stringify(reducedMid)),
+    'per-query reduced motion must match a reduced-motion director',
+  );
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(reduced.at(8.375, { reducedMotion: false }))),
+    JSON.parse(JSON.stringify(fullMid)),
+    'per-query options may also override a reduced-motion director',
+  );
 
   assert.equal(reduced.at(8).transition.impulse, 0.8 * 0.15, 'impulse scales to 15%');
   assert.ok(Math.abs(reduced.at(7.75).transition.channels.phaseTurn - 0.5 * 0.2) < 1e-12);
@@ -326,6 +337,13 @@ function makeLegacyArtifacts() {
   // No channel is removed and scene identity/timing facts stay identical.
   assert.deepEqual(Object.keys(reducedMid.transition.channels), Object.keys(fullMid.transition.channels));
   assert.deepEqual(JSON.parse(JSON.stringify(reducedMid.scene)), JSON.parse(JSON.stringify(fullMid.scene)));
+}
+
+// Both raw JSON and normalizeVisualArtifacts output are valid index inputs.
+{
+  const timeline = makeTimeline();
+  const normalized = normalizeVisualArtifacts(makeRecipe(), timeline);
+  assert.deepEqual(buildSceneIndexes(normalized), buildSceneIndexes(timeline));
 }
 
 // --- legacy neutral state -------------------------------------------------------
