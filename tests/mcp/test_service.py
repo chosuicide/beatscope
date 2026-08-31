@@ -4,7 +4,7 @@ import json
 import pytest
 
 from beatscope.mcp.errors import ProjectNotFound
-from beatscope.mcp.models import GetProjectInput, ListProjectsInput
+from beatscope.mcp.models import EventsInput, GetProjectInput, ListProjectsInput
 from mcp_support import PRIVATE_AUDIO, PROJECT_A, PROJECT_B
 
 
@@ -161,3 +161,72 @@ def test_get_project_rejects_invalid_stored_project(mcp_env):
     rhythm_file.write_text(json.dumps({"schema_version": "4.0", "source": {}}), encoding="utf-8")
     with pytest.raises(ProjectNotFound, match="schema v4 validation"):
         mcp_env.service().get_project(GetProjectInput(project_id=PROJECT_A))
+
+
+# ------------------------------------------------ v0.7 structure in summaries
+
+def _structure_mutate(rhythm: dict) -> None:
+    """Inject a legal v0.7 whole-song structure into the 8 s fixture."""
+    rhythm["patterns"]["method"] = "bar-multiview-ssm-v2"
+    rhythm["patterns"]["segments"] = [
+        {
+            "id": "segment-001", "index": 0, "start_bar": 1, "end_bar": 1,
+            "start_time": 0.0, "end_time": 4.0, "family": "A", "variant": 0,
+            "display_label": "A", "bar_count": 1,
+        },
+        {
+            "id": "segment-002", "index": 1, "start_bar": 2, "end_bar": 2,
+            "start_time": 4.0, "end_time": 8.0, "family": "B", "variant": 0,
+            "display_label": "B", "bar_count": 1,
+        },
+    ]
+    rhythm["patterns"]["boundaries"] = [
+        {"bar": 2, "time": 4.0, "novelty": 0.78, "drivers": {"harmony": 0.83}},
+    ]
+
+
+def test_project_summary_includes_neutral_structure(mcp_env):
+    mcp_env.seed(mutate=_structure_mutate)
+    result = mcp_env.service().get_project(GetProjectInput(project_id=PROJECT_A, detail="summary"))
+    structure = result["data"]["structure"]
+    assert structure == {
+        "segment_count": 2,
+        "families": ["A", "B"],
+        "form": "A-B",
+        "method": "bar-multiview-ssm-v2",
+    }
+
+
+def test_project_summary_omits_structure_without_segments(mcp_env):
+    result = mcp_env.service().get_project(GetProjectInput(project_id=PROJECT_A, detail="summary"))
+    assert "structure" not in result["data"]
+
+
+@pytest.mark.anyio
+async def test_get_events_segments_overlap_window_and_leak_no_matrices(mcp_env):
+    mcp_env.seed(mutate=_structure_mutate)
+    service = mcp_env.service()
+    # (start, end] window vs span facts: a segment overlaps when its
+    # [start_time, end_time) intersects the window.
+    result = await service.get_events(EventsInput(
+        project_id=PROJECT_A, start=5.0, end=6.0,
+        include={"segments", "boundaries"},
+    ))
+    kinds = {event["kind"] for event in result["events"]}
+    assert kinds == {"segment"}  # no boundary inside (5, 6]
+    segment = result["events"][0]
+    assert segment == {
+        "kind": "segment", "time": 4.0, "end": 8.0,
+        "family": "B", "label": "B", "index": 1,
+    }
+
+    wide = await service.get_events(EventsInput(
+        project_id=PROJECT_A, start=0.0, end=8.0,
+        include={"segments", "boundaries"},
+    ))
+    assert [event["kind"] for event in wide["events"]] == ["segment", "boundary", "segment"]
+    boundary = wide["events"][1]
+    assert boundary["time"] == 4.0 and boundary["bar"] == 2
+    assert boundary["novelty"] == 0.78 and boundary["drivers"] == {"harmony": 0.83}
+    # No feature vectors anywhere in the response.
+    assert "vector" not in json.dumps(wide)

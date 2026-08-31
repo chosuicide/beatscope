@@ -115,8 +115,11 @@ Analyzes a local audio file into a cached project. Rules:
 One instant of visual state, computed by the shared JavaScript runtime (the
 same `track.at(time)` the web player and the export package use):
 `bar, beat, beatIndex, beatPhase, barPhase, low, mid, high, all, onset
-{item, age, value}, accent, section`. A `null` onset age or accent means no
-previous onset exists at that time.
+{item, age, value}, accent, section`, and on v0.7 projects a `structure`
+block with the current segment's `id, family, variant, label, index,
+startTime, endTime, phase, nextBoundaryTime, secondsToBoundary`. A `null`
+onset age or accent means no previous onset exists at that time; a `null`
+structure means the project carries no segments.
 
 ### beatscope_get_events
 
@@ -124,7 +127,11 @@ previous onset exists at that time.
 
 Events in the half-open window **(start, end]**: `onsets` come from the
 runtime's `between` op; `beats`, `cues` (accent/impact/scale/flow/flash/bloom),
-and `pattern` bars are binary-sliced facts. Windows are capped at 600 s.
+and `pattern` bars are binary-sliced facts. `include` selects among `beats`,
+`onsets`, `cues`, `patterns`, and - on v0.7 projects - `segments`
+(`{kind, time, end, family, label, index}`, any overlap with the window) and
+`boundaries` (`{kind, time, bar, novelty, drivers}`). Windows are capped at
+600 s.
 Results are sorted by `(time, kind)` and paginated with `{total, count,
 offset, has_more, next_offset}`.
 

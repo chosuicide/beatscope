@@ -361,6 +361,16 @@ class BeatScopeService:
                 ]
         if "patterns" in request.include:
             events += _pattern_events(rhythm, request.start, request.end)
+        if "segments" in request.include:
+            events += _segment_events(rhythm, request.start, request.end)
+        if "boundaries" in request.include:
+            events += [
+                {"kind": "boundary", **boundary}
+                for boundary in _time_slice(
+                    (rhythm.get("patterns") or {}).get("boundaries") or [],
+                    request.start, request.end,
+                )
+            ]
 
         events.sort(key=lambda event: (float(event.get("time") or 0), event["kind"]))
         page, meta = paginate(events, request.limit, request.offset)
@@ -420,6 +430,32 @@ def _time_slice(items: list[dict[str, Any]], start: float, end: float) -> list[d
     lo = bisect.bisect_right(times, start)
     hi = bisect.bisect_right(times, end)
     return items[lo:hi]
+
+
+def _segment_events(rhythm: dict[str, Any], start: float, end: float) -> list[dict[str, Any]]:
+    """Structural segments overlapping the query window (plan section 16).
+
+    A segment is a span, not an instant, so it is included when its
+    [start_time, end_time) overlaps (start, end]. Only identity, family, and
+    span facts ride along - never feature matrices.
+    """
+    segments = (rhythm.get("patterns") or {}).get("segments") or []
+    events: list[dict[str, Any]] = []
+    for segment in segments:
+        if not isinstance(segment, dict):
+            continue
+        seg_start = float(segment.get("start_time") or 0)
+        seg_end = float(segment.get("end_time") or 0)
+        if seg_start < end and seg_end > start:
+            events.append({
+                "kind": "segment",
+                "time": seg_start,
+                "end": seg_end,
+                "family": segment.get("family"),
+                "label": segment.get("display_label"),
+                "index": segment.get("index"),
+            })
+    return events
 
 
 def _pattern_events(rhythm: dict[str, Any], start: float, end: float) -> list[dict[str, Any]]:

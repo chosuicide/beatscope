@@ -134,6 +134,15 @@ def _codex_rhythm_map(rhythm_data: dict[str, Any]) -> dict[str, Any]:
         bars = [{"bar": n, "start": float(items[0].get("time", 0)) if items else None,
                  "end": float(items[-1].get("time", 0)) if items else None,
                  "beats": items} for n, items in by_bar.items()]
+    # v0.7 whole-song structure rides along (plan section 17): segments,
+    # boundaries, repetitions, and diagnostics only. Self-similarity matrices
+    # are analysis intermediates and never enter the export.
+    source_patterns = rhythm_data.get("patterns") or {}
+    structure_patterns = {
+        key: source_patterns[key]
+        for key in ("method", "segments", "boundaries", "repetitions", "diagnostics")
+        if key in source_patterns
+    }
     return {
         "schema_version": "beatscope-rhythm-map-1.0",
         "source_schema_version": rhythm_data.get("schema_version", "3.0"),
@@ -163,6 +172,7 @@ def _codex_rhythm_map(rhythm_data: dict[str, Any]) -> dict[str, Any]:
         "cues": cues,
         "energy": rhythm_data.get("energy", {}),
         "sections": sections,
+        **({"patterns": structure_patterns} if structure_patterns.get("segments") else {}),
         "analysis": {
             "pipeline": rhythm_data.get("analysis", {}).get("pipeline") or rhythm_data.get("analysis", {}).get("backend"),
             "analyzer_version": rhythm_data.get("analysis", {}).get("analyzer_version") or rhythm_data.get("analysis", {}).get("pipeline_version"),
@@ -203,7 +213,7 @@ def generate_codex_export(rhythm_data: dict[str, Any], include_preview: bool = F
     """Package a portable BeatScope handoff for Codex/other coding agents."""
     rhythm_map = _codex_rhythm_map(rhythm_data)
     display_name = rhythm_map["source"]["display_name"]
-    handoff = f'''# BeatScope handoff: {display_name}\n\nThis package is the inspected timing data for one audio file. It is intended to be handed to an agent making an audio-reactive web, video, or motion visual.\n\n## Rules\n\n- Do not re-analyse the audio. Use `rhythm-map.json` as the source of analysed timing facts.\n- Use `audio.currentTime` as the only clock. Call `getVisualState(time)` from `visual-state.js` for animation state.\n- Every animation must remain correct after pause, seek, replay, and rendering a single frame. Do not use wall-clock timers or non-reproducible random motion.\n- Keep playback controls and the visual clock separate: audio controls own transport; the visual samples the current time.\n\n## Suggested mapping\n\n`low`, `mid`, and `high` can drive separate scale, density, or line-weight layers. `onset` and `accent` are short impulses; `beatPhase` and `barPhase` provide repeatable breathing; `section` can change composition density or palette. These are starting points, not instrument labels. The data does not identify kick, snare, or 808.\n\nThe original file name, duration, BPM, origin, beats, raw onsets, energy arrays, and section annotations are recorded in `rhythm-map.json`.\n'''
+    handoff = f'''# BeatScope handoff: {display_name}\n\nThis package is the inspected timing data for one audio file. It is intended to be handed to an agent making an audio-reactive web, video, or motion visual.\n\n## Rules\n\n- Do not re-analyse the audio. Use `rhythm-map.json` as the source of analysed timing facts.\n- Use `audio.currentTime` as the only clock. Call `getVisualState(time)` from `visual-state.js` for animation state.\n- Every animation must remain correct after pause, seek, replay, and rendering a single frame. Do not use wall-clock timers or non-reproducible random motion.\n- Keep playback controls and the visual clock separate: audio controls own transport; the visual samples the current time.\n\n## Suggested mapping\n\n`low`, `mid`, and `high` can drive separate scale, density, or line-weight layers. `onset` and `accent` are short impulses; `beatPhase` and `barPhase` provide repeatable breathing; `section` can change composition density or palette. These are starting points, not instrument labels. The data does not identify kick, snare, or 808. When `rhythm-map.json` carries `patterns.segments`, treat segment boundaries as scene-level changes, treat `family` and `variant` as recurrence rather than musical role, and never rename the neutral `A`/`B` families without instruction.\n\nThe original file name, duration, BPM, origin, beats, raw onsets, energy arrays, section annotations, and (when present) whole-song structure segments are recorded in `rhythm-map.json`.\n'''
     readme = f'''# BeatScope export\n\nFiles in this handoff:\n\n- `rhythm-map.json` — versioned timing data: duration, BPM, origin, bars/beats, raw onsets, accents, low/mid/high energy, and sections.\n- `visual-state.js` — pure `getVisualState(time)` function. It has no random state and is safe to call after seek.\n- `beatscope-runtime.js` — the shared runtime module `visual-state.js` builds on (`createTrack`).\n- `BEATSCOPE.md` — implementation handoff and timing invariants.\n- `SKILL.md` — portable Codex skill for building a visual from this package.\n- `references/schema.md` — exact field semantics for the skill.\n\nThe source audio is not copied into this package. Pair it with the original local file named `{display_name}`.\n'''
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:

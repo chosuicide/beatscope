@@ -45,7 +45,7 @@ def project_summary(project_id: str, rhythm: dict[str, Any]) -> dict[str, Any]:
     source = rhythm.get("source") or {}
     bpm = tempo.get("global_bpm")
     duration = source.get("duration")
-    return {
+    summary = {
         "project_id": project_id,
         "display_name": source.get("display_name") or "unknown",
         "bpm": round(float(bpm), 2) if isinstance(bpm, (int, float)) else None,
@@ -59,6 +59,28 @@ def project_summary(project_id: str, rhythm: dict[str, Any]) -> dict[str, Any]:
         "warnings": list(analysis.get("warnings") or []),
         "provenance": provenance_methods(rhythm),
     }
+    # v0.7 whole-song structure summary (plan section 16): counts and the
+    # neutral form string only - never matrices or feature vectors.
+    patterns = rhythm.get("patterns") or {}
+    segments = patterns.get("segments")
+    if isinstance(segments, list) and segments:
+        families: list[str] = []
+        for segment in segments:
+            family = segment.get("family") if isinstance(segment, dict) else None
+            if isinstance(family, str) and family not in families:
+                families.append(family)
+        labels = [
+            segment.get("display_label")
+            for segment in segments
+            if isinstance(segment, dict) and isinstance(segment.get("display_label"), str)
+        ]
+        summary["structure"] = {
+            "segment_count": len(segments),
+            "families": families,
+            "form": "-".join(labels),
+            "method": patterns.get("method"),
+        }
+    return summary
 
 
 def summary_line(summary: dict[str, Any]) -> str:

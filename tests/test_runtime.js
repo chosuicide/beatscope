@@ -389,3 +389,82 @@ const track = createTrack(project);
 }
 
 console.log('Runtime OK: createTrack contract, immutability, quantize parity, purity.');
+
+// --- v0.7 whole-song structure queries (plan section 14) --------------------
+{
+  const structureProject = JSON.parse(
+    await readFile(new URL('./fixtures/runtime/structure-project.json', import.meta.url), 'utf-8'),
+  );
+  const structureTrack = createTrack(structureProject);
+
+  // Segment lookup: start, middle, boundary -1 ms, boundary, duration.
+  assert.equal(structureTrack.structuralSegmentAt(0)?.id, 'segment-001');
+  assert.equal(structureTrack.structuralSegmentAt(2)?.id, 'segment-001');
+  assert.equal(structureTrack.structuralSegmentAt(4 - 0.001)?.id, 'segment-001');
+  // Half-open: the boundary instant itself belongs to the next segment.
+  assert.equal(structureTrack.structuralSegmentAt(4.0)?.id, 'segment-002');
+  assert.equal(structureTrack.structuralSegmentAt(8.0)?.id, 'segment-002');
+
+  // Phase: 0 at segment start, 1 clamped only at the final duration.
+  assert.equal(structureTrack.structuralPhaseAt(0), 0);
+  assert.equal(structureTrack.structuralPhaseAt(2), 0.5);
+  assert.equal(structureTrack.structuralPhaseAt(4), 0);
+  assert.equal(structureTrack.structuralPhaseAt(8), 1);
+
+  // Next boundary: strictly after the query; none past the last cut.
+  assert.equal(structureTrack.nextStructuralBoundary(0)?.time, 4.0);
+  assert.equal(structureTrack.nextStructuralBoundary(3.999)?.time, 4.0);
+  assert.equal(structureTrack.nextStructuralBoundary(4.0), null);
+  assert.equal(structureTrack.nextStructuralBoundary(8), null);
+
+  // Recurrence is family-keyed, in song order, never role-labeled.
+  assert.deepEqual(
+    structureTrack.repeatedSegments('A').map((segment) => segment.id),
+    ['segment-001'],
+  );
+  assert.deepEqual(structureTrack.repeatedSegments('Z'), []);
+
+  // The at() structure block: facts about the owning segment only.
+  const state = structureTrack.at(5);
+  assert.deepEqual(state.structure, {
+    id: 'segment-002',
+    family: 'B',
+    variant: 0,
+    label: 'B',
+    index: 1,
+    startTime: 4.0,
+    endTime: 8.0,
+    phase: 0.25,
+    nextBoundaryTime: 8.0,
+    secondsToBoundary: 3,
+  });
+
+  // Out-of-order queries are deterministic (seek safety).
+  const late = structureTrack.at(7.5).structure;
+  const early = structureTrack.at(0.5).structure;
+  const again = structureTrack.at(7.5).structure;
+  assert.deepEqual(again, late);
+  assert.deepEqual(structureTrack.at(0.5).structure, early);
+
+  // Signals: structureLead peaks at the cut, boundaryImpulse decays after it.
+  assert.equal(structureTrack.structureLead(8), 1);
+  assert.ok(Math.abs(structureTrack.structureLead(4.5) - 0.04296875) < 1e-9);
+  assert.ok(Math.abs(structureTrack.boundaryImpulse(4.5) - Math.exp(-0.5 * 2)) < 1e-9);
+  assert.equal(structureTrack.boundaryImpulse(0), 0);
+
+  // Legacy project without segments: null everywhere, zero signals.
+  assert.equal(track.structuralSegmentAt(1), null);
+  assert.equal(track.structuralPhaseAt(1), null);
+  assert.equal(track.nextStructuralBoundary(1), null);
+  assert.deepEqual(track.repeatedSegments('A'), []);
+  assert.equal(track.at(1).structure, null);
+  assert.equal(track.structureLead(1), 0);
+  assert.equal(track.boundaryImpulse(1), 0);
+
+  // The structure project is not mutated by querying it.
+  const untouched = JSON.stringify(structureProject);
+  structureTrack.at(1);
+  structureTrack.structuralSegmentAt(4);
+  structureTrack.repeatedSegments('B');
+  assert.equal(JSON.stringify(structureProject), untouched);
+}

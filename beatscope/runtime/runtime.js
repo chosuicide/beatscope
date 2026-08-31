@@ -28,7 +28,10 @@ export function normalizeMap(rhythmMap) {
   const tempo = map.tempo || {};
   const grid = map.grid || {};
   const patterns = map.patterns || {};
-  const sections = patterns.bars || patterns.segments || map.overview || map.sections || [];
+  // Per-bar rows only: segments are span facts, not per-bar entries, so they
+  // must never stand in for the bar sections (v0.7 structure is queried
+  // through the structural* methods instead).
+  const sections = patterns.bars || map.overview || map.sections || [];
   return {
     source: map,
     bpm: Number(tempo.global_bpm || tempo.bpm || map.bpm) || 120,
@@ -40,6 +43,8 @@ export function normalizeMap(rhythmMap) {
     energy: map.energy || {},
     patterns,
     sections: Array.isArray(sections) ? sections : [],
+    structureSegments: Array.isArray(patterns.segments) ? patterns.segments : [],
+    structureBoundaries: Array.isArray(patterns.boundaries) ? patterns.boundaries : [],
     cues: map.cues || {},
   };
 }
@@ -55,6 +60,8 @@ export function buildIndexes(map) {
     onsetIds: map.onsets.map((onset) => onset.id),
     accentIds: new Set(Array.isArray(map.cues?.accent) ? map.cues.accent.map((cue) => cue.onset) : []),
     barSpans: buildBarSpans(map),
+    segmentStartTimes: map.structureSegments.map((segment) => Number(segment.start_time) || 0),
+    boundaryTimes: map.structureBoundaries.map((boundary) => Number(boundary.time) || 0),
     cueTimes: Object.fromEntries(
       Object.entries(map.cues || {})
         .filter(([, items]) => Array.isArray(items))
@@ -273,6 +280,100 @@ function sectionForBar(map, bar) {
   return map.sections[Math.max(0, bar - 1)] || null;
 }
 
+// ---------------------------------------------------------------------------
+// v0.7 whole-song structure (plan section 14): neutral repeat families as
+// span facts. Segments are half-open [start_time, end_time) except the final
+// one, whose end equals the track duration; phase clamps to 1 only there.
+// Every query is a pure function of (map, time) - no clocks, no mutation -
+// and returns null on legacy projects without structure.
+// ---------------------------------------------------------------------------
+
+/** The structural segment owning ``time``, or null (legacy / before bar 1). */
+export function structuralSegmentAt(map, indexes, time) {
+  const segments = map.structureSegments;
+  if (!segments.length) return null;
+  const t = Number(time) || 0;
+  const index = previousIndex(indexes.segmentStartTimes, t);
+  if (index < 0) return null;
+  const segment = segments[index];
+  const end = Number(segment.end_time) || 0;
+  // Interior ends are exclusive; only the final segment owns its own end.
+  const isFinal = index === segments.length - 1;
+  if (!isFinal && t >= end) return null;
+  return segment;
+}
+
+/** Progress through the owning segment in [0, 1], or null without segments. */
+export function structuralPhaseAt(map, indexes, time) {
+  const segment = structuralSegmentAt(map, indexes, time);
+  if (!segment) return null;
+  const start = Number(segment.start_time) || 0;
+  const length = Math.max(1e-9, (Number(segment.end_time) || 0) - start);
+  return clamp(((Number(time) || 0) - start) / length);
+}
+
+/** The next boundary record strictly after ``time``, or null when the song
+ * runs out of boundaries (the last segment ends at the duration). */
+export function nextStructuralBoundary(map, indexes, time) {
+  const boundaries = map.structureBoundaries;
+  if (!boundaries.length) return null;
+  const index = previousIndex(indexes.boundaryTimes, Number(time) || 0) + 1;
+  return index < boundaries.length ? boundaries[index] : null;
+}
+
+/** All segments of one neutral family ("A"), in song order; [] when none.
+ * Recurrence means "same family", never a musical role. */
+export function repeatedSegments(map, family) {
+  const key = String(family ?? '');
+  if (!key) return [];
+  return map.structureSegments.filter((segment) => segment.family === key);
+}
+
+/** The ``at()`` structure block: facts about the owning segment only. */
+export function structureStateAt(map, indexes, time) {
+  const segment = structuralSegmentAt(map, indexes, time);
+  if (!segment) return null;
+  const t = Number(time) || 0;
+  const startTime = Number(segment.start_time) || 0;
+  const endTime = Number(segment.end_time) || 0;
+  const length = Math.max(1e-9, endTime - startTime);
+  return {
+    id: segment.id,
+    family: segment.family,
+    variant: Number(segment.variant) || 0,
+    label: segment.display_label,
+    index: Number(segment.index) || 0,
+    startTime,
+    endTime,
+    phase: clamp((t - startTime) / length),
+    // The current segment always ends at a boundary or at the duration, so
+    // this countdown is honest even for the last segment.
+    nextBoundaryTime: endTime,
+    secondsToBoundary: Math.max(0, endTime - t),
+  };
+}
+
+/** Boundary anticipation signal: 1 at the boundary, 0 four seconds out
+ * (plan section 14). A fact-shaped envelope, not a visual effect. */
+export function structureLead(map, indexes, time) {
+  const state = structureStateAt(map, indexes, time);
+  if (!state) return 0;
+  const p = (4 - state.secondsToBoundary) / 4; // 0 four seconds out -> 1 at the cut
+  const x = clamp(p);
+  return x * x * (3 - 2 * x);
+}
+
+/** Decaying impulse right after a structural boundary crossing. */
+export function boundaryImpulse(map, indexes, time, decay = 2.0, maxAge = 4.0) {
+  const boundaries = map.structureBoundaries;
+  if (!boundaries.length) return 0;
+  const index = previousIndex(indexes.boundaryTimes, Number(time) || 0);
+  if (index < 0) return 0;
+  const age = Math.max(0, (Number(time) || 0) - indexes.boundaryTimes[index]);
+  if (age >= maxAge) return 0;
+  return Math.exp(-age * decay);
+}
+
 /**
  * Full visual query with the web player's semantics: bar/beat/phase from
  * the adjacent-beat position core, onset as the decaying impulse over the
@@ -300,6 +401,7 @@ export function stateAt(map, indexes, time, options = {}) {
     onset: { item: impulse.item, age: impulse.age, value: impulse.value },
     accent,
     section: sectionForBar(map, position.bar),
+    structure: structureStateAt(map, indexes, rawTime),
   };
 }
 
@@ -461,6 +563,12 @@ export function createTrack(rhythmMap, options = {}) {
       quantize(map, indexes, time, subdivision, overrides ? { ...options, ...overrides } : options),
     energyAt: (time, band = 'all') => energyAt(map, time, band),
     sectionAt: (time) => sectionForBar(map, stateAt(map, indexes, time, options).bar),
+    structuralSegmentAt: (time) => structuralSegmentAt(map, indexes, time),
+    structuralPhaseAt: (time) => structuralPhaseAt(map, indexes, time),
+    nextStructuralBoundary: (time) => nextStructuralBoundary(map, indexes, time),
+    repeatedSegments: (family) => repeatedSegments(map, family),
+    structureLead: (time) => structureLead(map, indexes, time),
+    boundaryImpulse: (time, decay, maxAge) => boundaryImpulse(map, indexes, time, decay, maxAge),
     between: (start, end) => eventsBetween(map, indexes, start, end),
     nextCue: (time, type = 'accent') => nextCue(map, indexes, time, type),
     previousOnset: (time) => previousOnset(map, indexes, time),
