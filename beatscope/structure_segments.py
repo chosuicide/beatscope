@@ -642,11 +642,14 @@ def analyze_structure_segments(
             "end_time": round(spans[end - 1].end_time, 6),
             "bar_count": spans[end - 1].bar - spans[start].bar + 1,
         })
-    # The final segment owns the grid tail (terminal fragments included).
-    if segments and total_bars > segments[-1]["end_bar"]:
-        segments[-1]["end_bar"] = total_bars
+    # The final segment owns the grid tail (terminal fragments included), and
+    # its end_time is the track duration - the IR contract makes end_time
+    # exclusive except for the final segment, where it tiles the whole file.
+    if segments:
+        if total_bars > segments[-1]["end_bar"]:
+            segments[-1]["end_bar"] = total_bars
+            segments[-1]["bar_count"] = segments[-1]["end_bar"] - segments[-1]["start_bar"] + 1
         segments[-1]["end_time"] = round(float(duration), 6)
-        segments[-1]["bar_count"] = segments[-1]["end_bar"] - segments[-1]["start_bar"] + 1
 
     boundaries: list[dict[str, Any]] = []
     for cut in bar_cuts[1:-1]:  # interior cuts only; spans[cut] needs cut < count

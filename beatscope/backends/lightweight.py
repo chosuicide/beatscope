@@ -153,6 +153,7 @@ class LightweightBackend:
             energy=compress_energy(novelty, sr, hop),
             tempo_score=result.path_score,
             tempo_segments=tempo_segments,
+            audio=y,
             warnings=warnings,
             diagnostics=diagnostics,
             provenance=provenance,

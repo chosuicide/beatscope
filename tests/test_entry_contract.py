@@ -37,13 +37,14 @@ def test_web_upload_matches_analyze_track(fixed_120_audio, run_web_analysis):
 @requires_librosa
 def test_web_project_is_content_addressed_and_honest(fixed_120_audio, run_web_analysis):
     from beatscope.project import content_hash
+    from beatscope.schema import ANALYZER_VERSION
 
     project = run_web_analysis(fixed_120_audio)
 
     assert project["project_id"] == content_hash(fixed_120_audio)[:12]
     assert project["schema_version"] == "4.0"
     assert project["analysis"]["backend"] == "lightweight"
-    assert project["analysis"]["pipeline_version"] == "0.6.0"
+    assert project["analysis"]["pipeline_version"] == ANALYZER_VERSION
 
     # No uncalibrated tempo confidence on the lightweight path.
     assert "confidence" not in project["tempo"]

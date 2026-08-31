@@ -212,11 +212,17 @@ def test_lightweight_provenance_and_diagnostics_are_real(fixed_120_audio):
 def test_analyzer_version_bump_changes_cache_key():
     from beatscope.project import compute_cache_key
 
-    assert ANALYZER_VERSION == "0.6.0"
+    assert ANALYZER_VERSION == "0.7.0"
     sha = "0" * 64
     config = {"subdivision": 16}
     assert (
         compute_cache_key(sha, config, analyzer_ver="0.4.0")
+        != compute_cache_key(sha, config, analyzer_ver=ANALYZER_VERSION)
+    )
+    # A v0.6 cache entry can never masquerade as v0.7 structure output
+    # (plan section 12.2): the analyzer version is part of the key.
+    assert (
+        compute_cache_key(sha, config, analyzer_ver="0.6.0")
         != compute_cache_key(sha, config, analyzer_ver=ANALYZER_VERSION)
     )
 
@@ -240,10 +246,49 @@ def test_analyze_track_lightweight_validates(fixed_120_audio):
     assert project["grid"]["bars"] == 4
     assert "confidence" not in project["tempo"]
     assert project["meter"] == {"numerator": 4, "denominator": 4}
-    assert project["patterns"]["method"] == "bar-rhythm-cosine-v1"
+    assert project["patterns"]["method"] == "bar-multiview-ssm-v2"
     assert set(project["cues"]) == {"accent", "impact", "scale", "flow", "flash", "bloom"}
     assert all("confidence" not in onset for onset in project["onsets"])
     assert all("accent" not in onset for onset in project["onsets"])
+
+
+def test_analyze_track_emits_v07_structure_natively(fixed_120_audio):
+    """The pipeline itself must carry patterns.segments - no benchmark injection."""
+    project = analyze_track(fixed_120_audio)
+    patterns = project["patterns"]
+    assert patterns["method"] == "bar-multiview-ssm-v2"
+    segments = patterns["segments"]
+    assert len(segments) == 1  # four bars of identical material: one family
+    segment = segments[0]
+    assert segment["id"] == "segment-001"
+    assert segment["index"] == 0
+    assert (segment["start_bar"], segment["end_bar"]) == (1, 4)
+    assert segment["family"] == "A" and segment["variant"] == 0
+    assert segment["display_label"] == "A"
+    assert abs(segment["end_time"] - project["source"]["duration"]) < 1e-3
+    assert patterns["boundaries"] == []
+    assert patterns["repetitions"] == []
+    diagnostics = patterns["diagnostics"]
+    assert diagnostics["feature_version"] == "structure-features-v2"
+    assert diagnostics["bars_analyzed"] == 4
+    assert "harmony" in diagnostics["views_used"]
+    assert validate_rhythm_v4(project) == []
+
+
+def test_analyze_track_without_waveform_keeps_legacy_patterns():
+    """No evidence.audio means the legacy bar-group slice plus an honest note."""
+    from fixtures.generate_audio import generate_all
+    import tempfile
+
+    tmp = Path(tempfile.mkdtemp())
+    audio = generate_all(tmp)["fixed-120"]["audio"]
+    evidence = LightweightBackend().analyze(audio, AnalysisConfig(), _no_op_progress, _never_cancelled)
+    evidence.audio = None
+    project = build_rhythm_project(Path(audio), "a" * 64, AnalysisConfig(), LightweightBackend(), evidence)
+    assert project["patterns"]["method"] == "bar-rhythm-cosine-v1"
+    assert "segments" not in project["patterns"]
+    assert any("no waveform" in warning for warning in project["analysis"]["warnings"])
+    assert validate_rhythm_v4(project) == []
 
 
 def test_analyze_track_is_deterministic(fixed_120_audio):

@@ -30,7 +30,7 @@ from .schema import (
     UnsupportedSchemaVersion,
     validate_rhythm_v4,
 )
-from .structure import analyze_song_structure
+from .structure import analyze_multiview_structure, analyze_song_structure
 
 
 def resolve_backend(
@@ -195,6 +195,34 @@ def build_rhythm_project(
     if pregrid_beats:
         diagnostics["pregrid_beats_merged"] = pregrid_beats
 
+    analysis_warnings = list(evidence.warnings)
+    patterns: dict[str, Any] = {"method": "bar-rhythm-cosine-v1", "bars": overview}
+    # Whole-song v0.7 structure reuses the waveform the backend already
+    # decoded and consumes exactly the facts this project publishes (v4 beats,
+    # onsets, energy), so the benchmark and the pipeline see the same input.
+    if evidence.audio is not None and evidence.audio.size:
+        structure = analyze_multiview_structure(
+            evidence.audio,
+            evidence.sample_rate,
+            beats_v4,
+            v4_onsets,
+            evidence.energy,
+            duration,
+            evidence.bars,
+            subdivision=config.subdivision,
+        )
+        if structure is not None:
+            for key in ("method", "segments", "boundaries", "repetitions", "diagnostics"):
+                patterns[key] = structure[key]
+        else:
+            analysis_warnings.append(
+                "structure: multiview analysis unavailable; keeping legacy bar groups"
+            )
+    elif evidence.audio is None:
+        analysis_warnings.append(
+            "structure: backend supplied no waveform; keeping legacy bar groups"
+        )
+
     return {
         "schema_version": SCHEMA_VERSION,
         "project_id": sha256[:12],
@@ -209,7 +237,7 @@ def build_rhythm_project(
             "backend": config.backend,
             "pipeline_version": ANALYZER_VERSION,
             "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            "warnings": list(evidence.warnings),
+            "warnings": analysis_warnings,
             "separation_used": bool(diagnostics.get("separated", False)),
             "parameters": {
                 "subdivision": config.subdivision,
@@ -233,7 +261,7 @@ def build_rhythm_project(
         "beats": beats_v4,
         "onsets": v4_onsets,
         "energy": evidence.energy,
-        "patterns": {"method": "bar-rhythm-cosine-v1", "bars": overview},
+        "patterns": patterns,
         "cues": {
             "accent": accent_cues,
             "impact": [],
@@ -268,9 +296,11 @@ def analyze_track(
     evidence = backend.analyze(source_path, cfg, progress_cb, cancelled or never_cancelled)
 
     check_cancelled(cancelled)
-    progress_cb("structure", 0.90, "比对小节相似度与结构...")
+    progress_cb("structure", 0.86, "聚合小节特征...")
+    progress_cb("structure", 0.90, "计算段落边界与重复关系...")
     project = build_rhythm_project(source_path, sha256, cfg, backend, evidence, display_name)
 
+    progress_cb("validate", 0.96, "校验 Rhythm IR...")
     errors = validate_rhythm_v4(project)
     if errors:
         raise InvalidRhythmProject(errors)

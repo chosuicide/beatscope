@@ -10,7 +10,7 @@
   },
   "analysis": {
     "pipeline": "beat-this+demucs-drums+multiband-novelty",
-    "analyzer_version": "0.6.0",
+    "analyzer_version": "0.7.0",
     "warnings": [],
     "separation_used": true
   },

@@ -1,76 +1,76 @@
 {
   "schema": "beatscope-structure-characterization-1",
-  "pipeline_version": "0.6.0",
+  "pipeline_version": "0.7.0",
   "cases": {
     "structure-aba": {
-      "method": "bar-rhythm-cosine-v1",
+      "method": "bar-multiview-ssm-v2",
       "bar_count": 24,
-      "segment_count": 0,
-      "boundary_count": 0,
-      "repetition_count": 0
+      "segment_count": 3,
+      "boundary_count": 2,
+      "repetition_count": 1
     },
     "structure-abacb": {
-      "method": "bar-rhythm-cosine-v1",
+      "method": "bar-multiview-ssm-v2",
       "bar_count": 30,
-      "segment_count": 0,
-      "boundary_count": 0,
-      "repetition_count": 0
+      "segment_count": 5,
+      "boundary_count": 4,
+      "repetition_count": 2
     },
     "structure-break": {
-      "method": "bar-rhythm-cosine-v1",
+      "method": "bar-multiview-ssm-v2",
       "bar_count": 21,
-      "segment_count": 0,
-      "boundary_count": 0,
-      "repetition_count": 0
+      "segment_count": 3,
+      "boundary_count": 2,
+      "repetition_count": 1
     },
     "structure-drift": {
-      "method": "bar-rhythm-cosine-v1",
+      "method": "bar-multiview-ssm-v2",
       "bar_count": 24,
-      "segment_count": 0,
+      "segment_count": 1,
       "boundary_count": 0,
       "repetition_count": 0
     },
     "structure-energy-only": {
-      "method": "bar-rhythm-cosine-v1",
+      "method": "bar-multiview-ssm-v2",
       "bar_count": 24,
-      "segment_count": 0,
-      "boundary_count": 0,
-      "repetition_count": 0
+      "segment_count": 3,
+      "boundary_count": 2,
+      "repetition_count": 1
     },
     "structure-harmony-only": {
-      "method": "bar-rhythm-cosine-v1",
+      "method": "bar-multiview-ssm-v2",
       "bar_count": 24,
-      "segment_count": 0,
-      "boundary_count": 0,
-      "repetition_count": 0
+      "segment_count": 3,
+      "boundary_count": 2,
+      "repetition_count": 1
     },
     "structure-monotony": {
-      "method": "bar-rhythm-cosine-v1",
+      "method": "bar-multiview-ssm-v2",
       "bar_count": 24,
-      "segment_count": 0,
+      "segment_count": 1,
       "boundary_count": 0,
       "repetition_count": 0
     },
     "structure-rhythm-only": {
-      "method": "bar-rhythm-cosine-v1",
+      "method": "bar-multiview-ssm-v2",
       "bar_count": 24,
-      "segment_count": 0,
-      "boundary_count": 0,
-      "repetition_count": 0
+      "segment_count": 3,
+      "boundary_count": 2,
+      "repetition_count": 1
     },
     "structure-short": {
-      "method": "bar-rhythm-cosine-v1",
+      "method": "bar-multiview-ssm-v2",
       "bar_count": 6,
-      "segment_count": 0,
+      "segment_count": 1,
       "boundary_count": 0,
       "repetition_count": 0
     },
     "structure-tempo-change-repeat": {
-      "method": "bar-rhythm-cosine-v1",
+      "method": "bar-multiview-ssm-v2",
       "bar_count": 24,
-      "segment_count": 0,
-      "boundary_count": 0,
-      "repetition_count": 0
+      "segment_count": 3,
+      "boundary_count": 2,
+      "repetition_count": 1
     }
   }
 }

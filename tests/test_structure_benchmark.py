@@ -1,10 +1,10 @@
 """Structure benchmark tests: fixture pinning, metrics, and characterization.
 
 The fixture generator, truth manifest, and metric definitions land before the
-v0.7 analyzer does, so the committed ``v06-characterization.json`` pins the
-legacy analyzer's structure slice first; the full v0.7 gates (boundary F1,
-family F1, MAE) are asserted by ``test_structure_benchmark_gates`` once the
-multiview segmenter exists (v0.7 plan section 22, commit 1).
+v0.7 analyzer does, so the committed characterization file pins the analyzer's
+structure slice (re-recorded at the v0.6 -> v0.7 handoff); the full v0.7 gates
+(boundary F1, family F1, MAE) are asserted by test_structure_benchmark_gates
+once the multiview segmenter exists (v0.7 plan section 22, commit 1).
 """
 from __future__ import annotations
 
@@ -136,8 +136,13 @@ def test_structure_coverage_errors():
 
 # -------------------------------------------------------- characterization
 
-def test_v06_legacy_characterization(structure_suite):
-    """The legacy analyzer's structure slice must stay exactly as recorded."""
+def test_structure_characterization(structure_suite):
+    """The analyzer's structure slice must stay exactly as recorded.
+
+    Re-record with ``record_characterization()`` only when the analyzer's
+    emitted structure legitimately changes (as at the v0.6 -> v0.7 handoff);
+    any other drift is a regression.
+    """
     committed = json.loads(COMMITTED_CHARACTERIZATION_PATH.read_text(encoding="utf-8"))
     for name, project in structure_suite["projects"].items():
         assert characterization_entry(project) == committed["cases"][name], name

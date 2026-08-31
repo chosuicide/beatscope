@@ -390,3 +390,154 @@ def test_v4_rejects_segment_overlap_reverse_and_illegal_bpm():
     illegal_bpm = _minimal_v4_project()
     illegal_bpm["tempo"]["segments"][0]["bpm"] = 500.0
     assert any("bpm" in error for error in validate_rhythm_v4(illegal_bpm))
+
+
+# ------------------------------------------------ v0.7 optional structure fields
+
+def _v07_patterns():
+    """A legal whole-song structure slice for the 12 s / 3 bar minimal project."""
+    return {
+        "method": "bar-multiview-ssm-v2",
+        "bars": [{"bar": 1, "label": "steady", "group": "A"}],
+        "segments": [
+            {
+                "id": "segment-001", "index": 0, "start_bar": 1, "end_bar": 1,
+                "start_time": 0.0, "end_time": 4.0, "family": "A", "variant": 0,
+                "display_label": "A", "bar_count": 1,
+            },
+            {
+                "id": "segment-002", "index": 1, "start_bar": 2, "end_bar": 3,
+                "start_time": 4.0, "end_time": 12.0, "family": "B", "variant": 0,
+                "display_label": "B", "bar_count": 2,
+            },
+        ],
+        "boundaries": [
+            {"bar": 2, "time": 4.0, "novelty": 0.78, "drivers": {"harmony": 0.83}},
+        ],
+        "repetitions": [],
+    }
+
+
+def test_v4_without_structure_fields_remains_valid():
+    from beatscope.schema import validate_rhythm_v4
+
+    assert validate_rhythm_v4(_minimal_v4_project()) == []
+
+
+def test_v07_structure_fields_are_legal():
+    from beatscope.schema import validate_rhythm_v4
+
+    project = _minimal_v4_project()
+    project["patterns"] = _v07_patterns()
+    assert validate_rhythm_v4(project) == []
+
+
+def test_v07_rejects_segment_bar_gaps_and_overlaps():
+    from beatscope.schema import validate_rhythm_v4
+
+    project = _minimal_v4_project()
+    project["patterns"] = _v07_patterns()
+    project["patterns"]["segments"][1]["start_bar"] = 3  # bar 2 left uncovered
+    assert any("contiguous" in error for error in validate_rhythm_v4(project))
+
+    project["patterns"] = _v07_patterns()
+    project["patterns"]["segments"][1]["start_bar"] = 1  # overlaps segment 1
+    assert any("contiguous" in error for error in validate_rhythm_v4(project))
+
+
+def test_v07_rejects_duplicate_ids_and_wrong_indexes():
+    from beatscope.schema import validate_rhythm_v4
+
+    project = _minimal_v4_project()
+    patterns = _v07_patterns()
+    patterns["segments"][1]["id"] = "segment-001"
+    project["patterns"] = patterns
+    assert any("duplicated" in error for error in validate_rhythm_v4(project))
+
+    patterns = _v07_patterns()
+    patterns["segments"][1]["index"] = 5
+    project["patterns"] = patterns
+    assert any("list position" in error for error in validate_rhythm_v4(project))
+
+
+def test_v07_rejects_final_segment_end_time_mismatch():
+    from beatscope.schema import validate_rhythm_v4
+
+    project = _minimal_v4_project()
+    patterns = _v07_patterns()
+    patterns["segments"][1]["end_time"] = 11.0  # duration is 12.0
+    project["patterns"] = patterns
+    assert any("end_time must equal the track duration" in error for error in validate_rhythm_v4(project))
+
+
+def test_v07_rejects_nonfinite_segment_values():
+    from beatscope.schema import validate_rhythm_v4
+
+    project = _minimal_v4_project()
+    patterns = _v07_patterns()
+    patterns["segments"][0]["end_time"] = float("inf")
+    project["patterns"] = patterns
+    assert any("finite" in error for error in validate_rhythm_v4(project))
+
+
+def test_v07_rejects_wrong_boundary_count_and_unmatched_starts():
+    from beatscope.schema import validate_rhythm_v4
+
+    project = _minimal_v4_project()
+    patterns = _v07_patterns()
+    patterns["boundaries"].append({"bar": 3, "time": 8.0, "novelty": 0.5})
+    project["patterns"] = patterns
+    assert any("exactly 1 entries" in error for error in validate_rhythm_v4(project))
+
+    patterns = _v07_patterns()
+    patterns["boundaries"][0]["bar"] = 3  # no segment starts at bar 3
+    project["patterns"] = patterns
+    assert any("does not start any segment" in error for error in validate_rhythm_v4(project))
+
+
+def test_v07_rejects_nonfinite_and_out_of_range_novelty():
+    from beatscope.schema import validate_rhythm_v4
+
+    project = _minimal_v4_project()
+    patterns = _v07_patterns()
+    patterns["boundaries"][0]["novelty"] = 1.5
+    project["patterns"] = patterns
+    assert any("novelty" in error for error in validate_rhythm_v4(project))
+
+    patterns = _v07_patterns()
+    patterns["boundaries"][0]["drivers"] = {"harmony": float("nan")}
+    project["patterns"] = patterns
+    assert any("drivers" in error for error in validate_rhythm_v4(project))
+
+
+def test_v07_rejects_repetitions_with_unknown_or_mismatched_segments():
+    from beatscope.schema import validate_rhythm_v4
+
+    project = _minimal_v4_project()
+    patterns = _v07_patterns()
+    patterns["repetitions"] = [{
+        "family": "A",
+        "segment_ids": ["segment-001", "segment-999"],
+        "mean_similarity": 0.9,
+    }]
+    project["patterns"] = patterns
+    assert any("unknown segment id" in error for error in validate_rhythm_v4(project))
+
+    patterns = _v07_patterns()
+    patterns["repetitions"] = [{
+        "family": "A",
+        "segment_ids": ["segment-001", "segment-002"],  # segment-002 is family B
+        "mean_similarity": 0.9,
+    }]
+    project["patterns"] = patterns
+    assert any("does not match segment" in error for error in validate_rhythm_v4(project))
+
+
+def test_v07_still_rejects_confidence_inside_structure():
+    from beatscope.schema import validate_rhythm_v4
+
+    project = _minimal_v4_project()
+    patterns = _v07_patterns()
+    patterns["segments"][0]["confidence"] = 0.9
+    project["patterns"] = patterns
+    assert any("confidence" in error for error in validate_rhythm_v4(project))

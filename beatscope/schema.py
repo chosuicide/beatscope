@@ -4,13 +4,14 @@ from __future__ import annotations
 import datetime
 import hashlib
 import json
+import math
 import re
 from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = "4.0"
 V3_SCHEMA_VERSION = "3.0"
-ANALYZER_VERSION = "0.6.0"
+ANALYZER_VERSION = "0.7.0"
 
 
 class InvalidRhythmProject(ValueError):
@@ -42,6 +43,223 @@ def _find_forbidden_keys(value: Any, path: str, errors: list[str]) -> None:
         for idx, item in enumerate(value):
             if isinstance(item, (dict, list)):
                 _find_forbidden_keys(item, f"{path}[{idx}]", errors)
+
+
+def _finite_number(value: Any) -> bool:
+    """True for a real, non-boolean, finite number."""
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+    )
+
+
+# Tolerance for float times that were rounded independently (4 vs 6 decimals)
+# but must describe the same instant or a contiguous boundary.
+_TIME_EPSILON = 1e-3
+
+
+def _validate_pattern_segments(
+    patterns: dict[str, Any],
+    duration: float | None,
+    bars: int | None,
+    errors: list[str],
+) -> None:
+    """Optional v0.7 ``patterns.segments`` (plan section 13).
+
+    Everything here runs only when ``segments`` is present, so legacy v4
+    projects without the field stay valid unchanged.
+    """
+    segments = patterns.get("segments")
+    if segments is None:
+        return
+    if not isinstance(segments, list) or not segments:
+        errors.append("patterns.segments must be a non-empty list when present")
+        return
+
+    ids: set[str] = set()
+    previous_end_bar: int | None = None
+    previous_end_time: float | None = None
+    for position, segment in enumerate(segments):
+        label = f"patterns.segments[{position}]"
+        if not isinstance(segment, dict):
+            errors.append(f"{label} must be an object")
+            previous_end_bar = None
+            continue
+
+        seg_id = segment.get("id")
+        if not isinstance(seg_id, str) or not seg_id:
+            errors.append(f"{label}.id must be a non-empty string")
+        elif seg_id in ids:
+            errors.append(f"{label}.id '{seg_id}' is duplicated")
+        else:
+            ids.add(seg_id)
+
+        if segment.get("index") != position:
+            errors.append(f"{label}.index must equal its list position {position}")
+
+        start_bar = segment.get("start_bar")
+        if not isinstance(start_bar, int) or isinstance(start_bar, bool) or start_bar < 1:
+            errors.append(f"{label}.start_bar must be a positive integer")
+            start_bar = None
+        elif bars is not None and start_bar > bars:
+            errors.append(f"{label}.start_bar {start_bar} exceeds grid bars {bars}")
+            start_bar = None
+        end_bar = segment.get("end_bar")
+        if not isinstance(end_bar, int) or isinstance(end_bar, bool) or end_bar < 1:
+            errors.append(f"{label}.end_bar must be a positive integer")
+            end_bar = None
+        elif bars is not None and end_bar > bars:
+            errors.append(f"{label}.end_bar {end_bar} exceeds grid bars {bars}")
+            end_bar = None
+        if start_bar is not None and end_bar is not None and end_bar < start_bar:
+            errors.append(f"{label} has end_bar before start_bar")
+
+        start_time = segment.get("start_time")
+        if not _finite_number(start_time) or start_time < 0:
+            errors.append(f"{label}.start_time must be a non-negative finite number")
+            start_time = None
+        end_time = segment.get("end_time")
+        if not _finite_number(end_time):
+            errors.append(f"{label}.end_time must be a finite number")
+            end_time = None
+        if start_time is not None and end_time is not None and end_time <= start_time:
+            errors.append(f"{label} times must increase")
+
+        family = segment.get("family")
+        if not isinstance(family, str) or not family:
+            errors.append(f"{label}.family must be a non-empty string")
+        variant = segment.get("variant")
+        if not isinstance(variant, int) or isinstance(variant, bool) or variant < 0:
+            errors.append(f"{label}.variant must be a non-negative integer")
+        display_label = segment.get("display_label")
+        if not isinstance(display_label, str) or not display_label:
+            errors.append(f"{label}.display_label must be a non-empty string")
+
+        # Ordered, contiguous, non-overlapping coverage of the bar range.
+        if previous_end_bar is not None and start_bar is not None:
+            if start_bar != previous_end_bar + 1:
+                errors.append(
+                    f"{label} must start at bar {previous_end_bar + 1} to keep coverage contiguous"
+                )
+            elif (
+                previous_end_time is not None
+                and start_time is not None
+                and start_time < previous_end_time - _TIME_EPSILON
+            ):
+                errors.append(f"{label} overlaps the previous segment in time")
+        previous_end_bar = end_bar
+        previous_end_time = end_time if end_time is not None and end_time > 0 else None
+
+    if duration is not None and isinstance(segments[-1], dict):
+        end_time = segments[-1].get("end_time")
+        if _finite_number(end_time) and abs(float(end_time) - duration) > _TIME_EPSILON:
+            errors.append("the final segment's end_time must equal the track duration")
+
+
+def _validate_pattern_boundaries(patterns: dict[str, Any], errors: list[str]) -> None:
+    """Optional v0.7 ``patterns.boundaries`` (plan section 13)."""
+    boundaries = patterns.get("boundaries")
+    if boundaries is None:
+        return
+    if not isinstance(boundaries, list):
+        errors.append("patterns.boundaries must be a list when present")
+        return
+
+    segments = patterns.get("segments")
+    segment_count = len(segments) if isinstance(segments, list) else 0
+    expected = max(0, segment_count - 1)
+    if len(boundaries) != expected:
+        errors.append(
+            f"patterns.boundaries must contain exactly {expected} entries for {segment_count} segments"
+        )
+
+    internal_starts = {
+        segment.get("start_bar")
+        for segment in segments[1:]
+        if isinstance(segment, dict)
+    } if isinstance(segments, list) and segment_count > 1 else set()
+
+    previous_bar: int | None = None
+    seen_bars: set[int] = set()
+    for position, boundary in enumerate(boundaries):
+        label = f"patterns.boundaries[{position}]"
+        if not isinstance(boundary, dict):
+            errors.append(f"{label} must be an object")
+            continue
+        bar = boundary.get("bar")
+        if not isinstance(bar, int) or isinstance(bar, bool) or bar < 2:
+            errors.append(f"{label}.bar must be an integer >= 2")
+        else:
+            if bar in seen_bars:
+                errors.append(f"{label}.bar {bar} is duplicated")
+            seen_bars.add(bar)
+            if previous_bar is not None and bar <= previous_bar:
+                errors.append(f"{label}.bar must be strictly increasing")
+            previous_bar = bar
+            if internal_starts and bar not in internal_starts:
+                errors.append(f"{label}.bar {bar} does not start any segment")
+        time = boundary.get("time")
+        if not _finite_number(time) or time < 0:
+            errors.append(f"{label}.time must be a non-negative finite number")
+        novelty = boundary.get("novelty")
+        if not _finite_number(novelty) or not 0.0 <= float(novelty) <= 1.0:
+            errors.append(f"{label}.novelty must be a finite number in [0, 1]")
+        drivers = boundary.get("drivers")
+        if drivers is not None:
+            if not isinstance(drivers, dict):
+                errors.append(f"{label}.drivers must be an object when present")
+            else:
+                for name, value in drivers.items():
+                    if not _finite_number(value):
+                        errors.append(f"{label}.drivers.{name} must be a finite number")
+
+
+def _validate_pattern_repetitions(patterns: dict[str, Any], errors: list[str]) -> None:
+    """Optional v0.7 ``patterns.repetitions`` (plan section 13)."""
+    repetitions = patterns.get("repetitions")
+    if repetitions is None:
+        return
+    if not isinstance(repetitions, list):
+        errors.append("patterns.repetitions must be a list when present")
+        return
+
+    segment_families: dict[str, Any] = {}
+    segments = patterns.get("segments")
+    if isinstance(segments, list):
+        for segment in segments:
+            if isinstance(segment, dict) and isinstance(segment.get("id"), str):
+                segment_families[segment["id"]] = segment.get("family")
+
+    claimed: set[str] = set()
+    for position, repetition in enumerate(repetitions):
+        label = f"patterns.repetitions[{position}]"
+        if not isinstance(repetition, dict):
+            errors.append(f"{label} must be an object")
+            continue
+        family = repetition.get("family")
+        if not isinstance(family, str) or not family:
+            errors.append(f"{label}.family must be a non-empty string")
+            family = None
+        segment_ids = repetition.get("segment_ids")
+        if not isinstance(segment_ids, list) or len(segment_ids) < 2:
+            errors.append(f"{label}.segment_ids must list at least two segments")
+            segment_ids = []
+        for seg_id in segment_ids:
+            if not isinstance(seg_id, str) or seg_id not in segment_families:
+                errors.append(f"{label} references unknown segment id {seg_id!r}")
+                continue
+            if family is not None and segment_families[seg_id] != family:
+                errors.append(
+                    f"{label} family '{family}' does not match segment '{seg_id}' "
+                    f"family '{segment_families[seg_id]}'"
+                )
+            if seg_id in claimed:
+                errors.append(f"{label} claims segment '{seg_id}' already used by another repetition")
+            claimed.add(seg_id)
+        mean_similarity = repetition.get("mean_similarity")
+        if mean_similarity is not None and not _finite_number(mean_similarity):
+            errors.append(f"{label}.mean_similarity must be a finite number or null")
 
 
 def validate_rhythm_v3(data: dict[str, Any]) -> list[str]:
@@ -379,6 +597,21 @@ def validate_rhythm_v4(data: dict[str, Any]) -> list[str]:
                 if not isinstance(item, dict) or not isinstance(item.get("bar"), int) or item["bar"] < 1:
                     errors.append(f"patterns.bars[{idx}] must declare a positive integer 'bar'")
                     break
+
+        # Optional v0.7 structure fields; each helper is a no-op when its key
+        # is absent so legacy projects stay valid.
+        duration_value: float | None = None
+        if isinstance(source, dict):
+            value = source.get("duration")
+            if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value)):
+                duration_value = float(value)
+        grid = data.get("grid")
+        grid_bars = grid.get("bars") if isinstance(grid, dict) else None
+        if not isinstance(grid_bars, int) or isinstance(grid_bars, bool):
+            grid_bars = None
+        _validate_pattern_segments(patterns, duration_value, grid_bars, errors)
+        _validate_pattern_boundaries(patterns, errors)
+        _validate_pattern_repetitions(patterns, errors)
 
     cues = data.get("cues")
     if not isinstance(cues, dict):

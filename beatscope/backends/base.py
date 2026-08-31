@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Protocol
 
+import numpy as np
+
 ProgressCallback = Callable[[str, float, str], None]
 CancelCallback = Callable[[], bool]
 
@@ -36,6 +38,11 @@ class AnalysisEvidence:
     # backend has no variable-tempo evidence (the pipeline then falls back to
     # a single global-tempo segment, plan section 16.2).
     tempo_segments: list[dict[str, Any]] = field(default_factory=list)
+    # Decoded mono waveform at ``sample_rate`` that the backend already holds;
+    # the pipeline reuses it for whole-song structure analysis instead of
+    # decoding a second time. None when the backend cannot supply it (the
+    # pipeline then keeps the legacy bar-group patterns).
+    audio: np.ndarray | None = None
     warnings: list[str] = field(default_factory=list)
     diagnostics: dict[str, Any] = field(default_factory=dict)
     provenance: dict[str, Any] = field(default_factory=dict)

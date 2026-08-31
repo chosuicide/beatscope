@@ -10,7 +10,7 @@
   },
   "analysis": {
     "backend": "lightweight",
-    "pipeline_version": "0.6.0",
+    "pipeline_version": "0.7.0",
     "warnings": [],
     "separation_used": false,
     "parameters": {
@@ -485,7 +485,7 @@
     }
   },
   "patterns": {
-    "method": "bar-rhythm-cosine-v1",
+    "method": "bar-multiview-ssm-v2",
     "bars": [
       {
         "bar": 1,
@@ -587,7 +587,50 @@
           0.0
         ]
       }
-    ]
+    ],
+    "segments": [
+      {
+        "start_bar": 1,
+        "end_bar": 4,
+        "start_time": 0.0058,
+        "end_time": 8.0,
+        "bar_count": 4,
+        "family": "A",
+        "variant": 0,
+        "descriptors": [
+          "opening",
+          "ending"
+        ],
+        "mean_energy": 0.0428,
+        "id": "segment-001",
+        "index": 0,
+        "display_label": "A"
+      }
+    ],
+    "boundaries": [],
+    "repetitions": [],
+    "diagnostics": {
+      "feature_version": "structure-features-v2",
+      "bars_analyzed": 4,
+      "views_used": [
+        "energy",
+        "harmony",
+        "rhythm",
+        "timbre"
+      ],
+      "boundary_kernel_bars": [
+        4,
+        8
+      ],
+      "minimum_segment_bars": 4,
+      "warnings": [],
+      "bars_folded": false,
+      "boundary_candidates": 0,
+      "segments_inferred": 1,
+      "families_used": [
+        "A"
+      ]
+    }
   },
   "cues": {
     "accent": [

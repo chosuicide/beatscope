@@ -42,9 +42,11 @@ def main() -> int:
         beat_file.write_text(beats_file_content(synth["fixed-120"]["truth"]["beats"]), encoding="utf-8")
 
         TRUTH_DIR.mkdir(parents=True, exist_ok=True)
+        # newline="\n" keeps the committed LF contract (explicit LF JSON);
+        # plain write_text would emit CRLF on Windows and fail the byte check.
         (TRUTH_DIR / "ground-truth.json").write_text(
             json.dumps({name: item["truth"] for name, item in synth.items()}, indent=2),
-            encoding="utf-8",
+            encoding="utf-8", newline="\n",
         )
 
         def run_web(audio_path: str, config: dict | None = None) -> dict:
@@ -85,7 +87,7 @@ def main() -> int:
             target = SNAPSHOT_DIR / f"{name}.json"
             target.write_text(
                 json.dumps(canonical_snapshot(project), indent=2, ensure_ascii=False) + "\n",
-                encoding="utf-8",
+                encoding="utf-8", newline="\n",
             )
             print(f"recorded {target.relative_to(Path(__file__).parent)}")
 

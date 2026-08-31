@@ -277,7 +277,8 @@ def structure_payload_for_project(
 
     Decodes the audio fresh and pulls beats/onsets/energy/duration/bars from
     the finished project, so the benchmark exercises exactly the facts the
-    pipeline publishes. Used until the pipeline emits structure itself.
+    pipeline publishes. The pipeline emits structure natively now; this stays
+    as the independent reference path for waveform-less projects.
     """
     beats = project.get("beats") or []
     downbeats = [b for b in beats if b.get("downbeat")]
@@ -302,8 +303,9 @@ def structure_payload_for_project(
 def analyze_with_structure(audio_path: str | Path) -> dict[str, Any]:
     """analyze_track plus the v0.7 structure payload injected into patterns.
 
-    Once build_rhythm_project emits segments natively (commit 4) the
-    injection becomes a no-op because the method already matches.
+    build_rhythm_project emits segments natively since commit 4, so the
+    injection is a no-op kept for projects analyzed without a waveform
+    (the legacy method still triggers a re-run on the serialized facts).
     """
     project = analyze_track(audio_path)
     patterns = project.get("patterns") or {}

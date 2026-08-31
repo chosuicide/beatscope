@@ -10,10 +10,11 @@
   },
   "analysis": {
     "backend": "lightweight",
-    "pipeline_version": "0.6.0",
+    "pipeline_version": "0.7.0",
     "warnings": [
       "Tempo estimation failed; fell back to 120 BPM",
-      "Insufficient rhythmic evidence; no tracked beats emitted"
+      "Insufficient rhythmic evidence; no tracked beats emitted",
+      "structure: multiview analysis unavailable; keeping legacy bar groups"
     ],
     "separation_used": false,
     "parameters": {

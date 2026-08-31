@@ -83,6 +83,7 @@ class BeatThisBackend:
             energy=compress_energy(novelty, sr, hop),
             tempo_score=float(tempo_score),
             tempo_segments=tempo_segments,
+            audio=y,
             warnings=warnings,
             diagnostics={
                 "tempo_method": "beat-marker-intervals",
