@@ -448,3 +448,625 @@ def test_require_valid_without_timeline(artifacts):
     recipe["families"]["B"]["composition"]["orbit"] = 2.0
     with pytest.raises(InvalidVisualRecipe):
         require_valid_visual_artifacts(rhythm, recipe, None)
+
+
+# --------------------------------------------------------------------------
+# Deterministic compiler (v0.8 plan section 6)
+# --------------------------------------------------------------------------
+
+import copy
+import hashlib
+from pathlib import Path
+
+import beatscope.visual_recipe as visual_recipe_module
+from beatscope.cli import main as cli_main
+from beatscope.project import RECIPE_FILENAME, TIMELINE_FILENAME, ProjectManager
+from beatscope.visual_recipe import (
+    COMPILER_VERSION,
+    canonical_visual_bytes,
+    compile_visual_artifacts,
+    compile_visual_recipe,
+    compile_visual_timeline,
+    stable_hash,
+    stable_unit,
+    visual_artifact_fingerprint,
+    _variant_delta,
+)
+from beatscope.visual_recipe_schema import (
+    COMPOSITION_KEYS,
+    MOTIF_BANK,
+    VARIANT_DELTA_MAX,
+    VARIANT_DELTA_MIN,
+    VARIANT_DISTANCE_MAX,
+    VARIANT_PRIMARY,
+    VARIANT_SECONDARY,
+    variant_distance,
+)
+
+BAR_SECONDS = 2.0
+BARS_PER_SEGMENT = 4
+
+
+def build_rhythm(
+    project_id: str = PROJECT_ID,
+    families: tuple[str, ...] = ("A", "B"),
+    variants: tuple[int, ...] | None = None,
+    beat_times: list[float] | None = None,
+    boundaries: list[dict] | None = None,
+    global_bpm: float = 120.0,
+) -> dict:
+    """Flexible valid v4 project: 4-bar segments of the given families."""
+    variants = list(variants) if variants is not None else [0] * len(families)
+    total_bars = len(families) * BARS_PER_SEGMENT
+    duration = total_bars * BAR_SECONDS
+    segments = []
+    for index, family in enumerate(families):
+        start_bar = index * BARS_PER_SEGMENT + 1
+        start_time = (start_bar - 1) * BAR_SECONDS
+        segments.append(
+            {
+                "id": f"segment-{index + 1:03d}",
+                "index": index,
+                "start_bar": start_bar,
+                "end_bar": start_bar + BARS_PER_SEGMENT - 1,
+                "start_time": start_time,
+                "end_time": start_time + BARS_PER_SEGMENT * BAR_SECONDS,
+                "bar_count": BARS_PER_SEGMENT,
+                "family": family,
+                "variant": variants[index],
+                "descriptors": ["opening"],
+                "mean_energy": 0.1,
+                "display_label": family if variants[index] == 0 else f"{family}\u2032",
+            }
+        )
+    if boundaries is None:
+        boundaries = [
+            {
+                "bar": (index + 1) * BARS_PER_SEGMENT + 1,
+                "time": (index + 1) * BARS_PER_SEGMENT * BAR_SECONDS,
+                "novelty": 0.5,
+                "drivers": {"harmony": 0.9, "rhythm": 0.2, "energy": 0.1, "timbre": 0.3},
+            }
+            for index in range(len(families) - 1)
+        ]
+    if beat_times is None:
+        beat_times = [i * 0.5 for i in range(int(duration / 0.5))]
+    # Bars follow the beat rank so arbitrary (off-grid) beat spacings keep
+    # beat_in_bar within 1..4; the transition compiler only reads times.
+    beats = []
+    for index, time in enumerate(beat_times):
+        beats.append(
+            {
+                "time": time,
+                "index": index,
+                "bar": index // 4 + 1,
+                "beat_in_bar": index % 4 + 1,
+                "downbeat": index % 4 == 0,
+            }
+        )
+    energy_samples = int(duration * 10)
+    rhythm = {
+        "schema_version": "4.0",
+        "project_id": project_id,
+        "source": {
+            "display_name": "unit.wav",
+            "duration": duration,
+            "sample_rate": 22050,
+            "channels": 1,
+            "sha256": "0" * 64,
+        },
+        "analysis": {
+            "backend": "lightweight",
+            "pipeline_version": "0.7.0",
+            "provenance": {"beats": {"method": "test"}, "onsets": {"method": "test"}},
+        },
+        "tempo": {
+            "global_bpm": global_bpm,
+            "segments": [{"start": 0.0, "end": duration, "bpm": global_bpm}],
+        },
+        "meter": {"numerator": 4, "denominator": 4},
+        "grid": {"origin": 0.0, "default_subdivision": 16, "bars": total_bars},
+        "beats": beats,
+        "onsets": [],
+        "energy": {
+            "fps": 10,
+            "bands": {
+                "all": [0.1] * energy_samples,
+                "low": [0.1] * energy_samples,
+                "mid": [0.1] * energy_samples,
+                "high": [0.1] * energy_samples,
+            },
+        },
+        "cues": {},
+        "exports": {},
+        "patterns": {
+            "method": "bar-multiview-ssm-v2",
+            "bars": [
+                {
+                    "bar": bar,
+                    "label": "section",
+                    "group": families[(bar - 1) // BARS_PER_SEGMENT],
+                    "mean_strength": 0.2,
+                    "similarity_previous": 0.5,
+                    "vector": [0.0] * 16,
+                }
+                for bar in range(1, total_bars + 1)
+            ],
+            "segments": segments,
+            "boundaries": boundaries,
+        },
+    }
+    from beatscope.schema import validate_rhythm_v4
+
+    errors = validate_rhythm_v4(rhythm)
+    assert not errors, errors
+    return rhythm
+
+
+def test_stable_hash_uses_sha256_not_python_hash():
+    assert stable_hash("abc") == int.from_bytes(hashlib.sha256(b"abc").digest()[:8], "big")
+    assert stable_hash("abc") == stable_hash("abc")
+    unit = stable_unit("abc")
+    assert 0.0 <= unit < 1.0
+    assert unit == stable_hash("abc") / ((1 << 64) - 1)
+
+
+def test_compile_recipe_family_order_is_first_occurrence():
+    recipe = compile_visual_recipe(build_rhythm(families=("B", "A", "B")))
+    assert list(recipe["families"]) == ["B", "A"]
+    assert recipe["diagnostics"]["family_count"] == 2
+
+
+def test_compile_recipe_is_deterministic_and_banked():
+    rhythm = build_rhythm()
+    first = compile_visual_recipe(rhythm)
+    second = compile_visual_recipe(copy.deepcopy(rhythm))
+    assert first == second
+    for entry in first["families"].values():
+        assert entry["motif"] in MOTIF_BANK
+        assert 0 <= entry["palette_slot"] <= 3
+    # The first family always receives its hash-selected motif: nothing is
+    # assigned before it, so the collision scan can never move it.
+    preferred = stable_hash(f"{PROJECT_ID}:A:motif-bank-1") % len(MOTIF_BANK)
+    assert first["families"]["A"]["motif"] == MOTIF_BANK[preferred]
+    assert first["families"]["A"]["motif"] != first["families"]["B"]["motif"]
+
+
+def test_motif_collision_prefers_unused_motifs():
+    def preferred(project_id: str, family: str) -> int:
+        return stable_hash(f"{project_id}:{family}:motif-bank-1") % len(MOTIF_BANK)
+
+    colliding_id = None
+    for index in range(100000):
+        candidate = f"{index:012x}"
+        if preferred(candidate, "A") == preferred(candidate, "B"):
+            colliding_id = candidate
+            break
+    assert colliding_id is not None
+
+    recipe = compile_visual_recipe(build_rhythm(project_id=colliding_id))
+    motifs = {family: entry["motif"] for family, entry in recipe["families"].items()}
+    assert motifs["A"] == MOTIF_BANK[preferred(colliding_id, "A")]
+    assert motifs["A"] != motifs["B"], "colliding families must split across the bank"
+
+
+def test_motif_reuse_after_bank_exhaustion_uses_fresh_slot():
+    recipe = compile_visual_recipe(build_rhythm(families=("A", "B", "C", "D", "E")))
+    entries = recipe["families"]
+    assert list(entries) == ["A", "B", "C", "D", "E"]
+    first_four = [entries[name]["motif"] for name in ("A", "B", "C", "D")]
+    assert sorted(first_four) == sorted(MOTIF_BANK), "four families must cover the bank"
+    fifth = entries["E"]
+    assert fifth["motif"] in first_four, "bank exhausted; the hash-selected motif is reused"
+    same_motif_slots = [
+        entry["palette_slot"] for entry in entries.values() if entry["motif"] == fifth["motif"]
+    ]
+    assert len(same_motif_slots) == len(set(same_motif_slots)), "reuse needs a different slot"
+    pairs = {(entry["motif"], entry["palette_slot"]) for entry in entries.values()}
+    assert len(pairs) == 5
+
+
+def test_break_family_receives_reserved_motif():
+    recipe = compile_visual_recipe(build_rhythm(families=("A", "BREAK", "A")))
+    assert recipe["families"]["BREAK"]["motif"] == "suspended-void"
+    others = {entry["motif"] for family, entry in recipe["families"].items() if family != "BREAK"}
+    assert "suspended-void" not in others
+
+
+def test_legacy_recipe_and_timeline_shape():
+    rhythm = build_rhythm(families=("A",))
+    rhythm["patterns"].pop("segments")
+    rhythm["patterns"].pop("boundaries")
+    recipe, timeline = compile_visual_artifacts(rhythm)
+    assert recipe["mode"] == "legacy"
+    assert recipe["diagnostics"]["warnings"], "legacy compilation must warn, not error"
+    legacy = recipe["families"]["LEGACY"]
+    assert legacy["motif"] == "compact-triad"
+    assert legacy["palette_slot"] == 0
+    assert legacy["composition"] == {key: 0.0 for key in COMPOSITION_KEYS}
+    assert timeline["mode"] == "legacy"
+    assert timeline["transitions"] == []
+    assert len(timeline["scenes"]) == 1
+    scene = timeline["scenes"][0]
+    assert scene["start_time"] == 0.0
+    assert scene["end_time"] == rhythm["source"]["duration"]
+    assert scene["segment_id"] is None
+    assert scene["label"] == "LEGACY"
+    assert scene["variant_delta"] == {key: 0.0 for key in COMPOSITION_KEYS}
+
+
+def test_malformed_segments_fail_loudly():
+    rhythm = build_rhythm()
+    rhythm["patterns"]["segments"] = ["not-a-segment"]
+    with pytest.raises(InvalidVisualRecipe, match="segment objects"):
+        compile_visual_artifacts(rhythm)
+
+    rhythm = build_rhythm()
+    rhythm["patterns"]["boundaries"] = []
+    with pytest.raises(InvalidVisualRecipe, match="no boundary for bar"):
+        compile_visual_artifacts(rhythm)
+
+
+def test_variant_deltas_obey_generation_rules():
+    rhythm = build_rhythm(families=("A", "A"), variants=(0, 1))
+    recipe, timeline = compile_visual_artifacts(rhythm)
+    base = recipe["families"]["A"]["composition"]
+    zero_scene, primed_scene = timeline["scenes"]
+    assert zero_scene["variant_delta"] == {key: 0.0 for key in COMPOSITION_KEYS}
+
+    delta = primed_scene["variant_delta"]
+    changed = [key for key in COMPOSITION_KEYS if delta[key] != 0.0]
+    assert len(changed) == 2
+    assert len([key for key in changed if key in VARIANT_PRIMARY]) == 1
+    assert len([key for key in changed if key in VARIANT_SECONDARY]) == 1
+    for key in changed:
+        assert VARIANT_DELTA_MIN <= abs(delta[key]) <= VARIANT_DELTA_MAX
+        assert 0.0 <= base[key] + delta[key] <= 1.0
+    assert variant_distance(delta) <= VARIANT_DISTANCE_MAX
+
+
+def test_variant_delta_is_pure_per_family_and_variant():
+    base = compile_visual_recipe(build_rhythm())["families"]["A"]["composition"]
+    first = _variant_delta(PROJECT_ID, "A", 1, base)
+    assert first == _variant_delta(PROJECT_ID, "A", 1, base)
+    second = _variant_delta(PROJECT_ID, "A", 2, base)
+    assert second != first
+    for delta in (first, second):
+        assert variant_distance(delta) <= VARIANT_DISTANCE_MAX
+
+
+def test_repeated_family_variant_receives_identical_delta():
+    rhythm = build_rhythm(families=("A", "A", "A"), variants=(0, 1, 1))
+    _, timeline = compile_visual_artifacts(rhythm)
+    deltas = [scene["variant_delta"] for scene in timeline["scenes"][1:]]
+    assert deltas[0] == deltas[1]
+
+
+def test_transition_durations_come_from_adjacent_real_beats():
+    # 0.5s beat spacing before the boundary at 8.0, 0.4s after it: the beat
+    # exactly on the boundary belongs to the "next" side.  localBeat is the
+    # median of the two adjacent intervals: median(0.5, 0.4) = 0.45.
+    before = [i * 0.5 for i in range(16)]
+    after = [8.0, 8.4] + [8.4 + i * 0.5 for i in range(1, 16)]
+    rhythm = build_rhythm(families=("A", "B"), beat_times=before + after)
+    _, timeline = compile_visual_artifacts(rhythm)
+    transition = timeline["transitions"][0]
+    assert transition["lead_seconds"] == pytest.approx(0.45)
+    assert transition["settle_seconds"] == pytest.approx(0.675)
+
+
+@pytest.mark.parametrize(
+    "spacing, expected_lead, expected_settle",
+    [
+        (2.0, 0.8, 0.9),  # long beats clamp to the token maxima
+        (0.2, 0.25, 0.35),  # short beats clamp to the range minima
+    ],
+)
+def test_transition_durations_clamp_to_contract(spacing, expected_lead, expected_settle):
+    beat_times = [i * spacing for i in range(64) if i * spacing < 16.0]
+    rhythm = build_rhythm(families=("A", "B"), beat_times=beat_times)
+    _, timeline = compile_visual_artifacts(rhythm)
+    transition = timeline["transitions"][0]
+    assert transition["lead_seconds"] == pytest.approx(expected_lead)
+    assert transition["settle_seconds"] == pytest.approx(expected_settle)
+
+
+def test_dense_boundaries_clamp_to_half_the_available_gap():
+    # Boundaries 0.35s apart: lead/settle clamp to half the gap.  Rhythm v4
+    # pins boundary times to segment starts, so such gaps cannot appear in a
+    # validated project; the clamp itself is pinned on the pure helper.  The
+    # clamped values fall below the artifact range floor, which full
+    # validation would reject.
+    from beatscope.visual_recipe import _transition_durations
+
+    rhythm = build_rhythm()  # 0.5s beats: localBeat 0.5, lead 0.5, settle 0.75
+    lead, settle = _transition_durations(rhythm, 8.35, 8.0, None, 16.0)
+    assert lead == pytest.approx(0.35 / 2)
+    assert settle == pytest.approx(0.75)
+
+
+def test_canonical_bytes_round_and_normalize():
+    data = canonical_visual_bytes({"a": 0.1 + 0.2, "b": [-0.0, 1, "é"], "c": {"d": 2.0}})
+    assert data.endswith(b"\n")
+    assert data.startswith(b'{\n  "a": 0.3,')
+    assert b"-0.0" not in data
+    assert "é".encode("utf-8") in data
+    reparsed = json.loads(data.decode("utf-8"))
+    assert canonical_visual_bytes(reparsed) == data, "canonical bytes are idempotent"
+    with pytest.raises(ValueError):
+        canonical_visual_bytes({"x": float("inf")})
+
+
+def test_compiled_artifacts_survive_canonical_round_trip():
+    rhythm = build_rhythm(families=("A", "A"), variants=(0, 1))
+    recipe, timeline = compile_visual_artifacts(rhythm)
+    assert json.loads(canonical_visual_bytes(recipe).decode("utf-8")) == recipe
+    assert json.loads(canonical_visual_bytes(timeline).decode("utf-8")) == timeline
+
+
+def test_fingerprint_covers_compiler_identity_and_rhythm():
+    rhythm = build_rhythm()
+    fingerprint = visual_artifact_fingerprint(rhythm)
+    assert fingerprint == visual_artifact_fingerprint(copy.deepcopy(rhythm))
+    changed = copy.deepcopy(rhythm)
+    changed["tempo"]["global_bpm"] = 140.0
+    assert visual_artifact_fingerprint(changed) != fingerprint
+
+    renamed = copy.deepcopy(rhythm)
+    renamed["project_id"] = "b2c3d4e5f6a1"
+    assert visual_artifact_fingerprint(renamed) != fingerprint
+
+    monkey = pytest.MonkeyPatch()
+    try:
+        monkey.setattr(visual_recipe_module, "COMPILER_VERSION", "visual-recipe-compiler-0")
+        assert visual_artifact_fingerprint(rhythm) != fingerprint
+    finally:
+        monkey.undo()
+
+
+def test_artifact_fingerprint_is_stored_in_the_recipe():
+    recipe, _ = compile_visual_artifacts(build_rhythm())
+    assert recipe["diagnostics"]["artifact_fingerprint"] == visual_artifact_fingerprint(
+        build_rhythm()
+    )
+
+
+# --------------------------------------------------------------------------
+# Project persistence (v0.8 plan section 8)
+# --------------------------------------------------------------------------
+
+@pytest.fixture()
+def manager(tmp_path):
+    return ProjectManager(cache_root=tmp_path / "cache")
+
+
+def _saved_rhythm(manager: ProjectManager, **kwargs) -> dict:
+    rhythm = build_rhythm(**kwargs)
+    manager.save_project(rhythm["project_id"], Path("unused.wav"), rhythm, {}, "cache-key")
+    return rhythm
+
+
+def _artifact_bytes(p_dir: Path) -> tuple[bytes, bytes]:
+    return (
+        (p_dir / RECIPE_FILENAME).read_bytes(),
+        (p_dir / TIMELINE_FILENAME).read_bytes(),
+    )
+
+
+def test_save_project_writes_visual_artifacts(manager):
+    rhythm = _saved_rhythm(manager)
+    p_dir = manager.get_project_dir(PROJECT_ID)
+    recipe_bytes, timeline_bytes = _artifact_bytes(p_dir)
+    recipe = json.loads(recipe_bytes.decode("utf-8"))
+    timeline = json.loads(timeline_bytes.decode("utf-8"))
+    require_valid_visual_artifacts(rhythm, recipe, timeline)
+    assert recipe["diagnostics"]["artifact_fingerprint"] == visual_artifact_fingerprint(rhythm)
+    assert timeline["duration"] == rhythm["source"]["duration"]
+
+
+def test_saved_artifacts_are_canonical_bytes(manager):
+    rhythm = _saved_rhythm(manager)
+    p_dir = manager.get_project_dir(PROJECT_ID)
+    recipe, timeline = compile_visual_artifacts(rhythm)
+    assert _artifact_bytes(p_dir) == (canonical_visual_bytes(recipe), canonical_visual_bytes(timeline))
+
+
+def test_ensure_visual_artifacts_is_lazy(manager):
+    rhythm = _saved_rhythm(manager)
+    p_dir = manager.get_project_dir(PROJECT_ID)
+    before = _artifact_bytes(p_dir)
+    result = manager.ensure_visual_artifacts(rhythm)
+    assert result["regenerated"] is False
+    assert _artifact_bytes(p_dir) == before
+
+
+def test_ensure_regenerates_on_fingerprint_mismatch(manager):
+    rhythm = _saved_rhythm(manager)
+    p_dir = manager.get_project_dir(PROJECT_ID)
+    recipe = json.loads((p_dir / RECIPE_FILENAME).read_text(encoding="utf-8"))
+    recipe["diagnostics"]["artifact_fingerprint"] = "0" * 64
+    (p_dir / RECIPE_FILENAME).write_text(json.dumps(recipe), encoding="utf-8")
+
+    result = manager.ensure_visual_artifacts(rhythm)
+    assert result["regenerated"] is True
+    stored = json.loads((p_dir / RECIPE_FILENAME).read_text(encoding="utf-8"))
+    assert stored["diagnostics"]["artifact_fingerprint"] == visual_artifact_fingerprint(rhythm)
+
+
+def test_ensure_regenerates_on_compiler_version_change(manager, monkeypatch):
+    rhythm = _saved_rhythm(manager)
+    monkeypatch.setattr(visual_recipe_module, "COMPILER_VERSION", "visual-recipe-compiler-0")
+    result = manager.ensure_visual_artifacts(rhythm)
+    assert result["regenerated"] is True
+
+
+def test_ensure_regenerates_when_rhythm_changes(manager):
+    rhythm = _saved_rhythm(manager)
+    updated = copy.deepcopy(rhythm)
+    updated["tempo"]["global_bpm"] = 140.0
+    result = manager.ensure_visual_artifacts(updated)
+    assert result["regenerated"] is True
+    assert result["recipe"]["source_rhythm_sha256"] == rhythm_source_sha256(updated)
+
+
+def test_failed_regeneration_keeps_existing_artifacts(manager, monkeypatch):
+    rhythm = _saved_rhythm(manager)
+    p_dir = manager.get_project_dir(PROJECT_ID)
+    before = _artifact_bytes(p_dir)
+
+    def broken_compile(_rhythm):
+        raise InvalidVisualRecipe("simulated compiler bug")
+
+    monkeypatch.setattr(visual_recipe_module, "compile_visual_artifacts", broken_compile)
+    with pytest.raises(InvalidVisualRecipe, match="simulated compiler bug"):
+        manager.ensure_visual_artifacts(rhythm, force=True)
+    assert _artifact_bytes(p_dir) == before, "valid artifacts must stay untouched"
+
+
+def test_interrupted_regeneration_recovers_on_next_load(manager, monkeypatch):
+    rhythm = _saved_rhythm(manager)
+    p_dir = manager.get_project_dir(PROJECT_ID)
+
+    import beatscope.project as project_module
+
+    calls = {"count": 0}
+
+    def crashing_replace(path, data):
+        calls["count"] += 1
+        if calls["count"] == 2:
+            raise OSError("simulated crash between files")
+        project_module._atomic_write_bytes(path, data)
+
+    monkeypatch.setattr(project_module, "_atomic_write_bytes", crashing_replace)
+    with pytest.raises(OSError, match="simulated crash"):
+        manager.ensure_visual_artifacts(rhythm, force=True)
+    monkeypatch.undo()
+
+    result = manager.ensure_visual_artifacts(rhythm, force=True)
+    assert result["regenerated"] is True
+    recipe, timeline = compile_visual_artifacts(rhythm)
+    assert _artifact_bytes(p_dir) == (canonical_visual_bytes(recipe), canonical_visual_bytes(timeline))
+
+
+def test_regeneration_never_touches_audio(manager):
+    rhythm = _saved_rhythm(manager)  # audio file 'unused.wav' never existed
+    p_dir = manager.get_project_dir(PROJECT_ID)
+    (p_dir / RECIPE_FILENAME).unlink()
+    (p_dir / TIMELINE_FILENAME).unlink()
+    assert manager.get_project_audio_path(PROJECT_ID) is None
+    result = manager.ensure_visual_artifacts(rhythm)
+    assert result["regenerated"] is True
+
+
+def test_structural_change_does_not_share_artifacts(manager):
+    first = _saved_rhythm(manager, global_bpm=120.0)
+    updated = copy.deepcopy(first)
+    updated["tempo"]["global_bpm"] = 140.0
+
+    result = manager.ensure_visual_artifacts(updated)
+    assert result["regenerated"] is True
+    assert result["recipe"]["source_rhythm_sha256"] == rhythm_source_sha256(updated)
+    back = manager.ensure_visual_artifacts(first, force=True)
+    assert back["recipe"]["source_rhythm_sha256"] == rhythm_source_sha256(first)
+
+
+def test_get_project_visual_artifacts_upgrades_v07_cache_lazily(manager):
+    _saved_rhythm(manager)
+    p_dir = manager.get_project_dir(PROJECT_ID)
+    (p_dir / RECIPE_FILENAME).unlink()
+    (p_dir / TIMELINE_FILENAME).unlink()
+
+    loaded = manager.get_project_visual_artifacts(PROJECT_ID)
+    assert loaded is not None
+    assert loaded["regenerated"] is True
+    require_valid_visual_artifacts(loaded["rhythm"], loaded["recipe"], loaded["timeline"])
+    assert manager.get_project_visual_artifacts(PROJECT_ID)["regenerated"] is False
+    assert manager.get_project_visual_artifacts("no-such-project") is None
+
+
+# --------------------------------------------------------------------------
+# visual-build CLI (v0.8 plan section 8)
+# --------------------------------------------------------------------------
+
+
+def test_visual_build_file_mode_writes_siblings(tmp_path):
+    source = tmp_path / "song.rhythm.json"
+    source.write_text(json.dumps(build_rhythm()), encoding="utf-8")
+    assert cli_main(["visual-build", str(source)]) == 0
+    assert (tmp_path / RECIPE_FILENAME).is_file()
+    assert (tmp_path / TIMELINE_FILENAME).is_file()
+
+
+def test_visual_build_file_mode_honors_output_dir(tmp_path):
+    source = tmp_path / "song.rhythm.json"
+    source.write_text(json.dumps(build_rhythm()), encoding="utf-8")
+    out_dir = tmp_path / "artifacts"
+    assert cli_main(["visual-build", str(source), "--output-dir", str(out_dir)]) == 0
+    assert (out_dir / RECIPE_FILENAME).is_file()
+    assert (out_dir / TIMELINE_FILENAME).is_file()
+    assert not (tmp_path / RECIPE_FILENAME).exists()
+
+
+def test_visual_build_project_mode_is_lazy_and_forceable(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    manager = ProjectManager()
+    _saved_rhythm(manager)
+    p_dir = manager.get_project_dir(PROJECT_ID)
+
+    # save_project already compiled the artifacts, so the first run is a
+    # fingerprint hit; deleting the recipe forces regeneration, --force
+    # always regenerates.
+    assert cli_main(["visual-build", PROJECT_ID]) == 0
+    assert "already current" in capsys.readouterr().out
+    (p_dir / RECIPE_FILENAME).unlink()
+    assert cli_main(["visual-build", PROJECT_ID]) == 0
+    assert "regenerated" in capsys.readouterr().out
+    assert cli_main(["visual-build", PROJECT_ID]) == 0
+    assert "already current" in capsys.readouterr().out
+    assert cli_main(["visual-build", PROJECT_ID, "--force"]) == 0
+    assert "regenerated" in capsys.readouterr().out
+
+
+def test_visual_build_project_mode_output_dir(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    manager = ProjectManager()
+    _saved_rhythm(manager)
+    out_dir = tmp_path / "standalone"
+    assert cli_main(["visual-build", PROJECT_ID, "--output-dir", str(out_dir)]) == 0
+    assert (out_dir / RECIPE_FILENAME).is_file()
+    # save_project already placed the canonical copies in the project dir.
+    assert (manager.get_project_dir(PROJECT_ID) / RECIPE_FILENAME).is_file()
+
+
+def test_visual_build_reports_legacy_mode(tmp_path, capsys):
+    source = tmp_path / "legacy.rhythm.json"
+    rhythm = build_rhythm(families=("A",))
+    rhythm["patterns"].pop("segments")
+    rhythm["patterns"].pop("boundaries")
+    source.write_text(json.dumps(rhythm), encoding="utf-8")
+    assert cli_main(["visual-build", str(source)]) == 0
+    captured = capsys.readouterr().out
+    assert "mode: legacy" in captured
+    assert "warning: no patterns.segments" in captured
+
+
+def test_visual_build_rejects_bad_input(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    missing = tmp_path / "missing.rhythm.json"
+    assert cli_main(["visual-build", str(missing)]) == 1
+
+    broken = tmp_path / "broken.json"
+    broken.write_text("{not json", encoding="utf-8")
+    assert cli_main(["visual-build", str(broken)]) == 1
+
+    invalid = tmp_path / "invalid.rhythm.json"
+    rhythm = build_rhythm()
+    rhythm["schema_version"] = "3.0"
+    invalid.write_text(json.dumps(rhythm), encoding="utf-8")
+    assert cli_main(["visual-build", str(invalid)]) == 1
+
+    # A 12-hex ID without a cached project fails cleanly; a path-looking
+    # argument never reaches the project cache.
+    assert cli_main(["visual-build", "0" * 12]) == 1
+    assert not (tmp_path / ".beatscope-cache" / "projects" / "missing.rhyt").exists()

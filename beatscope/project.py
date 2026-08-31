@@ -1,12 +1,56 @@
 """Project management, content hashing, configuration, and disk caching."""
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
+import os
+import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 from .schema import ANALYZER_VERSION, SCHEMA_VERSION, normalize_rhythm, validate_rhythm_v4
+from .visual_recipe_schema import validate_visual_recipe, validate_visual_timeline
+
+RECIPE_FILENAME = "visual-recipe.json"
+TIMELINE_FILENAME = "visual-timeline.json"
+
+# Bounded wait for the artifact regeneration lock.  Regeneration is
+# deterministic, so an expired wait degrades to harmless concurrent writes
+# of identical bytes rather than an error.
+_ARTIFACT_LOCK_ATTEMPTS = 100
+_ARTIFACT_LOCK_DELAY_SECONDS = 0.01
+
+
+def _atomic_write_bytes(path: Path, data: bytes) -> None:
+    """Write bytes through a sibling temporary file and ``os.replace``."""
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        tmp.write_bytes(data)
+        os.replace(tmp, path)
+    finally:
+        with contextlib.suppress(OSError):
+            tmp.unlink()
+
+
+def write_visual_artifacts(
+    directory: Path,
+    rhythm: dict[str, Any],
+    recipe: dict[str, Any],
+    timeline: dict[str, Any],
+) -> None:
+    """Validate and atomically persist visual artifacts (recipe first).
+
+    Nothing is written unless both artifacts validate, so present-but-invalid
+    artifacts can never replace existing valid ones (plan sections 7/8).
+    """
+    from .visual_recipe import canonical_visual_bytes, require_valid_visual_artifacts
+
+    require_valid_visual_artifacts(rhythm, recipe, timeline)
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    _atomic_write_bytes(directory / RECIPE_FILENAME, canonical_visual_bytes(recipe))
+    _atomic_write_bytes(directory / TIMELINE_FILENAME, canonical_visual_bytes(timeline))
 
 
 def content_hash(path: str | Path) -> str:
@@ -166,6 +210,11 @@ class ProjectManager:
         if not adj_file.is_file():
             adj_file.write_text(json.dumps({"bpm": None, "origin": None}, indent=2), encoding="utf-8")
 
+        # 5. visual artifacts (v0.8): compile from the already-validated
+        # rhythm.  Never re-runs audio analysis; fails loudly on compiler
+        # errors before any artifact file is touched.
+        self.ensure_visual_artifacts(rhythm_data)
+
         return p_dir
 
     def get_project_rhythm(self, project_id: str) -> dict[str, Any] | None:
@@ -189,6 +238,116 @@ class ProjectManager:
             except Exception:
                 pass
         return None
+
+    @contextlib.contextmanager
+    def _artifact_lock(self, p_dir: Path) -> Iterator[None]:
+        """Best-effort exclusive lock so concurrent readers regenerate once."""
+        lock_path = p_dir / ".visual-artifacts.lock"
+        acquired = False
+        for _ in range(_ARTIFACT_LOCK_ATTEMPTS):
+            try:
+                descriptor = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.close(descriptor)
+                acquired = True
+                break
+            except FileExistsError:
+                time.sleep(_ARTIFACT_LOCK_DELAY_SECONDS)
+        try:
+            yield
+        finally:
+            if acquired:
+                with contextlib.suppress(OSError):
+                    lock_path.unlink()
+
+    def _current_visual_artifacts(
+        self, p_dir: Path, rhythm_data: dict[str, Any]
+    ) -> tuple[dict[str, Any], dict[str, Any]] | None:
+        """Return the stored artifacts when they still match the rhythm.
+
+        Identity comes from the stored artifact fingerprint (project id,
+        canonical Rhythm digest, schema/version, motif bank, compiler) plus
+        a full re-validation against the rhythm.  File modification times
+        are never consulted.
+        """
+        from .visual_recipe import visual_artifact_fingerprint
+
+        recipe_file = p_dir / RECIPE_FILENAME
+        timeline_file = p_dir / TIMELINE_FILENAME
+        if not (recipe_file.is_file() and timeline_file.is_file()):
+            return None
+        try:
+            recipe = json.loads(recipe_file.read_text(encoding="utf-8"))
+            timeline = json.loads(timeline_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        if not isinstance(recipe, dict) or not isinstance(timeline, dict):
+            return None
+        diagnostics = recipe.get("diagnostics")
+        expected = visual_artifact_fingerprint(rhythm_data)
+        if not isinstance(diagnostics, dict) or diagnostics.get("artifact_fingerprint") != expected:
+            return None
+        if validate_visual_recipe(recipe) or validate_visual_timeline(timeline, rhythm_data, recipe):
+            return None
+        return recipe, timeline
+
+    def ensure_visual_artifacts(
+        self, rhythm_data: dict[str, Any], *, force: bool = False
+    ) -> dict[str, Any]:
+        """Compile and persist visual artifacts for a rhythm (plan section 8).
+
+        Regenerates only when artifacts are missing or their fingerprint/
+        version no longer matches, unless ``force`` is set.  Compilation and
+        validation happen in memory first; invalid artifacts never replace
+        existing ones.  Audio is never re-analyzed and ``project_id`` never
+        changes.
+        """
+        from .visual_recipe import compile_visual_artifacts
+
+        errors = validate_rhythm_v4(rhythm_data)
+        if errors:
+            raise ValueError(
+                "Cannot compile visual artifacts for an invalid Rhythm Project v4: "
+                + "; ".join(errors)
+            )
+
+        p_dir = self.get_project_dir(str(rhythm_data.get("project_id", ""))[:12])
+        if not force:
+            current = self._current_visual_artifacts(p_dir, rhythm_data)
+            if current is not None:
+                return {
+                    "recipe": current[0],
+                    "timeline": current[1],
+                    "regenerated": False,
+                    "project_dir": p_dir,
+                }
+        recipe, timeline = compile_visual_artifacts(rhythm_data)
+        with self._artifact_lock(p_dir):
+            write_visual_artifacts(p_dir, rhythm_data, recipe, timeline)
+        return {
+            "recipe": recipe,
+            "timeline": timeline,
+            "regenerated": True,
+            "project_dir": p_dir,
+        }
+
+    def get_project_visual_artifacts(
+        self, project_id: str, *, force: bool = False
+    ) -> dict[str, Any] | None:
+        """Load a project rhythm and its visual artifacts, regenerating lazily.
+
+        This is the project-load path that upgrades v0.7 caches on first
+        read (plan section 8).
+        """
+        rhythm = self.get_project_rhythm(project_id)
+        if rhythm is None:
+            return None
+        artifacts = self.ensure_visual_artifacts(rhythm, force=force)
+        return {
+            "rhythm": rhythm,
+            "recipe": artifacts["recipe"],
+            "timeline": artifacts["timeline"],
+            "regenerated": artifacts["regenerated"],
+        }
 
     def save_adjustments(self, project_id: str, adjustments: dict[str, Any]) -> None:
         p_dir = self.get_project_dir(project_id)
