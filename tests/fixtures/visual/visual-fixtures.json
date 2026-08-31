@@ -1,0 +1,84 @@
+{
+  "schema": "beatscope-visual-fixtures-1",
+  "generator_version": "visual-fixtures-v1",
+  "fixtures": {
+    "visual-aba": {
+      "project_id": "62bce8192088",
+      "rhythm_sha256": "d8118564062c9186adaa8a43393daa6f6e9cc0b77d6447318fe5e1128b6fb698",
+      "recipe_sha256": null,
+      "timeline_sha256": null
+    },
+    "visual-aba-prime": {
+      "project_id": "bbd86fdf75d0",
+      "rhythm_sha256": "81a7277e09dbe32e9224ba381ebc1cc83d50e8dbd5d5f0e9bb1f448e3bcf2435",
+      "recipe_sha256": null,
+      "timeline_sha256": null
+    },
+    "visual-rondo": {
+      "project_id": "bd96d0f995af",
+      "rhythm_sha256": "17fe6a8a73431b7998b960b49bbf1d998b8e44cba7681d5089e48176b6210c2a",
+      "recipe_sha256": null,
+      "timeline_sha256": null
+    },
+    "visual-break": {
+      "project_id": "b4d6437f14a0",
+      "rhythm_sha256": "5a5fbab786fa4236b1bb80e192b8e9d60003d27636371c19b6396180d8970a2b",
+      "recipe_sha256": null,
+      "timeline_sha256": null
+    },
+    "visual-driver-harmony": {
+      "project_id": "a8d8e5a75065",
+      "rhythm_sha256": "9e06c6ddb760c1380be16f12eef55fa03118e2744ea5eed353f13c00fccc5311",
+      "recipe_sha256": null,
+      "timeline_sha256": null
+    },
+    "visual-driver-rhythm": {
+      "project_id": "82f8b000d64e",
+      "rhythm_sha256": "730e5211137e4d9dfd2d9c9a74d68507a2db84f3a9b39c3385bb96368e998679",
+      "recipe_sha256": null,
+      "timeline_sha256": null
+    },
+    "visual-driver-energy": {
+      "project_id": "4a4d69d3c6b1",
+      "rhythm_sha256": "ebeb6e05102a48f1b0ae9de67aa23a87f868b98f89f5365ca51eb17f6e547333",
+      "recipe_sha256": null,
+      "timeline_sha256": null
+    },
+    "visual-driver-timbre": {
+      "project_id": "44fffae5619d",
+      "rhythm_sha256": "b0f067bd6453b1065bdbcc0849848b1403ffa5523eb15bf0cadc52edd6287b25",
+      "recipe_sha256": null,
+      "timeline_sha256": null
+    },
+    "visual-neutral-boundary": {
+      "project_id": "288413677ccf",
+      "rhythm_sha256": "dcd8c13a62247a95e24a9faef43fa0fbb8c70bc18e3407d6a92446baeec16e53",
+      "recipe_sha256": null,
+      "timeline_sha256": null
+    },
+    "visual-dense": {
+      "project_id": "d50619ebe534",
+      "rhythm_sha256": "66e651d13de3bec45d22861aafd21352c89a8e28a1148faa15e18e5e1017cd35",
+      "recipe_sha256": null,
+      "timeline_sha256": null
+    },
+    "visual-variable-tempo": {
+      "project_id": "bb36afda63a1",
+      "rhythm_sha256": "d3fc15b1142e7f2141ebf3a7db852d825fcdb381221fb3a96c28b7bbfc82f4a6",
+      "recipe_sha256": null,
+      "timeline_sha256": null
+    },
+    "visual-legacy": {
+      "project_id": "1680f0b8a936",
+      "rhythm_sha256": "4e365e14713db1931a8d3adb16610266c50a69931ef59433961aec6728a62746",
+      "recipe_sha256": null,
+      "timeline_sha256": null
+    },
+    "visual-short": {
+      "project_id": "6dce000eab4f",
+      "rhythm_sha256": "e0996563ee90045ce5d6e2a76453c5990ac7be6634e4a5d3e8862fea2c85decb",
+      "recipe_sha256": null,
+      "timeline_sha256": null
+    }
+  }
+}

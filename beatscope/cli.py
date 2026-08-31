@@ -194,6 +194,14 @@ def main(argv: list[str] | None = None) -> int:
     bench_struct.add_argument("--output-dir", type=Path, default=Path("build") / "structure-benchmark")
     bench_struct.add_argument("--fixtures-dir", type=Path, help="reuse a fixture directory instead of generating one")
 
+    # benchmark-visual (v0.8): scene orchestration acceptance gates
+    bench_visual = sub.add_parser(
+        "benchmark-visual",
+        help="run the visual orchestration benchmark against frozen scene fixtures",
+    )
+    bench_visual.add_argument("--output-dir", type=Path, default=Path("build") / "visual-benchmark")
+    bench_visual.add_argument("--fixtures-dir", type=Path, help="reuse a visual fixture directory instead of the frozen one")
+
     # doctor
     sub.add_parser("doctor", help="check system dependencies and configuration")
 
@@ -271,6 +279,18 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Structure benchmark written to {results['output_dir']}")
         failed = results["gates"]["failed"]
         print(f"Gates failed: {', '.join(failed) if failed else 'none'}")
+        return 1 if failed else 0
+
+    if args.command == "benchmark-visual":
+        from .visual_benchmark import run_visual_benchmark
+
+        results = run_visual_benchmark(args.output_dir, args.fixtures_dir)
+        print(f"Visual benchmark written to {results['output_dir']}")
+        failed = results["gates"]["failed"]
+        pending = results["gates"].get("pending") or []
+        print(f"Gates failed: {', '.join(failed) if failed else 'none'}")
+        if pending:
+            print(f"Gates pending for later v0.8 commits: {', '.join(pending)}")
         return 1 if failed else 0
 
     if args.command == "export":
