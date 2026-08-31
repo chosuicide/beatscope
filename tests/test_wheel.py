@@ -1,4 +1,4 @@
-"""The built wheel must carry the v0.7.0 visual instrument modules.
+"""The built wheel must carry the v0.8.0 visual instrument modules.
 
 The app is zero-build in the browser, but the wheel packages ``beatscope/web``
 as package data; a packaging regression that silently drops the new modules

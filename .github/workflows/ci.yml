@@ -40,7 +40,7 @@ jobs:
         run: python -m pytest tests/mcp -q
 
       - name: JavaScript tests
-        run: node --test tests/test_grid.js tests/test_interaction.js tests/test_runtime.js tests/test_visual_profile.js tests/test_playback_characterization.js tests/test_visual_stage.js tests/test_particle_geometry.js tests/test_particle_uniforms.js
+        run: node --test tests/test_grid.js tests/test_interaction.js tests/test_runtime.js tests/test_scene_director.js tests/test_visual_profile.js tests/test_playback_characterization.js tests/test_visual_stage.js tests/test_particle_geometry.js tests/test_particle_uniforms.js
 
       - name: Benchmark gates
         run: python -m beatscope.cli benchmark --output-dir build/benchmark-ci

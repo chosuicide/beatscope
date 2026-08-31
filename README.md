@@ -4,7 +4,7 @@ English | [简体中文](README.zh-CN.md)
 
 A local personal project that turns a song's rhythm into a playable visual reference and a reusable timing package for coding agents.
 
-BeatScope lets you upload a track, play it in the browser, and watch a flowing particle instrument, delayed orbit belts, frequency traces, and a whole-song structure view respond to LOW, MID, HIGH, transients, and section changes. The same analysis is arranged into an eight-bar cue map and exported as a Codex package with its own <code>SKILL.md</code>, so the next visual project does not have to guess the timing of the same song again.
+BeatScope lets you upload a track, play it in the browser, and watch a flowing particle instrument, delayed orbit belts, frequency traces, and a whole-song structure view respond to LOW, MID, HIGH, transients, and section changes. The same analysis is arranged into an eight-bar cue map and exported as a Codex package with its own <code>SKILL.md</code>, so the next visual project does not have to guess the timing of the same song again. Since v0.8 the structure itself is compiled into a deterministic visual recipe — per-family motifs, palette slots, and composition tokens — plus a scene timeline, so one scene director drives the player, the MCP surface, and the export package from the same files.
 
 [![BeatScope animated preview; click to play with sound](docs/demo/beatscope-preview.gif)](docs/demo/beatscope-demo.mp4)
 
@@ -80,6 +80,10 @@ The player's central body is an organic three-lobed particle field drawn beneath
 
 Every phase comes from the tempo-aware motion director and the playback clock alone: the same instant of a song always produces the same frame. Particle seeds may change a streamer's reach or grain size, but never its timing. Fixed-time captures of the other states — rest, recoil, dense passage, a variable-tempo boundary, and reduced motion — live in <code>docs/screenshots/</code>.
 
+### Structural scenes: composition that follows the song
+
+v0.8 turns the structural view into two deterministic artifacts. <code>visual-recipe.json</code> gives every repeat family a stable identity — motif, palette slot, composition base — plus shared tokens for transition timing and motion limits; <code>visual-timeline.json</code> instantiates those identities on the real song as scenes and boundary transitions timed from real beat intervals. The shared <code>runtime/scene-director.js</code> turns both into one seek-safe state function: every boundary moves through approach, cross, and settle envelopes, family identity carries the composition across the change, and only the boundary impulse may be discontinuous. A variant (<code>A′</code>) keeps its family's identity with two bounded secondary changes, and <code>BREAK</code> uses a reserved neutral suspended treatment. The player exposes this through a Follow structure toggle (hidden until artifacts exist) and an accessible scene summary; beats stay locally reactive inside every scene.
+
 ## How music changes the scene
 
 The player does not treat every strong beat as the same event. It compares transient strength and local density inside the current song, then spends a limited visual budget.
@@ -115,11 +119,11 @@ v0.6 tracks beats and tempo on the real timeline: beats come from novelty-guided
 
 1. **Facts**: what the audio directly supports — beat times, transients (with band energy and strength), and multiband energy frames. No guessing happens here.
 2. **Semantics**: derived from facts — global BPM and tempo segments, the bar grid, quantised positions, the section overview, the whole-song structural segments and boundaries, and accent cues. Every field can be traced to its source (<code>analysis.provenance</code>) and its computation (<code>analysis.diagnostics</code>).
-3. **Presentation**: maps semantics onto a visual budget — the pulse, turbulence, burst, and hero tiers are allocated by <code>runtime/visual-profile.js</code>, and the player is just one of its consumers.
+3. **Presentation**: maps semantics onto a visual budget — the pulse, turbulence, burst, and hero tiers are allocated by <code>runtime/visual-profile.js</code>, and the player is just one of its consumers. Since v0.8 the compiled visual recipe and timeline live beside the project as separate artifacts; the rhythm IR itself stays schema v4 with no presentation data inside.
 
 Project data is written as schema v4 (<code>schema_version: "4.0"</code>) and validated; v3 projects are migrated on load, and the structure block lives in optional <code>patterns.segments</code> fields, so consumers written before v0.7 keep working unchanged. Core output contains no kick, snare, hihat, or 808 identity, and strength is never renamed into confidence — the page shows the backend, pipeline version, and interpretable diagnostics (provenance methods, migration notes, pregrid merge counts, warning counts).
 
-The shared JavaScript runtime <code>beatscope/runtime/runtime.js</code> is dependency-free ESM with no DOM, Audio, Canvas, or wall-clock access; <code>track.at(time)</code> always returns the same result for the same input, and bar/beat phase in variable-tempo material is derived from adjacent real beats and downbeat spans instead of assuming a global BPM. Meter phase itself remains heuristic continuous numbering from the first tracked beat (provenance marks it as inferred), not a dedicated downbeat model. Since v0.7 <code>track.at(time)</code> also carries a <code>structure</code> block — the active segment, its phase, and the seconds to the next boundary — plus <code>structureLead</code> and <code>boundaryImpulse</code> signals, all pure functions of time. The web player, the page diagnostics, and the Codex export are all built on it.
+The shared JavaScript runtime <code>beatscope/runtime/runtime.js</code> is dependency-free ESM with no DOM, Audio, Canvas, or wall-clock access; <code>track.at(time)</code> always returns the same result for the same input, and bar/beat phase in variable-tempo material is derived from adjacent real beats and downbeat spans instead of assuming a global BPM. Meter phase itself remains heuristic continuous numbering from the first tracked beat (provenance marks it as inferred), not a dedicated downbeat model. Since v0.7 <code>track.at(time)</code> also carries a <code>structure</code> block — the active segment, its phase, and the seconds to the next boundary — plus <code>structureLead</code> and <code>boundaryImpulse</code> signals, all pure functions of time. Since v0.8 <code>runtime/scene-director.js</code> sits beside it as the scene counterpart under the same purity contract: scene identity and transition envelopes are pure functions of playback time. The web player, the page diagnostics, and the Codex export are all built on them.
 
 ## Measured accuracy
 
@@ -143,6 +147,8 @@ Hard gates (commit-blocking): a valid schema, fixed-BPM error ≤ 5 BPM, beat F1
 
 Structure accuracy has its own harness: ten synthetic arrangements (A-B-A, an A-B-A-C-B form with a variant, energy/harmony/rhythm-only changes, a two-bar break, monotony, a sub-four-bar track, a tempo-change repeat, and gradual drift) are gated against frozen truth for boundary precision/recall/F1, repeat-family accuracy, and over/under-segmentation — with the same no-confidence, neutral-letter contract. Run it with <code>beatscope benchmark-structure</code>; the v0.7 acceptance run is written to <code>build/benchmark-v07/</code>.
 
+Visual orchestration is the third harness: <code>beatscope benchmark-visual</code> compiles thirteen frozen scene fixtures and drives them through the real runtime (scene director, motion director, particle geometry, and an inline WebGL2 stub for draw-call counting) via one generated Node process. It enforces 28 blocking gates covering determinism (recipe and timeline bytes, query order, seek, cross-surface parity against the MCP bridge, dense-onset stability), identity (family motif and palette equality, variant stability, the BREAK reservation), timeline coverage and transition timing, motion continuity (composition continuous across boundaries, impulse-only jumps, reduced-motion scaling, the combined spread cap, settle exactness), and performance budgets (scene query p95 under 0.10 ms, director query p95 under 0.35 ms, exactly one draw call per render, an allocation smoke test). A gate whose probe is unavailable — for example when Node is not installed — is reported as <code>unavailable</code>, never silently passed, and 117 golden checkpoint frames are verified on every run.
+
 ## The Codex package
 
 ~~~text
@@ -152,11 +158,16 @@ beatscope-codex.zip
 ├── rhythm-map.json
 ├── visual-state.js
 ├── beatscope-runtime.js
+├── scene-director.js
+├── visual-recipe.json
+├── visual-timeline.json
+├── visual-recipe-data.js
+├── visual-timeline-data.js
 ├── BEATSCOPE.md
 └── README.md
 ~~~
 
-<code>visual-state.js</code> does one thing: <code>getVisualState(time)</code> is the shared runtime's <code>track.at(time)</code>. The browser player and the export package use the same <code>beatscope-runtime.js</code>, so the state an agent consumes is produced by the same implementation the player shows. An agent can read beat phase, band energy, transient impulses, and sections without analysing the audio again, and the scene recovers from pause, seek, or replay using the same playback time.
+<code>visual-state.js</code> keeps <code>getVisualState(time)</code> — the shared runtime's <code>track.at(time)</code> — and, when the package carries compiled visual artifacts, adds <code>getSceneState(time)</code> and a one-call <code>getBeatScopeFrame(time)</code> returning <code>{ timing, scene }</code>. The browser player and the export package use the same <code>beatscope-runtime.js</code> and <code>scene-director.js</code>, so the state an agent consumes is produced by the same implementation the player shows. An agent can read beat phase, band energy, transient impulses, sections, and the compiled scene without analysing the audio again, and the scene recovers from pause, seek, or replay using the same playback time.
 
 MIDI, CSV, PNG, and raw JSON remain under **Advanced tools**. MIDI is a quantised timing reference, not a reconstructed drum performance.
 
@@ -166,6 +177,8 @@ MIDI, CSV, PNG, and raw JSON remain under **Advanced tools**. MIDI is a quantise
 - One analysis pipeline: beat grid, transients, multiband energy, and whole-song structural segments with repeat families
 - Schema v4 validation, v3 project migration, and provenance/diagnostics metadata
 - A shared JavaScript runtime: web and export query time through one implementation
+- A visual recipe compiler (<code>beatscope visual-build</code>): structure becomes family identities, palette slots, and a scene timeline stored beside the project
+- A shared scene director (<code>runtime/scene-director.js</code>): structural scenes and boundary envelopes as pure functions of playback time
 - A deterministic WebGL2 particle instrument with coherent lobe motion, flow-guided streamers, delayed orbit belts, adaptive quality tiers, and a Canvas 2D fallback
 - Canvas 2D frequency traces, light field, and spectrum deck
 - Motion tiers derived from within-song distribution and rhythmic density
@@ -173,6 +186,7 @@ MIDI, CSV, PNG, and raw JSON remain under **Advanced tools**. MIDI is a quantise
 - Whole-song structure navigation with segment jumps and 1/16 or 1/32 cue maps
 - The page shows the analysis backend and interpretable diagnostics, never a fake confidence
 - A benchmark with accuracy gates that generates the accuracy report
+- A visual orchestration benchmark with 28 blocking quality and performance gates (<code>beatscope benchmark-visual</code>)
 - Codex ZIP, Skill, JSON, CSV, PNG, and reference MIDI exports
 - Request-scoped temporary files, a 250 MB upload cap, and local project cache
 - Python, plain JavaScript, and GitHub Actions regression checks
@@ -202,12 +216,16 @@ beatscope/
 ├── pipeline.py             # one analysis pipeline, assembles schema v4 projects
 ├── schema.py               # v4 validator and v3 migration
 ├── benchmark.py            # synthetic ground-truth benchmark with accuracy gates
+├── visual_recipe.py        # v0.8 structure → visual recipe/timeline compiler
+├── visual_recipe_schema.py # v0.8 visual artifact validators and canonical bytes
+├── visual_benchmark.py     # v0.8 visual orchestration benchmark and gates
 ├── exports.py              # Codex, CSV, PNG, and MIDI exports
 ├── server.py               # local upload, project, and media service
 ├── mcp/                    # MCP server (service, PathPolicy, runtime bridge)
 │   └── runtime_worker.mjs  #   Node worker: shared-runtime time queries
 ├── runtime/                # shared JavaScript runtime (web and export share it)
 │   ├── runtime.js          #   track.at / quantize and other time queries
+│   ├── scene-director.js   #   v0.8 structural scene and transition state
 │   └── visual-profile.js   #   pulse/turbulence/burst/hero visual budget
 ├── agent_skill/            # portable Skill included in each ZIP
 └── web/
@@ -243,8 +261,10 @@ Useful commands:
 ~~~powershell
 beatscope serve
 beatscope rhythm song.wav --drums drums.wav --beat-this song.beats --output rhythm.json
+beatscope visual-build rhythm.json
 beatscope separate song.wav --output-dir .beatscope-cache\song\stems --model htdemucs --device cuda
 beatscope benchmark
+beatscope benchmark-visual
 beatscope doctor
 ~~~
 
@@ -273,9 +293,11 @@ data is ever sent over the network.
 | `beatscope_list_projects` | List cached projects (BPM, bars, backend, provenance) |
 | `beatscope_get_project` | Read a project as summary / timing / full JSON |
 | `beatscope_analyze_audio` | Analyze and cache audio; progress and cancellation, multi-config coexistence |
-| `beatscope_get_visual_state` | Full visual state at one instant, identical to the web player |
-| `beatscope_get_events` | beats / onsets / cues / patterns / segments / boundaries in a (start, end] window |
+| `beatscope_get_visual_state` | Full visual state at one instant, identical to the web player; with compiled artifacts the response adds the `visual` block (scene, transition, composition) |
+| `beatscope_get_events` | beats / onsets / cues / patterns / segments / boundaries / scenes in a (start, end] window |
 | `beatscope_export_package` | Export the portable agent ZIP (atomic write, SKILL and schema included) |
+
+Compiled visual artifacts live beside the project (<code>visual-recipe.json</code>, <code>visual-timeline.json</code>), the local web API serves them under the same names, and <code>beatscope_get_project</code> reports which artifacts exist.
 
 Security model: every input and output path must live inside the
 `BEATSCOPE_ALLOWED_ROOTS` allowlist (default: the current directory);
@@ -333,12 +355,13 @@ When <code>--device cuda</code> is selected, BeatScope does not silently fall ba
 ~~~powershell
 pytest -q
 python -m pytest tests\mcp -q
-node --test tests\test_grid.js tests\test_interaction.js tests\test_runtime.js tests\test_visual_profile.js tests\test_playback_characterization.js tests\test_visual_stage.js tests\test_particle_geometry.js tests\test_particle_uniforms.js
+node --test tests\test_grid.js tests\test_interaction.js tests\test_runtime.js tests\test_scene_director.js tests\test_visual_profile.js tests\test_playback_characterization.js tests\test_visual_stage.js tests\test_particle_geometry.js tests\test_particle_uniforms.js
 beatscope benchmark
 beatscope benchmark-structure
+beatscope benchmark-visual
 ~~~
 
-On the JavaScript side the grid and interaction tests cover page behaviour; the runtime and visual profile tests cover the shared runtime contract and purity constraints; the characterisation test compares the web player and the Codex export paths at the same instants; the visual-stage, particle-geometry, and particle-uniform tests pin the deterministic director frames, point-set determinism, and uniform conversion, including the adaptive quality tiers and the forced-fallback paths. The Python suite additionally asserts that the built wheel ships the particle modules. The structure tests pin bar-synchronous feature extraction, boundary and family invariants, the optional schema block, runtime segment queries, and MCP/export parity; the structure benchmark gates the ten synthetic arrangements against frozen truth. The MCP tests cover the tool contract, path safety, runtime parity, and export. GitHub Actions runs the core checks on Windows and Ubuntu with Python 3.10 and 3.12.
+On the JavaScript side the grid and interaction tests cover page behaviour; the runtime, scene-director, and visual profile tests cover the shared runtime contract and purity constraints; the characterisation test compares the web player and the Codex export paths at the same instants; the visual-stage, particle-geometry, and particle-uniform tests pin the deterministic director frames, point-set determinism, and uniform conversion, including the adaptive quality tiers and the forced-fallback paths. The Python suite additionally asserts that the built wheel ships the particle modules. The structure tests pin bar-synchronous feature extraction, boundary and family invariants, the optional schema block, runtime segment queries, and MCP/export parity; the structure benchmark gates the ten synthetic arrangements against frozen truth. The visual recipe tests pin compilation, identity, and persistence rules, and the visual benchmark tests pin the gate policy, the motion semantics behind each gate, and byte-identical checkpoint regeneration. The MCP tests cover the tool contract, path safety, runtime parity, and export. GitHub Actions runs the core checks on Windows and Ubuntu with Python 3.10 and 3.12.
 
 ## Known limits
 
@@ -346,12 +369,13 @@ On the JavaScript side the grid and interaction tests cover page behaviour; the 
 - The WebGL2 particle instrument renders up to 18,000 body points plus three orbit belts; where WebGL2 is unavailable the Canvas 2D fallback keeps a deliberately small fixed body budget (at most 680 points), so very high-resolution recording still favours a WebGL2-capable browser.
 - Automatic section labels describe energy and repetition, not human arrangement notation. Structural families stay neutral letters (<code>A</code>, <code>B</code>, <code>A′</code>): they mark recurrence, not musical roles, and <code>BREAK</code> marks a near-silent exception.
 - Whole-song structure detection favours honesty over slicing: gradual evolutions, very short tracks, and unclear repeats can legitimately yield a single segment, and boundaries carry a novelty weight rather than a certainty claim.
+- Compiled visual recipes describe structure, not art direction: family motifs and palette slots are neutral, deterministic starting points, a variant stays inside two bounded secondary changes, and <code>BREAK</code> keeps its reserved suspended treatment — the recipe never turns recurrence into a musical role.
 - MP3 support depends on local libsndfile or FFmpeg.
 - BeatScope is a local creative reference, not a DAW, FLP generator, or exact drum transcription tool.
 
 ## Project status
 
-BeatScope now covers the complete local path from audio upload and playable visualisation to whole-song structure, an eight-bar cue map, and a Codex Skill export. v0.6.0 added real-timeline variable-tempo tracking and preserved tempo segments through runtime, MIDI, MCP, and Codex export. v0.6.1 rebuilt the player around a deterministic WebGL2 particle instrument with coherent body motion, flow-guided streamers, delayed orbit belts, adaptive budgets, and a safe fallback. v0.7.0 added deterministic whole-song structure analysis — bar-synchronous multi-view features, novelty-guided boundaries, and repeat families with variants — exposed natively in the rhythm IR, the runtime, MCP, the Codex export, and the player navigator; the package and the analysis pipeline are both versioned 0.7.0. BeatScope is still a personal experiment in progress; the next priority is keeping this visual language stable across more songs, devices, and recording conditions.
+BeatScope now covers the complete local path from audio upload and playable visualisation to whole-song structure, an eight-bar cue map, and a Codex Skill export. v0.6.0 added real-timeline variable-tempo tracking and preserved tempo segments through runtime, MIDI, MCP, and Codex export. v0.6.1 rebuilt the player around a deterministic WebGL2 particle instrument with coherent body motion, flow-guided streamers, delayed orbit belts, adaptive budgets, and a safe fallback. v0.7.0 added deterministic whole-song structure analysis — bar-synchronous multi-view features, novelty-guided boundaries, and repeat families with variants — exposed natively in the rhythm IR, the runtime, MCP, the Codex export, and the player navigator. v0.8.0 turned that structure into a deterministic visual language: a compiler turns rhythm projects into visual recipes and scene timelines, one shared scene director drives the player, MCP, and the export package from the same artifacts, and a 28-gate visual benchmark keeps determinism, identity, motion continuity, and performance honest. The package is versioned 0.8.0 while the audio analyser intentionally stays at 0.7.0. BeatScope is still a personal experiment in progress; the next priority is keeping this visual language stable across more songs, devices, and recording conditions.
 
 ## License
 
