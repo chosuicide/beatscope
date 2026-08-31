@@ -983,6 +983,43 @@ export function renderOverlay(canvas, state) {
   }
 }
 
+// v0.7 whole-song structure helpers (plan 15): pure functions of the project
+// JSON so the overview strip, the keyboard jumps, and the readout agree on
+// the same segment facts.
+export function structuralSegments(project) {
+  const segments = project?.patterns?.segments;
+  return Array.isArray(segments) && segments.length ? segments : null;
+}
+
+export function structuralSegmentAt(project, time) {
+  const segments = structuralSegments(project);
+  if (!segments) return null;
+  let active = null;
+  for (const segment of segments) {
+    if (time >= (Number(segment.start_time) || 0)) active = segment;
+    else break;
+  }
+  return active;
+}
+
+export function structureSummary(project) {
+  const segments = structuralSegments(project);
+  if (!segments) return null;
+  const named = (segment) => {
+    const family = segment.family || '?';
+    if (family === 'BREAK') return 'break';
+    const primed = (Number(segment.variant) || 0) > 0
+      || (segment.display_label && segment.display_label !== family);
+    return primed ? `${family}-prime` : family;
+  };
+  const span = (segment) => {
+    const start = Number(segment.start_bar) || 0;
+    const end = Number(segment.end_bar) || start;
+    return end > start ? `bars ${start} to ${end}` : `bar ${start}`;
+  };
+  return `Song structure: ${segments.map((segment) => `${named(segment)} ${span(segment)}`).join(', ')}`;
+}
+
 export function renderOverview(canvas, state) {
   const width = canvas.clientWidth || 1200;
   const height = canvas.clientHeight || 192;
@@ -1003,28 +1040,59 @@ export function renderOverview(canvas, state) {
   const structureHeight = 28;
 
   // Song sections are treated as navigation chapters, never as a confidence score.
-  let lastGroup = null;
-  let groupStart = 0;
-  const groupPalette = ['#171713', '#77756c', '#c65032', '#a9a69b'];
-  let groupIndex = -1;
-  for (let index = 0; index <= overview.length; index += 1) {
-    const group = index < overview.length ? (overview[index]?.group || overview[index]?.label || '—') : null;
-    if (group !== lastGroup) {
-      if (lastGroup !== null) {
-        const segmentX = left + groupStart * barWidth;
-        const segmentWidth = Math.max(1, (index - groupStart) * barWidth);
-        ctx.fillStyle = groupPalette[Math.abs(groupIndex) % groupPalette.length];
-        ctx.globalAlpha = lastGroup === (overview[Math.max(0, Math.floor(clamp(state.playbackTime / duration) * bars))]?.group || overview[Math.max(0, Math.floor(clamp(state.playbackTime / duration) * bars))]?.label) ? .92 : .68;
-        ctx.fillRect(segmentX, structureTop, segmentWidth, structureHeight);
-        ctx.globalAlpha = 1;
-        if (segmentWidth > 34) {
-          text(ctx, lastGroup, segmentX + 6, structureTop + 12, { color: SURFACE, font: '700 8px monospace' });
-          text(ctx, `${String(groupStart + 1).padStart(2, '0')}—${String(index).padStart(2, '0')}`, segmentX + 6, structureTop + 23, { color: SURFACE, alpha: .72, font: '7px monospace' });
-        }
+  const structureSegments = structuralSegments(project);
+  if (structureSegments) {
+    // v0.7 whole-song navigator (plan 15.1): one contiguous block per
+    // structural segment. Shades are indexed by family, so every repeat of a
+    // family wears the same neutral shade and variants differ only by their
+    // prime label. Boundary tick weight follows the boundary's novelty.
+    const familyShades = ['#171713', '#77756c', '#a9a69b', '#4a4840', '#8c897d', '#6b6960'];
+    const familyIndex = new Map();
+    const activeSegment = structuralSegmentAt(project, state.playbackTime);
+    for (const segment of structureSegments) {
+      if (!familyIndex.has(segment.family)) familyIndex.set(segment.family, familyIndex.size);
+      const startX = clamp(Number(segment.start_time) / duration);
+      const endX = clamp(Number(segment.end_time) / duration);
+      const segmentX = left + startX * innerWidth;
+      const segmentWidth = Math.max(1, (endX - startX) * innerWidth);
+      ctx.fillStyle = familyShades[familyIndex.get(segment.family) % familyShades.length];
+      ctx.globalAlpha = segment === activeSegment ? .92 : .68;
+      ctx.fillRect(segmentX, structureTop, segmentWidth, structureHeight);
+      ctx.globalAlpha = 1;
+      if (segmentWidth > 34) {
+        text(ctx, segment.display_label || segment.family || '—', segmentX + 6, structureTop + 12, { color: SURFACE, font: '700 8px monospace' });
+        text(ctx, `${String(segment.start_bar).padStart(2, '0')}—${String(segment.end_bar).padStart(2, '0')}`, segmentX + 6, structureTop + 23, { color: SURFACE, alpha: .72, font: '7px monospace' });
       }
-      lastGroup = group;
-      groupStart = index;
-      groupIndex += 1;
+    }
+    for (const boundary of project.patterns?.boundaries || []) {
+      const novelty = clamp(Number(boundary.novelty));
+      const x = left + clamp(Number(boundary.time) / duration) * innerWidth;
+      line(ctx, x, structureTop - 2 - novelty * 5, x, structureTop + structureHeight, INK, 1 + novelty, .28 + novelty * .5);
+    }
+  } else {
+    let lastGroup = null;
+    let groupStart = 0;
+    const groupPalette = ['#171713', '#77756c', '#c65032', '#a9a69b'];
+    let groupIndex = -1;
+    for (let index = 0; index <= overview.length; index += 1) {
+      const group = index < overview.length ? (overview[index]?.group || overview[index]?.label || '—') : null;
+      if (group !== lastGroup) {
+        if (lastGroup !== null) {
+          const segmentX = left + groupStart * barWidth;
+          const segmentWidth = Math.max(1, (index - groupStart) * barWidth);
+          ctx.fillStyle = groupPalette[Math.abs(groupIndex) % groupPalette.length];
+          ctx.globalAlpha = lastGroup === (overview[Math.max(0, Math.floor(clamp(state.playbackTime / duration) * bars))]?.group || overview[Math.max(0, Math.floor(clamp(state.playbackTime / duration) * bars))]?.label) ? .92 : .68;
+          ctx.fillRect(segmentX, structureTop, segmentWidth, structureHeight);
+          ctx.globalAlpha = 1;
+          if (segmentWidth > 34) {
+            text(ctx, lastGroup, segmentX + 6, structureTop + 12, { color: SURFACE, font: '700 8px monospace' });
+            text(ctx, `${String(groupStart + 1).padStart(2, '0')}—${String(index).padStart(2, '0')}`, segmentX + 6, structureTop + 23, { color: SURFACE, alpha: .72, font: '7px monospace' });
+          }
+        }
+        lastGroup = group;
+        groupStart = index;
+        groupIndex += 1;
+      }
     }
   }
 

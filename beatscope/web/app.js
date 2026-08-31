@@ -1,7 +1,7 @@
 import { state, subscribe, setProject, setSubdivision, setStartBar, setSelectedOnset, toggleLoop } from './state.js';
 import { fetchProject, getAudioUrl, getMidiExportUrl, getCsvExportUrl, getCodexExportUrl } from './api.js';
 import { initAudio, setAudioSource, togglePlay, seek, previewTransient } from './audio.js';
-import { renderStaticMap, renderOverlay, renderOverview, exportStaticPng } from './renderer.js';
+import { renderStaticMap, renderOverlay, renderOverview, exportStaticPng, structuralSegmentAt, structureSummary } from './renderer.js';
 import { createVisualStage, installVisualDebug } from './visual-stage.js';
 import { updateInspector } from './inspector.js';
 import { initImportHandlers, showEmptyState, showErrorState } from './import.js';
@@ -32,6 +32,7 @@ const controls = {
   filename: $('#filename'), status: $('#status'), timecode: $('#timecode'), currentTime: $('#currentTime'),
   play: $('#play'), stagePlay: $('#stagePlay'), loop: $('#loop'), prev: $('#prev'), next: $('#next'),
   subdivision: $('#subdivision'), range: $('#rangeLabel'), window: $('#windowLabel'), visualReadout: $('#visualReadout'),
+  structureReadout: $('#structureReadout'), structureHint: $('#structureHint'),
   duration: $('#durationLabel'), seekBack: $('#seekBack'), seekForward: $('#seekForward'),
   stageTrack: $('#stageTrackName'), factBpm: $('#factBpm'), factBars: $('#factBars'), factDuration: $('#factDuration'), factBackend: $('#factBackend'),
   analysisMeta: $('#analysisMeta'),
@@ -115,6 +116,9 @@ function updateProjectUI() {
     controls.factBackend.textContent = '—';
     controls.analysisMeta.hidden = true;
     controls.analysisMeta.textContent = '';
+    controls.structureHint.hidden = true;
+    controls.structureReadout.hidden = true;
+    overviewCanvas.setAttribute('aria-label', 'Song structure and whole-track energy navigation');
     setDisabled(true);
     renderAll();
     return;
@@ -138,6 +142,11 @@ function updateProjectUI() {
   const analysisSummary = describeAnalysis(project);
   controls.analysisMeta.textContent = analysisSummary;
   controls.analysisMeta.hidden = !analysisSummary;
+  // Accessible structure name (plan 15.3): "Song structure: A bars 1 to 8, ...";
+  // falls back to the static label on legacy projects without segments.
+  const structureSummaryText = structureSummary(project);
+  overviewCanvas.setAttribute('aria-label', structureSummaryText || 'Song structure and whole-track energy navigation');
+  controls.structureHint.hidden = !structureSummaryText;
   setDisabled(false);
   controls.prev.disabled = state.startBar <= 0;
   controls.next.disabled = state.startBar + state.viewBars >= bars;
@@ -151,6 +160,23 @@ function updatePlaybackUI() {
   seekRange.value = String(state.playbackTime);
   const position = state.project ? gridPosition(state.playbackTime, state.project, state.subdivision, state.adjustments) : null;
   controls.visualReadout.textContent = position ? `BAR ${String(position.bar || 1).padStart(2, '0')} · BEAT ${position.beat || 1}` : 'BAR — · BEAT —';
+  // Signal player structure label (plan 15.2): the active segment label and
+  // how far through it we are — never a confidence figure.
+  const structureSegments = state.project?.patterns?.segments;
+  if (Array.isArray(structureSegments) && structureSegments.length) {
+    const segment = structuralSegmentAt(state.project, state.playbackTime);
+    if (segment) {
+      const start = Number(segment.start_time) || 0;
+      const end = Number(segment.end_time) || start;
+      const through = Math.round(Math.max(0, Math.min(1, (state.playbackTime - start) / (end - start || 1))) * 100);
+      controls.structureReadout.hidden = false;
+      controls.structureReadout.textContent = `${segment.display_label || segment.family || '—'} · ${through}% THROUGH`;
+    } else {
+      controls.structureReadout.hidden = true;
+    }
+  } else if (!controls.structureReadout.hidden) {
+    controls.structureReadout.hidden = true;
+  }
   controls.play.textContent = state.isPlaying ? 'Pause' : 'Play';
   controls.stagePlay.textContent = state.isPlaying ? 'Ⅱ' : '▶';
   controls.stagePlay.dataset.playing = state.isPlaying ? 'true' : 'false';
@@ -377,9 +403,28 @@ controls.projectFile.onchange = async (event) => {
   }
 };
 
+// Segment navigation (plan 15.3): Shift+arrows jump to the previous/next
+// structural segment start without disturbing the plain-arrow bar navigation.
+function jumpSegment(direction) {
+  const segments = state.project?.patterns?.segments;
+  if (!Array.isArray(segments) || !segments.length) return;
+  let target = null;
+  if (direction > 0) {
+    target = segments.find((segment) => Number(segment.start_time) > state.playbackTime + 1e-3) || null;
+  } else {
+    for (const segment of segments) {
+      if (Number(segment.start_time) < state.playbackTime - 1e-3) target = segment;
+      else break;
+    }
+  }
+  if (target) seek(Number(target.start_time));
+}
+
 window.addEventListener('keydown', (event) => {
   if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
   if (event.code === 'Space') { event.preventDefault(); togglePlay(); }
+  else if (event.shiftKey && event.code === 'ArrowRight') { event.preventDefault(); jumpSegment(1); }
+  else if (event.shiftKey && event.code === 'ArrowLeft') { event.preventDefault(); jumpSegment(-1); }
   else if (event.code === 'ArrowRight') { event.preventDefault(); setStartBar(state.startBar + state.viewBars); }
   else if (event.code === 'ArrowLeft') { event.preventDefault(); setStartBar(state.startBar - state.viewBars); }
   else if (event.code === 'KeyL') { event.preventDefault(); toggleLoop(); }

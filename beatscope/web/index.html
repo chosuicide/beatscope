@@ -30,7 +30,7 @@
       <section id="visualSection" class="player-section" aria-labelledby="visual-title">
         <div class="section-heading stage-heading"><div><h2 id="visual-title">Signal player</h2></div><div class="track-facts"><span><b id="factBpm">—</b> BPM</span><span><b id="factBars">—</b> bars</span><span><b id="factDuration">—</b></span><span><b id="factBackend">—</b> backend</span></div></div>
         <div class="visual-stage-shell">
-          <div class="stage-meta"><strong id="stageTrackName">No track</strong><span id="visualReadout" class="mono">BAR — · BEAT —</span></div>
+          <div class="stage-meta"><strong id="stageTrackName">No track</strong><span id="structureReadout" class="mono" hidden></span><span id="visualReadout" class="mono">BAR — · BEAT —</span></div>
           <div id="visualStageStack" class="visual-stage-stack" role="img" aria-label="Audio-reactive particle instrument driven by playback time">
             <canvas id="particleStage" aria-hidden="true"></canvas>
             <canvas id="visualStage" aria-hidden="true"></canvas>
@@ -42,7 +42,7 @@
       <section id="overviewSection" class="overview-section" aria-labelledby="overview-title">
         <div class="section-heading compact-heading"><div><h2 id="overview-title">Rhythm pattern overview</h2></div><label class="follow-control"><input id="followPlayback" type="checkbox" checked><span>Follow playback</span></label></div>
         <div class="overview-shell"><canvas id="overview" width="1400" height="192" tabindex="0" aria-label="Song structure and whole-track energy navigation"></canvas></div>
-        <div class="overview-meta"><span id="rangeLabel">No track loaded</span><span>Select a bar to move the eight-bar window</span></div>
+        <div class="overview-meta"><span id="rangeLabel">No track loaded</span><span>Select a bar to move the eight-bar window</span><span id="structureHint" hidden>Shift+← / → jump between song segments</span></div>
         <p id="analysisMeta" class="analysis-meta" hidden></p>
       </section>
 
