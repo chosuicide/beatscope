@@ -24,8 +24,10 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
+from .audio_io import load_analysis_audio
 from .pipeline import analyze_track
 from .schema import ANALYZER_VERSION, validate_rhythm_v4
+from .structure import analyze_multiview_structure
 
 STRUCTURE_TOLERANCE_BARS = 1
 STRUCTURE_F1_FLOOR = 0.80
@@ -149,7 +151,11 @@ def structure_coverage_errors(
     segments: list[dict[str, Any]],
     total_bars: int,
 ) -> list[str]:
-    """Ways a segment list fails to tile bars 1..total_bars exactly once."""
+    """Ways a segment list fails to tile bars 1..total_bars exactly once.
+
+    Segment ends beyond ``total_bars`` (a trailing grid fragment the truth
+    manifest does not count) clamp to the last truth bar.
+    """
     errors: list[str] = []
     previous_end = 0
     for index, segment in enumerate(segments):
@@ -162,9 +168,11 @@ def structure_coverage_errors(
         if start < 1 or end < start:
             errors.append(f"segment-{index}-reversed-range")
             continue
+        if start > total_bars:
+            continue  # entirely beyond the truth bar count
         if start != previous_end + 1:
             errors.append(f"segment-{index}-gap-or-overlap")
-        previous_end = end
+        previous_end = min(end, total_bars)
     if not segments or previous_end != total_bars:
         errors.append("segments-do-not-cover-song")
     return errors
@@ -258,12 +266,64 @@ def load_structure_fixtures(fixtures_dir: str | Path | None = None) -> dict[str,
     }}
 
 
+# ------------------------------------------------------- v0.7 analyze path
+
+def structure_payload_for_project(
+    audio_path: str | Path,
+    project: dict[str, Any],
+    target_sr: int = 44100,
+) -> dict[str, Any] | None:
+    """Run the multiview segmenter on a serialized project's own facts.
+
+    Decodes the audio fresh and pulls beats/onsets/energy/duration/bars from
+    the finished project, so the benchmark exercises exactly the facts the
+    pipeline publishes. Used until the pipeline emits structure itself.
+    """
+    beats = project.get("beats") or []
+    downbeats = [b for b in beats if b.get("downbeat")]
+    total_bars = int((project.get("grid") or {}).get("bars") or 0)
+    if len(downbeats) < 2 or total_bars <= 0:
+        return None
+    y, sr, decoded_duration, _channels, _warnings = load_analysis_audio(
+        audio_path, target_sr=target_sr,
+    )
+    duration = float((project.get("source") or {}).get("duration") or decoded_duration)
+    return analyze_multiview_structure(
+        y,
+        sr,
+        beats,
+        project.get("onsets") or [],
+        project.get("energy") or {},
+        duration,
+        total_bars,
+    )
+
+
+def analyze_with_structure(audio_path: str | Path) -> dict[str, Any]:
+    """analyze_track plus the v0.7 structure payload injected into patterns.
+
+    Once build_rhythm_project emits segments natively (commit 4) the
+    injection becomes a no-op because the method already matches.
+    """
+    project = analyze_track(audio_path)
+    patterns = project.get("patterns") or {}
+    if patterns.get("method") != V07_STRUCTURE_METHOD:
+        payload = structure_payload_for_project(audio_path, project)
+        if payload is not None:
+            patterns["method"] = payload["method"]
+            patterns["segments"] = payload["segments"]
+            patterns["boundaries"] = payload["boundaries"]
+            patterns["repetitions"] = payload["repetitions"]
+            patterns["diagnostics"] = payload["diagnostics"]
+    return project
+
+
 def run_structure_benchmark(
     output_dir: str | Path | None = None,
     fixtures_dir: str | Path | None = None,
     case_names: set[str] | None = None,
     *,
-    analyze: Callable[[Path], dict[str, Any]] = analyze_track,
+    analyze: Callable[[Path], dict[str, Any]] = analyze_with_structure,
     fixtures: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Analyze every fixture and score it; writes JSON + markdown reports."""
@@ -389,6 +449,7 @@ __all__ = [
     "STRUCTURE_F1_FLOOR",
     "STRUCTURE_MAE_CEIL_BARS",
     "STRUCTURE_TOLERANCE_BARS",
+    "analyze_with_structure",
     "bar_pair_family_f1",
     "boundary_metrics",
     "characterization_entry",
@@ -398,5 +459,6 @@ __all__ = [
     "record_characterization",
     "run_structure_benchmark",
     "structure_coverage_errors",
+    "structure_payload_for_project",
     "write_markdown",
 ]

@@ -9,7 +9,7 @@ from beatscope.structure_features import (
     BarSpan,
     build_bar_spans,
     extract_structure_features,
-    robust_normalize,
+    level_normalize,
 )
 
 SR = 22050
@@ -90,33 +90,40 @@ def test_bar_spans_renumber_noncontiguous_bars():
     assert any("renumbered" in w for w in warnings)
 
 
-# ------------------------------------------------------- robust normalize
+# -------------------------------------------------------- level normalize
 
-def test_robust_normalize_constant_column_and_row_norms():
+def test_level_normalize_zero_column_collapses_and_rows_are_unit():
     matrix = np.array([
-        [5.0, 1.0, 2.0],
-        [5.0, 2.0, -1.0],
-        [5.0, 3.0, 2.0],
-        [5.0, 4.0, -1.0],
+        [5.0, 0.0, 2.0],
+        [5.0, 0.0, -1.0],
+        [5.0, 0.0, 2.0],
+        [5.0, 0.0, -1.0],
     ])
-    normalized = robust_normalize(matrix)
+    normalized = level_normalize(matrix)
     assert normalized.dtype == np.float32
-    assert np.all(normalized[:, 0] == 0.0)  # constant column carries nothing
+    assert np.all(normalized[:, 1] == 0.0)  # a silent column carries nothing
+    assert np.all(normalized[:, 0] != 0.0)  # a constant column keeps its level
     norms = np.linalg.norm(normalized, axis=1)
     assert np.allclose(norms[norms > 0], 1.0, atol=1e-5)
 
 
-def test_robust_normalize_clips_outliers():
-    values = np.array([[0.0], [1.0], [2.0], [3.0], [1000.0]])
-    normalized = robust_normalize(values)
-    assert normalized.max() <= 4.0 + 1e-6
+def test_level_normalize_does_not_amplify_measurement_noise():
+    # Regression: MAD-based scaling turned 0.003 wobble on a constant column
+    # into unit-magnitude junk, decorrelating same-section bars. Absolute
+    # level scaling must keep identical bars' cosine near 1.
+    noise = np.array([[0.004], [-0.003], [0.002], [-0.001]])
+    signal = np.full((4, 1), 5.0)
+    normalized = level_normalize(np.hstack([signal + noise, signal]))
+    cosine = float(normalized[0] @ normalized[1])
+    assert cosine > 0.9999
 
 
-def test_robust_normalize_preserves_row_deviations():
-    # Rows keep their deviation from the typical bar (no row is special-cased).
-    normalized = robust_normalize(np.array([[0.0, 0.0], [1.0, 2.0], [3.0, 4.0]]))
-    assert normalized.shape == (3, 2)
-    assert np.all(np.isfinite(normalized))
+def test_level_normalize_is_scale_invariant():
+    # Dividing by each column's median |x| cancels any global gain factor.
+    matrix = np.array([[0.0, 0.0], [1.0, 2.0], [3.0, 4.0]])
+    quiet = level_normalize(matrix * 0.01)
+    loud = level_normalize(matrix)
+    assert np.allclose(quiet, loud, atol=1e-6)
 
 
 # ---------------------------------------------------------------- extract
@@ -147,7 +154,7 @@ def test_extract_structure_features_shapes_and_determinism():
         norms = np.linalg.norm(matrix, axis=1)
         assert np.all((np.abs(norms - 1.0) < 1e-5) | (norms == 0.0)), name
     assert first.diagnostics["bars_analyzed"] == 4
-    assert first.diagnostics["feature_version"] == "structure-features-v1"
+    assert first.diagnostics["feature_version"] == "structure-features-v2"
     assert first.diagnostics["nonfinite_replaced"] == 0
     # Bit-identical across runs: the analysis must be deterministic.
     for name in first.views:

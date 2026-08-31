@@ -5,6 +5,8 @@ from typing import Any
 import numpy as np
 
 from .beatgrid import quantize_to_beat_grid
+from .structure_features import _band_means_per_bar, extract_structure_features
+from .structure_segments import analyze_structure_segments
 
 
 def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
@@ -117,3 +119,58 @@ def analyze_song_structure(
         })
 
     return labels
+
+
+def _onset_time(onset: dict[str, Any]) -> float | None:
+    """Evidence onsets carry raw_time; serialized v4 onsets carry time."""
+    value = onset.get("raw_time")
+    if value is None:
+        value = onset.get("time")
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def analyze_multiview_structure(
+    audio: np.ndarray,
+    sr: int,
+    beats: list[dict[str, Any]],
+    onsets: list[dict[str, Any]],
+    energy: dict[str, Any],
+    duration: float,
+    total_bars: int,
+    subdivision: int = 16,
+) -> dict[str, Any] | None:
+    """Whole-song structure payload (v0.7); None when the input is unusable.
+
+    Wraps per-bar feature extraction and segment inference. Per-bar energy
+    comes from the stored 'all' band curve and per-bar density from raw onset
+    counts, so the break detector sees the same facts the rest of the
+    pipeline publishes. ``total_bars`` is the grid bar count; the final
+    segment extends to it so segments tile the whole song.
+    """
+    features = extract_structure_features(
+        audio, sr, beats, onsets, energy, duration, subdivision=subdivision,
+    )
+    spans = features.bar_spans
+    if not spans:
+        return None
+
+    band_means = _band_means_per_bar(energy, spans)
+    bar_energy = band_means[:, 0] if band_means.size else np.zeros(len(spans))
+
+    starts = np.asarray([span.start_time for span in spans], dtype=np.float64)
+    ends = np.asarray([span.end_time for span in spans], dtype=np.float64)
+    bar_density = np.zeros(len(spans), dtype=np.float64)
+    for onset in onsets:
+        time = _onset_time(onset)
+        if time is None:
+            continue
+        index = int(np.searchsorted(starts, time, side="right")) - 1
+        if 0 <= index < len(spans) and time < ends[index]:
+            bar_density[index] += 1.0
+
+    return analyze_structure_segments(
+        features, float(duration), int(total_bars), bar_energy, bar_density,
+    )

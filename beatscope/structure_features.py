@@ -8,9 +8,9 @@ module turns decoded audio plus the beat grid into exactly that:
 * frame features (chroma / MFCC / contrast / RMS / onset envelope) at a fixed
   hop, aggregated per bar with robust summaries;
 * the legacy 66-dim bar rhythm vector, kept as the rhythm view's backbone;
-* robust cross-bar normalization (median centre, 1.4826*MAD scale, clipped
-  to +/-4) and per-view L2, so one loud section cannot dominate cosine
-  similarity.
+* absolute-level column scaling plus per-view L2, so one loud section cannot
+  dominate cosine similarity while per-bar measurement noise stays
+  proportional to each column's signal scale.
 
 Determinism contract: no RNG, no wall-clock input; float32 only after all
 aggregation; non-finite values are replaced by 0 and counted in diagnostics.
@@ -28,21 +28,30 @@ except ImportError as exc:  # pragma: no cover - librosa is a hard dependency
     raise RuntimeError("beatscope.structure_features requires librosa") from exc
 
 from .beatgrid import quantize_to_beat_grid
-from .structure import build_bar_vector
 
-FEATURE_VERSION = "structure-features-v1"
+FEATURE_VERSION = "structure-features-v2"
 STRUCTURE_HOP = 512
 STRUCTURE_N_FFT = 2048
 N_MFCC = 20
 N_CHROMA = 12
 N_CONTRAST = 7
 
-# Robust normalization: deviations beyond this many robust sigmas are clipped.
-ROBUST_CLIP = 4.0
-MAD_TO_SIGMA = 1.4826
+# Absolute-level scaling floor: columns with median |x| at or below this
+# carry no measurable signal and collapse to zero.
+LEVEL_SCALE_FLOOR = 1e-9
 
-# Summary statistic layout per base feature: median, MAD, p25, p75, delta.
-SUMMARY_WIDTH = 5
+# Fixed weight for the gain-invariant band-ratio dims of the energy view;
+# kept small so they cannot drown the anchored log-level dim.
+ENERGY_RATIO_WEIGHT = 0.12
+
+# An onset marks only the energy bands whose level reaches this fraction of
+# its strongest band, so a kick marks the low layer, a snare the mid/high
+# layers, and sub-dominant leakage is dropped. Binary dominant-band
+# occupancy is the pattern signal: raw step strengths make the cosine
+# between bars measure loudness overlap instead of "which instrument hits
+# which step", and uniform leakage above any absolute floor makes a
+# kick-to-snare swap invisible.
+RHYTHM_DOMINANT_BAND_RATIO = 0.5
 
 
 @dataclass(frozen=True)
@@ -163,49 +172,50 @@ def _frame_features(audio: np.ndarray, sr: int) -> tuple[dict[str, np.ndarray], 
     return aligned, warnings
 
 
-def _summarize_block(block: np.ndarray, span: BarSpan) -> np.ndarray:
-    """Robust summaries of one base feature block over one bar's frames."""
+def _median_over_span(block: np.ndarray, span: BarSpan) -> np.ndarray:
+    """Per-feature median over one bar's frames.
+
+    Medians only, deliberately: over ~86 frames the median averages
+    measurement noise down, whereas spread summaries (MAD, percentiles,
+    first-to-last delta) sit at the noise floor on sustained content - and
+    any per-column rescaling then amplifies that noise until same-section
+    bars decorrelate under cosine similarity.
+    """
     start = min(span.start_frame, block.shape[1] - 1)
     end = max(start + 1, min(span.end_frame, block.shape[1]))
     frames = block[:, start:end]
     if frames.shape[1] == 0:  # unreachable with the clamps above, kept safe
-        return np.zeros(block.shape[0] * SUMMARY_WIDTH, dtype=np.float64)
-    median = np.median(frames, axis=1)
-    mad = np.median(np.abs(frames - median[:, None]), axis=1)
-    p25 = np.percentile(frames, 25, axis=1)
-    p75 = np.percentile(frames, 75, axis=1)
-    delta = frames[:, -1] - frames[:, 0]
-    return np.concatenate([median, mad, p25, p75, delta]).astype(np.float64)
+        return np.zeros(block.shape[0], dtype=np.float64)
+    return np.median(frames, axis=1)
 
 
-def robust_normalize(matrix: np.ndarray) -> np.ndarray:
-    """Mean-centre, MAD-scale, clip to +/-4, then L2-normalize each row.
+def level_normalize(matrix: np.ndarray) -> np.ndarray:
+    """Scale each column by its typical absolute level, then L2 each row.
 
-    The centring reference is the mean even though the scale is the robust
-    1.4826*MAD: with median centring, whichever section forms the majority
-    sits exactly at zero and its bars lose their shared deviation, leaving
-    per-bar measurement noise as the only direction - same-section bars then
-    decorrelate under cosine similarity. Mean centring keeps every cluster's
-    shared offset alive, the MAD scale still ignores outlier bars, and the
-    +/-4 clip bounds any single wild bar.
-
-    Columns that never vary across bars carry no structure information and
-    collapse to zero. Only for continuous per-bar summaries; sparse occupancy
-    vectors (the rhythm view) must use :func:`l2_normalize_rows` instead -
-    most step columns are zero in the majority of bars, so their MAD is zero
-    and centring would delete exactly the dimensions that distinguish
-    sections.
+    Deliberately NOT variance-based (no centring, no MAD z-scores): on a
+    near-constant column the MAD *is* the per-bar measurement noise, so
+    dividing by it amplifies wobble ~1e-3 of the signal to unit magnitude
+    and identical-section bars decorrelate into random directions under
+    cosine similarity. Centring is equally destructive - it subtracts the
+    shared signal first, leaving only that noise for the row L2 to inflate.
+    Dividing by an absolute level reference (median |x|) keeps every
+    contribution proportional to its column's signal scale instead: real
+    cross-bar changes survive, noise stays small. Columns whose absolute
+    level is zero carry nothing and collapse to zero. Only for continuous
+    per-bar summaries; sparse occupancy vectors (the rhythm view) use
+    :func:`l2_normalize_rows` instead - most step columns are zero in the
+    majority of bars, so their level is zero and they would be deleted
+    exactly where they distinguish sections.
     """
-    values = np.asarray(matrix, dtype=np.float64)
+    values = np.nan_to_num(
+        np.asarray(matrix, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0
+    )
     if values.size == 0:
         return np.zeros_like(values, dtype=np.float32)
-    centre = values.mean(axis=0)
-    mad = np.median(np.abs(values - np.median(values, axis=0)), axis=0)
-    scale = MAD_TO_SIGMA * mad
-    safe = scale > 1e-9
+    level = np.median(np.abs(values), axis=0)
+    safe = level > LEVEL_SCALE_FLOOR
     normalized = np.zeros_like(values)
-    normalized[:, safe] = (values[:, safe] - centre[safe]) / scale[safe]
-    normalized = np.clip(normalized, -ROBUST_CLIP, ROBUST_CLIP)
+    normalized[:, safe] = values[:, safe] / level[safe]
     norms = np.linalg.norm(normalized, axis=1)
     nonzero = norms > 1e-9
     normalized[nonzero] /= norms[nonzero][:, None]
@@ -254,6 +264,34 @@ def _band_means_per_bar(
     return out
 
 
+def _energy_rows(rms_medians: np.ndarray, band_means: np.ndarray) -> np.ndarray:
+    """Song-anchored log level plus fixed-weight spectral-balance ratios.
+
+    Cosine similarity is scale-invariant, so a view built purely from
+    amplitude-like columns cannot see a uniform gain change: every column
+    scales together and the rows stay parallel. Anchoring the level at the
+    song's own median rms breaks that invariance - a section at half gain
+    sits ~0.7 away from the typical level while a typical bar sits at 0, so
+    same-level bars keep cosine ~1 while level changes become visible. The
+    low/mid/high-over-all band ratios are gain-invariant spectral-balance
+    context and ride along at a fixed small weight so they cannot drown the
+    anchor. The anchor is clipped so digitally silent bars stay outliers
+    instead of unbounded ones.
+    """
+    reference = max(float(np.median(rms_medians)), 1e-6)
+    anchor = np.log(np.maximum(rms_medians, 1e-6) / reference)
+    anchor = np.clip(anchor, -4.0, 4.0)
+    total = np.maximum(band_means[:, 0], 1e-9)
+    has_signal = band_means[:, 0] > 1e-9
+    rows = np.zeros((band_means.shape[0], 4), dtype=np.float64)
+    rows[:, 0] = anchor
+    for column in (1, 2, 3):
+        rows[:, column] = ENERGY_RATIO_WEIGHT * np.where(
+            has_signal, band_means[:, column] / total, 0.0
+        )
+    return rows
+
+
 # ------------------------------------------------------------- rhythm view
 
 def _rhythm_base_rows(
@@ -264,32 +302,59 @@ def _rhythm_base_rows(
     onset_env: np.ndarray,
     sr: int,
 ) -> np.ndarray:
-    """Legacy 66-dim bar vector plus onset-envelope summaries per bar."""
+    """Dominant-band step occupancy per bar, plus density and onset level.
+
+    The rhythm view owns pattern identity. Each onset is reduced to the
+    energy bands that dominate it (>= RHYTHM_DOMINANT_BAND_RATIO of its
+    strongest band) and marks those layers' step: a kick fills only the low
+    layer, a snare the mid/high layers, and leakage levels are dropped, so
+    a kick-to-snare role swap is a large change in two layers instead of a
+    4-of-64-step wobble. The same material at a different tempo reproduces
+    the same bar-synced grid exactly. Layout: low/mid/high step layers
+    (3 x subdivision), hit count, onset-envelope median.
+    """
+    band_names = ("low", "mid", "high")
+    width = len(band_names) * subdivision
     bar_onsets: dict[int, list[dict[str, Any]]] = {span.bar: [] for span in spans}
     if beats:
         for onset in onsets:
             try:
-                placed = quantize_to_beat_grid(float(onset["raw_time"]), beats, subdivision=subdivision)
+                raw = float(onset.get("raw_time", onset.get("time")))
+                placed = quantize_to_beat_grid(raw, beats, subdivision=subdivision)
             except (KeyError, TypeError, ValueError):
                 continue
             bar_onsets.setdefault(placed["bar"], [])
             if placed["bar"] in bar_onsets:
                 bar_onsets[placed["bar"]].append({**onset, **placed})
 
-    rows = np.zeros((len(spans), 66 + SUMMARY_WIDTH), dtype=np.float64)
+    rows = np.zeros((len(spans), width + 2), dtype=np.float64)
     for index, span in enumerate(spans):
-        vector = build_bar_vector(bar_onsets.get(span.bar, []), subdivision)
-        rows[index, :66] = vector
+        hits = bar_onsets.get(span.bar, [])
+        rows[index, width] = float(min(1.0, len(hits) / 16.0))
+        for onset in hits:
+            step = int(onset.get("step_in_bar", 1)) - 1
+            if not 0 <= step < subdivision:
+                continue
+            values = onset.get("bands") if isinstance(onset.get("bands"), dict) else {}
+            band_levels = [
+                float((values or {}).get(name, 0.0) or 0.0) for name in band_names
+            ]
+            peak = max(band_levels)
+            if peak <= 1e-6:
+                band_levels = [1.0, 1.0, 1.0]  # bandless hit: treat as broadband
+            else:
+                band_levels = [
+                    1.0 if level >= RHYTHM_DOMINANT_BAND_RATIO * peak else 0.0
+                    for level in band_levels
+                ]
+            for band, marked in enumerate(band_levels):
+                if marked:
+                    rows[index, band * subdivision + step] = 1.0
         start = min(span.start_frame, onset_env.shape[1] - 1)
         end = max(start + 1, min(span.end_frame, onset_env.shape[1]))
         frames = onset_env[0, start:end]
         if frames.size:
-            median = float(np.median(frames))
-            rows[index, 66] = median
-            rows[index, 67] = float(np.median(np.abs(frames - median)))
-            rows[index, 68] = float(np.percentile(frames, 25))
-            rows[index, 69] = float(np.percentile(frames, 75))
-            rows[index, 70] = float(frames[-1] - frames[0])
+            rows[index, width + 1] = float(np.median(frames))
     return rows
 
 
@@ -320,10 +385,10 @@ def extract_structure_features(
     warnings.extend(span_warnings)
 
     empty_views = {
-        "harmony": np.zeros((0, N_CHROMA * SUMMARY_WIDTH), dtype=np.float32),
-        "timbre": np.zeros((0, (N_MFCC + N_CONTRAST) * SUMMARY_WIDTH), dtype=np.float32),
-        "rhythm": np.zeros((0, 66 + SUMMARY_WIDTH), dtype=np.float32),
-        "energy": np.zeros((0, SUMMARY_WIDTH + 4), dtype=np.float32),
+        "harmony": np.zeros((0, N_CHROMA), dtype=np.float32),
+        "timbre": np.zeros((0, N_MFCC - 1 + N_CONTRAST), dtype=np.float32),
+        "rhythm": np.zeros((0, 3 * 16 + 2), dtype=np.float32),
+        "energy": np.zeros((0, 4), dtype=np.float32),
     }
     if not spans:
         return StructureFeatures([], dict(empty_views), {
@@ -341,7 +406,10 @@ def extract_structure_features(
     chroma = frames["chroma"]
     if chroma.shape[0] != N_CHROMA:
         warnings.append(f"chroma width {chroma.shape[0]} != {N_CHROMA}; harmonized")
-    timbre = np.concatenate([frames["mfcc"], frames["contrast"]], axis=0)
+    # MFCC c0 is a log-energy offset (~-500 on typical audio) that dwarfs the
+    # shape coefficients and is gain-blind after level scaling anyway; the
+    # energy view owns level. Timbre keeps c1.. only.
+    timbre = np.concatenate([frames["mfcc"][1:], frames["contrast"]], axis=0)
 
     nonfinite = 0
 
@@ -360,19 +428,18 @@ def extract_structure_features(
     onset_env = _clean(frames["onset_env"])
     band_means = _clean(_band_means_per_bar(energy, spans))
 
-    harmony_raw = np.stack([_summarize_block(chroma, span) for span in spans])
-    timbre_raw = np.stack([_summarize_block(timbre, span) for span in spans])
-    energy_raw = np.concatenate(
-        [np.stack([_summarize_block(rms, span) for span in spans]), band_means],
-        axis=1,
-    )
+    # Harmony: chroma medians only, no column scaling - every column shares
+    # the same 0-1 unit and chord bins dominate leakage bins on their own.
+    harmony_raw = np.stack([_median_over_span(chroma, span) for span in spans])
+    timbre_raw = np.stack([_median_over_span(timbre, span) for span in spans])
+    rms_medians = np.stack([_median_over_span(rms, span) for span in spans])[:, 0]
     rhythm_raw = _clean(_rhythm_base_rows(onsets, beats, spans, subdivision, onset_env, sr))
 
     views = {
-        "harmony": robust_normalize(harmony_raw),
-        "timbre": robust_normalize(timbre_raw),
+        "harmony": l2_normalize_rows(harmony_raw),
+        "timbre": level_normalize(timbre_raw),
         "rhythm": l2_normalize_rows(rhythm_raw),
-        "energy": robust_normalize(energy_raw),
+        "energy": l2_normalize_rows(_energy_rows(rms_medians, band_means)),
     }
 
     diagnostics = {
@@ -396,5 +463,5 @@ __all__ = [
     "build_bar_spans",
     "extract_structure_features",
     "l2_normalize_rows",
-    "robust_normalize",
+    "level_normalize",
 ]
