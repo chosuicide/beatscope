@@ -5,6 +5,7 @@ import contextlib
 import hashlib
 import json
 import os
+import tempfile
 import time
 from pathlib import Path
 from typing import Any, Iterator
@@ -24,9 +25,15 @@ _ARTIFACT_LOCK_DELAY_SECONDS = 0.01
 
 def _atomic_write_bytes(path: Path, data: bytes) -> None:
     """Write bytes through a sibling temporary file and ``os.replace``."""
-    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    descriptor, tmp_name = tempfile.mkstemp(
+        dir=path.parent,
+        prefix=f".{path.name}.{os.getpid()}.",
+        suffix=".tmp",
+    )
+    tmp = Path(tmp_name)
     try:
-        tmp.write_bytes(data)
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(data)
         os.replace(tmp, path)
     finally:
         with contextlib.suppress(OSError):

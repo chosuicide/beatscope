@@ -457,7 +457,9 @@ def test_require_valid_without_timeline(artifacts):
 import copy
 import hashlib
 from pathlib import Path
+from threading import Barrier, Thread
 
+import beatscope.project as project_module
 import beatscope.visual_recipe as visual_recipe_module
 from beatscope.cli import main as cli_main
 from beatscope.project import RECIPE_FILENAME, TIMELINE_FILENAME, ProjectManager
@@ -927,8 +929,6 @@ def test_interrupted_regeneration_recovers_on_next_load(manager, monkeypatch):
     rhythm = _saved_rhythm(manager)
     p_dir = manager.get_project_dir(PROJECT_ID)
 
-    import beatscope.project as project_module
-
     calls = {"count": 0}
 
     def crashing_replace(path, data):
@@ -946,6 +946,40 @@ def test_interrupted_regeneration_recovers_on_next_load(manager, monkeypatch):
     assert result["regenerated"] is True
     recipe, timeline = compile_visual_artifacts(rhythm)
     assert _artifact_bytes(p_dir) == (canonical_visual_bytes(recipe), canonical_visual_bytes(timeline))
+
+
+def test_atomic_visual_writes_use_unique_temp_files(tmp_path, monkeypatch):
+    """A stale cross-process lock must not make thread writers collide."""
+    target = tmp_path / RECIPE_FILENAME
+    barrier = Barrier(2)
+    original_replace = project_module.os.replace
+    sources: list[Path] = []
+    errors: list[Exception] = []
+
+    def synchronized_replace(source, destination):
+        sources.append(Path(source))
+        barrier.wait(timeout=2)
+        original_replace(source, destination)
+
+    monkeypatch.setattr(project_module.os, "replace", synchronized_replace)
+
+    def write() -> None:
+        try:
+            project_module._atomic_write_bytes(target, b"{}")
+        except Exception as error:  # pragma: no cover - asserted below
+            errors.append(error)
+
+    threads = [Thread(target=write), Thread(target=write)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=3)
+
+    assert not errors
+    assert len(sources) == 2
+    assert sources[0] != sources[1]
+    assert target.read_bytes() == b"{}"
+    assert not list(tmp_path.glob(f".{RECIPE_FILENAME}.*.tmp"))
 
 
 def test_regeneration_never_touches_audio(manager):
