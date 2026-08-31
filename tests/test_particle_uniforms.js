@@ -40,6 +40,7 @@ const layout = { width: 1400, height: 520 };
     anticipation: 2.5, hold: 3, impact: 2.5, recoil: -0.5, aftershock: 9,
     tension: -4, hero: 2, shockProgress: 17,
     beatWave: 8, waveProgress: -2, coreAperture: 4, diffusion: 7, beatExpand: 3,
+    lobeSplit: 5,
     lobeWeights: [1.4, -0.2, 0.5],
     direction: [9, 0, 0],
   };
@@ -61,6 +62,7 @@ const layout = { width: 1400, height: 520 };
   assert.equal(uniforms.uCoreAperture, 1);
   assert.equal(uniforms.uDiffusion, 1);
   assert.equal(uniforms.uBeatExpand, 1);
+  assert.equal(uniforms.uLobeSplit, 1);
   assert.equal(uniforms.uLobeWeights0, 1);
   assert.equal(uniforms.uLobeWeights1, 0);
   // Direction renormalizes to a unit vector no matter the input magnitude.

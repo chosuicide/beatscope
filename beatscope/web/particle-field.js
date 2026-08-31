@@ -22,7 +22,7 @@ const UNIFORM_NAMES = [
   'uAnticipation', 'uHold', 'uImpact', 'uRecoil', 'uAftershock',
   'uTension', 'uHero', 'uLobeWeights', 'uDirection',
   'uShockProgress', 'uBeatWave', 'uWaveProgress', 'uCoreAperture', 'uDiffusion',
-  'uBeatExpand', 'uReducedMotion', 'uQuality',
+  'uBeatExpand', 'uLobeSplit', 'uReducedMotion', 'uQuality',
   'uRingA', 'uRingE', 'uRingSpeed', 'uRingColor', 'uRingMat',
 ];
 
@@ -103,6 +103,7 @@ export function frameToUniforms(frame, layout, { quality = 1, reducedMotion = fa
   uniforms.uCoreAperture = clamp(frame?.coreAperture, 0, 1);
   uniforms.uDiffusion = clamp(frame?.diffusion, 0, 1);
   uniforms.uBeatExpand = clamp(frame?.beatExpand, 0, 1);
+  uniforms.uLobeSplit = clamp(frame?.lobeSplit, 0, 1);
   uniforms.uReducedMotion = reducedMotion ? 1 : 0;
   uniforms.uQuality = clamp(quality, 0.5, 1);
 
@@ -382,6 +383,7 @@ export function createParticleField({ canvas, geometry = null } = {}) {
       gl.uniform1f(loc.uCoreAperture, uniforms.uCoreAperture);
       gl.uniform1f(loc.uDiffusion, uniforms.uDiffusion);
       gl.uniform1f(loc.uBeatExpand, uniforms.uBeatExpand);
+      gl.uniform1f(loc.uLobeSplit, uniforms.uLobeSplit);
       gl.uniform1f(loc.uReducedMotion, uniforms.uReducedMotion);
       gl.uniform1f(loc.uQuality, uniforms.uQuality);
       gl.drawArrays(gl.POINTS, 0, state.count);

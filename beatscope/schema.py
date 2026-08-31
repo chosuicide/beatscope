@@ -136,18 +136,28 @@ def _validate_pattern_segments(
         if not isinstance(display_label, str) or not display_label:
             errors.append(f"{label}.display_label must be a non-empty string")
 
-        # Ordered, contiguous, non-overlapping coverage of the bar range.
+        # Ordered, contiguous, non-overlapping coverage of the bar and time
+        # ranges.  A gap is just as invalid as an overlap: consumers use these
+        # spans as a partition of the song, so there must be exactly one owner
+        # at every structural timestamp.
+        if position == 0 and start_bar is not None and start_bar != 1:
+            errors.append(f"{label} must start at bar 1")
+        if (
+            position == 0
+            and start_time is not None
+            and abs(float(start_time)) > _TIME_EPSILON
+        ):
+            errors.append(f"{label} must start at time 0")
         if previous_end_bar is not None and start_bar is not None:
             if start_bar != previous_end_bar + 1:
                 errors.append(
                     f"{label} must start at bar {previous_end_bar + 1} to keep coverage contiguous"
                 )
-            elif (
-                previous_end_time is not None
-                and start_time is not None
-                and start_time < previous_end_time - _TIME_EPSILON
-            ):
-                errors.append(f"{label} overlaps the previous segment in time")
+            if previous_end_time is not None and start_time is not None:
+                delta = float(start_time) - previous_end_time
+                if abs(delta) > _TIME_EPSILON:
+                    relation = "leaves a gap after" if delta > 0 else "overlaps"
+                    errors.append(f"{label} {relation} the previous segment in time")
         previous_end_bar = end_bar
         previous_end_time = end_time if end_time is not None and end_time > 0 else None
 
@@ -155,6 +165,10 @@ def _validate_pattern_segments(
         end_time = segments[-1].get("end_time")
         if _finite_number(end_time) and abs(float(end_time) - duration) > _TIME_EPSILON:
             errors.append("the final segment's end_time must equal the track duration")
+    if bars is not None and isinstance(segments[-1], dict):
+        end_bar = segments[-1].get("end_bar")
+        if isinstance(end_bar, int) and not isinstance(end_bar, bool) and end_bar != bars:
+            errors.append(f"the final segment's end_bar must equal grid bars {bars}")
 
 
 def _validate_pattern_boundaries(patterns: dict[str, Any], errors: list[str]) -> None:
@@ -179,6 +193,15 @@ def _validate_pattern_boundaries(patterns: dict[str, Any], errors: list[str]) ->
         for segment in segments[1:]
         if isinstance(segment, dict)
     } if isinstance(segments, list) and segment_count > 1 else set()
+    internal_start_times = {
+        segment.get("start_bar"): float(segment["start_time"])
+        for segment in segments[1:]
+        if (
+            isinstance(segment, dict)
+            and isinstance(segment.get("start_bar"), int)
+            and _finite_number(segment.get("start_time"))
+        )
+    } if isinstance(segments, list) and segment_count > 1 else {}
 
     previous_bar: int | None = None
     seen_bars: set[int] = set()
@@ -202,6 +225,12 @@ def _validate_pattern_boundaries(patterns: dict[str, Any], errors: list[str]) ->
         time = boundary.get("time")
         if not _finite_number(time) or time < 0:
             errors.append(f"{label}.time must be a non-negative finite number")
+        elif isinstance(bar, int) and bar in internal_start_times:
+            expected_time = internal_start_times[bar]
+            if abs(float(time) - expected_time) > _TIME_EPSILON:
+                errors.append(
+                    f"{label}.time must equal the matching segment start_time {expected_time}"
+                )
         novelty = boundary.get("novelty")
         if not _finite_number(novelty) or not 0.0 <= float(novelty) <= 1.0:
             errors.append(f"{label}.novelty must be a finite number in [0, 1]")

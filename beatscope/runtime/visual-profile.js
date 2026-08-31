@@ -192,6 +192,15 @@ function beatPulseEnvelope(phase) {
   return attack * release;
 }
 
+/** Heavy-hit separation: open on the strike, hold briefly, then settle. */
+function lobeSplitEnvelope(event, time) {
+  if (!event?.phrased || time < event.time) return 0;
+  const holdEnd = event.time + event.impactDuration + 0.055;
+  if (time <= holdEnd) return 1;
+  const recovery = clampBetween(event.recoilDuration + 0.08, 0.25, 0.40);
+  return 1 - smoothstepValue(progress01(holdEnd, holdEnd + recovery, time));
+}
+
 /**
  * Phase lengths for one event's phrase (plan section 6.4), derived from the
  * ADJACENT beat duration so variable-tempo tracks stretch and compress the
@@ -219,6 +228,7 @@ export const envelopeMath = {
   easeInCubic,
   easeOutExpo,
   beatPulseEnvelope,
+  lobeSplitEnvelope,
   phaseDurations,
 };
 
@@ -425,7 +435,10 @@ function buildEvents(track, options) {
 function eventChannels(event, time) {
   const t0 = event.time;
   const strikeEnd = t0 + event.impactDuration;
-  const channels = { anticipation: 0, hold: 0, impact: 0, recoil: 0, aftershock: 0, dominance: 0 };
+  const channels = {
+    anticipation: 0, hold: 0, impact: 0, recoil: 0, aftershock: 0,
+    lobeSplit: 0, dominance: 0,
+  };
 
   if (event.phrased) {
     // Release fades both the anticipation plateau and the hold down across
@@ -456,8 +469,10 @@ function eventChannels(event, time) {
   channels.impact *= event.amplitude;
   channels.recoil *= event.amplitude;
   channels.aftershock *= event.amplitude;
+  channels.lobeSplit = lobeSplitEnvelope(event, time) * event.amplitude;
   channels.dominance = channels.impact * 2 + channels.anticipation
-    + channels.hold * 0.5 + channels.recoil + channels.aftershock * 0.5;
+    + channels.hold * 0.5 + channels.recoil + channels.aftershock * 0.5
+    + channels.lobeSplit * 1.5;
   return channels;
 }
 
@@ -522,6 +537,7 @@ export function createMotionDirector(track, options = {}) {
     let impact = 0;
     let recoil = 0;
     let aftershock = 0;
+    let lobeSplit = 0;
     let primary = null;
     let primaryDominance = 0;
     let recent = null;
@@ -534,6 +550,7 @@ export function createMotionDirector(track, options = {}) {
       if (channels.impact > impact) impact = channels.impact;
       if (channels.recoil > recoil) recoil = channels.recoil;
       if (channels.aftershock > aftershock) aftershock = channels.aftershock;
+      if (channels.lobeSplit > lobeSplit) lobeSplit = channels.lobeSplit;
       if (channels.dominance > primaryDominance) {
         primaryDominance = channels.dominance;
         primary = event;
@@ -554,6 +571,7 @@ export function createMotionDirector(track, options = {}) {
     let impactValue = impact;
     let recoilValue = recoil;
     let aftershockValue = aftershock;
+    let lobeSplitValue = lobeSplit;
     if (reducedMotion) {
       ambientValue = ambient * 0.15;
       anticipationValue = anticipation * 0.25;
@@ -561,6 +579,7 @@ export function createMotionDirector(track, options = {}) {
       impactValue = impact * 0.25;
       recoilValue = recoil * 0.25;
       aftershockValue = aftershock * 0.25;
+      lobeSplitValue = lobeSplit * 0.20;
     }
 
     const memory = 1 - Math.exp(-memorySum);
@@ -613,6 +632,7 @@ export function createMotionDirector(track, options = {}) {
       impact: impactValue,
       recoil: recoilValue,
       aftershock: aftershockValue,
+      lobeSplit: lobeSplitValue,
       tension,
       memory,
       hero: driver && driver.tier === 'hero' ? 1 : 0,

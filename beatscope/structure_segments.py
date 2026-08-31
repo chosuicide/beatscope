@@ -638,7 +638,10 @@ def analyze_structure_segments(
             "_entry_novelty": cut_novelty.get(start),
             "start_bar": spans[start].bar,
             "end_bar": spans[end - 1].bar,
-            "start_time": round(spans[start].start_time, 6),
+            # A pickup or leading silence can put the first downbeat after
+            # zero. Structural spans still partition the complete source, so
+            # the first segment owns that prefix.
+            "start_time": 0.0 if start == 0 else round(spans[start].start_time, 6),
             "end_time": round(spans[end - 1].end_time, 6),
             "bar_count": spans[end - 1].bar - spans[start].bar + 1,
         })

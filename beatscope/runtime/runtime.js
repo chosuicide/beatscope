@@ -299,7 +299,7 @@ export function structuralSegmentAt(map, indexes, time) {
   const end = Number(segment.end_time) || 0;
   // Interior ends are exclusive; only the final segment owns its own end.
   const isFinal = index === segments.length - 1;
-  if (!isFinal && t >= end) return null;
+  if (t > end || (!isFinal && t >= end)) return null;
   return segment;
 }
 

@@ -148,7 +148,10 @@ function beatsFromSpans(spans) {
   return beats;
 }
 
-const MOTION_CHANNELS = ['ambient', 'anticipation', 'hold', 'impact', 'recoil', 'aftershock', 'tension', 'memory'];
+const MOTION_CHANNELS = [
+  'ambient', 'anticipation', 'hold', 'impact', 'recoil', 'aftershock',
+  'lobeSplit', 'tension', 'memory',
+];
 
 // Envelope curve helpers: exact endpoints and clamps (plan section 6.4).
 {
@@ -186,6 +189,17 @@ const MOTION_CHANNELS = ['ambient', 'anticipation', 'hold', 'impact', 'recoil', 
   assert.ok(envelopeMath.beatPulseEnvelope(0.05) > 0.5);
   assert.ok(envelopeMath.beatPulseEnvelope(0.6) > 0);
   assert.ok(envelopeMath.beatPulseEnvelope(0.6) < 1);
+
+  const splitEvent = {
+    phrased: true, time: 2, amplitude: 1,
+    impactDuration: 0.06, recoilDuration: 0.21,
+  };
+  assert.equal(envelopeMath.lobeSplitEnvelope(splitEvent, 2 - 1e-8), 0);
+  assert.equal(envelopeMath.lobeSplitEnvelope(splitEvent, 2), 1);
+  assert.equal(envelopeMath.lobeSplitEnvelope(splitEvent, 2.115), 1);
+  assert.ok(envelopeMath.lobeSplitEnvelope(splitEvent, 2.25) < 1);
+  assert.ok(envelopeMath.lobeSplitEnvelope(splitEvent, 2.25) > 0);
+  assert.equal(envelopeMath.lobeSplitEnvelope(splitEvent, 2.405), 0);
 }
 
 // One silent hero at t=20 on a 120 BPM fallback grid: beatSpan 0.5 s gives
@@ -224,6 +238,7 @@ const boundaryDirector = createMotionDirector(createTrack(boundaryProject()));
   assert.equal(strike.impact, 1); // amplitude 1 x hero x gate(0)
   assert.equal(strike.recoil, 0);
   assert.equal(strike.aftershock, 0);
+  assert.equal(strike.lobeSplit, 1);
   assert.equal(strike.hero, 1);
   assert.equal(strike.tier, 'hero');
 
@@ -234,6 +249,9 @@ const boundaryDirector = createMotionDirector(createTrack(boundaryProject()));
   assert.equal(handover.hold, 0);
   assert.equal(handover.recoil, 0);
   assert.ok(d.at(20.06 + EPS).recoil > 0);
+  assert.equal(d.at(20.10).lobeSplit, 1);
+  assert.ok(d.at(20.25).lobeSplit > 0);
+  assert.equal(d.at(20.405).lobeSplit, 0);
 
   assert.equal(d.at(20.27).recoil, 0); // recoil window end
   assert.equal(d.at(20.27).aftershock, 0);
@@ -251,7 +269,7 @@ const boundaryDirector = createMotionDirector(createTrack(boundaryProject()));
     const before = boundaryDirector.at(boundary - EPS);
     const after = boundaryDirector.at(boundary + EPS);
     for (const channel of MOTION_CHANNELS) {
-      if (boundary === 20 && channel === 'impact') continue;
+      if (boundary === 20 && (channel === 'impact' || channel === 'lobeSplit')) continue;
       assert.ok(
         Math.abs(before[channel] - after[channel]) <= 1e-6,
         `boundary ${boundary}: ${channel} jumped ${before[channel]} -> ${after[channel]}`,
@@ -272,7 +290,7 @@ const boundaryDirector = createMotionDirector(createTrack(boundaryProject()));
       anticipation: [0, 1], hold: [0, 1], impact: [0, 1], recoil: [0, 1],
       aftershock: [-1, 1], tension: [0, 1], memory: [0, 1], hero: [0, 1],
       shockProgress: [0, 1], beatWave: [0, 1], waveProgress: [0, 1],
-      coreAperture: [0, 1], diffusion: [0, 1], beatExpand: [0, 1],
+      coreAperture: [0, 1], diffusion: [0, 1], beatExpand: [0, 1], lobeSplit: [0, 1],
       beatPhase: [0, 1], barPhase: [0, 1],
     }, `director.at(${time})`);
     assert.equal(frame.tier, 'ambient');
@@ -454,6 +472,7 @@ const boundaryDirector = createMotionDirector(createTrack(boundaryProject()));
   assert.equal(calm.hold, 0);
   assert.ok(Math.abs(calm.anticipation - frame.anticipation * 0.25) < 1e-12);
   assert.ok(Math.abs(calm.impact - frame.impact * 0.25) < 1e-12);
+  assert.ok(Math.abs(calm.lobeSplit - frame.lobeSplit * 0.20) < 1e-12);
   assert.ok(frame.ambient > 0);
   assert.ok(Math.abs(calm.ambient - frame.ambient * 0.15) < 1e-12);
   assert.ok(Math.abs(calm.tension - Math.min(1, calm.anticipation + 0.35 * calm.memory)) < 1e-12);

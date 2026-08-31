@@ -592,7 +592,7 @@
       {
         "start_bar": 1,
         "end_bar": 4,
-        "start_time": 0.0058,
+        "start_time": 0.0,
         "end_time": 8.0,
         "bar_count": 4,
         "family": "A",

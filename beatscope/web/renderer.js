@@ -479,6 +479,7 @@ function drawParticleHalo(ctx, frame, layout) {
   const impact = clamp(frame.impact) * reduced;
   const wave = clamp(frame.beatWave) * reduced;
   const expand = clamp(frame.beatExpand) * reduced;
+  const split = clamp(frame.lobeSplit) * reduced;
   const anticipation = clamp(frame.anticipation) * reduced;
   const low = clamp(frame.low);
   const weights = Array.isArray(frame.lobeWeights) ? frame.lobeWeights : [1 / 3, 1 / 3, 1 / 3];
@@ -498,10 +499,10 @@ function drawParticleHalo(ctx, frame, layout) {
   for (let index = 0; index < 3; index += 1) {
     const angle = -Math.PI / 2 + index * Math.PI * 2 / 3;
     const selected = clamp(weights[index]);
-    const energy = clamp(.045 + low * .075 + expand * .16 + wave * (.09 + selected * .16)
+    const energy = clamp(.045 + low * .075 + expand * .16 + split * .28 + wave * (.09 + selected * .16)
       + impact * (.16 + selected * .54));
     const pullIn = 1 - anticipation * (.10 + selected * .10);
-    const offset = baseRadius * (.14 + impact * selected * .10) * pullIn;
+    const offset = baseRadius * (.14 + split * .34 + impact * selected * .10) * pullIn;
     const radius = baseRadius * (.66 + expand * .28 + impact * selected * .38) * pullIn;
     const x = centreX + Math.cos(angle) * offset;
     const y = centreY + Math.sin(angle) * offset;

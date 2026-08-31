@@ -404,12 +404,14 @@ console.log('Runtime OK: createTrack contract, immutability, quantize parity, pu
   // Half-open: the boundary instant itself belongs to the next segment.
   assert.equal(structureTrack.structuralSegmentAt(4.0)?.id, 'segment-002');
   assert.equal(structureTrack.structuralSegmentAt(8.0)?.id, 'segment-002');
+  assert.equal(structureTrack.structuralSegmentAt(8.001), null);
 
   // Phase: 0 at segment start, 1 clamped only at the final duration.
   assert.equal(structureTrack.structuralPhaseAt(0), 0);
   assert.equal(structureTrack.structuralPhaseAt(2), 0.5);
   assert.equal(structureTrack.structuralPhaseAt(4), 0);
   assert.equal(structureTrack.structuralPhaseAt(8), 1);
+  assert.equal(structureTrack.structuralPhaseAt(8.001), null);
 
   // Next boundary: strictly after the query; none past the last cut.
   assert.equal(structureTrack.nextStructuralBoundary(0)?.time, 4.0);
@@ -448,6 +450,7 @@ console.log('Runtime OK: createTrack contract, immutability, quantize parity, pu
 
   // Signals: structureLead peaks at the cut, boundaryImpulse decays after it.
   assert.equal(structureTrack.structureLead(8), 1);
+  assert.equal(structureTrack.structureLead(8.001), 0);
   assert.ok(Math.abs(structureTrack.structureLead(4.5) - 0.04296875) < 1e-9);
   assert.ok(Math.abs(structureTrack.boundaryImpulse(4.5) - Math.exp(-0.5 * 2)) < 1e-9);
   assert.equal(structureTrack.boundaryImpulse(0), 0);

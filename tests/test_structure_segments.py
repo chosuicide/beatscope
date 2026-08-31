@@ -263,6 +263,29 @@ def test_payload_extends_final_segment_to_grid_bars():
     assert payload["bar_families"][24] == "A"
 
 
+def test_payload_first_segment_covers_leading_audio():
+    features = _aba_features()
+    shifted = StructureFeatures(
+        [
+            BarSpan(
+                span.bar,
+                span.start_time + 0.25,
+                span.end_time + 0.25,
+                span.start_frame,
+                span.end_frame,
+            )
+            for span in features.bar_spans
+        ],
+        features.views,
+        features.diagnostics,
+    )
+    payload = analyze_structure_segments(
+        shifted, 48.25, 24, np.ones(24), np.full(24, 8.0),
+    )
+    assert payload is not None
+    assert payload["segments"][0]["start_time"] == 0.0
+
+
 def test_payload_is_deterministic():
     first = analyze_structure_segments(
         _aba_features(), 48.0, 24, np.ones(24), np.full(24, 8.0),

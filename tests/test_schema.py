@@ -445,6 +445,41 @@ def test_v07_rejects_segment_bar_gaps_and_overlaps():
     assert any("contiguous" in error for error in validate_rhythm_v4(project))
 
 
+def test_v07_rejects_incomplete_song_coverage():
+    from beatscope.schema import validate_rhythm_v4
+
+    project = _minimal_v4_project()
+    patterns = _v07_patterns()
+    patterns["segments"][0]["start_bar"] = 2
+    project["patterns"] = patterns
+    assert any("start at bar 1" in error for error in validate_rhythm_v4(project))
+
+    patterns = _v07_patterns()
+    patterns["segments"][0]["start_time"] = 1.0
+    project["patterns"] = patterns
+    assert any("start at time 0" in error for error in validate_rhythm_v4(project))
+
+    patterns = _v07_patterns()
+    patterns["segments"][-1]["end_bar"] = 2
+    project["patterns"] = patterns
+    assert any("end_bar must equal grid bars" in error for error in validate_rhythm_v4(project))
+
+
+def test_v07_rejects_segment_time_gaps_and_boundary_time_mismatch():
+    from beatscope.schema import validate_rhythm_v4
+
+    project = _minimal_v4_project()
+    patterns = _v07_patterns()
+    patterns["segments"][1]["start_time"] = 5.0
+    project["patterns"] = patterns
+    assert any("leaves a gap" in error for error in validate_rhythm_v4(project))
+
+    patterns = _v07_patterns()
+    patterns["boundaries"][0]["time"] = 5.0
+    project["patterns"] = patterns
+    assert any("matching segment start_time" in error for error in validate_rhythm_v4(project))
+
+
 def test_v07_rejects_duplicate_ids_and_wrong_indexes():
     from beatscope.schema import validate_rhythm_v4
 

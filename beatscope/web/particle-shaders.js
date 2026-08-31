@@ -40,6 +40,7 @@ uniform float uWaveProgress;
 uniform float uCoreAperture;
 uniform float uDiffusion;
 uniform float uBeatExpand;
+uniform float uLobeSplit;
 uniform float uReducedMotion;
 uniform float uQuality;
 uniform vec3 uRingA;          // ring semi-major axes (world units)
@@ -158,6 +159,9 @@ void main() {
     position.xy += lobeTangent * alongLobe * (idleTurn + impactTurn);
     position.xy += lobeAxis * alongLobe * lobeOpen;
     position.xy += lobeAxis * uImpact * (0.025 + 0.040 * selected);
+    // One coherent translation per petal: heavy beats open a clear centre
+    // without introducing independent particle timing or a random explosion.
+    position.xy += lobeAxis * uLobeSplit * (0.20 + 0.08 * uHero);
 
     // Continuous macro flow: neighbouring particles sample the same smooth
     // spatial field, so the centre rolls and folds as one material instead of
