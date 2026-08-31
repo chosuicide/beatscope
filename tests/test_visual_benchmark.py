@@ -16,14 +16,22 @@ from beatscope import visual_benchmark
 from beatscope.schema import validate_rhythm_v4
 from beatscope.visual_benchmark import (
     BLOCKING_GATES,
+    CASE_PROBE_GATES,
     GATE_POLICY,
+    PERF_PROBE_GATES,
     RECORDED_ONLY_GATES,
+    TRANSITION_SAMPLE_COUNT,
+    checkpoint_mismatches,
+    collect_visual_checkpoints,
     evaluate_visual_case,
     identity_report,
+    load_visual_checkpoints,
     load_visual_fixtures,
+    motion_report,
     run_visual_benchmark,
     scene_tiling_report,
     transition_report,
+    transition_sample_times,
 )
 from beatscope.visual_recipe_schema import (
     BREAK_FAMILY,
@@ -97,11 +105,17 @@ def test_frozen_thresholds():
     assert visual_benchmark.COMPOSITION_CONTINUITY_EPS == 1e-5
     assert visual_benchmark.SETTLE_EXACTNESS == 1e-6
     assert visual_benchmark.REDUCED_MOTION_POSITION_MAX == 0.20
+    assert visual_benchmark.REDUCED_IMPUSE_SCALE_MAX == 0.15
     assert visual_benchmark.SCENE_QUERY_P95_MS == 0.10
     assert visual_benchmark.DIRECTOR_QUERY_P95_MS == 0.35
     assert visual_benchmark.RENDERER_CPU_P95_MS == 2.0
     assert visual_benchmark.FRAME_BUDGET_P95_MS == 18.0
     assert visual_benchmark.MAX_DRAW_CALLS == 1
+    assert visual_benchmark.DIRECTOR_ALLOCATION_SMOKE_BYTES == 262_144
+    assert visual_benchmark.PERF_FIXTURE_NAME == "visual-dense"
+    assert visual_benchmark.PERF_SCENE_QUERIES == 3000
+    assert visual_benchmark.PERF_DIRECTOR_QUERIES == 2000
+    assert visual_benchmark.PERF_ALLOCATION_QUERIES == 8000
     assert visual_benchmark.SCENE_STEADY_SPREAD_CAP == 0.32
     assert visual_benchmark.HEAVY_BEAT_ADDITIVE_CAP == 0.28
     assert visual_benchmark.COMBINED_SPREAD_CAP == 0.46
@@ -259,14 +273,12 @@ def test_run_visual_benchmark_without_compiler_reports_unavailable(tmp_path, mon
     assert all(case["gates_failed"] == ["compiler-unavailable"] for case in results["cases"])
 
 
-def test_pending_gates_cover_unimplemented_probes(tmp_path):
-    enforced = set(visual_benchmark.ENFORCED_GATES)
-    pending = sorted(gate for gate in BLOCKING_GATES if gate not in enforced)
+def test_every_blocking_gate_is_enforced(tmp_path):
+    assert visual_benchmark.ENFORCED_GATES == BLOCKING_GATES
     results = run_visual_benchmark(tmp_path / "report", cases=[])
-    assert results["gates"]["pending"] == pending
-    assert "composition-continuity" in pending
-    assert "scene-query-p95" in pending
-    assert "seek-determinism" in pending
+    assert results["gates"]["pending"] == []
+    assert results["gates"]["unavailable"] == []
+    assert results["gates"]["failed"] == []
 
 
 def test_run_visual_benchmark_writes_default_report(tmp_path, monkeypatch):
@@ -283,6 +295,288 @@ def test_run_visual_benchmark_writes_default_report(tmp_path, monkeypatch):
     assert results["output_dir"] == str(Path("build") / "visual-benchmark")
     assert (tmp_path / "build" / "visual-benchmark" / "visual-benchmark.json").exists()
     assert results["gates"]["failed"] == []
+
+
+# ------------------------------------------------- identity: palette gate
+
+
+def test_family_palette_gate_flags_invalid_slot():
+    case = _compiled_case()
+    case["recipe"]["families"]["A"]["palette_slot"] = 9
+    result = evaluate_visual_case(case["name"], case["rhythm"], case["recipe"], case["timeline"])
+    assert "family-palette-equality" in result["gates_failed"]
+    assert result["metrics"]["identity"]["palette_violations"]
+
+
+def test_family_palette_gate_flags_unknown_family_reference():
+    case = _compiled_case()
+    case["timeline"]["scenes"][0]["family"] = "ZZ"
+    result = evaluate_visual_case(case["name"], case["rhythm"], case["recipe"], case["timeline"])
+    assert "family-palette-equality" in result["gates_failed"]
+
+
+# ----------------------------------------------- motion sampling (18.4)
+
+
+def _smoothstep(value: float) -> float:
+    clamped = min(1.0, max(0.0, value))
+    return clamped * clamped * (3.0 - 2.0 * clamped)
+
+
+FROM_BASE = {"spread": 0.3, "twist": 0.16, "flow": 0.24, "orbit": 0.52, "void": 0.22, "contrast": 0.66}
+TO_BASE = {"spread": 0.42, "twist": 0.1, "flow": 0.3, "orbit": 0.4, "void": 0.3, "contrast": 0.5}
+BOUNDARY, LEAD, SETTLE, STRENGTH, PALETTE_CAP = 8.0, 0.5, 0.75, 0.8, 0.42
+
+
+def _synthetic_timeline():
+    return {
+        "duration": 16.0,
+        "scenes": [
+            {"id": "scene-001", "family": "A", "start_time": 0.0, "end_time": 8.0, "variant_delta": {}},
+            {"id": "scene-002", "family": "B", "start_time": 8.0, "end_time": 16.0, "variant_delta": {}},
+        ],
+        "transitions": [
+            {
+                "id": "t1",
+                "boundary_bar": 9,
+                "time": BOUNDARY,
+                "lead_seconds": LEAD,
+                "settle_seconds": SETTLE,
+                "strength": STRENGTH,
+                "treatment": "phase-turn",
+                "driver": "harmony",
+            }
+        ],
+    }
+
+
+def _synthetic_recipe():
+    return {
+        "families": {
+            "A": {"composition": dict(FROM_BASE)},
+            "B": {"composition": dict(TO_BASE)},
+        },
+        "tokens": {"motion": {"max_palette_mix": PALETTE_CAP}},
+    }
+
+
+def _synthetic_frame(time, *, reduced=False):
+    if time == BOUNDARY:
+        stage, impulse = "cross", STRENGTH
+    elif BOUNDARY < time <= BOUNDARY + SETTLE:
+        stage, impulse = "settle", 0.0
+    elif BOUNDARY - LEAD <= time < BOUNDARY:
+        stage, impulse = "approach", 0.0
+    else:
+        stage, impulse = "idle", 0.0
+    envelope = (
+        1.0 if stage == "cross"
+        else _smoothstep((time - (BOUNDARY - LEAD)) / LEAD) if stage == "approach"
+        else 1.0 - _smoothstep((time - BOUNDARY) / SETTLE) if stage == "settle"
+        else 0.0
+    )
+    motion_scale = 0.2 if reduced else 1.0
+    mix = _smoothstep((time - BOUNDARY) / SETTLE) if time > BOUNDARY else 0.0
+    composition = {
+        key: FROM_BASE[key] + (TO_BASE[key] - FROM_BASE[key]) * mix * (0.2 if reduced and key in ("spread", "twist", "flow") else 1.0)
+        for key in FROM_BASE
+    }
+    composition["paletteMix"] = mix * PALETTE_CAP
+    return {
+        "time": time,
+        "transition": {
+            "stage": stage,
+            "impulse": impulse * (0.15 if reduced else 1.0),
+            "strength": STRENGTH,
+            "channels": {
+                "phaseTurn": envelope * motion_scale,
+                "radialPart": 0.0,
+                "aperture": 0.0,
+                "flowShear": 0.0,
+                "contrastHit": STRENGTH if stage == "cross" else STRENGTH * envelope if stage == "settle" else 0.0,
+            },
+        },
+        "composition": composition,
+    }
+
+
+def _synthetic_samples():
+    times = transition_sample_times(_synthetic_timeline())["t1"]
+    samples = []
+    for time in times:
+        beat = {"lobeSplit": 0.1}
+        samples.append({
+            "transition": "t1",
+            "time": time,
+            "full": _synthetic_frame(time),
+            "reduced": _synthetic_frame(time, reduced=True),
+            "beat": beat,
+            "sceneSpread": 0.35,
+        })
+    return samples
+
+
+def test_transition_sample_times_follow_plan_grid():
+    samples = transition_sample_times(_synthetic_timeline())["t1"]
+    assert len(samples) == TRANSITION_SAMPLE_COUNT
+    assert samples[3] == BOUNDARY
+    for offset, expected in (
+        (0, BOUNDARY - LEAD - 0.001),
+        (1, BOUNDARY - LEAD),
+        (2, BOUNDARY - 0.001),
+        (4, BOUNDARY + 0.001),
+        (5, BOUNDARY + SETTLE / 2),
+        (6, BOUNDARY + SETTLE),
+        (7, BOUNDARY + SETTLE + 0.001),
+    ):
+        assert abs(samples[offset] - expected) < 1e-12
+
+
+def test_motion_report_accepts_conforming_samples():
+    report = motion_report(_synthetic_recipe(), _synthetic_timeline(), _synthetic_samples())
+    assert report["sample_count"] == TRANSITION_SAMPLE_COUNT
+    assert report["past_end_samples"] == 0
+    assert report["bounds_violations"] == []
+    assert report["continuity_violations"] == []
+    assert report["impulse_violations"] == []
+    assert report["reduced_motion_violations"] == []
+    assert report["settle_exactness_violations"] == []
+    assert report["combined_spread_violations"] == []
+    assert report["combined_spread_max"] == 0.35
+
+
+def _sample_at(samples, time):
+    return next(sample for sample in samples if abs(sample["time"] - time) < 1e-12)
+
+
+@pytest.mark.parametrize(
+    "mutate, field",
+    [
+        # a composition channel jumps across the boundary
+        (
+            lambda samples: _sample_at(samples, BOUNDARY + 0.001)["full"]["composition"].update(spread=0.31),
+            "continuity_violations",
+        ),
+        # the impulse leaks below its sanctioned boundary instant
+        (
+            lambda samples: _sample_at(samples, BOUNDARY - 0.001)["full"]["transition"].update(impulse=0.4),
+            "impulse_violations",
+        ),
+        # reduced motion closes the whole crossfade distance
+        (
+            lambda samples: _sample_at(samples, BOUNDARY + SETTLE / 2)["reduced"]["composition"].update(
+                spread=_sample_at(samples, BOUNDARY + SETTLE / 2)["full"]["composition"]["spread"]
+            ),
+            "reduced_motion_violations",
+        ),
+        # settlement misses the target scene base
+        (
+            lambda samples: _sample_at(samples, BOUNDARY + SETTLE)["full"]["composition"].update(spread=0.4),
+            "settle_exactness_violations",
+        ),
+        # the combined spread breaks through the cap
+        (
+            lambda samples: _sample_at(samples, BOUNDARY).update(sceneSpread=0.9),
+            "combined_spread_violations",
+        ),
+    ],
+)
+def test_motion_report_flags_violations(mutate, field):
+    samples = _synthetic_samples()
+    mutate(samples)
+    report = motion_report(_synthetic_recipe(), _synthetic_timeline(), samples)
+    assert report[field], field
+
+
+def test_motion_report_ignores_post_settle_ownership_snap():
+    # After the settle window both motion modes sit exactly on the owning
+    # scene's base; that structural handoff is not a reduced-motion breach.
+    samples = _synthetic_samples()
+    report = motion_report(_synthetic_recipe(), _synthetic_timeline(), samples)
+    assert not report["reduced_motion_violations"]
+
+
+def test_motion_report_tolerates_past_end_samples():
+    samples = _synthetic_samples()
+    samples[-1]["full"] = None
+    samples[-1]["reduced"] = None
+    report = motion_report(_synthetic_recipe(), _synthetic_timeline(), samples)
+    assert report["past_end_samples"] >= 1
+    assert report["bounds_violations"] == []
+
+
+# ---------------------------------------------------------- probe runs
+
+
+def test_probe_gates_become_unavailable_without_node(tmp_path, monkeypatch):
+    monkeypatch.setattr(visual_benchmark.shutil, "which", lambda name: None)
+    results = run_visual_benchmark(tmp_path / "report")
+    assert results["gates"]["failed"] == []
+    assert set(results["gates"]["unavailable"]) == set(CASE_PROBE_GATES) | set(PERF_PROBE_GATES)
+    by_name = {case["name"]: case for case in results["cases"]}
+    # The compiler still runs, so artifact gates stay enforced everywhere.
+    assert by_name["visual-legacy"]["metrics"]["tiling"]["scene_count"] == 1
+    assert all("compiler-unavailable" not in case["gates_failed"] for case in results["cases"])
+
+
+def _node_missing() -> bool:
+    import shutil
+
+    return shutil.which("node") is None
+
+
+@pytest.mark.skipif(_node_missing(), reason="Node.js is not available")
+def test_full_visual_benchmark_passes_every_gate(tmp_path):
+    results = run_visual_benchmark(tmp_path / "report")
+    assert results["gates"]["failed"] == []
+    assert results["gates"]["unavailable"] == []
+    assert results["gates"]["pending"] == []
+    assert results["probes"]["driver"] == "ok"
+    assert results["probes"]["parity"] == "checked"
+    by_name = {case["name"]: case for case in results["cases"]}
+    assert len(by_name) == 13
+    # Golden checkpoints replay exactly through the live runtime.
+    assert all(case["metrics"].get("checkpoint_mismatches", 0) == 0 for case in results["cases"])
+    # Determinism probes all ran and passed.
+    for case in results["cases"]:
+        determinism = case["metrics"].get("determinism") or {}
+        assert determinism.get("order_checked") and determinism.get("seek_checked"), case["name"]
+        assert determinism.get("parity_checked"), case["name"]
+    # Performance probes on the dense fixture stay inside the budgets.
+    performance = by_name["visual-dense"]["metrics"]["performance"]
+    assert performance["scene_query_p95_ms"] < visual_benchmark.SCENE_QUERY_P95_MS
+    assert performance["director_query_p95_ms"] < visual_benchmark.DIRECTOR_QUERY_P95_MS
+    assert performance["allocation_retained_bytes"] <= visual_benchmark.DIRECTOR_ALLOCATION_SMOKE_BYTES
+    assert set(performance["draw_call_renders"]) == {visual_benchmark.MAX_DRAW_CALLS}
+    # The legacy fixture compiles to its single neutral scene.
+    assert by_name["visual-legacy"]["metrics"]["tiling"]["scene_count"] == 1
+    markdown = (tmp_path / "report" / "visual-benchmark.md").read_text(encoding="utf-8")
+    assert "gates failed: 0" in markdown
+    assert "gates unavailable: 0" in markdown
+
+
+# --------------------------------------------------------- checkpoints
+
+
+def test_committed_checkpoints_cover_every_fixture():
+    document = load_visual_checkpoints()
+    assert document["schema"] == "beatscope-visual-checkpoints-1"
+    assert document["recipe_version"] == "0.8.0"
+    assert set(document["fixtures"]) == set(FROZEN_FIXTURES)
+    for name, payload in document["fixtures"].items():
+        assert len(payload["times"]) == len(payload["states"]) >= 3, name
+        assert payload["times"][0] == 0.0
+        assert all(state is not None and state["scene"]["family"] for state in payload["states"]), name
+
+
+@pytest.mark.skipif(_node_missing(), reason="Node.js is not available")
+def test_checkpoint_regeneration_is_byte_identical():
+    import json
+
+    document = collect_visual_checkpoints()
+    text = json.dumps(document, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+    committed = visual_benchmark.COMMITTED_CHECKPOINT_PATH.read_bytes().decode("utf-8")
+    assert text == committed
 
 
 # ------------------------------------------------------ frozen fixtures

@@ -1,0 +1,4881 @@
+{
+  "schema": "beatscope-visual-checkpoints-1",
+  "recipe_version": "0.8.0",
+  "fixtures": {
+    "visual-aba": {
+      "times": [
+        0.0,
+        7.99345,
+        15.9869,
+        16.735775,
+        23.9862,
+        31.9855,
+        32.734375,
+        39.99275,
+        48.0
+      ],
+      "states": [
+        {
+          "time": 0,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 0
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 7.99345,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 0.5
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 15.9869,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "axial-flow",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "phase-turn",
+            "driver": "harmony",
+            "strength": 1,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 1,
+            "settle": 0,
+            "impulse": 1,
+            "channels": {
+              "phaseTurn": 1,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 1
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 16.735775,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "axial-flow",
+            "phase": 0.046808783268536
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "phase-turn",
+            "driver": "harmony",
+            "strength": 1,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 23.9862,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "axial-flow",
+            "phase": 0.5000000000000001
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 31.9855,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "radial-part",
+            "driver": "rhythm",
+            "strength": 0.9483,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.9483,
+            "settle": 0,
+            "impulse": 0.9483,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 1,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0.9483
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 32.734375,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 0.04676230915732628
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "radial-part",
+            "driver": "rhythm",
+            "strength": 0.9483,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 39.99275,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 0.5000000000000001
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 48,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 1
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        }
+      ]
+    },
+    "visual-aba-prime": {
+      "times": [
+        0.0,
+        7.99345,
+        15.9869,
+        16.6835,
+        22.8426,
+        29.6983,
+        30.390625,
+        37.7063,
+        45.7143
+      ],
+      "states": [
+        {
+          "time": 0,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 7.99345,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0.5
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 15.9869,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "A",
+            "variant": 1,
+            "label": "A′",
+            "motif": "orbital-weave",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "phase-turn",
+            "driver": "harmony",
+            "strength": 0.9343,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.9343,
+            "settle": 0,
+            "impulse": 0.9343,
+            "channels": {
+              "phaseTurn": 1,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0.9343
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 16.6835,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "A",
+            "variant": 1,
+            "label": "A′",
+            "motif": "orbital-weave",
+            "phase": 0.050804440100937785
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "phase-turn",
+            "driver": "harmony",
+            "strength": 0.9343,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.335783,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.727449,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 22.8426,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "A",
+            "variant": 1,
+            "label": "A′",
+            "motif": "orbital-weave",
+            "phase": 0.5000000000000001
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.335783,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.727449,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 29.6983,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "flow-shear",
+            "driver": "timbre",
+            "strength": 0.957,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.957,
+            "settle": 0,
+            "impulse": 0.957,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": -1,
+              "contrastHit": 0.957
+            }
+          },
+          "composition": {
+            "spread": 0.335783,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.727449,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 30.390625,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0.04322708541458543
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "flow-shear",
+            "driver": "timbre",
+            "strength": 0.957,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 37.7063,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0.4999999999999999
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 45.7143,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 1
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        }
+      ]
+    },
+    "visual-break": {
+      "times": [
+        0.0,
+        7.99635,
+        15.9927,
+        16.741575,
+        19.98945,
+        23.9862,
+        24.735,
+        31.9931,
+        40.0
+      ],
+      "states": [
+        {
+          "time": 0,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 7.99635,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0.5
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 15.9927,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "BREAK",
+            "variant": 0,
+            "label": "BREAK",
+            "motif": "suspended-void",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "aperture",
+            "driver": "energy",
+            "strength": 1,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 1,
+            "settle": 0,
+            "impulse": 1,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 1,
+              "flowShear": 0,
+              "contrastHit": 1
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 16.741575,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "BREAK",
+            "variant": 0,
+            "label": "BREAK",
+            "motif": "suspended-void",
+            "phase": 0.09368549446425241
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.08,
+            "twist": 0.04,
+            "flow": 0.12,
+            "orbit": 0.2,
+            "void": 0.52,
+            "contrast": 0.58,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 19.98945,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "BREAK",
+            "variant": 0,
+            "label": "BREAK",
+            "motif": "suspended-void",
+            "phase": 0.5000000000000002
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.08,
+            "twist": 0.04,
+            "flow": 0.12,
+            "orbit": 0.2,
+            "void": 0.52,
+            "contrast": 0.58,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 23.9862,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "phase-turn",
+            "driver": "harmony",
+            "strength": 0.9391,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.9391,
+            "settle": 0,
+            "impulse": 0.9391,
+            "channels": {
+              "phaseTurn": 1,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0.9391
+            }
+          },
+          "composition": {
+            "spread": 0.08,
+            "twist": 0.04,
+            "flow": 0.12,
+            "orbit": 0.2,
+            "void": 0.52,
+            "contrast": 0.58,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 24.735,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0.046759669784810554
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "phase-turn",
+            "driver": "harmony",
+            "strength": 0.9391,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16000000000000003,
+            "contrast": 0.74,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 31.9931,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0.4999999999999999
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 40,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 1
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        }
+      ]
+    },
+    "visual-dense": {
+      "times": [
+        0.0,
+        7.99345,
+        15.9869,
+        16.735775,
+        23.9862,
+        31.9855,
+        32.734375,
+        39.99275,
+        48.0
+      ],
+      "states": [
+        {
+          "time": 0,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 0
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 7.99345,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 0.5
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 15.9869,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "orbital-weave",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "phase-turn",
+            "driver": "harmony",
+            "strength": 1,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 1,
+            "settle": 0,
+            "impulse": 1,
+            "channels": {
+              "phaseTurn": 1,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 1
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 16.735775,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "orbital-weave",
+            "phase": 0.046808783268536
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "phase-turn",
+            "driver": "harmony",
+            "strength": 1,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 23.9862,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "orbital-weave",
+            "phase": 0.5000000000000001
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 31.9855,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "radial-part",
+            "driver": "rhythm",
+            "strength": 0.9483,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.9483,
+            "settle": 0,
+            "impulse": 0.9483,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 1,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0.9483
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 32.734375,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 0.04676230915732628
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "radial-part",
+            "driver": "rhythm",
+            "strength": 0.9483,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 39.99275,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 0.5000000000000001
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 48,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 1
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        }
+      ]
+    },
+    "visual-driver-energy": {
+      "times": [
+        0.0,
+        7.99345,
+        15.9869,
+        16.735775,
+        23.9862,
+        31.9855,
+        32.734375,
+        39.99275,
+        48.0
+      ],
+      "states": [
+        {
+          "time": 0,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 0
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 7.99345,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 0.5
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 15.9869,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "axial-flow",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "aperture",
+            "driver": "energy",
+            "strength": 1,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 1,
+            "settle": 0,
+            "impulse": 1,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 1,
+              "flowShear": 0,
+              "contrastHit": 1
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 16.735775,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "axial-flow",
+            "phase": 0.046808783268536
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "aperture",
+            "driver": "energy",
+            "strength": 1,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 23.9862,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "axial-flow",
+            "phase": 0.5000000000000001
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 31.9855,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "aperture",
+            "driver": "energy",
+            "strength": 0.9373,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.9373,
+            "settle": 0,
+            "impulse": 0.9373,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 1,
+              "flowShear": 0,
+              "contrastHit": 0.9373
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 32.734375,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 0.04676230915732628
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "aperture",
+            "driver": "energy",
+            "strength": 0.9373,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 39.99275,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 0.5000000000000001
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 48,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "open-triad",
+            "phase": 1
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        }
+      ]
+    },
+    "visual-driver-harmony": {
+      "times": [
+        0.0,
+        7.99345,
+        15.9869,
+        16.735775,
+        23.9862,
+        31.9855,
+        32.734375,
+        39.99275,
+        48.0
+      ],
+      "states": [
+        {
+          "time": 0,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 0
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 7.99345,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 0.5
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 15.9869,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "open-triad",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "phase-turn",
+            "driver": "harmony",
+            "strength": 1,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 1,
+            "settle": 0,
+            "impulse": 1,
+            "channels": {
+              "phaseTurn": 1,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 1
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 16.735775,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "open-triad",
+            "phase": 0.046808783268536
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "phase-turn",
+            "driver": "harmony",
+            "strength": 1,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 23.9862,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "open-triad",
+            "phase": 0.5000000000000001
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 31.9855,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "phase-turn",
+            "driver": "harmony",
+            "strength": 0.9555,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.9555,
+            "settle": 0,
+            "impulse": 0.9555,
+            "channels": {
+              "phaseTurn": 1,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0.9555
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 32.734375,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 0.04676230915732628
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "phase-turn",
+            "driver": "harmony",
+            "strength": 0.9555,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 39.99275,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 0.5000000000000001
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 48,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 1
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        }
+      ]
+    },
+    "visual-driver-rhythm": {
+      "times": [
+        0.0,
+        7.99345,
+        15.9869,
+        16.735775,
+        23.9862,
+        31.9855,
+        32.734375,
+        39.99275,
+        48.0
+      ],
+      "states": [
+        {
+          "time": 0,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 0
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 7.99345,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 0.5
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 15.9869,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "orbital-weave",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "radial-part",
+            "driver": "rhythm",
+            "strength": 0.9679,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.9679,
+            "settle": 0,
+            "impulse": 0.9679,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 1,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0.9679
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 16.735775,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "orbital-weave",
+            "phase": 0.046808783268536
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "radial-part",
+            "driver": "rhythm",
+            "strength": 0.9679,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 23.9862,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "orbital-weave",
+            "phase": 0.5000000000000001
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 31.9855,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "radial-part",
+            "driver": "rhythm",
+            "strength": 0.9739,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.9739,
+            "settle": 0,
+            "impulse": 0.9739,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 1,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0.9739
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 32.734375,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 0.04676230915732628
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "radial-part",
+            "driver": "rhythm",
+            "strength": 0.9739,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 39.99275,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 0.5000000000000001
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 48,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 1
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        }
+      ]
+    },
+    "visual-driver-timbre": {
+      "times": [
+        0.0,
+        5.99365,
+        11.9873,
+        12.740525,
+        17.98675,
+        23.9862,
+        24.735,
+        29.98565,
+        35.9851,
+        36.738325,
+        41.98455,
+        47.984,
+        48.737225,
+        53.992,
+        60.0
+      ],
+      "states": [
+        {
+          "time": 0,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 5.99365,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0.5
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 11.9873,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "compact-triad",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "flow-shear",
+            "driver": "timbre",
+            "strength": 0.6809,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.6809,
+            "settle": 0,
+            "impulse": 0.6809,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 1,
+              "contrastHit": 0.6809
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 12.740525,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "compact-triad",
+            "phase": 0.06277450432956358
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "flow-shear",
+            "driver": "timbre",
+            "strength": 0.6809,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.14,
+            "twist": 0.08,
+            "flow": 0.32,
+            "orbit": 0.44,
+            "void": 0.18,
+            "contrast": 0.72,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 17.98675,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "compact-triad",
+            "phase": 0.5000000000000001
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.14,
+            "twist": 0.08,
+            "flow": 0.32,
+            "orbit": 0.44,
+            "void": 0.18,
+            "contrast": 0.72,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 23.9862,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "flow-shear",
+            "driver": "timbre",
+            "strength": 0.6813,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.6813,
+            "settle": 0,
+            "impulse": 0.6813,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": -1,
+              "contrastHit": 0.6813
+            }
+          },
+          "composition": {
+            "spread": 0.14,
+            "twist": 0.08,
+            "flow": 0.32,
+            "orbit": 0.44,
+            "void": 0.18,
+            "contrast": 0.72,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 24.735,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0.06240572052438133
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "flow-shear",
+            "driver": "timbre",
+            "strength": 0.6813,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 29.98565,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0.49999999999999983
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 35.9851,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-004",
+            "segmentId": "segment-004",
+            "family": "C",
+            "variant": 0,
+            "label": "C",
+            "motif": "open-triad",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-003",
+            "treatment": "flow-shear",
+            "driver": "timbre",
+            "strength": 0.4435,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.4435,
+            "settle": 0,
+            "impulse": 0.4435,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 1,
+              "contrastHit": 0.4435
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 36.738325,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-004",
+            "segmentId": "segment-004",
+            "family": "C",
+            "variant": 0,
+            "label": "C",
+            "motif": "open-triad",
+            "phase": 0.0627745043295636
+          },
+          "transition": {
+            "id": "transition-003",
+            "treatment": "flow-shear",
+            "driver": "timbre",
+            "strength": 0.4435,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 41.98455,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-004",
+            "segmentId": "segment-004",
+            "family": "C",
+            "variant": 0,
+            "label": "C",
+            "motif": "open-triad",
+            "phase": 0.4999999999999997
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 47.984,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-005",
+            "segmentId": "segment-005",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "compact-triad",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-004",
+            "treatment": "flow-shear",
+            "driver": "timbre",
+            "strength": 1,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 1,
+            "settle": 0,
+            "impulse": 1,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": -1,
+              "contrastHit": 1
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 48.737225,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-005",
+            "segmentId": "segment-005",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "compact-triad",
+            "phase": 0.0626851697736352
+          },
+          "transition": {
+            "id": "transition-004",
+            "treatment": "flow-shear",
+            "driver": "timbre",
+            "strength": 1,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.14,
+            "twist": 0.08,
+            "flow": 0.32,
+            "orbit": 0.44,
+            "void": 0.18,
+            "contrast": 0.72,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 53.992,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-005",
+            "segmentId": "segment-005",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "compact-triad",
+            "phase": 0.4999999999999997
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.14,
+            "twist": 0.08,
+            "flow": 0.32,
+            "orbit": 0.44,
+            "void": 0.18,
+            "contrast": 0.72,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 60,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-005",
+            "segmentId": "segment-005",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "compact-triad",
+            "phase": 1
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.14,
+            "twist": 0.08,
+            "flow": 0.32,
+            "orbit": 0.44,
+            "void": 0.18,
+            "contrast": 0.72,
+            "paletteMix": 0
+          }
+        }
+      ]
+    },
+    "visual-legacy": {
+      "times": [
+        0.0,
+        24.0,
+        48.0
+      ],
+      "states": [
+        {
+          "time": 0,
+          "mode": "legacy",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": null,
+            "family": "LEGACY",
+            "variant": 0,
+            "label": "LEGACY",
+            "motif": "compact-triad",
+            "phase": 0
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0,
+            "twist": 0,
+            "flow": 0,
+            "orbit": 0,
+            "void": 0,
+            "contrast": 0,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 24,
+          "mode": "legacy",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": null,
+            "family": "LEGACY",
+            "variant": 0,
+            "label": "LEGACY",
+            "motif": "compact-triad",
+            "phase": 0.5
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0,
+            "twist": 0,
+            "flow": 0,
+            "orbit": 0,
+            "void": 0,
+            "contrast": 0,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 48,
+          "mode": "legacy",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": null,
+            "family": "LEGACY",
+            "variant": 0,
+            "label": "LEGACY",
+            "motif": "compact-triad",
+            "phase": 1
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0,
+            "twist": 0,
+            "flow": 0,
+            "orbit": 0,
+            "void": 0,
+            "contrast": 0,
+            "paletteMix": 0
+          }
+        }
+      ]
+    },
+    "visual-neutral-boundary": {
+      "times": [
+        0.0,
+        7.99345,
+        15.9869,
+        16.735775,
+        23.9862,
+        31.9855,
+        32.734375,
+        39.99275,
+        48.0
+      ],
+      "states": [
+        {
+          "time": 0,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 0
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 7.99345,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 0.5
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 15.9869,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "orbital-weave",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "cross-settle",
+            "driver": "neutral",
+            "strength": 1,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 1,
+            "settle": 0,
+            "impulse": 1,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 1
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 16.735775,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "orbital-weave",
+            "phase": 0.046808783268536
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "cross-settle",
+            "driver": "neutral",
+            "strength": 1,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 23.9862,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "orbital-weave",
+            "phase": 0.5000000000000001
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 31.9855,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "cross-settle",
+            "driver": "neutral",
+            "strength": 0.9483,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.9483,
+            "settle": 0,
+            "impulse": 0.9483,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0.9483
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 32.734375,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 0.04676230915732628
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "cross-settle",
+            "driver": "neutral",
+            "strength": 0.9483,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 39.99275,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 0.5000000000000001
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 48,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "axial-flow",
+            "phase": 1
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        }
+      ]
+    },
+    "visual-rondo": {
+      "times": [
+        0.0,
+        5.99365,
+        11.9873,
+        12.740525,
+        17.98675,
+        23.9862,
+        24.735,
+        29.98565,
+        35.9851,
+        36.738325,
+        41.98455,
+        47.984,
+        48.737225,
+        53.992,
+        60.0
+      ],
+      "states": [
+        {
+          "time": 0,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "compact-triad",
+            "phase": 0
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.14,
+            "twist": 0.08,
+            "flow": 0.32,
+            "orbit": 0.44,
+            "void": 0.18,
+            "contrast": 0.72,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 5.99365,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "compact-triad",
+            "phase": 0.5
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.14,
+            "twist": 0.08,
+            "flow": 0.32,
+            "orbit": 0.44,
+            "void": 0.18,
+            "contrast": 0.72,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 11.9873,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "orbital-weave",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "aperture",
+            "driver": "energy",
+            "strength": 0.6809,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.6809,
+            "settle": 0,
+            "impulse": 0.6809,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 1,
+              "flowShear": 0,
+              "contrastHit": 0.6809
+            }
+          },
+          "composition": {
+            "spread": 0.14,
+            "twist": 0.08,
+            "flow": 0.32,
+            "orbit": 0.44,
+            "void": 0.18,
+            "contrast": 0.72,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 12.740525,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "orbital-weave",
+            "phase": 0.06277450432956358
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "aperture",
+            "driver": "energy",
+            "strength": 0.6809,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 17.98675,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "B",
+            "variant": 0,
+            "label": "B",
+            "motif": "orbital-weave",
+            "phase": 0.5000000000000001
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 23.9862,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "C",
+            "variant": 0,
+            "label": "C",
+            "motif": "open-triad",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "aperture",
+            "driver": "energy",
+            "strength": 0.6813,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.6813,
+            "settle": 0,
+            "impulse": 0.6813,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 1,
+              "flowShear": 0,
+              "contrastHit": 0.6813
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 24.735,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "C",
+            "variant": 0,
+            "label": "C",
+            "motif": "open-triad",
+            "phase": 0.06240572052438133
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "aperture",
+            "driver": "energy",
+            "strength": 0.6813,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 29.98565,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "C",
+            "variant": 0,
+            "label": "C",
+            "motif": "open-triad",
+            "phase": 0.49999999999999983
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 35.9851,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-004",
+            "segmentId": "segment-004",
+            "family": "D",
+            "variant": 0,
+            "label": "D",
+            "motif": "axial-flow",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-003",
+            "treatment": "flow-shear",
+            "driver": "timbre",
+            "strength": 0.4435,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.4435,
+            "settle": 0,
+            "impulse": 0.4435,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 1,
+              "contrastHit": 0.4435
+            }
+          },
+          "composition": {
+            "spread": 0.3,
+            "twist": 0.16,
+            "flow": 0.24,
+            "orbit": 0.52,
+            "void": 0.22,
+            "contrast": 0.66,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 36.738325,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-004",
+            "segmentId": "segment-004",
+            "family": "D",
+            "variant": 0,
+            "label": "D",
+            "motif": "axial-flow",
+            "phase": 0.0627745043295636
+          },
+          "transition": {
+            "id": "transition-003",
+            "treatment": "flow-shear",
+            "driver": "timbre",
+            "strength": 0.4435,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 41.98455,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-004",
+            "segmentId": "segment-004",
+            "family": "D",
+            "variant": 0,
+            "label": "D",
+            "motif": "axial-flow",
+            "phase": 0.4999999999999997
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 47.984,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-005",
+            "segmentId": "segment-005",
+            "family": "E",
+            "variant": 0,
+            "label": "E",
+            "motif": "axial-flow",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-004",
+            "treatment": "phase-turn",
+            "driver": "harmony",
+            "strength": 1,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 1,
+            "settle": 0,
+            "impulse": 1,
+            "channels": {
+              "phaseTurn": 1,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 1
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 48.737225,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-005",
+            "segmentId": "segment-005",
+            "family": "E",
+            "variant": 0,
+            "label": "E",
+            "motif": "axial-flow",
+            "phase": 0.0626851697736352
+          },
+          "transition": {
+            "id": "transition-004",
+            "treatment": "phase-turn",
+            "driver": "harmony",
+            "strength": 1,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 53.992,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-005",
+            "segmentId": "segment-005",
+            "family": "E",
+            "variant": 0,
+            "label": "E",
+            "motif": "axial-flow",
+            "phase": 0.4999999999999997
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 60,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-005",
+            "segmentId": "segment-005",
+            "family": "E",
+            "variant": 0,
+            "label": "E",
+            "motif": "axial-flow",
+            "phase": 1
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.2,
+            "twist": 0.12,
+            "flow": 0.56,
+            "orbit": 0.3,
+            "void": 0.24,
+            "contrast": 0.7,
+            "paletteMix": 0
+          }
+        }
+      ]
+    },
+    "visual-short": {
+      "times": [
+        0.0,
+        3.0,
+        6.0
+      ],
+      "states": [
+        {
+          "time": 0,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 3,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0.5
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 6,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 1
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        }
+      ]
+    },
+    "visual-variable-tempo": {
+      "times": [
+        0.0,
+        7.99345,
+        15.9869,
+        16.6835,
+        22.8426,
+        29.6983,
+        30.390625,
+        37.7063,
+        45.7143
+      ],
+      "states": [
+        {
+          "time": 0,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 7.99345,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-001",
+            "segmentId": "segment-001",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0.5
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 15.9869,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "A",
+            "variant": 1,
+            "label": "A′",
+            "motif": "orbital-weave",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "phase-turn",
+            "driver": "harmony",
+            "strength": 0.9343,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.9343,
+            "settle": 0,
+            "impulse": 0.9343,
+            "channels": {
+              "phaseTurn": 1,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0.9343
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 16.6835,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "A",
+            "variant": 1,
+            "label": "A′",
+            "motif": "orbital-weave",
+            "phase": 0.050804440100937785
+          },
+          "transition": {
+            "id": "transition-001",
+            "treatment": "phase-turn",
+            "driver": "harmony",
+            "strength": 0.9343,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.20676,
+            "twist": 0.1,
+            "flow": 0.300659,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 22.8426,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-002",
+            "segmentId": "segment-002",
+            "family": "A",
+            "variant": 1,
+            "label": "A′",
+            "motif": "orbital-weave",
+            "phase": 0.5000000000000001
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.20676,
+            "twist": 0.1,
+            "flow": 0.300659,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 29.6983,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "flow-shear",
+            "driver": "timbre",
+            "strength": 0.957,
+            "stage": "cross",
+            "approach": 1,
+            "cross": 0.957,
+            "settle": 0,
+            "impulse": 0.957,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": -1,
+              "contrastHit": 0.957
+            }
+          },
+          "composition": {
+            "spread": 0.20676,
+            "twist": 0.1,
+            "flow": 0.300659,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 30.390625,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0.04322708541458543
+          },
+          "transition": {
+            "id": "transition-002",
+            "treatment": "flow-shear",
+            "driver": "timbre",
+            "strength": 0.957,
+            "stage": "settle",
+            "approach": 1,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0.42
+          }
+        },
+        {
+          "time": 37.7063,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 0.4999999999999999
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        },
+        {
+          "time": 45.7143,
+          "mode": "structure",
+          "scene": {
+            "id": "scene-003",
+            "segmentId": "segment-003",
+            "family": "A",
+            "variant": 0,
+            "label": "A",
+            "motif": "orbital-weave",
+            "phase": 1
+          },
+          "transition": {
+            "id": null,
+            "treatment": null,
+            "driver": null,
+            "strength": 0,
+            "stage": "idle",
+            "approach": 0,
+            "cross": 0,
+            "settle": 0,
+            "impulse": 0,
+            "channels": {
+              "phaseTurn": 0,
+              "radialPart": 0,
+              "aperture": 0,
+              "flowShear": 0,
+              "contrastHit": 0
+            }
+          },
+          "composition": {
+            "spread": 0.26,
+            "twist": 0.1,
+            "flow": 0.36,
+            "orbit": 0.62,
+            "void": 0.16,
+            "contrast": 0.74,
+            "paletteMix": 0
+          }
+        }
+      ]
+    }
+  }
+}

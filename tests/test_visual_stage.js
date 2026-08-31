@@ -203,4 +203,47 @@ function stubStageCanvas() {
   sceneStage.dispose();
 }
 
+// --- v0.8 commit 6: reduced-motion frame flag, canvas fallback with a live
+// scene block, and the shipped toggle/aria contract (plan sections 9/12.4).
+{
+  const frames = [];
+  const accessStage = createVisualStage({
+    overlayCanvas: stubStageCanvas(),
+    onFrame: (frame) => frames.push(frame),
+  });
+  accessStage.setVisible(true);
+  accessStage.setProject(fixtureProject);
+  accessStage.setVisualArtifacts(makeVisualRecipe(), makeVisualTimeline());
+
+  // The reduced-motion preference rides the frame for every consumer.
+  accessStage.render({ playbackTime: 4, isPlaying: false, reducedMotion: true });
+  assert.equal(frames[0].reducedMotion, true);
+  assert.ok(frames[0].scene, 'reduced motion keeps the scene block');
+  frames.length = 0;
+  accessStage.render({ playbackTime: 4, isPlaying: false, reducedMotion: false });
+  assert.equal(frames[0].reducedMotion, false);
+
+  // Canvas fallback still renders the scene-driven frame (plan section 9).
+  const accessDebug = installVisualDebug(accessStage, { isLocal: () => true });
+  assert.equal(accessDebug.forceBackend('canvas').backend, 'canvas');
+  frames.length = 0;
+  accessStage.render({ playbackTime: 4, isPlaying: false, reducedMotion: true });
+  assert.ok(frames[0].scene, 'canvas fallback keeps the scene block');
+  assert.ok(Number.isFinite(accessDebug.diagnostics().lastFrameCostMs));
+  accessDebug.forceBackend(null);
+
+  accessStage.dispose();
+}
+
+{
+  const markup = await readFile(new URL('../beatscope/web/index.html', import.meta.url), 'utf-8');
+  // The follow-structure toggle ships checked, hidden until artifacts land.
+  assert.match(markup, /id="followStructureControl"[^>]*hidden/);
+  assert.match(markup, /id="followStructure" type="checkbox" checked/);
+  // The stage stack and seek control stay reachable for assistive tech.
+  assert.match(markup, /id="visualStageStack"[^>]*role="img"/);
+  assert.match(markup, /id="visualStageStack"[^>]*aria-label="Audio-reactive particle instrument driven by playback time"/);
+  assert.match(markup, /id="seekRange"[^>]*aria-label="Seek audio"/);
+}
+
 console.log('Visual stage OK: lifecycle gating, diagnostics, debug entry contract.');
