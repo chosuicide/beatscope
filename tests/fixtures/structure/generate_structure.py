@@ -34,7 +34,7 @@ STEPS_PER_BAR = 16
 
 # --------------------------------------------------------------- synthesis
 
-KICK_SECONDS = 0.22
+KICK_SECONDS = 0.13
 SNARE_SECONDS = 0.12
 HAT_SECONDS = 0.06
 
@@ -48,7 +48,10 @@ PATTERNS: dict[str, dict[str, tuple[int, ...]]] = {
     "four-floor": {"kick": (0, 4, 8, 12), "hat": (2, 6, 10, 14)},
     "backbeat": {"kick": (0, 8), "snare": (4, 12), "hat": (2, 6, 10, 14)},
     "syncopated": {"kick": (0, 3, 8, 11), "snare": (4, 12), "hat": (2, 6, 10, 14)},
-    "break": {"hat": (0,)},
+    # Break bars keep one soft click per beat: near-silent for the energy
+    # and density descriptors, but still enough of a pulse for the beat
+    # tracker to stay locked across the break.
+    "break": {"hat": (0, 4, 8, 12)},
 }
 
 # Section presets. ``brightness`` trades low for high spectral content; the
@@ -107,7 +110,9 @@ def _render_bar(
     buffer = np.zeros(bar_len, dtype=np.float64)
     duration = bar_len / SR
 
-    # Sustained chord pad with a short fade at each bar edge.
+    # Sustained chord pad with a short fade at each bar edge. The pad sits
+    # above the drum bed so the harmony view sees pitch content, not just
+    # broadband transients (real mixes carry chords at comparable level).
     t = np.arange(bar_len) / SR
     fade = 0.35
     envelope = np.minimum(1.0, np.minimum(t / fade, (duration - t) / fade))
@@ -116,13 +121,13 @@ def _render_bar(
     for freq in chord:
         pad += np.sin(2.0 * np.pi * freq * t)
         pad += brightness * 0.5 * np.sin(2.0 * np.pi * freq * 3.0 * t)
-    pad *= 0.045 * gain * pad_scale * envelope / len(chord)
+    pad *= 0.11 * gain * pad_scale * envelope / len(chord)
     buffer += pad
 
     grid = PATTERNS[pattern]
     step_seconds = _bar_seconds(bpm) / STEPS_PER_BAR
     levels = {
-        "kick": gain * (0.85 - 0.28 * brightness),
+        "kick": gain * (0.65 - 0.20 * brightness),
         "snare": gain * (0.42 + 0.10 * brightness),
         "hat": gain * (0.10 + 0.30 * brightness),
     }
@@ -136,10 +141,12 @@ def _render_bar(
 
 # ------------------------------------------------------------ case table
 
-def _span(bars: int, family: str, *, section: str = "A", bpm: float = 120.0, **overrides: Any) -> dict[str, Any]:
+def _span(bars: int, section: str, *, bpm: float = 120.0, family: str | None = None, **overrides: Any) -> dict[str, Any]:
+    """One span of a case: ``section`` picks the content, ``family`` the truth
+    label (defaults to the section name, overridden for single-knob cases)."""
     spec = dict(SECTIONS[section])
     spec.update(overrides)
-    return {"bars": bars, "family": family, "bpm": bpm, **spec}
+    return {"bars": bars, "family": family or section, "bpm": bpm, **spec}
 
 
 CASES: dict[str, dict[str, Any]] = {
@@ -153,19 +160,31 @@ CASES: dict[str, dict[str, Any]] = {
     },
     "structure-energy-only": {
         "purpose": "identical arrangement; only the section gain changes",
-        "spans": [_span(8, "X", gain=1.0), _span(8, "Y", gain=0.45), _span(8, "X", gain=1.0)],
+        "spans": [
+            _span(8, "A", family="X", gain=1.0),
+            _span(8, "A", family="Y", gain=0.45),
+            _span(8, "A", family="X", gain=1.0),
+        ],
     },
     "structure-harmony-only": {
         "purpose": "constant rhythm and timbre; only the chord changes",
-        "spans": [_span(8, "A"), _span(8, "B", pattern="four-floor", brightness=0.0), _span(8, "A")],
+        "spans": [
+            _span(8, "A"),
+            _span(8, "B", pattern="four-floor", brightness=0.0),
+            _span(8, "A"),
+        ],
     },
     "structure-rhythm-only": {
         "purpose": "constant chord and timbre; only the drum pattern changes",
-        "spans": [_span(8, "A"), _span(8, "B", chord=CHORD_A_M, brightness=0.0), _span(8, "A")],
+        "spans": [
+            _span(8, "A"),
+            _span(8, "B", chord=CHORD_A_M, brightness=0.0),
+            _span(8, "A"),
+        ],
     },
     "structure-break": {
         "purpose": "near-silent break bars between two identical sections",
-        "spans": [_span(8, "A"), _span(4, "BREAK", section="BREAK"), _span(8, "A")],
+        "spans": [_span(8, "A"), _span(4, "BREAK"), _span(8, "A")],
     },
     "structure-monotony": {
         "purpose": "one unchanging section; the analyzer must not invent boundaries",

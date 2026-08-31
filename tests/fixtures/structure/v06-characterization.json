@@ -18,7 +18,7 @@
     },
     "structure-break": {
       "method": "bar-rhythm-cosine-v1",
-      "bar_count": 20,
+      "bar_count": 21,
       "segment_count": 0,
       "boundary_count": 0,
       "repetition_count": 0
