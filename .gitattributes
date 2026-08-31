@@ -3,3 +3,6 @@ evaluations/fixtures-manifest.json text eol=lf
 evaluations/beatscope_mcp.xml text eol=lf
 tests/fixtures/truth/*.json text eol=lf
 tests/fixtures/benchmark-baseline.json text eol=lf
+tests/fixtures/runtime/*.json text eol=lf
+tests/fixtures/structure/*.json text eol=lf
+tests/fixtures/visual/*.json text eol=lf
