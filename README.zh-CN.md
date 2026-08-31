@@ -56,7 +56,7 @@ BeatScope 尝试把这段工作留下来。Python 负责读取音频、追踪节
 
 ![BeatScope 全曲结构导航](docs/screenshots/beatscope-track-structure.png)
 
-这条导航把整首歌压缩成段落、LOW / MID / HIGH 能量曲线与瞬态分布。段落来自节奏相似度分组，不是 Verse/Chorus 识别。点击任意小节即可跳转，红色框始终标出 cue map 当前查看的八小节，因此不用在一条长时间轴里盲目寻找变化。
+这条导航把整首歌压缩成结构段落、LOW / MID / HIGH 能量曲线与瞬态分布。v0.7 起，顶部条带按全曲结构段落绘制：家族是中性字母（<code>A</code>、<code>B</code>……），只表示重复关系，不是 Verse/Chorus 识别；变体（<code>A′</code>）表示与家族相关但听感有变化；同一家族的重复永远使用同一中性色。边界刻度的权重来自分析对这次变化的强度判断。点击任意小节即可跳转，<code>Shift+←/→</code> 可在上一个/下一个段落起点之间跳转，红色框始终标出 cue map 当前查看的八小节，因此不用在一条长时间轴里盲目寻找变化。
 
 ### 8-bar cue map：把听感拆成可操作时间点
 
@@ -111,15 +111,15 @@ BeatScope 将原始瞬态对齐到 1/16 或 1/32 网格，同时保留真实发�
 
 ## Rhythm IR：事实、语义与呈现
 
-v0.6 在真实时间轴上追踪节拍与速度：拍点来自 novelty 引导的追踪（局部速度候选、全局速度路径、逐拍重建与分段恒速 tempo segments），而不是全局 BPM 均匀网格。所有节奏数据整理成三层结构，每层只依赖上一层：
+v0.6 在真实时间轴上追踪节拍与速度：拍点来自 novelty 引导的追踪（局部速度候选、全局速度路径、逐拍重建与分段恒速 tempo segments），而不是全局 BPM 均匀网格。v0.7 在同一阶梯上加入全曲结构：按小节聚合和声、音色、节奏、能量四类视图，多尺度 novelty 提议边界，再用长度受限的分配标注重复家族（<code>A</code>、<code>B</code>……）与变体（<code>A′</code>）——全程确定性、缓存诚实、不含 confidence。所有节奏数据整理成三层结构，每层只依赖上一层：
 
 1. **事实层**：音频直接支持的内容 —— 节拍时间、瞬态（含频段能量与强度）、多频段能量帧。这一层不做任何猜测。
-2. **语义层**：从事实推导的内容 —— 全曲 BPM 与变速段、小节网格、量化位置、段落概览、accent cue。每个字段都能追溯到来源（<code>analysis.provenance</code>）与计算过程（<code>analysis.diagnostics</code>）。
+2. **语义层**：从事实推导的内容 —— 全曲 BPM 与变速段、小节网格、量化位置、段落概览、全曲结构段落与边界、accent cue。每个字段都能追溯到来源（<code>analysis.provenance</code>）与计算过程（<code>analysis.diagnostics</code>）。
 3. **呈现层**：把语义映射成视觉预算 —— pulse、turbulence、burst、hero 分层由 <code>runtime/visual-profile.js</code> 统一分配，播放器只是它的一个消费者。
 
-项目数据使用 schema v4（<code>schema_version: "4.0"</code>）写入并通过 validator 校验；v3 项目读取时自动迁移。核心输出不包含 kick、snare、hihat 或 808 等乐器身份，也不把强度伪装成 confidence —— 页面显示的是 backend、pipeline 版本和可解释的诊断信息（来源方法、迁移记录、pregrid 合并数量、警告条数）。
+项目数据使用 schema v4（<code>schema_version: "4.0"</code>）写入并通过 validator 校验；v3 项目读取时自动迁移，结构数据放在可选的 <code>patterns.segments</code> 字段里，v0.7 之前编写的 v4 消费者不受影响。核心输出不包含 kick、snare、hihat 或 808 等乐器身份，也不把强度伪装成 confidence —— 页面显示的是 backend、pipeline 版本和可解释的诊断信息（来源方法、迁移记录、pregrid 合并数量、警告条数）。
 
-共享 JavaScript 运行时 <code>beatscope/runtime/runtime.js</code> 是纯 ESM，不依赖 DOM、Audio、Canvas 或系统时钟；<code>track.at(time)</code> 对相同输入始终返回相同结果，变速段落的小节/拍相位由相邻真实节拍与小节下拍推导，而不是假设全局 BPM。小节相位本身仍然是从第一个追踪拍开始的启发式连续编号（provenance 已标记为推断值），不是专用 downbeat 模型。网页播放器、页面诊断与 Codex 导出都构建在它之上。
+共享 JavaScript 运行时 <code>beatscope/runtime/runtime.js</code> 是纯 ESM，不依赖 DOM、Audio、Canvas 或系统时钟；<code>track.at(time)</code> 对相同输入始终返回相同结果，变速段落的小节/拍相位由相邻真实节拍与小节下拍推导，而不是假设全局 BPM。小节相位本身仍然是从第一个追踪拍开始的启发式连续编号（provenance 已标记为推断值），不是专用 downbeat 模型。v0.7 起 <code>track.at(time)</code> 还携带 <code>structure</code> 块 —— 当前段落、段内相位与距下一个边界的秒数 —— 以及 <code>structureLead</code>、<code>boundaryImpulse</code> 信号，全部是时间的纯函数。网页播放器、页面诊断与 Codex 导出都构建在它之上。
 
 ## 实测精度
 
@@ -141,6 +141,8 @@ v0.6 在真实时间轴上追踪节拍与速度：拍点来自 novelty 引导的
 
 硬门槛（阻断提交）：schema 必须有效、固定 BPM 场景误差 ≤ 5 BPM、拍 F1 ≥ 0.5、静音误报 ≤ 20 个；固定速度场景相对基线的回归窗口（拍 F1 下降不超过 0.03、拍 MAE 恶化不超过 15 ms）；变速场景的声明下限 —— tempo-change 拍 F1 ≥ 0.55、分段 BPM 误差 ≤ 5 BPM、变速点误差 ≤ 1 s、接缝漏拍/多拍各 ≤ 1；gradual-drift 拍 F1 ≥ 0.65 且 tempo MAE ≤ 6 BPM；micro-drift 不允许八度错误且 tempo segments ≤ 3；octave-trap 不允许八度错误。当前 11 个场景全部通过（0 gates failed）。v0.5 → v0.6 的提升集中在该出现的地方：tempo-change 拍 F1 从 0.16 提升到 1.00（两段 tempo segments，分段 BPM 误差 0.185 / 0.325 BPM，变速点误差 0.01 s，接缝漏拍 0 / 多拍 0），所有固定速度场景保持原有水平。bass-heavy 的瞬态 F1 按计划仅作报告参考：低频主导混音中的高频瞬态召回受合成素材本身限制。
 
+结构精度有独立的基准：十个合成编曲（A-B-A、含变体的 A-B-A-C-B、仅能量/和声/节奏变化、两小节 break、单调、不足四小节、变速重复、渐变漂移）对照冻结真值，考核边界 precision/recall/F1、重复家族准确率与过/欠分割数量，沿用同一套无 confidence、中性字母的契约。用 <code>beatscope benchmark-structure</code> 运行；v0.7 验收结果写入 <code>build/benchmark-v07/</code>。
+
 ## 给 Codex 的导出包
 
 ~~~text
@@ -161,14 +163,14 @@ MIDI、CSV、PNG 和原始 JSON 仍然保留在 **Advanced tools** 中。MIDI �
 ## 当前实现
 
 - 本地音频读取、格式检查与 FFmpeg 安全回退
-- 单一分析管线：节拍网格、瞬态、多频段能量和全曲结构分析
+- 单一分析管线：节拍网格、瞬态、多频段能量和带重复家族的全曲结构段落
 - schema v4 校验、v3 项目迁移与来源/诊断元数据
 - 共享 JavaScript 运行时：网页与导出使用同一份时间查询实现
 - 确定性的 WebGL2 粒子乐器：整体叶瓣运动、流场拖尾、延迟轨道带、自适应质量分级与 Canvas 2D 回退
 - Canvas 2D 频段曲线、光晕与频谱面板
 - 根据歌曲分布和节奏密度分配动画层级
 - 播放、暂停、音量、跳转和 8 小节循环
-- 全曲结构导航与 1/16、1/32 cue map
+- 全曲结构导航（含段落跳转）与 1/16、1/32 cue map
 - 页面显示分析 backend 与可解释诊断，不显示虚假 confidence
 - 带 accuracy gates 的 benchmark，自动生成精度报告
 - Codex ZIP、Skill、JSON、CSV、PNG 和参考 MIDI 导出
@@ -195,6 +197,8 @@ beatscope/
 ├── rhythm.py               # 事实型节奏项目
 ├── beatgrid.py             # 节拍、量化与偏移
 ├── structure.py            # 全曲段落与模式概览
+├── structure_features.py   # v0.7 按小节聚合的多视图结构特征
+├── structure_segments.py   # v0.7 边界、重复家族与变体
 ├── pipeline.py             # 单一分析管线，组装 schema v4 项目
 ├── schema.py               # v4 validator 与 v3 迁移
 ├── benchmark.py            # 合成真值基准与 accuracy gates
@@ -263,7 +267,7 @@ beatscope-mcp
 | `beatscope_get_project` | 读取项目 summary / timing / 完整 JSON |
 | `beatscope_analyze_audio` | 分析音频并缓存；支持进度与取消，多配置可共存 |
 | `beatscope_get_visual_state` | 某一时刻的完整视觉状态，与网页播放器一致 |
-| `beatscope_get_events` | (start, end] 区间内的 beats / onsets / cues / patterns |
+| `beatscope_get_events` | (start, end] 区间内的 beats / onsets / cues / patterns / segments / boundaries |
 | `beatscope_export_package` | 导出便携 Agent ZIP（原子写入，含 SKILL 与 schema） |
 
 安全模型：所有输入输出路径必须位于 `BEATSCOPE_ALLOWED_ROOTS` 白名单内（默认当前目录），越界请求会被直接拒绝；导出目标必须是 `.zip`。
@@ -315,21 +319,23 @@ pytest -q
 python -m pytest tests\mcp -q
 node --test tests\test_grid.js tests\test_interaction.js tests\test_runtime.js tests\test_visual_profile.js tests\test_playback_characterization.js tests\test_visual_stage.js tests\test_particle_geometry.js tests\test_particle_uniforms.js
 beatscope benchmark
+beatscope benchmark-structure
 ~~~
 
-JavaScript 侧：网格与交互测试覆盖页面行为；runtime 与 visual profile 测试覆盖共享运行时契约和纯度约束；characterization 测试比较网页播放器与 Codex 导出两条路径在同一时间点的输出一致性；visual-stage、particle-geometry 与 particle-uniform 测试固定了确定性 director 帧、点集确定性与 uniform 转换，并覆盖自适应质量分级与强制回退路径。Python 套件还会断言构建出的 wheel 包含粒子模块。MCP 测试覆盖工具契约、路径安全、运行时一致性与导出。GitHub Actions 会在 Windows 与 Ubuntu、Python 3.10 与 3.12 上运行相同的核心检查。
+JavaScript 侧：网格与交互测试覆盖页面行为；runtime 与 visual profile 测试覆盖共享运行时契约和纯度约束；characterization 测试比较网页播放器与 Codex 导出两条路径在同一时间点的输出一致性；visual-stage、particle-geometry 与 particle-uniform 测试固定了确定性 director 帧、点集确定性与 uniform 转换，并覆盖自适应质量分级与强制回退路径。Python 套件还会断言构建出的 wheel 包含粒子模块。结构测试覆盖按小节聚合的特征提取、边界与家族不变量、可选 schema 块、runtime 段落查询以及 MCP/导出一致性；结构基准把十个合成编曲对照冻结真值考核。MCP 测试覆盖工具契约、路径安全、运行时一致性与导出。GitHub Actions 会在 Windows 与 Ubuntu、Python 3.10 与 3.12 上运行相同的核心检查。
 
 ## 已知限制
 
 - 内置分析不会可靠识别 kick、snare 或 808 身份，只报告瞬态和频段事实。
 - WebGL2 粒子乐器最多渲染 18,000 个主体点外加三条轨道带；WebGL2 不可用时 Canvas 2D 回退保持刻意较小的固定主体预算（最多 680 点），因此极高分辨率录屏仍建议使用支持 WebGL2 的浏览器。
-- 自动段落标签来自能量与重复关系，不等同于人工编曲标注。
+- 自动段落标签来自能量与重复关系，不等同于人工编曲标注。结构家族保持中性字母（<code>A</code>、<code>B</code>、<code>A′</code>）：只表示重复关系，不表示音乐角色；<code>BREAK</code> 表示近乎静音的例外。
+- 全曲结构检测宁可诚实也不强行切分：渐变演化、过短的音频和不清晰的重复都可能合法地只产生一个段落；边界携带的是 novelty 权重，而不是确定性声明。
 - MP3 支持取决于本机 libsndfile 或 FFmpeg。
 - 这是本地创作与参考工具，不是 DAW、FLP 生成器或精确鼓组转录器。
 
 ## 项目状态
 
-BeatScope 已完成从音频上传、播放式可视化、全曲结构、8 小节 cue map 到 Codex Skill 导出的完整本地流程。v0.6.0 增加了真实时间轴上的变速追踪，并把 tempo segments 保留到 runtime、MIDI、MCP 和 Codex 导出；v0.6.1 则把播放器重建为确定性的 WebGL2 粒子乐器，加入主体整体运动、流场拖尾、延迟轨道带、自适应预算和安全回退。软件包版本是 v0.6.1，分析管线版本仍刻意保持为 0.6.0。它仍是一个持续调整的个人实验；后续重点是让这套视觉语法在更多歌曲、设备和录制环境中保持稳定。
+BeatScope 已完成从音频上传、播放式可视化、全曲结构、8 小节 cue map 到 Codex Skill 导出的完整本地流程。v0.6.0 增加了真实时间轴上的变速追踪，并把 tempo segments 保留到 runtime、MIDI、MCP 和 Codex 导出；v0.6.1 则把播放器重建为确定性的 WebGL2 粒子乐器，加入主体整体运动、流场拖尾、延迟轨道带、自适应预算和安全回退。v0.7.0 增加了确定性的全曲结构分析 —— 按小节聚合的多视图特征、novelty 引导的边界、带变体的重复家族 —— 并原生接入节奏 IR、runtime、MCP、Codex 导出与播放器导航；软件包与分析管线版本均为 0.7.0。它仍是一个持续调整的个人实验；后续重点是让这套视觉语法在更多歌曲、设备和录制环境中保持稳定。
 
 ## License
 
