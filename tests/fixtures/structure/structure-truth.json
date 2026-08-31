@@ -1,0 +1,262 @@
+{
+  "schema": "beatscope-structure-truth-1",
+  "generator_version": "structure-fixtures-v1",
+  "sample_rate": 22050,
+  "cases": {
+    "structure-aba": {
+      "purpose": "A-B-A form; harmony, timbre, and rhythm change together",
+      "bars": 24,
+      "boundaries": [
+        {
+          "bar": 9
+        },
+        {
+          "bar": 17
+        }
+      ],
+      "segments": [
+        {
+          "start_bar": 1,
+          "end_bar": 8,
+          "family": "A"
+        },
+        {
+          "start_bar": 9,
+          "end_bar": 16,
+          "family": "B"
+        },
+        {
+          "start_bar": 17,
+          "end_bar": 24,
+          "family": "A"
+        }
+      ]
+    },
+    "structure-abacb": {
+      "purpose": "five-section rondo; every family repeats at least once",
+      "bars": 30,
+      "boundaries": [
+        {
+          "bar": 7
+        },
+        {
+          "bar": 13
+        },
+        {
+          "bar": 19
+        },
+        {
+          "bar": 25
+        }
+      ],
+      "segments": [
+        {
+          "start_bar": 1,
+          "end_bar": 6,
+          "family": "A"
+        },
+        {
+          "start_bar": 7,
+          "end_bar": 12,
+          "family": "B"
+        },
+        {
+          "start_bar": 13,
+          "end_bar": 18,
+          "family": "A"
+        },
+        {
+          "start_bar": 19,
+          "end_bar": 24,
+          "family": "C"
+        },
+        {
+          "start_bar": 25,
+          "end_bar": 30,
+          "family": "B"
+        }
+      ]
+    },
+    "structure-energy-only": {
+      "purpose": "identical arrangement; only the section gain changes",
+      "bars": 24,
+      "boundaries": [
+        {
+          "bar": 9
+        },
+        {
+          "bar": 17
+        }
+      ],
+      "segments": [
+        {
+          "start_bar": 1,
+          "end_bar": 8,
+          "family": "X"
+        },
+        {
+          "start_bar": 9,
+          "end_bar": 16,
+          "family": "Y"
+        },
+        {
+          "start_bar": 17,
+          "end_bar": 24,
+          "family": "X"
+        }
+      ]
+    },
+    "structure-harmony-only": {
+      "purpose": "constant rhythm and timbre; only the chord changes",
+      "bars": 24,
+      "boundaries": [
+        {
+          "bar": 9
+        },
+        {
+          "bar": 17
+        }
+      ],
+      "segments": [
+        {
+          "start_bar": 1,
+          "end_bar": 8,
+          "family": "A"
+        },
+        {
+          "start_bar": 9,
+          "end_bar": 16,
+          "family": "B"
+        },
+        {
+          "start_bar": 17,
+          "end_bar": 24,
+          "family": "A"
+        }
+      ]
+    },
+    "structure-rhythm-only": {
+      "purpose": "constant chord and timbre; only the drum pattern changes",
+      "bars": 24,
+      "boundaries": [
+        {
+          "bar": 9
+        },
+        {
+          "bar": 17
+        }
+      ],
+      "segments": [
+        {
+          "start_bar": 1,
+          "end_bar": 8,
+          "family": "A"
+        },
+        {
+          "start_bar": 9,
+          "end_bar": 16,
+          "family": "B"
+        },
+        {
+          "start_bar": 17,
+          "end_bar": 24,
+          "family": "A"
+        }
+      ]
+    },
+    "structure-break": {
+      "purpose": "near-silent break bars between two identical sections",
+      "bars": 20,
+      "boundaries": [
+        {
+          "bar": 9
+        },
+        {
+          "bar": 13
+        }
+      ],
+      "segments": [
+        {
+          "start_bar": 1,
+          "end_bar": 8,
+          "family": "A"
+        },
+        {
+          "start_bar": 9,
+          "end_bar": 12,
+          "family": "BREAK"
+        },
+        {
+          "start_bar": 13,
+          "end_bar": 20,
+          "family": "A"
+        }
+      ]
+    },
+    "structure-monotony": {
+      "purpose": "one unchanging section; the analyzer must not invent boundaries",
+      "bars": 24,
+      "boundaries": [],
+      "segments": [
+        {
+          "start_bar": 1,
+          "end_bar": 24,
+          "family": "A"
+        }
+      ]
+    },
+    "structure-short": {
+      "purpose": "six bars only; too short to segment and must not crash",
+      "bars": 6,
+      "boundaries": [],
+      "segments": [
+        {
+          "start_bar": 1,
+          "end_bar": 6,
+          "family": "A"
+        }
+      ]
+    },
+    "structure-tempo-change-repeat": {
+      "purpose": "same material at 120/140/120 BPM; bar-synced features must stay one family",
+      "bars": 24,
+      "boundaries": [
+        {
+          "bar": 9
+        },
+        {
+          "bar": 17
+        }
+      ],
+      "segments": [
+        {
+          "start_bar": 1,
+          "end_bar": 8,
+          "family": "A"
+        },
+        {
+          "start_bar": 9,
+          "end_bar": 16,
+          "family": "A"
+        },
+        {
+          "start_bar": 17,
+          "end_bar": 24,
+          "family": "A"
+        }
+      ]
+    },
+    "structure-drift": {
+      "purpose": "continuous timbre ramp across 24 bars; drift, not a boundary",
+      "bars": 24,
+      "boundaries": [],
+      "segments": [
+        {
+          "start_bar": 1,
+          "end_bar": 24,
+          "family": "A"
+        }
+      ]
+    }
+  }
+}

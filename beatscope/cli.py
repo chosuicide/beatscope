@@ -186,6 +186,14 @@ def main(argv: list[str] | None = None) -> int:
         help="explicitly re-record the baseline after reviewing the metric diff; refuses while any absolute gate fails",
     )
 
+    # benchmark-structure (v0.7): whole-song arrangement metrics
+    bench_struct = sub.add_parser(
+        "benchmark-structure",
+        help="run the whole-song structure benchmark against synthetic arrangements",
+    )
+    bench_struct.add_argument("--output-dir", type=Path, default=Path("build") / "structure-benchmark")
+    bench_struct.add_argument("--fixtures-dir", type=Path, help="reuse a fixture directory instead of generating one")
+
     # doctor
     sub.add_parser("doctor", help="check system dependencies and configuration")
 
@@ -252,6 +260,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Baseline NOT accepted: {baseline.get('reason')}")
             print(f"Gates failed: {', '.join(baseline.get('gates_failed', []))}")
             return 1
+        failed = results["gates"]["failed"]
+        print(f"Gates failed: {', '.join(failed) if failed else 'none'}")
+        return 1 if failed else 0
+
+    if args.command == "benchmark-structure":
+        from .structure_benchmark import run_structure_benchmark
+
+        results = run_structure_benchmark(args.output_dir, args.fixtures_dir)
+        print(f"Structure benchmark written to {results['output_dir']}")
         failed = results["gates"]["failed"]
         print(f"Gates failed: {', '.join(failed) if failed else 'none'}")
         return 1 if failed else 0

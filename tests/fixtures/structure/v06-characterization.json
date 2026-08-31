@@ -1,0 +1,76 @@
+{
+  "schema": "beatscope-structure-characterization-1",
+  "pipeline_version": "0.6.0",
+  "cases": {
+    "structure-aba": {
+      "method": "bar-rhythm-cosine-v1",
+      "bar_count": 24,
+      "segment_count": 0,
+      "boundary_count": 0,
+      "repetition_count": 0
+    },
+    "structure-abacb": {
+      "method": "bar-rhythm-cosine-v1",
+      "bar_count": 30,
+      "segment_count": 0,
+      "boundary_count": 0,
+      "repetition_count": 0
+    },
+    "structure-break": {
+      "method": "bar-rhythm-cosine-v1",
+      "bar_count": 20,
+      "segment_count": 0,
+      "boundary_count": 0,
+      "repetition_count": 0
+    },
+    "structure-drift": {
+      "method": "bar-rhythm-cosine-v1",
+      "bar_count": 24,
+      "segment_count": 0,
+      "boundary_count": 0,
+      "repetition_count": 0
+    },
+    "structure-energy-only": {
+      "method": "bar-rhythm-cosine-v1",
+      "bar_count": 24,
+      "segment_count": 0,
+      "boundary_count": 0,
+      "repetition_count": 0
+    },
+    "structure-harmony-only": {
+      "method": "bar-rhythm-cosine-v1",
+      "bar_count": 24,
+      "segment_count": 0,
+      "boundary_count": 0,
+      "repetition_count": 0
+    },
+    "structure-monotony": {
+      "method": "bar-rhythm-cosine-v1",
+      "bar_count": 24,
+      "segment_count": 0,
+      "boundary_count": 0,
+      "repetition_count": 0
+    },
+    "structure-rhythm-only": {
+      "method": "bar-rhythm-cosine-v1",
+      "bar_count": 24,
+      "segment_count": 0,
+      "boundary_count": 0,
+      "repetition_count": 0
+    },
+    "structure-short": {
+      "method": "bar-rhythm-cosine-v1",
+      "bar_count": 6,
+      "segment_count": 0,
+      "boundary_count": 0,
+      "repetition_count": 0
+    },
+    "structure-tempo-change-repeat": {
+      "method": "bar-rhythm-cosine-v1",
+      "bar_count": 24,
+      "segment_count": 0,
+      "boundary_count": 0,
+      "repetition_count": 0
+    }
+  }
+}
