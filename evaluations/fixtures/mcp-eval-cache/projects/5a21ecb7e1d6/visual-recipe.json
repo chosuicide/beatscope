@@ -1,0 +1,49 @@
+{
+  "schema": "beatscope-visual-recipe-1",
+  "recipe_version": "0.8.0",
+  "project_id": "5a21ecb7e1d6",
+  "source_rhythm_sha256": "9f2ed42f1495c81eb3a3a719918c7071a2e9c85b35de85098fa004c80ae42a3c",
+  "seed": "5a21ecb7e1d6:visual-recipe-1",
+  "mode": "legacy",
+  "tokens": {
+    "palette": {
+      "paper": "#f4f1e9",
+      "ink": "#171713",
+      "accent": "#c65032",
+      "warm": "#fff1ce"
+    },
+    "transition": {
+      "lead_beats": 1.0,
+      "settle_beats": 1.5,
+      "max_lead_seconds": 0.8,
+      "max_settle_seconds": 0.9
+    },
+    "motion": {
+      "max_scene_spread": 0.32,
+      "max_scene_twist": 0.28,
+      "max_palette_mix": 0.42
+    }
+  },
+  "families": {
+    "LEGACY": {
+      "motif": "compact-triad",
+      "palette_slot": 0,
+      "composition": {
+        "spread": 0.0,
+        "twist": 0.0,
+        "flow": 0.0,
+        "orbit": 0.0,
+        "void": 0.0,
+        "contrast": 0.0
+      }
+    }
+  },
+  "diagnostics": {
+    "family_count": 1,
+    "motif_bank_version": "motif-bank-1",
+    "artifact_fingerprint": "c2d5ad46ac1ed2b8b1c7e88435684867f2723497e0e1164ef4bf9ffd70288524",
+    "warnings": [
+      "no patterns.segments; visual recipe compiled in legacy mode with the neutral LEGACY family"
+    ]
+  }
+}

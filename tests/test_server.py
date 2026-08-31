@@ -1,8 +1,10 @@
+import hashlib
 import http.client
 import json
 import threading
 import time
 import wave
+from pathlib import Path
 
 from http.server import ThreadingHTTPServer
 import beatscope.server as server_module
@@ -128,3 +130,86 @@ def test_job_analysis_and_range_audio(tmp_path):
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
+# --- v0.8 compiled visual artifact routes (plan section 13) ------------------
+
+
+def _seed_visual_project(projects_root, project_id='0a1b2c3d4e5f'):
+    """Seed one compilable project: rhythm.json + project.json in the cache."""
+    import json as _json
+    fixture = Path(__file__).parent / 'fixtures' / 'runtime' / 'characterization-project.json'
+    rhythm = _json.loads(fixture.read_text(encoding='utf-8'))
+    rhythm['project_id'] = project_id
+    p_dir = projects_root / project_id[:12]
+    p_dir.mkdir(parents=True, exist_ok=True)
+    (p_dir / 'rhythm.json').write_text(_json.dumps(rhythm, ensure_ascii=False), encoding='utf-8')
+    (p_dir / 'project.json').write_text(
+        _json.dumps({'project_id': project_id[:12], 'display_name': 'characterization.wav'}),
+        encoding='utf-8',
+    )
+    return rhythm
+
+
+def test_visual_artifact_routes_serve_canonical_bytes_with_etag(tmp_path):
+    from beatscope.project import ProjectManager
+    from beatscope.visual_recipe import canonical_visual_bytes
+    from beatscope.web_api import WebApi
+
+    projects = tmp_path / 'projects'
+    rhythm = _seed_visual_project(projects)
+    api = WebApi(ProjectManager(tmp_path))
+
+    status, headers, body = api.handle_get('/api/projects/0a1b2c3d4e5f/visual-recipe', {}, {})
+    assert status == 200
+    assert headers['Content-Type'] == 'application/json; charset=utf-8'
+    recipe = json.loads(body.decode('utf-8'))
+    assert recipe['schema'] == 'beatscope-visual-recipe-1'
+    assert body == canonical_visual_bytes(recipe)
+    etag = headers['ETag']
+    assert etag == '"' + hashlib.sha256(body).hexdigest() + '"'
+
+    status, headers, body = api.handle_get('/api/projects/0a1b2c3d4e5f/visual-timeline', {}, {})
+    assert status == 200
+    timeline = json.loads(body.decode('utf-8'))
+    assert timeline['schema'] == 'beatscope-visual-timeline-1'
+    assert body == canonical_visual_bytes(timeline)
+    assert headers['ETag'] == '"' + hashlib.sha256(body).hexdigest() + '"'
+    # The compiled timeline instantiates the recipe's families on the song.
+    assert [scene['family'] for scene in timeline['scenes']] == ['LEGACY']
+    assert recipe['diagnostics']['artifact_fingerprint']
+
+
+def test_visual_artifact_routes_honour_if_none_match(tmp_path):
+    from beatscope.project import ProjectManager
+    from beatscope.web_api import WebApi
+
+    _seed_visual_project(tmp_path / 'projects')
+    api = WebApi(ProjectManager(tmp_path))
+    _, headers, _ = api.handle_get('/api/projects/0a1b2c3d4e5f/visual-recipe', {}, {})
+    etag = headers['ETag']
+
+    status, headers, body = api.handle_get(
+        '/api/projects/0a1b2c3d4e5f/visual-recipe', {}, {'If-None-Match': etag})
+    assert status == 304
+    assert body == b''
+    assert headers['ETag'] == etag
+    assert headers['Content-Type'] == 'application/json; charset=utf-8'
+
+    # A different validator re-serves the full document.
+    status, _, body = api.handle_get(
+        '/api/projects/0a1b2c3d4e5f/visual-recipe', {}, {'If-None-Match': '"0123abcd"'})
+    assert status == 200 and len(body) > 0
+    # Case-insensitive header lookup.
+    status, _, _ = api.handle_get(
+        '/api/projects/0a1b2c3d4e5f/visual-recipe', {}, {'if-none-match': etag})
+    assert status == 304
+
+
+def test_visual_artifact_routes_unknown_project_is_404(tmp_path):
+    from beatscope.project import ProjectManager
+    from beatscope.web_api import WebApi
+
+    api = WebApi(ProjectManager(tmp_path))
+    for route in ('visual-recipe', 'visual-timeline'):
+        status, headers, body = api.handle_get(f'/api/projects/zz9x/{route}', {}, {})
+        assert status == 404
+        assert 'error' in json.loads(body.decode('utf-8'))

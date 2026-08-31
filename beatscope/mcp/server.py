@@ -182,7 +182,9 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
             "Read one BeatScope project. detail='summary' returns identity and counts; "
             "'timing' adds beats, tempo segments, patterns, and cues (no energy arrays); "
             "'full' returns the complete schema v4 JSON unless it exceeds the response "
-            "budget, in which case it points at the beatscope://projects/{id}/rhythm resource."
+            "budget, in which case it points at the beatscope://projects/{id}/rhythm resource. "
+            "Every detail also carries a visual block: whether compiled visual artifacts "
+            "exist, their recipe version and mode, and family/scene/transition counts."
         ),
         annotations=_read_only("Read a BeatScope project"),
     )
@@ -204,7 +206,10 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
             "runtime: bar, beat, beatIndex, beat/bar phases, low/mid/high/all "
             "energy, onset impulse, accent, section. Mirrors the web player's "
             "track.at(time) exactly; null onset age or accent means no previous "
-            "onset exists."
+            "onset exists. When the project has compiled visual artifacts, an "
+            "additive visual block reports the structural scene (family, variant, "
+            "motif, phase), the boundary transition stage, and the scene "
+            "composition channels at the same instant."
         ),
         annotations=_read_only("Read BeatScope visual state"),
     )
@@ -224,8 +229,11 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
         description=(
             "List BeatScope events in a time window (start, end]: beats, onsets "
             "(runtime boundary semantics), cues by type, and pattern bars. "
-            "Windows are capped at 600 s - split longer ranges into separate "
-            "queries. Results are sorted by time and kind, then paginated."
+            "include also accepts 'scenes' (compiled visual scenes overlapping "
+            "the window) and 'transitions' (boundary transitions with "
+            "start < time <= end), carrying identity/timing only. Windows are "
+            "capped at 600 s - split longer ranges into separate queries. "
+            "Results are sorted by time and kind, then paginated."
         ),
         annotations=_read_only("Read BeatScope events"),
     )

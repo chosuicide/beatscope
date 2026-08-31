@@ -61,9 +61,13 @@ class EventsInput(StrictModel):
     project_id: str = Field(pattern=PROJECT_ID_PATTERN)
     start: float = Field(ge=0)
     end: float = Field(gt=0)
-    # "segments"/"boundaries" are the v0.7 whole-song structure facts; the
-    # legacy per-bar "patterns" include stays untouched.
-    include: set[Literal["beats", "onsets", "cues", "patterns", "segments", "boundaries"]] = Field(
+    # "segments"/"boundaries" are the v0.7 whole-song structure facts;
+    # "scenes"/"transitions" are the v0.8 compiled visual artifacts (plan
+    # section 15); the legacy per-bar "patterns" include stays untouched.
+    include: set[Literal[
+        "beats", "onsets", "cues", "patterns", "segments", "boundaries",
+        "scenes", "transitions",
+    ]] = Field(
         default_factory=lambda: {"beats", "onsets", "cues"}
     )
     cue_types: set[CUE_TYPES] = Field(

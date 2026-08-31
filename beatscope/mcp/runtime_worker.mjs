@@ -15,8 +15,10 @@
 import { readFileSync, statSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { createTrack } from '../runtime/runtime.js';
+import { createSceneDirector } from '../runtime/scene-director.js';
 
 const tracks = new Map();
+const sceneDirectors = new Map();
 
 function fingerprintOf(path) {
   const stat = statSync(path, { bigint: true });
@@ -30,6 +32,22 @@ function getTrack(projectId, path, fingerprint) {
   const track = createTrack(rhythm);
   tracks.set(projectId, { fingerprint, track });
   return track;
+}
+
+// Cache key (plan section 15): project ID + rhythm fingerprint + recipe
+// fingerprint + timeline fingerprint. Replacing any artifact invalidates
+// exactly this project entry.
+function getSceneDirector(request) {
+  const recipeFingerprint = request.recipe_fingerprint ?? fingerprintOf(request.recipe_path);
+  const timelineFingerprint = request.timeline_fingerprint ?? fingerprintOf(request.timeline_path);
+  const key = `${request.project}:${request.fingerprint}:${recipeFingerprint}:${timelineFingerprint}`;
+  const cached = sceneDirectors.get(key);
+  if (cached) return cached;
+  const recipe = JSON.parse(readFileSync(request.recipe_path, 'utf8'));
+  const timeline = JSON.parse(readFileSync(request.timeline_path, 'utf8'));
+  const director = createSceneDirector(recipe, timeline);
+  sceneDirectors.set(key, director);
+  return director;
 }
 
 function respond(message) {
@@ -60,6 +78,15 @@ interface_.on('line', (line) => {
         break;
       case 'at':
         result = requireTrack(request).at(Number(request.time) || 0);
+        break;
+      case 'visual_state':
+        // One combined op: the runtime state and the scene state are sampled
+        // at the same instant through the same shared modules the browser
+        // and the export run (plan section 15).
+        result = {
+          at: requireTrack(request).at(Number(request.time) || 0),
+          scene: getSceneDirector(request).at(Number(request.time) || 0),
+        };
         break;
       case 'between':
         result = requireTrack(request).between(Number(request.start) || 0, Number(request.end) || 0);

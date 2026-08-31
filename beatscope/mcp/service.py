@@ -64,6 +64,51 @@ class BeatScopeService:
     def _rhythm_path(self, project_id: str) -> Path:
         return self.projects.projects_dir / project_id[:12] / "rhythm.json"
 
+    def _recipe_path(self, project_id: str) -> Path:
+        return self.projects.projects_dir / project_id[:12] / "visual-recipe.json"
+
+    def _timeline_path(self, project_id: str) -> Path:
+        return self.projects.projects_dir / project_id[:12] / "visual-timeline.json"
+
+    def load_visual_artifacts(self, project_id: str) -> dict[str, Any] | None:
+        """Recipe + timeline for a project, regenerating lazily (plan section 15).
+
+        Returns None when the artifacts cannot be produced (unreadable or
+        invalid project); callers degrade to the legacy surface instead of
+        failing the whole tool response.
+        """
+        try:
+            return self.projects.get_project_visual_artifacts(project_id)
+        except (OSError, ValueError, TypeError):
+            return None
+
+    def _visual_metadata(
+        self, project_id: str, artifacts: dict[str, Any] | None, detail: str
+    ) -> dict[str, Any]:
+        """The beatscope_get_project visual block (plan section 15).
+
+        Counts and identity only - never per-frame samples and never the
+        artifact documents themselves. The artifact fingerprint rides along
+        from timing detail upward.
+        """
+        if artifacts is None:
+            return {"available": False}
+        recipe = artifacts["recipe"]
+        timeline = artifacts["timeline"]
+        block: dict[str, Any] = {
+            "available": True,
+            "recipe_version": recipe.get("recipe_version"),
+            "mode": recipe.get("mode"),
+            "families": len(recipe.get("families") or {}),
+            "scenes": len(timeline.get("scenes") or []),
+            "transitions": len(timeline.get("transitions") or []),
+        }
+        if detail != "summary":
+            diagnostics = recipe.get("diagnostics")
+            if isinstance(diagnostics, dict):
+                block["artifact_fingerprint"] = diagnostics.get("artifact_fingerprint")
+        return block
+
     def load_validated_rhythm(self, project_id: str) -> dict[str, Any]:
         """Read through ProjectManager so stored v3 projects migrate on load."""
         if not self._rhythm_path(project_id).is_file():
@@ -131,6 +176,7 @@ class BeatScopeService:
         rhythm = self.load_validated_rhythm(request.project_id)
         base = project_summary(request.project_id, rhythm)
         line = summary_line(base)
+        artifacts = self.load_visual_artifacts(request.project_id)
         result: dict[str, Any] = {
             "ok": True,
             "project_id": request.project_id,
@@ -140,6 +186,7 @@ class BeatScopeService:
             "resource": None,
             "note": None,
             "data": None,
+            "visual": self._visual_metadata(request.project_id, artifacts, request.detail),
         }
         if request.detail == "summary":
             result["data"] = base
@@ -311,18 +358,55 @@ class BeatScopeService:
         return self.runtime
 
     async def get_visual_state(self, request) -> dict[str, Any]:
-        """Visual state at one instant, computed by the shared runtime."""
+        """Visual state at one instant, computed by the shared runtime.
+
+        The v0.8 scene block is additive (plan section 15): the top-level
+        runtime fields stay exactly what track.at(time) returns, and the
+        worker computes scene state through the same scene-director.js the
+        browser and the export run, so all three carriers agree exactly.
+        """
         runtime = self._require_runtime()
         self.load_validated_rhythm(request.project_id)  # existence + schema check
         rhythm_path = self._rhythm_path(request.project_id)
-        state = await runtime.call(
-            "at",
+        artifacts = self.load_visual_artifacts(request.project_id)
+        if artifacts is None:
+            state = await runtime.call(
+                "at",
+                project=request.project_id,
+                path=str(rhythm_path),
+                fingerprint=file_fingerprint(rhythm_path),
+                time=request.time,
+            )
+            return {"ok": True, "project_id": request.project_id, **state}
+        recipe_path = self._recipe_path(request.project_id)
+        timeline_path = self._timeline_path(request.project_id)
+        result = await runtime.call(
+            "visual_state",
             project=request.project_id,
             path=str(rhythm_path),
             fingerprint=file_fingerprint(rhythm_path),
+            recipe_path=str(recipe_path),
+            recipe_fingerprint=file_fingerprint(recipe_path),
+            timeline_path=str(timeline_path),
+            timeline_fingerprint=file_fingerprint(timeline_path),
             time=request.time,
         )
-        return {"ok": True, "project_id": request.project_id, **state}
+        scene_frame = result.get("scene")
+        if scene_frame is None:
+            # Past the timeline's last scene (time > duration) the scene
+            # director reports null - exactly what the web player's frame
+            # carries there, so the visual block is simply omitted.
+            return {"ok": True, "project_id": request.project_id, **result["at"]}
+        return {
+            "ok": True,
+            "project_id": request.project_id,
+            **result["at"],
+            "visual": {
+                "scene": scene_frame["scene"],
+                "transition": scene_frame["transition"],
+                "composition": scene_frame["composition"],
+            },
+        }
 
     async def get_events(self, request: EventsInput) -> dict[str, Any]:
         """Events in (start, end] - the runtime's boundary semantics.
@@ -371,6 +455,15 @@ class BeatScopeService:
                     request.start, request.end,
                 )
             ]
+        # v0.8 compiled visual artifacts (plan section 15): scenes overlap the
+        # window as spans; transitions are instants with start < time <= end.
+        if "scenes" in request.include or "transitions" in request.include:
+            artifacts = self.load_visual_artifacts(request.project_id)
+            if artifacts is not None:
+                if "scenes" in request.include:
+                    events += _scene_events(artifacts["timeline"], request.start, request.end)
+                if "transitions" in request.include:
+                    events += _transition_events(artifacts["timeline"], request.start, request.end)
 
         events.sort(key=lambda event: (float(event.get("time") or 0), event["kind"]))
         page, meta = paginate(events, request.limit, request.offset)
@@ -430,6 +523,62 @@ def _time_slice(items: list[dict[str, Any]], start: float, end: float) -> list[d
     lo = bisect.bisect_right(times, start)
     hi = bisect.bisect_right(times, end)
     return items[lo:hi]
+
+
+def _scene_events(timeline: dict[str, Any], start: float, end: float) -> list[dict[str, Any]]:
+    """Compiled visual scenes overlapping the window (plan section 15).
+
+    A scene is a span like a segment, so it is included when its
+    [start_time, end_time) overlaps (start, end]. Only identity and timing
+    facts ride along - never variant parameter vectors.
+    """
+    events: list[dict[str, Any]] = []
+    for scene in timeline.get("scenes") or []:
+        if not isinstance(scene, dict):
+            continue
+        scene_start = float(scene.get("start_time") or 0)
+        scene_end = float(scene.get("end_time") or 0)
+        if scene_start < end and scene_end > start:
+            events.append({
+                "kind": "scene",
+                "time": scene_start,
+                "end": scene_end,
+                "id": scene.get("id"),
+                "segment_id": scene.get("segment_id"),
+                "family": scene.get("family"),
+                "variant": scene.get("variant"),
+                "label": scene.get("label"),
+                "motif": scene.get("motif"),
+            })
+    return events
+
+
+def _transition_events(timeline: dict[str, Any], start: float, end: float) -> list[dict[str, Any]]:
+    """Boundary transitions with start < time <= end (plan section 15).
+
+    Treatment, driver, strength, and timing ride along; no parameter
+    vectors, no emotion labels.
+    """
+    events: list[dict[str, Any]] = []
+    for transition in timeline.get("transitions") or []:
+        if not isinstance(transition, dict):
+            continue
+        time = float(transition.get("time") or 0)
+        if start < time <= end:
+            events.append({
+                "kind": "transition",
+                "time": time,
+                "id": transition.get("id"),
+                "boundary_bar": transition.get("boundary_bar"),
+                "from_scene": transition.get("from_scene"),
+                "to_scene": transition.get("to_scene"),
+                "treatment": transition.get("treatment"),
+                "driver": transition.get("driver"),
+                "strength": transition.get("strength"),
+                "lead_seconds": transition.get("lead_seconds"),
+                "settle_seconds": transition.get("settle_seconds"),
+            })
+    return events
 
 
 def _segment_events(rhythm: dict[str, Any], start: float, end: float) -> list[dict[str, Any]]:

@@ -1,0 +1,34 @@
+{
+  "schema": "beatscope-visual-timeline-1",
+  "recipe_version": "0.8.0",
+  "project_id": "5a21ecb7e1d6",
+  "duration": 8.0,
+  "mode": "legacy",
+  "scenes": [
+    {
+      "id": "scene-001",
+      "segment_id": null,
+      "segment_index": 0,
+      "family": "LEGACY",
+      "variant": 0,
+      "label": "LEGACY",
+      "start_time": 0.0,
+      "end_time": 8.0,
+      "motif": "compact-triad",
+      "variant_delta": {
+        "spread": 0.0,
+        "twist": 0.0,
+        "flow": 0.0,
+        "orbit": 0.0,
+        "void": 0.0,
+        "contrast": 0.0
+      }
+    }
+  ],
+  "transitions": [],
+  "diagnostics": {
+    "scene_count": 1,
+    "transition_count": 0,
+    "warnings": []
+  }
+}

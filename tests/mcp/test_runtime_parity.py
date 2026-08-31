@@ -16,6 +16,7 @@ import pytest
 from mcp import Client
 
 from beatscope.mcp.paths import MCPSettings
+from beatscope.project import ProjectManager
 from mcp_support import (
     PRIVATE_AUDIO,
     PROJECT_A,
@@ -46,6 +47,19 @@ def _direct_states(fixture: Path, times: list[str]) -> list[dict]:
     return [json.loads(line) for line in completed.stdout.splitlines() if line.strip()]
 
 
+def _direct_scene_states(
+    fixture: Path, recipe: Path, timeline: Path, times: list[str]
+) -> list[dict]:
+    completed = subprocess.run(
+        ["node", str(PARITY_SCRIPT), str(fixture), "--scene", str(recipe), str(timeline), *times],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=True,
+    )
+    return [json.loads(line) for line in completed.stdout.splitlines() if line.strip()]
+
+
 async def test_visual_state_matches_direct_runtime(tmp_path: Path):
     server = build_snapshot_server(tmp_path)
     fixture = tmp_path / "cache" / "projects" / PROJECT_A / "rhythm.json"
@@ -60,6 +74,7 @@ async def test_visual_state_matches_direct_runtime(tmp_path: Path):
             payload = json.loads(result.content[0].text)
             assert payload.pop("ok") is True
             assert payload.pop("project_id") == PROJECT_A
+            payload.pop("visual", None)  # additive v0.8 block; pinned in the scene test below
             actual.append(payload)
 
     assert actual == expected
@@ -85,6 +100,10 @@ async def test_seek_back_matches_direct_runtime(tmp_path: Path):
                 )
             ).content[0].text
         )
+    # The additive visual block rides on both responses; the block itself is
+    # pinned against the scene director in the scene parity test below.
+    early_mcp.pop("visual")
+    late_mcp.pop("visual")
     assert early_mcp == {**early, "ok": True, "project_id": PROJECT_A}
     assert late_mcp == {**late, "ok": True, "project_id": PROJECT_A}
 
@@ -93,6 +112,41 @@ def test_parity_script_covers_all_plan_time_classes():
     assert len(PARITY_TIMES) >= 6
     assert "0.01" in PARITY_TIMES  # 10 ms after an onset
     assert "4.2" in PARITY_TIMES   # after the last stored beat
+
+
+# --- scene parity: the additive visual block vs scene-director.js (plan 18.1)
+
+async def test_scene_state_matches_direct_runtime(tmp_path: Path):
+    server = build_snapshot_server(tmp_path)
+    project_dir = tmp_path / "cache" / "projects" / PROJECT_A
+    fixture = project_dir / "rhythm.json"
+    # Compile and persist the artifacts up front so the direct side and the
+    # MCP worker read the same recipe/timeline documents (and fingerprints).
+    rhythm = json.loads(fixture.read_text(encoding="utf-8"))
+    rhythm["project_id"] = PROJECT_A
+    ProjectManager(tmp_path / "cache").ensure_visual_artifacts(rhythm)
+    recipe = project_dir / "visual-recipe.json"
+    timeline = project_dir / "visual-timeline.json"
+    expected = _direct_scene_states(fixture, recipe, timeline, PARITY_TIMES)
+
+    async with Client(server, raise_exceptions=True) as client:
+        for time_text, direct in zip(PARITY_TIMES, expected):
+            result = await client.call_tool(
+                "beatscope_get_visual_state", {"project_id": PROJECT_A, "time": float(time_text)}
+            )
+            payload = json.loads(result.content[0].text)
+            assert payload.pop("ok") is True
+            assert payload.pop("project_id") == PROJECT_A
+            visual = payload.pop("visual")
+            assert payload == direct["at"]
+            assert visual == {
+                "scene": direct["scene"]["scene"],
+                "transition": direct["scene"]["transition"],
+                "composition": direct["scene"]["composition"],
+            }
+            # Structure-level facts the scene contract pins everywhere.
+            assert visual["scene"]["family"] == "LEGACY"
+            assert visual["transition"]["stage"] in {"idle", "approach", "cross", "settle"}
 
 
 # --- variable-tempo parity across the tempo seam (plan section 18.3) --------
@@ -145,6 +199,7 @@ async def test_variable_tempo_visual_state_matches_direct_runtime(tmp_path: Path
             payload = json.loads(result.content[0].text)
             assert payload.pop("ok") is True
             assert payload.pop("project_id") == PROJECT_VARIABLE
+            payload.pop("visual", None)  # additive block; omitted past the last scene
             actual.append(payload)
 
     assert actual == expected

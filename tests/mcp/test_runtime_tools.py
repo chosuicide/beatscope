@@ -158,3 +158,86 @@ async def test_events_unknown_include_value_is_actionable(server):
         )
     assert result.is_error is True
     assert "include" in result.content[0].text
+
+
+# --- v0.8 additive visual surfaces (plan section 15) -------------------------
+
+
+async def test_visual_state_includes_additive_visual_block(server):
+    async with Client(server, raise_exceptions=True) as client:
+        result = await client.call_tool(
+            "beatscope_get_visual_state", {"project_id": PROJECT_A, "time": 1.25}
+        )
+    state = _payload(result)
+    visual = state["visual"]
+    assert set(visual) == {"scene", "transition", "composition"}
+    # Identity and timing only: family, variant, motif, phase (plan 16).
+    assert visual["scene"]["family"] == "LEGACY"
+    assert visual["scene"]["motif"] == "compact-triad"
+    assert visual["scene"]["phase"] == pytest.approx(1.25 / 8.0)
+    # Far from any boundary the transition envelope is idle and channels rest.
+    assert visual["transition"]["stage"] == "idle"
+    assert visual["transition"]["strength"] == 0
+    assert visual["composition"]["spread"] == 0
+    forbidden = {"kick", "snare", "hihat", "bass_808", "confidence",
+                 "emotion", "mood", "feeling", "instrument", "role"}
+    assert not forbidden & set(visual["scene"])
+    assert not forbidden & set(visual["transition"])
+    assert not forbidden & set(visual["composition"])
+
+
+async def test_visual_state_past_last_scene_omits_visual_block(server):
+    # The characterization fixture runs 8 s; past the last scene the scene
+    # director reports null exactly like the web player's frame, so the
+    # additive block is omitted instead of inventing scene state.
+    async with Client(server, raise_exceptions=True) as client:
+        result = await client.call_tool(
+            "beatscope_get_visual_state", {"project_id": PROJECT_A, "time": 12.0}
+        )
+    state = _payload(result)
+    assert state["ok"] is True
+    assert "visual" not in state
+    assert state["beatIndex"] is None or isinstance(state["beatIndex"], int)
+
+
+async def test_events_include_scenes_reports_overlapping_spans(server):
+    async with Client(server, raise_exceptions=True) as client:
+        result = await client.call_tool(
+            "beatscope_get_events",
+            {"project_id": PROJECT_A, "start": 0.0, "end": 8.0, "include": ["scenes"]},
+        )
+    payload = _payload(result)
+    # One compiled scene spans the whole fixture: overlap semantics, not
+    # instant semantics - it appears even though its start sits at t=0.
+    assert payload["total"] == 1
+    scene = payload["events"][0]
+    assert scene["kind"] == "scene"
+    assert scene["time"] == 0.0
+    assert scene["end"] == 8.0
+    assert scene["family"] == "LEGACY"
+    assert scene["motif"] == "compact-triad"
+    assert "variant_delta" not in scene  # parameter vectors never ride along
+
+
+async def test_events_include_transitions_empty_without_boundaries(server):
+    async with Client(server, raise_exceptions=True) as client:
+        result = await client.call_tool(
+            "beatscope_get_events",
+            {"project_id": PROJECT_A, "start": 0.0, "end": 8.0, "include": ["transitions"]},
+        )
+    payload = _payload(result)
+    assert payload["total"] == 0  # legacy-mode timeline has no boundaries
+
+
+async def test_events_scenes_mix_with_beats_and_stay_sorted(server):
+    async with Client(server, raise_exceptions=True) as client:
+        result = await client.call_tool(
+            "beatscope_get_events",
+            {"project_id": PROJECT_A, "start": 0.5, "end": 2.0, "include": ["beats", "scenes"]},
+        )
+    payload = _payload(result)
+    kinds = [(event["kind"], event["time"]) for event in payload["events"]]
+    # The scene span overlaps the window; beats keep their instant times.
+    assert {kind for kind, _ in kinds} == {"beat", "scene"}
+    times = [time for _, time in kinds]
+    assert times == sorted(times)

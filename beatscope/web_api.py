@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 import tempfile
 from typing import Any
@@ -10,6 +11,7 @@ from urllib.parse import parse_qs, urlparse
 from .exports import generate_rhythm_midi, generate_rhythm_csv, generate_codex_export
 from .jobs import JobManager
 from .project import ProjectManager
+from .visual_recipe import canonical_visual_bytes
 
 
 MAX_UPLOAD_BYTES = 500 * 1024 * 1024
@@ -86,11 +88,25 @@ class WebApi:
             rhythm = self.project_manager.get_project_rhythm(project_id)
             if not rhythm:
                 return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Project not found"}).encode()
-            archive = generate_codex_export(rhythm)
+            artifacts = self.project_manager.get_project_visual_artifacts(project_id)
+            if artifacts is None:
+                return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Project not found"}).encode()
+            archive = generate_codex_export(
+                rhythm, visual_artifacts=(artifacts["recipe"], artifacts["timeline"]),
+            )
             return 200, {
                 "Content-Type": "application/zip",
                 "Content-Disposition": f'attachment; filename="{project_id}.beatscope-codex.zip"',
             }, archive
+
+        # 8./9. GET /api/projects/<id>/visual-recipe and /visual-timeline
+        if (
+            len(parts) == 4
+            and parts[0] == "api"
+            and parts[1] == "projects"
+            and parts[3] in ("visual-recipe", "visual-timeline")
+        ):
+            return self._serve_visual_artifact(parts[2], "recipe" if parts[3] == "visual-recipe" else "timeline", headers)
 
         return 404, {"Content-Type": "text/plain"}, b"Not found"
 
@@ -117,6 +133,36 @@ class WebApi:
             except Exception as exc:
                 return 400, {"Content-Type": "application/json"}, json.dumps({"error": str(exc)}).encode()
         return 404, {"Content-Type": "text/plain"}, b"Not found"
+
+    def _serve_visual_artifact(
+        self, project_id: str, kind: str, headers: dict[str, str]
+    ) -> tuple[int, dict[str, str], bytes]:
+        """Serve one compiled visual artifact document (plan section 13).
+
+        Artifacts regenerate lazily under the project lock, the body is the
+        canonical LF JSON, and the ETag is the SHA-256 of those exact bytes
+        so ``If-None-Match`` can answer 304 without recompilation. Local
+        file paths never enter the response; invalid artifacts surface the
+        existing structured error shape.
+        """
+        try:
+            artifacts = self.project_manager.get_project_visual_artifacts(project_id)
+        except ValueError as exc:
+            return 400, {"Content-Type": "application/json"}, json.dumps({"error": str(exc)}).encode()
+        if artifacts is None:
+            return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Project not found"}).encode()
+        body = canonical_visual_bytes(artifacts[kind])
+        etag = f'"{hashlib.sha256(body).hexdigest()}"'
+        response_headers = {
+            "Content-Type": "application/json; charset=utf-8",
+            "ETag": etag,
+        }
+        if_none_match = headers.get("If-None-Match") or headers.get("if-none-match")
+        if if_none_match:
+            candidates = {candidate.strip() for candidate in if_none_match.split(",")}
+            if etag in candidates or "*" in candidates:
+                return 304, response_headers, b""
+        return 200, response_headers, body
 
     def _serve_file_range(self, file_path: Path, range_header: str | None) -> tuple[int, dict[str, str], bytes]:
         """Serve media file supporting HTTP 206 Byte Ranges for audio seeking."""
