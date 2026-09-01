@@ -1,0 +1,60 @@
+{
+  "schema": "beatscope-agent-rubric-1",
+  "purpose": "Objective conformance scoring for Coding Agent runs of the frozen interoperability task (v0.9 plan section 13.3). Artistic taste is recorded as a human note and never changes the conformance score.",
+  "weights": {
+    "starts-successfully": 15,
+    "uses-exported-frame-api": 20,
+    "no-audio-re-analysis": 15,
+    "pause-seek-replay-correctness": 20,
+    "checkpoint-parity": 15,
+    "structure-scale-response": 5,
+    "reduced-motion": 5,
+    "independent-visual-implementation": 5
+  },
+  "categories": [
+    {
+      "id": "starts-successfully",
+      "weight": 15,
+      "evidence": "clean install/build/run of the generated consumer from a fresh checkout"
+    },
+    {
+      "id": "uses-exported-frame-api",
+      "weight": 20,
+      "evidence": "import of the manifest-declared frame function plus the runtime probe passing"
+    },
+    {
+      "id": "no-audio-re-analysis",
+      "weight": 15,
+      "evidence": "dependency list and source inspection find no audio decoding, FFT, or beat detection"
+    },
+    {
+      "id": "pause-seek-replay-correctness",
+      "weight": 20,
+      "evidence": "browser pause/seek/replay probes or offline frame probes pass"
+    },
+    {
+      "id": "checkpoint-parity",
+      "weight": 15,
+      "evidence": "canonical checkpoint hashes match the shared fixture"
+    },
+    {
+      "id": "structure-scale-response",
+      "weight": 5,
+      "evidence": "diagnostics show scene-scale state changing at structural boundaries"
+    },
+    {
+      "id": "reduced-motion",
+      "weight": 5,
+      "evidence": "automated state inspection with reduced motion enabled"
+    },
+    {
+      "id": "independent-visual-implementation",
+      "weight": 5,
+      "evidence": "no BeatScope player code fingerprint in the generated source"
+    }
+  ],
+  "human_notes": {
+    "role": "Artistic taste, documentation quality, and visual polish are recorded as free-text human notes.",
+    "score_effect": 0
+  }
+}

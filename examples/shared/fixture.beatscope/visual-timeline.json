@@ -1,0 +1,97 @@
+{
+  "schema": "beatscope-visual-timeline-1",
+  "recipe_version": "0.8.0",
+  "project_id": "e5d9366aa963",
+  "duration": 30.0001,
+  "mode": "structure",
+  "scenes": [
+    {
+      "id": "scene-001",
+      "segment_id": "segment-001",
+      "segment_index": 0,
+      "family": "A",
+      "variant": 0,
+      "label": "A",
+      "start_time": 0.0,
+      "end_time": 7.4884,
+      "motif": "orbital-weave",
+      "variant_delta": {
+        "spread": 0.0,
+        "twist": 0.0,
+        "flow": 0.0,
+        "orbit": 0.0,
+        "void": 0.0,
+        "contrast": 0.0
+      }
+    },
+    {
+      "id": "scene-002",
+      "segment_id": "segment-002",
+      "segment_index": 1,
+      "family": "B",
+      "variant": 0,
+      "label": "B",
+      "start_time": 7.4884,
+      "end_time": 14.9885,
+      "motif": "open-triad",
+      "variant_delta": {
+        "spread": 0.0,
+        "twist": 0.0,
+        "flow": 0.0,
+        "orbit": 0.0,
+        "void": 0.0,
+        "contrast": 0.0
+      }
+    },
+    {
+      "id": "scene-003",
+      "segment_id": "segment-003",
+      "segment_index": 2,
+      "family": "C",
+      "variant": 0,
+      "label": "C",
+      "start_time": 14.9885,
+      "end_time": 30.0001,
+      "motif": "compact-triad",
+      "variant_delta": {
+        "spread": 0.0,
+        "twist": 0.0,
+        "flow": 0.0,
+        "orbit": 0.0,
+        "void": 0.0,
+        "contrast": 0.0
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "id": "transition-001",
+      "boundary_bar": 5,
+      "time": 7.4884,
+      "from_scene": "scene-001",
+      "to_scene": "scene-002",
+      "treatment": "phase-turn",
+      "strength": 1.0,
+      "driver": "harmony",
+      "lead_seconds": 0.4673,
+      "settle_seconds": 0.70095
+    },
+    {
+      "id": "transition-002",
+      "boundary_bar": 9,
+      "time": 14.9885,
+      "from_scene": "scene-002",
+      "to_scene": "scene-003",
+      "treatment": "radial-part",
+      "strength": 0.9778,
+      "driver": "rhythm",
+      "lead_seconds": 0.5021,
+      "settle_seconds": 0.75315
+    }
+  ],
+  "diagnostics": {
+    "scene_count": 3,
+    "transition_count": 2,
+    "warnings": []
+  }
+}

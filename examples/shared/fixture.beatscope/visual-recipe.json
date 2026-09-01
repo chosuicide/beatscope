@@ -1,0 +1,71 @@
+{
+  "schema": "beatscope-visual-recipe-1",
+  "recipe_version": "0.8.0",
+  "project_id": "e5d9366aa963",
+  "source_rhythm_sha256": "2d3a1f3a033d02610dc2b642cd5e4c2697e23d8a254c2f5964b312f057c4a80f",
+  "seed": "e5d9366aa963:visual-recipe-1",
+  "mode": "structure",
+  "tokens": {
+    "palette": {
+      "paper": "#f4f1e9",
+      "ink": "#171713",
+      "accent": "#c65032",
+      "warm": "#fff1ce"
+    },
+    "transition": {
+      "lead_beats": 1.0,
+      "settle_beats": 1.5,
+      "max_lead_seconds": 0.8,
+      "max_settle_seconds": 0.9
+    },
+    "motion": {
+      "max_scene_spread": 0.32,
+      "max_scene_twist": 0.28,
+      "max_palette_mix": 0.42
+    }
+  },
+  "families": {
+    "A": {
+      "motif": "orbital-weave",
+      "palette_slot": 0,
+      "composition": {
+        "spread": 0.26,
+        "twist": 0.1,
+        "flow": 0.36,
+        "orbit": 0.62,
+        "void": 0.16,
+        "contrast": 0.74
+      }
+    },
+    "B": {
+      "motif": "open-triad",
+      "palette_slot": 1,
+      "composition": {
+        "spread": 0.3,
+        "twist": 0.16,
+        "flow": 0.24,
+        "orbit": 0.52,
+        "void": 0.22,
+        "contrast": 0.66
+      }
+    },
+    "C": {
+      "motif": "compact-triad",
+      "palette_slot": 2,
+      "composition": {
+        "spread": 0.14,
+        "twist": 0.08,
+        "flow": 0.32,
+        "orbit": 0.44,
+        "void": 0.18,
+        "contrast": 0.72
+      }
+    }
+  },
+  "diagnostics": {
+    "family_count": 3,
+    "motif_bank_version": "motif-bank-1",
+    "artifact_fingerprint": "d39da65d6b840d5f7c61f7d992d4820d6513fb8c5af2cab533a5a8420fb9ca41",
+    "warnings": []
+  }
+}

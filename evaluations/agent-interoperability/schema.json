@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BeatScope agent interoperability records (v0.9 plan section 13)",
+  "type": "object",
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "validator_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "passed", "failed", "unavailable"],
+      "properties": {
+        "required": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "unavailable": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "agent-run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "agent",
+        "model_family",
+        "date",
+        "task_sha256",
+        "package_sha256",
+        "framework",
+        "attempts",
+        "human_interventions",
+        "validator"
+      ],
+      "properties": {
+        "schema": { "const": "beatscope-agent-run-1" },
+        "agent": { "type": "string", "minLength": 1 },
+        "model_family": { "type": "string", "minLength": 1 },
+        "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "task_sha256": { "$ref": "#/$defs/sha256" },
+        "package_sha256": { "$ref": "#/$defs/sha256" },
+        "framework": { "type": "string", "minLength": 1 },
+        "attempts": { "type": "integer", "minimum": 1 },
+        "human_interventions": { "type": "integer", "minimum": 0 },
+        "validator": { "$ref": "#/$defs/validator_summary" },
+        "human_repairs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "artistic_note": { "type": "string" }
+      }
+    },
+    "run-index": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "runs"],
+      "properties": {
+        "schema": { "const": "beatscope-agent-run-index-1" },
+        "runs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/agent-run" }
+        }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/agent-run" },
+    { "$ref": "#/$defs/run-index" }
+  ]
+}
