@@ -174,7 +174,7 @@ class BeatScopeService:
 
     def get_project(self, request: GetProjectInput) -> dict[str, Any]:
         rhythm = self.load_validated_rhythm(request.project_id)
-        base = project_summary(request.project_id, rhythm)
+        base = project_summary(request.project_id, rhythm, include_segment_energy=True)
         line = summary_line(base)
         artifacts = self.load_visual_artifacts(request.project_id)
         result: dict[str, Any] = {

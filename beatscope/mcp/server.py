@@ -179,7 +179,8 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
     @mcp.tool(
         name="beatscope_get_project",
         description=(
-            "Read one BeatScope project. detail='summary' returns identity and counts; "
+            "Read one BeatScope project. detail='summary' returns identity, counts, and "
+            "compact per-segment mean low/mid/high energy when structure is available; "
             "'timing' adds beats, tempo segments, patterns, and cues (no energy arrays); "
             "'full' returns the complete schema v4 JSON unless it exceeds the response "
             "budget, in which case it points at the beatscope://projects/{id}/rhythm resource. "

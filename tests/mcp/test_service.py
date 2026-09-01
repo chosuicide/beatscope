@@ -183,6 +183,16 @@ def _structure_mutate(rhythm: dict) -> None:
     rhythm["patterns"]["boundaries"] = [
         {"bar": 2, "time": 4.0, "novelty": 0.78, "drivers": {"harmony": 0.83}},
     ]
+    rhythm["energy"] = {
+        "fps": 1,
+        "start": 0.0,
+        "bands": {
+            "all": [0.1] * 8,
+            "low": [0.1, 0.3, 0.5, 0.7, 0.2, 0.4, 0.6, 0.8],
+            "mid": [0.2, 0.4, 0.6, 0.8, 0.1, 0.3, 0.5, 0.7],
+            "high": [0.0, 0.2, 0.4, 0.6, 0.3, 0.5, 0.7, 0.9],
+        },
+    }
 
 
 def test_project_summary_includes_neutral_structure(mcp_env):
@@ -194,6 +204,16 @@ def test_project_summary_includes_neutral_structure(mcp_env):
         "families": ["A", "B"],
         "form": "A-B",
         "method": "bar-multiview-ssm-v2",
+        "segment_energy": [
+            {
+                "segment_id": "segment-001", "label": "A", "start_time": 0.0,
+                "end_time": 4.0, "mean": {"low": 0.4, "mid": 0.5, "high": 0.3},
+            },
+            {
+                "segment_id": "segment-002", "label": "B", "start_time": 4.0,
+                "end_time": 8.0, "mean": {"low": 0.5, "mid": 0.4, "high": 0.6},
+            },
+        ],
     }
 
 

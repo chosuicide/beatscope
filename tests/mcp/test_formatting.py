@@ -7,6 +7,7 @@ from beatscope.mcp.formatting import (
     paginate,
     project_summary,
     provenance_methods,
+    segment_energy_summary,
     summary_line,
     timing_view,
 )
@@ -47,6 +48,49 @@ def test_project_summary_tolerates_missing_sections():
     assert summary["bars"] == 0
     assert summary["cues"] == 0
     assert summary["provenance"] == {}
+
+
+def test_segment_energy_summary_uses_half_open_frame_ranges():
+    rhythm = {
+        "energy": {
+            "fps": 1,
+            "start": 0.0,
+            "bands": {
+                "low": [0.1, 0.3, 0.5, 0.7],
+                "mid": [0.2, 0.4, 0.6, 0.8],
+                "high": [0.0, 0.2, 0.4, 0.6],
+            },
+        },
+        "patterns": {"segments": [
+            {"id": "segment-001", "display_label": "A", "start_time": 0.0, "end_time": 2.0},
+            {"id": "segment-002", "display_label": "B", "start_time": 2.0, "end_time": 4.0},
+        ]},
+    }
+    assert segment_energy_summary(rhythm) == [
+        {
+            "segment_id": "segment-001", "label": "A", "start_time": 0.0,
+            "end_time": 2.0, "mean": {"low": 0.2, "mid": 0.3, "high": 0.1},
+        },
+        {
+            "segment_id": "segment-002", "label": "B", "start_time": 2.0,
+            "end_time": 4.0, "mean": {"low": 0.6, "mid": 0.7, "high": 0.5},
+        },
+    ]
+
+
+def test_project_summary_only_adds_segment_energy_when_requested():
+    rhythm = {
+        "patterns": {"method": "test", "segments": [
+            {"id": "segment-001", "family": "A", "display_label": "A", "start_time": 0.0, "end_time": 1.0},
+        ]},
+        "energy": {"fps": 1, "start": 0.0, "bands": {"low": [0.2], "mid": [0.3], "high": [0.4]}},
+    }
+    compact = project_summary("0a1b2c3d4e5f", rhythm)
+    detailed = project_summary("0a1b2c3d4e5f", rhythm, include_segment_energy=True)
+    assert "segment_energy" not in compact["structure"]
+    assert detailed["structure"]["segment_energy"][0]["mean"] == {
+        "low": 0.2, "mid": 0.3, "high": 0.4,
+    }
 
 
 def test_summary_line_formats():

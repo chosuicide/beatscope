@@ -38,7 +38,71 @@ def provenance_methods(rhythm: dict[str, Any]) -> dict[str, str]:
     return methods
 
 
-def project_summary(project_id: str, rhythm: dict[str, Any]) -> dict[str, Any]:
+def segment_energy_summary(rhythm: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return compact, frame-weighted LOW/MID/HIGH means per structure segment.
+
+    Energy frames are sampled at ``energy.start + index / energy.fps`` and
+    segments use the same half-open ``[start_time, end_time)`` convention as
+    the structure/runtime surfaces. This is an MCP view, not a Rhythm IR field.
+    """
+    energy = rhythm.get("energy") or {}
+    bands = energy.get("bands") or {}
+    patterns = rhythm.get("patterns") or {}
+    segments = patterns.get("segments")
+    fps = energy.get("fps")
+    start = energy.get("start", 0.0)
+    if (
+        not isinstance(segments, list)
+        or not isinstance(bands, dict)
+        or not isinstance(fps, (int, float))
+        or float(fps) <= 0
+        or not isinstance(start, (int, float))
+    ):
+        return []
+
+    series = {name: bands.get(name) for name in ("low", "mid", "high")}
+    if any(not isinstance(values, list) for values in series.values()):
+        return []
+    frame_count = min(len(values) for values in series.values())
+    if frame_count <= 0:
+        return []
+
+    result: list[dict[str, Any]] = []
+    frame_rate = float(fps)
+    energy_start = float(start)
+    for segment in segments:
+        if not isinstance(segment, dict):
+            continue
+        segment_start = segment.get("start_time")
+        segment_end = segment.get("end_time")
+        if not isinstance(segment_start, (int, float)) or not isinstance(segment_end, (int, float)):
+            continue
+        # Subtract a tiny epsilon so exact frame boundaries stay exact despite
+        # floating-point multiplication (for example, 1.2 * 100).
+        first = max(0, math.ceil((float(segment_start) - energy_start) * frame_rate - 1e-9))
+        stop = min(frame_count, math.ceil((float(segment_end) - energy_start) * frame_rate - 1e-9))
+        if stop <= first:
+            continue
+        means = {
+            name: round(sum(float(value) for value in values[first:stop]) / (stop - first), 6)
+            for name, values in series.items()
+        }
+        result.append({
+            "segment_id": segment.get("id"),
+            "label": segment.get("display_label"),
+            "start_time": round(float(segment_start), 6),
+            "end_time": round(float(segment_end), 6),
+            "mean": means,
+        })
+    return result
+
+
+def project_summary(
+    project_id: str,
+    rhythm: dict[str, Any],
+    *,
+    include_segment_energy: bool = False,
+) -> dict[str, Any]:
     """The shared summary view: identity, tempo, counts, provenance, warnings."""
     analysis = rhythm.get("analysis") or {}
     tempo = rhythm.get("tempo") or {}
@@ -74,12 +138,17 @@ def project_summary(project_id: str, rhythm: dict[str, Any]) -> dict[str, Any]:
             for segment in segments
             if isinstance(segment, dict) and isinstance(segment.get("display_label"), str)
         ]
-        summary["structure"] = {
+        structure = {
             "segment_count": len(segments),
             "families": families,
             "form": "-".join(labels),
             "method": patterns.get("method"),
         }
+        if include_segment_energy:
+            segment_energy = segment_energy_summary(rhythm)
+            if segment_energy:
+                structure["segment_energy"] = segment_energy
+        summary["structure"] = structure
     return summary
 
 
