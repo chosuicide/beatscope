@@ -291,8 +291,18 @@ def test_probe_cli_detects_manifest_tampering(tmp_path: Path):
 
 
 def test_no_committed_audio_anywhere_under_examples():
-    for path in (REPO_ROOT / "examples").rglob("*"):
-        assert path.suffix.lower() not in AUDIO_SUFFIXES, f"audio must not enter Git: {path}"
+    # The invariant is about what enters Git, so walk the tracked file
+    # list: ignored trees (node_modules and friends) are not violations.
+    tracked = subprocess.run(
+        ["git", "ls-files", "examples"],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.splitlines()
+    assert tracked, "examples must contain committed files"
+    for relative in tracked:
+        assert Path(relative).suffix.lower() not in AUDIO_SUFFIXES, f"audio must not enter Git: {relative}"
 
 
 @pytest.mark.skipif(_node_missing(), reason="node is required to render checkpoint frames")

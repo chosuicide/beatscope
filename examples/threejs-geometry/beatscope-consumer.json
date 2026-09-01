@@ -1,0 +1,16 @@
+{
+  "schema": "beatscope-consumer-1",
+  "name": "threejs-geometry",
+  "framework": "three",
+  "entry_page": "index.html",
+  "package_path": "../shared/fixture.beatscope",
+  "clock": "audio.currentTime",
+  "debug_hook": "__BEATSCOPE_CONSUMER__",
+  "capabilities": {
+    "playback": true,
+    "seek": true,
+    "offline_frame": false,
+    "reduced_motion": true
+  },
+  "draw_call_budget": 4
+}

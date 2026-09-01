@@ -1,0 +1,14 @@
+{
+  "schema": "beatscope-consumer-1",
+  "name": "remotion-composition",
+  "framework": "remotion",
+  "entry_page": "README.md",
+  "package_path": "../shared/fixture.beatscope",
+  "clock": "frame/fps",
+  "capabilities": {
+    "playback": false,
+    "seek": false,
+    "offline_frame": true,
+    "reduced_motion": true
+  }
+}

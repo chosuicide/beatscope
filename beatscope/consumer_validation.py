@@ -698,19 +698,24 @@ def load_declaration(example_dir: Path) -> tuple[dict[str, Any] | None, list[str
     errors: list[str] = []
     if declaration.get("schema") != DECLARATION_SCHEMA:
         errors.append(f"declaration:schema-expected {DECLARATION_SCHEMA!r}")
-    for field in ("name", "framework", "entry_page", "package_path", "clock", "debug_hook"):
+    for field in ("name", "framework", "entry_page", "package_path", "clock"):
         value = declaration.get(field)
         if not isinstance(value, str) or not value.strip():
             errors.append(f"declaration:{field}:must-be-a-non-empty-string")
     capabilities = declaration.get("capabilities")
+    playback = isinstance(capabilities, dict) and capabilities.get("playback") is True
+    # Only interactive consumers expose the browser debug hook; offline
+    # compositions declare no hook rather than promising a missing one.
+    if playback and declaration.get("debug_hook") != DEBUG_HOOK_NAME:
+        errors.append(f"declaration:debug_hook:must-be {DEBUG_HOOK_NAME!r} for interactive consumers")
+    if not playback and declaration.get("debug_hook") not in (None, DEBUG_HOOK_NAME):
+        errors.append(f"declaration:debug_hook:must-be {DEBUG_HOOK_NAME!r} when present")
     if not isinstance(capabilities, dict):
         errors.append("declaration:capabilities:must-be-an-object")
     else:
         for key in ("playback", "seek", "offline_frame", "reduced_motion"):
             if not isinstance(capabilities.get(key), bool):
                 errors.append(f"declaration:capabilities.{key}:must-be-a-boolean")
-    if declaration.get("debug_hook") not in (None, DEBUG_HOOK_NAME):
-        errors.append(f"declaration:debug_hook:must-be {DEBUG_HOOK_NAME!r}")
     return declaration, errors
 
 

@@ -1,0 +1,18 @@
+{
+  "name": "beatscope-example-remotion-composition",
+  "version": "0.9.0",
+  "private": true,
+  "description": "BeatScope reference consumer: Remotion offline composition driven by the handoff package's frame API",
+  "license": "MIT",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts BeatScopeScope out/beatscope.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.520",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "remotion": "4.0.520"
+  },
+  "type": "module"
+}

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BeatScope Three.js reference consumer — seeded shell geometry</title>
+    <script type="importmap">
+      { "imports": { "three": "./node_modules/three/build/three.module.js" } }
+    </script>
+    <link rel="stylesheet" href="../canvas-particles/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="head">
+        <h1>Seeded shell geometry</h1>
+        <p class="lede">
+          The same handoff package driving Three.js: the package frame API
+          is the only timing source and every transform derives from the
+          current media time, so seek and replay are exact.
+        </p>
+      </header>
+
+      <canvas
+        id="stage"
+        role="img"
+        aria-label="Rotating shell of seeded points that swells with low frequencies and turns with the musical phase."
+      >
+        Your browser does not support WebGL. The BeatScope timing data for
+        this visual is still available through the package's
+        <code>visual-state.js</code> module.
+      </canvas>
+      <p id="webgl-fallback" hidden role="alert">
+        WebGL is unavailable in this browser. The visual cannot render, but
+        the handoff package and its timing data remain usable.
+      </p>
+
+      <section class="transport" aria-label="Playback transport">
+        <button id="play" type="button" aria-pressed="false">Play</button>
+        <label class="seek" for="seek">
+          <span class="visually-hidden">Seek</span>
+          <input id="seek" type="range" min="0" max="1000" step="1" value="0" />
+        </label>
+        <span class="time"><span id="elapsed">0:00.0</span> / <span id="total">0:00.0</span></span>
+      </section>
+
+      <section class="options" aria-label="Options">
+        <label class="file">
+          <span>Audio file:</span>
+          <input id="audio-file" type="file" accept="audio/*" />
+        </label>
+        <label class="toggle">
+          <input id="reduced-motion" type="checkbox" />
+          <span>Reduced motion</span>
+        </label>
+        <p id="status" role="status" class="status">
+          No audio loaded: the visual samples media time 0. Nothing plays
+          until you choose a file and press Play.
+        </p>
+      </section>
+    </main>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
