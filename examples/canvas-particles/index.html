@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BeatScope Canvas reference consumer — planar particle field</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="head">
+        <h1>Planar particle field</h1>
+        <p class="lede">
+          A BeatScope consumer example: the package is the only musical
+          timing source, the audio element is the only clock, and the
+          canvas is redrawn as a pure function of the current media time.
+        </p>
+      </header>
+
+      <canvas
+        id="stage"
+        role="img"
+        aria-label="Planar particle field that moves with the music: rows of particles ripple with low frequencies, bend with mid frequencies, and sparkle with high frequencies."
+      >
+        Your browser does not support canvas. The BeatScope timing data for
+        this visual is still available through the package's
+        <code>visual-state.js</code> module.
+      </canvas>
+
+      <section class="transport" aria-label="Playback transport">
+        <button id="play" type="button" aria-pressed="false">Play</button>
+        <label class="seek" for="seek">
+          <span class="visually-hidden">Seek</span>
+          <input id="seek" type="range" min="0" max="1000" step="1" value="0" />
+        </label>
+        <span class="time"><span id="elapsed">0:00.0</span> / <span id="total">0:00.0</span></span>
+      </section>
+
+      <section class="options" aria-label="Options">
+        <label class="file">
+          <span>Audio file:</span>
+          <input id="audio-file" type="file" accept="audio/*" />
+        </label>
+        <label class="toggle">
+          <input id="reduced-motion" type="checkbox" />
+          <span>Reduced motion</span>
+        </label>
+        <p id="status" role="status" class="status">
+          No audio loaded: the visual samples media time 0. Nothing plays
+          until you choose a file and press Play.
+        </p>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
