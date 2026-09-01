@@ -193,6 +193,49 @@ def run_visual_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_validate_handoff(args: argparse.Namespace) -> int:
+    """Validate one handoff package; never modifies the target (v0.9)."""
+    from .consumer_validation import ConsumerUsageError, format_report, validate_handoff
+
+    try:
+        report = validate_handoff(args.target, checkpoints=args.checkpoints)
+    except ConsumerUsageError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    else:
+        print(format_report(report))
+    return report["exit_code"]
+
+
+def run_validate_consumer(args: argparse.Namespace) -> int:
+    """Validate consumer example(s); never modifies the target (v0.9)."""
+    from .consumer_validation import ConsumerUsageError, format_report, validate_consumer, validate_consumers_all
+
+    options = {"browser": args.browser, "offline": args.offline, "checkpoints": args.checkpoints}
+    try:
+        report = validate_consumers_all(args.target, **options) if args.all else validate_consumer(args.target, **options)
+    except ConsumerUsageError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    else:
+        reports = report["reports"] if report.get("all") else [report]
+        for index, entry in enumerate(reports):
+            if index:
+                print()
+            print(format_report(entry))
+        if report.get("all"):
+            summary = report["summary"]
+            print(
+                f"\n{summary['consumers']} consumers: {summary['passed']} passed, "
+                f"{summary['failed']} failed, {summary['environment']} environment"
+            )
+    return report["exit_code"]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="beatscope", description="Create an editable rhythm map locally")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -296,6 +339,31 @@ def main(argv: list[str] | None = None) -> int:
         help="recompile even when stored artifacts already match the rhythm fingerprint",
     )
 
+    # validate-handoff (v0.9): read-only package validation
+    validate_handoff = sub.add_parser(
+        "validate-handoff",
+        help="validate a BeatScope handoff package (ZIP or directory), read-only",
+    )
+    validate_handoff.add_argument("target", type=Path, help="path to a .beatscope.zip or an unpacked package directory")
+    validate_handoff.add_argument(
+        "--checkpoints",
+        type=Path,
+        help="checkpoint file to replay (default: checkpoints.json beside the package)",
+    )
+    validate_handoff.add_argument("--json", action="store_true", help="emit the beatscope-consumer-report-1 JSON report")
+
+    # validate-consumer (v0.9): read-only consumer example validation
+    validate_consumer = sub.add_parser(
+        "validate-consumer",
+        help="validate a visual consumer example against its declared package, read-only",
+    )
+    validate_consumer.add_argument("target", type=Path, help="consumer example directory (or its parent with --all)")
+    validate_consumer.add_argument("--browser", action="store_true", help="include the browser layer for interactive consumers")
+    validate_consumer.add_argument("--offline", action="store_true", help="include the offline layer for offline_frame consumers")
+    validate_consumer.add_argument("--all", action="store_true", help="validate every beatscope-consumer.json under the target")
+    validate_consumer.add_argument("--checkpoints", type=Path, help="checkpoint file to replay (default: beside the package)")
+    validate_consumer.add_argument("--json", action="store_true", help="emit the beatscope-consumer-report-1 JSON report")
+
     # doctor
     sub.add_parser("doctor", help="check system dependencies and configuration")
 
@@ -389,6 +457,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "visual-build":
         return run_visual_build(args)
+
+    if args.command == "validate-handoff":
+        return run_validate_handoff(args)
+
+    if args.command == "validate-consumer":
+        return run_validate_consumer(args)
 
     if args.command == "export":
         data = load_rhythm_project(args.project)
