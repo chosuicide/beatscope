@@ -256,12 +256,12 @@ FULL_VISUAL_MANIFEST = {
     "rhythm-map.json", "beatscope-runtime.js", "scene-director.js",
     "visual-recipe.json", "visual-timeline.json",
     "visual-recipe-data.js", "visual-timeline-data.js",
-    "visual-state.js", "BEATSCOPE.md", "SKILL.md",
+    "visual-state.js", "worker-example.js", "BEATSCOPE.md", "SKILL.md",
     "references/schema.md", "README.md",
 }
 
 LEGACY_MANIFEST = {
-    "rhythm-map.json", "beatscope-runtime.js", "visual-state.js",
+    "rhythm-map.json", "beatscope-runtime.js", "visual-state.js", "worker-example.js",
     "BEATSCOPE.md", "SKILL.md", "references/schema.md", "README.md",
 }
 
@@ -355,6 +355,46 @@ console.log(JSON.stringify({
         "sameFrame": True,
         "hasScene": True,
     }
+
+
+def test_codex_export_visual_state_runs_in_module_worker(tmp_path):
+    import shutil
+    import subprocess
+
+    if shutil.which("node") is None:
+        import pytest
+        pytest.skip("Node.js is not available")
+
+    with zipfile.ZipFile(io.BytesIO(generate_codex_export(_visual_export_rhythm()))) as archive:
+        for name in archive.namelist():
+            (tmp_path / name.replace("/", "_")).write_bytes(archive.read(name))
+    probe = tmp_path / "worker-probe.mjs"
+    probe.write_text("""\
+import { parentPort } from 'node:worker_threads';
+globalThis.self = { postMessage: (message) => parentPort.postMessage(message) };
+await import('./worker-example.js');
+parentPort.on('message', (data) => globalThis.self.onmessage({ data }));
+""", encoding="utf-8")
+    driver = tmp_path / "worker-driver.mjs"
+    driver.write_text("""\
+import { Worker } from 'node:worker_threads';
+const worker = new Worker(new URL('./worker-probe.mjs', import.meta.url), { type: 'module' });
+const message = await new Promise((resolve, reject) => {
+  worker.once('message', resolve);
+  worker.once('error', reject);
+  worker.postMessage({ id: 'probe', time: 1.0 });
+});
+await worker.terminate();
+console.log(JSON.stringify(message));
+""", encoding="utf-8")
+    completed = subprocess.run(
+        ["node", str(driver)], capture_output=True, text=True, timeout=30, check=True,
+    )
+    payload = json.loads(completed.stdout)
+    assert payload["id"] == "probe"
+    assert payload["time"] == 1.0
+    assert payload["timing"]["bar"] == 1
+    assert payload["scene"]["scene"]["family"] == "LEGACY"
 
 
 def test_codex_export_without_compilable_rhythm_stays_legacy():
