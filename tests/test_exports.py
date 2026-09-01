@@ -253,6 +253,7 @@ def test_codex_export_keeps_tempo_segments_and_no_local_paths(tmp_path):
 # --- v0.8 visual package (plan section 14.2) ---------------------------------
 
 FULL_VISUAL_MANIFEST = {
+    "beatscope-package.json", "AGENT.md", "consumer-probe.js",
     "rhythm-map.json", "beatscope-runtime.js", "scene-director.js",
     "visual-recipe.json", "visual-timeline.json",
     "visual-recipe-data.js", "visual-timeline-data.js",
@@ -261,6 +262,7 @@ FULL_VISUAL_MANIFEST = {
 }
 
 LEGACY_MANIFEST = {
+    "beatscope-package.json", "AGENT.md", "consumer-probe.js",
     "rhythm-map.json", "beatscope-runtime.js", "visual-state.js", "worker-example.js",
     "BEATSCOPE.md", "SKILL.md", "references/schema.md", "README.md",
 }

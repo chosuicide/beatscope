@@ -1,15 +1,16 @@
-"""Consumer handoff contract tests (v0.9 plan sections 4, 6, 9, and 18.1).
+"""Consumer handoff contract tests (v0.9 plan sections 4, 5, 6, 9, and 18.1).
 
-The frozen fixture under ``examples/shared/`` is the pre-implementation
-baseline: its package is a byte-exact v0.8.1 export, its checkpoints pin
-factual frame state, and its lock content-addresses both. The manifest
-validation is exercised with synthetic documents because the export does
-not emit ``beatscope-package.json`` until the next commit deliberately
-changes that behavior.
+The frozen fixture under ``examples/shared/`` is the shared ground truth:
+its package is a byte-exact v0.9 export carrying the self-describing
+contract (manifest, AGENT.md, probe), its checkpoints pin factual frame
+state that the probe can replay bit for bit, and its lock content-addresses
+both. The manifest validator is additionally exercised with synthetic
+documents so rejection rules never depend on export behavior.
 """
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import shutil
 import subprocess
@@ -22,6 +23,7 @@ import pytest
 from beatscope.consumer_contract import (
     CHECKPOINT_SCHEMA,
     FIXTURE_LOCK_SCHEMA,
+    MANIFEST_MEMBER,
     MANIFEST_SCHEMA,
     canonical_manifest_bytes,
     is_sha256_hex,
@@ -33,7 +35,7 @@ from beatscope.consumer_contract import (
     validate_manifest,
     valid_member_path,
 )
-from beatscope.exports import generate_codex_export
+from beatscope.exports import PACKAGE_VERSION, generate_codex_export
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SHARED_DIR = REPO_ROOT / "examples" / "shared"
@@ -41,10 +43,12 @@ FIXTURE_DIR = SHARED_DIR / "fixture.beatscope"
 CHECKPOINTS_PATH = SHARED_DIR / "checkpoints.json"
 LOCK_PATH = SHARED_DIR / "fixture-lock.json"
 GENERATOR_PATH = Path(__file__).parent / "fixtures" / "consumer" / "generate_consumer.py"
+PROBE_SOURCE_PATH = REPO_ROOT / "beatscope" / "runtime" / "consumer-probe.js"
+PROBE_SIZE_BUDGET = 24 * 1024
+AGENT_WORD_BUDGET = 900
 
-# The exact v0.8.1 handoff member set. Commit 2 adds the manifest, the
-# Agent routing document, and the probe; this pin makes that delta visible
-# and intentional instead of incidental.
+# The v0.8.1 handoff member set, kept as the historical baseline; commit 2
+# deliberately extends it with the self-describing contract members.
 V081_MEMBERS = frozenset(
     {
         "BEATSCOPE.md",
@@ -62,6 +66,8 @@ V081_MEMBERS = frozenset(
         "references/schema.md",
     }
 )
+V090_CONTRACT_MEMBERS = frozenset({"beatscope-package.json", "AGENT.md", "consumer-probe.js"})
+V090_MEMBERS = V081_MEMBERS | V090_CONTRACT_MEMBERS
 
 AUDIO_SUFFIXES = {".wav", ".wave", ".mp3", ".flac", ".ogg", ".m4a", ".aiff", ".aif", ".opus"}
 
@@ -86,6 +92,14 @@ def _rhythm_for_export() -> dict:
     return rhythm
 
 
+def _unpacked_export() -> tuple[dict[str, bytes], dict]:
+    """One fresh export, unpacked, with its parsed manifest."""
+    archive = zipfile.ZipFile(io.BytesIO(generate_codex_export(_rhythm_for_export())))
+    members = {info.filename: archive.read(info.filename) for info in archive.infolist() if not info.is_dir()}
+    manifest = json.loads(members[MANIFEST_MEMBER].decode("utf-8"))
+    return members, manifest
+
+
 # --------------------------------------------------------- frozen fixture
 
 
@@ -93,12 +107,18 @@ def test_frozen_fixture_matches_lock():
     lock = json.loads(LOCK_PATH.read_text(encoding="utf-8"))
     assert validate_fixture_lock(lock) == []
     members = _fixture_members()
-    assert set(members) == V081_MEMBERS
-    assert lock["package_sha256"] == package_member_digest(members)
+    assert set(members) == V090_MEMBERS
+    content_digest = package_member_digest(
+        {name: data for name, data in members.items() if name != MANIFEST_MEMBER}
+    )
+    assert lock["package_sha256"] == content_digest
     assert lock["rhythm_sha256"] == sha256_hex(members["rhythm-map.json"])
     assert lock["checkpoint_sha256"] == sha256_hex(CHECKPOINTS_PATH.read_bytes())
     checkpoints = json.loads(CHECKPOINTS_PATH.read_text(encoding="utf-8"))
     assert validate_checkpoints(checkpoints, members) == []
+    manifest = json.loads(members[MANIFEST_MEMBER].decode("utf-8"))
+    assert validate_manifest(manifest, members) == []
+    assert manifest["package_version"] == PACKAGE_VERSION
 
 
 def test_checkpoints_cover_required_times():
@@ -124,9 +144,150 @@ def test_frozen_package_exports_public_v08_functions():
     assert "export function getBeatScopeFrame" in shim
 
 
-def test_v081_export_member_set_is_unchanged():
-    archive = zipfile.ZipFile(__import__("io").BytesIO(generate_codex_export(_rhythm_for_export())))
-    assert set(archive.namelist()) == V081_MEMBERS
+def test_export_member_set_matches_v090_contract():
+    """v0.8.1 members plus the self-describing contract, nothing else."""
+    archive = zipfile.ZipFile(io.BytesIO(generate_codex_export(_rhythm_for_export())))
+    assert set(archive.namelist()) == V090_MEMBERS
+
+
+def test_export_manifest_is_valid_honest_and_deterministic():
+    members, manifest = _unpacked_export()
+    assert manifest["schema"] == MANIFEST_SCHEMA
+    assert manifest["package_version"] == PACKAGE_VERSION
+    assert validate_manifest(manifest, members) == []
+    rhythm_map = json.loads(members["rhythm-map.json"].decode("utf-8"))
+    assert manifest_duration_errors(manifest, rhythm_map) == []
+    # Capabilities describe what the package actually carries.
+    assert manifest["capabilities"]["scenes"] is ("visual-recipe.json" in members)
+    assert manifest["capabilities"]["structure"] is bool(rhythm_map.get("patterns", {}).get("segments"))
+    assert manifest["capabilities"]["module_worker"] is ("worker-example.js" in members)
+    assert manifest["functions"]["frame"] == "getBeatScopeFrame"
+    assert manifest["functions"]["timing"] == "getVisualState"
+    # Two exports of the same input are byte-identical, manifest included.
+    assert generate_codex_export(_rhythm_for_export()) == generate_codex_export(_rhythm_for_export())
+
+
+def test_export_manifest_integrity_covers_every_member():
+    members, manifest = _unpacked_export()
+    listed = manifest["integrity"]["members"]
+    assert set(listed) == set(members) - {MANIFEST_MEMBER}
+    for name, digest in listed.items():
+        assert digest == sha256_hex(members[name]), name
+    assert MANIFEST_MEMBER not in listed
+
+
+def test_export_manifest_and_agent_document_leak_nothing():
+    members, _ = _unpacked_export()
+    for name in (MANIFEST_MEMBER, "AGENT.md", "BEATSCOPE.md", "README.md"):
+        text = members[name].decode("utf-8")
+        assert "\\" not in text, f"{name} carries a backslash path"
+        for drive in ("E:", "D:", "C:", "/home/", "/Users/", "/tmp/"):
+            assert drive not in text, f"{name} leaks {drive}"
+        for key in ("created_at", "generated_at", "timestamp", "hostname", "username"):
+            assert key not in text, f"{name} leaks {key}"
+
+
+def test_agent_document_routes_the_agent():
+    members, manifest = _unpacked_export()
+    agent = members["AGENT.md"].decode("utf-8")
+    assert len(agent.split()) <= AGENT_WORD_BUDGET
+    # Plan section 5: the routing anchors every Agent needs.
+    for anchor in (
+        "beatscope-package.json",
+        manifest["functions"]["frame"],
+        "audio.currentTime",
+        "frame / fps",
+        "re-analyse",
+        "seek",
+        "reduced motion",
+        "consumer-probe.js",
+        "frame.timing",
+        "frame.scene",
+        "instruments",
+        "SKILL.md",
+    ):
+        assert anchor in agent, f"AGENT.md is missing {anchor!r}"
+    assert "import { getBeatScopeFrame } from './visual-state.js';" in agent
+
+
+def test_probe_ships_in_package_and_stays_dependency_free():
+    members, manifest = _unpacked_export()
+    assert members["consumer-probe.js"] == PROBE_SOURCE_PATH.read_bytes()
+    source = members["consumer-probe.js"].decode("utf-8")
+    assert len(members["consumer-probe.js"]) <= PROBE_SIZE_BUDGET
+    for export_name in ("inspectPackage", "canonicalFrame", "runCheckpointSuite", "assertSeekDeterminism"):
+        assert f"export function {export_name}" in source or f"export async function {export_name}" in source
+    # Dependency-free: no static imports; node builtins only behind the CLI guard.
+    assert "\nimport " not in source and not source.startswith("import ")
+    assert manifest["probe"] == "consumer-probe.js"
+    assert manifest["entry"] == "visual-state.js"
+
+
+def test_legacy_export_honestly_reduces_capabilities():
+    minimal = {
+        "schema_version": "3.0",
+        "source": {"display_name": "hand-built.wav", "duration": 12.5, "sample_rate": 44100, "channels": 2},
+        "tempo": {"global_bpm": 100.0},
+        "grid": {"origin": 0.0, "time_signature": [4, 4], "default_subdivision": 16},
+        "beats": [{"time": index * 0.6, "strength": 1.0} for index in range(21)],
+    }
+    archive = zipfile.ZipFile(io.BytesIO(generate_codex_export(minimal)))
+    members = {info.filename: archive.read(info.filename) for info in archive.infolist() if not info.is_dir()}
+    manifest = json.loads(members[MANIFEST_MEMBER].decode("utf-8"))
+    assert manifest["capabilities"]["scenes"] is False
+    assert manifest["capabilities"]["structure"] is False
+    assert set(manifest["functions"]) == {"timing"}
+    assert set(manifest["files"]) == {"rhythm"}
+    assert "visual-recipe.json" not in members and "scene-director.js" not in members
+    assert validate_manifest(manifest, members) == []
+    # A map without a project id gets a stable content-derived one.
+    assert manifest["project_id"] and len(manifest["project_id"]) == 12
+
+
+@pytest.mark.skipif(_node_missing(), reason="node is required to run the packaged probe")
+def test_probe_cli_passes_on_unpacked_fixture(tmp_path: Path):
+    result = subprocess.run(
+        [
+            "node",
+            str(FIXTURE_DIR / "consumer-probe.js"),
+            str(FIXTURE_DIR),
+            "--checkpoints",
+            str(CHECKPOINTS_PATH),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        cwd=str(tmp_path),
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    report = json.loads(result.stdout)
+    assert report["ok"] is True
+    assert report["errors"] == []
+    assert report["checkpoints"]["ok"] is True
+    assert report["checkpoints"]["times"] == len(json.loads(CHECKPOINTS_PATH.read_text(encoding="utf-8"))["times"])
+
+
+@pytest.mark.skipif(_node_missing(), reason="node is required to run the packaged probe")
+def test_probe_cli_detects_manifest_tampering(tmp_path: Path):
+    tampered_dir = tmp_path / "fixture.beatscope"
+    shutil.copytree(FIXTURE_DIR, tampered_dir)
+    manifest_path = tampered_dir / MANIFEST_MEMBER
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["duration"] = manifest["duration"] + 1.0
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    result = subprocess.run(
+        ["node", str(tampered_dir / "consumer-probe.js"), str(tampered_dir)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        cwd=str(tmp_path),
+    )
+    assert result.returncode == 1
+    report = json.loads(result.stdout)
+    assert report["ok"] is False
+    assert any("duration:mismatch" in error for error in report["errors"])
 
 
 def test_no_committed_audio_anywhere_under_examples():

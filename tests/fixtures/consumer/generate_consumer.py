@@ -50,7 +50,14 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 
-from beatscope.consumer_contract import package_member_digest  # noqa: E402
+from beatscope.consumer_contract import (  # noqa: E402
+    MANIFEST_MEMBER,
+    manifest_duration_errors,
+    package_member_digest,
+    validate_checkpoints,
+    validate_fixture_lock,
+    validate_manifest,
+)
 from beatscope.exports import generate_codex_export  # noqa: E402
 from beatscope.pipeline import analyze_track  # noqa: E402
 from beatscope.visual_recipe import compile_visual_artifacts  # noqa: E402
@@ -244,25 +251,13 @@ def analyze_project(wav_path: Path) -> dict[str, Any]:
 # -------------------------------------------------------------- checkpoints
 
 
-def _sorted_keys(value: Any) -> Any:
-    if isinstance(value, dict):
-        return {key: _sorted_keys(value[key]) for key in sorted(value)}
-    if isinstance(value, list):
-        return [_sorted_keys(item) for item in value]
-    if isinstance(value, float):
-        if not math.isfinite(value):
-            raise ValueError(f"checkpoint frame carries non-finite value: {value}")
-        if value == 0.0:
-            return 0.0
-    return value
-
-
-def canonical_frame_json(frame: Any) -> str:
-    return json.dumps(_sorted_keys(frame), ensure_ascii=False, sort_keys=True, allow_nan=False, separators=(",", ":"))
-
-
 def _checkpoint_times(project: dict[str, Any], timeline: dict[str, Any]) -> tuple[list[float], list[float]]:
-    """Ordered checkpoint times plus an out-of-order seek sequence."""
+    """Ordered checkpoint times plus an out-of-order seek sequence.
+
+    The seek sequence is a permutation of recorded times (the probe
+    compares each sequence entry against the recorded frame), so every
+    settle midpoint is recorded as a checkpoint too.
+    """
     beats = [float(b["time"]) for b in project["beats"]]
     duration = float(project["source"]["duration"])
     boundaries = [float(t["time"]) for t in timeline["transitions"]]
@@ -279,7 +274,8 @@ def _checkpoint_times(project: dict[str, Any], timeline: dict[str, Any]) -> tupl
         times.add(round(boundary - 0.001, 9))
         times.add(round(boundary, 9))
         times.add(round(boundary + 0.001, 9))
-    times.add(round(settle_midpoints[0], 9))
+    for midpoint in settle_midpoints:
+        times.add(round(midpoint, 9))
     times.add(round(duration - 0.001, 9))
     ordered = sorted(times)
 
@@ -290,28 +286,57 @@ def _checkpoint_times(project: dict[str, Any], timeline: dict[str, Any]) -> tupl
         round(boundaries[0] - 0.001, 9),
         round((beats[4] + beats[5]) / 2.0, 9),
     ]
+    assert set(seek_sequence) <= set(ordered), "seek sequence must replay recorded checkpoints"
     return ordered, seek_sequence
 
 
+# The runner canonicalizes frames with the package's own probe, so the
+# frozen hash and every later probe replay serialize identically by
+# construction (plan section 6: the probe owns canonicalization).
 _NODE_RUNNER = """
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const times = JSON.parse(readFileSync(process.argv[3], 'utf8'));
-const { getBeatScopeFrame } = await import(pathToFileURL(process.argv[2]).href);
-const frames = times.map((time) => getBeatScopeFrame(time));
-process.stdout.write(JSON.stringify({ frames }));
+const probe = await import(pathToFileURL(process.argv[4]).href);
+const moduleNamespace = await import(pathToFileURL(process.argv[2]).href);
+const frames = times.map((time) => probe.canonicalFrame(moduleNamespace, time));
+process.stdout.write(JSON.stringify(frames));
 """
 
 
-def _node_frames(fixture_dir: Path, times: list[float], workdir: Path) -> list[Any]:
+def _assert_frames_finite(frames: list[Any]) -> None:
+    """The probe already rejects non-finite values; double-check in Python."""
+
+    def walk(value: Any) -> None:
+        if isinstance(value, float) and not math.isfinite(value):
+            raise RuntimeError("checkpoint frame carries a non-finite value")
+        if isinstance(value, dict):
+            for item in value.values():
+                walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+
+    for frame in frames:
+        walk(frame)
+
+
+def _node_frames(fixture_dir: Path, times: list[float], workdir: Path) -> bytes:
+    """Evaluate checkpoint frames through the package probe.
+
+    Returns the runner's exact canonical JSON bytes: that byte string is
+    what the frames_sha256 digest covers, and the probe's own
+    runCheckpointSuite reproduces it bit for bit.
+    """
     runner = workdir / "frame_runner.mjs"
     times_file = workdir / "times.json"
+    probe_source = REPO_ROOT / "beatscope" / "runtime" / "consumer-probe.js"
     runner.write_text(_NODE_RUNNER, encoding="utf-8", newline="\n")
     times_file.write_text(json.dumps(times), encoding="utf-8", newline="\n")
     entry = (fixture_dir / "visual-state.js").resolve()
     result = subprocess.run(
-        ["node", str(runner), str(entry), str(times_file)],
+        ["node", str(runner), str(entry), str(times_file), str(probe_source)],
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -320,8 +345,9 @@ def _node_frames(fixture_dir: Path, times: list[float], workdir: Path) -> list[A
     )
     if result.returncode != 0:
         raise RuntimeError(f"checkpoint frame runner failed: {result.stderr.strip()}")
-    payload = json.loads(result.stdout)
-    return payload["frames"]
+    frames_canonical = result.stdout
+    _assert_frames_finite(json.loads(frames_canonical))
+    return frames_canonical.encode("utf-8")
 
 
 # ----------------------------------------------------------------- locking
@@ -350,26 +376,31 @@ def build_fixture(output_dir: Path) -> dict[str, Any]:
 
         rhythm_map = json.loads(members["rhythm-map.json"].decode("utf-8"))
         timeline = json.loads(members["visual-timeline.json"].decode("utf-8"))
+        manifest = json.loads(members[MANIFEST_MEMBER].decode("utf-8"))
+
+        # The frozen fixture must satisfy the same contract consumers
+        # enforce: manifest shape and integrity, duration agreement, and
+        # the honest capability set for this arrangement.
+        manifest_errors = validate_manifest(manifest, members) + manifest_duration_errors(manifest, rhythm_map)
+        assert not manifest_errors, f"exported manifest failed contract validation: {manifest_errors}"
+        assert manifest["capabilities"]["scenes"] is True, "fixture arrangement must carry scene artifacts"
+        assert manifest["capabilities"]["structure"] is True, "fixture arrangement must carry structure segments"
+
         duration = float(project["source"]["duration"])
         times, seek_sequence = _checkpoint_times(project, timeline)
-        frames = _node_frames(fixture_dir, times, workdir)
-        assert len(frames) == len(times)
-
-        frames_canonical = json.dumps(
-            [_sorted_keys(frame) for frame in frames],
-            ensure_ascii=False,
-            sort_keys=True,
-            allow_nan=False,
-            separators=(",", ":"),
-        )
+        frames_canonical = _node_frames(fixture_dir, times, workdir)
         checkpoints = {
             "schema": CHECKPOINT_SCHEMA,
-            "package_sha256": package_member_digest(members),
+            "package_sha256": package_member_digest(
+                {name: data for name, data in members.items() if name != MANIFEST_MEMBER}
+            ),
             "duration": duration,
             "times": times,
-            "frames_sha256": hashlib.sha256(frames_canonical.encode("utf-8")).hexdigest(),
+            "frames_sha256": hashlib.sha256(frames_canonical).hexdigest(),
             "seek_sequence": seek_sequence,
         }
+        checkpoint_errors = validate_checkpoints(checkpoints, members)
+        assert not checkpoint_errors, f"generated checkpoints failed contract validation: {checkpoint_errors}"
         checkpoints_bytes = (
             json.dumps(checkpoints, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n"
         ).encode("utf-8")
@@ -383,6 +414,8 @@ def build_fixture(output_dir: Path) -> dict[str, Any]:
             "package_sha256": checkpoints["package_sha256"],
             "checkpoint_sha256": hashlib.sha256(checkpoints_bytes).hexdigest(),
         }
+        lock_errors = validate_fixture_lock(lock)
+        assert not lock_errors, f"generated lock failed contract validation: {lock_errors}"
         lock_bytes = (json.dumps(lock, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
         (output_dir / "fixture-lock.json").write_bytes(lock_bytes)
         return lock

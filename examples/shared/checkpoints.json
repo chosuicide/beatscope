@@ -1,7 +1,7 @@
 {
   "duration": 30.0001,
-  "frames_sha256": "06cf423cd20915c8de802f6632e87c59d491c8f425cb1d0d98cc049c3bb91bda",
-  "package_sha256": "8002dbdf9d236e8891ffb26c2af846959214701736acd8fbb0fe387b3a6ea77a",
+  "frames_sha256": "a52d57f478421658cc82ded79162c8393248caa9b9767784c5c2941268c28ee9",
+  "package_sha256": "e3889b7fd03bed6622de128c0d90552785a5e4b0f71e172b963f54b2552affd5",
   "schema": "beatscope-consumer-checkpoints-1",
   "seek_sequence": [
     30.0001,
@@ -23,6 +23,7 @@
     14.9875,
     14.9885,
     14.9895,
+    15.365075,
     29.9991,
     30.0001
   ]

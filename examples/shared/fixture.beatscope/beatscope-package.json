@@ -1,0 +1,51 @@
+{
+  "capabilities": {
+    "bands": true,
+    "module_worker": true,
+    "scenes": true,
+    "structure": true,
+    "timing": true
+  },
+  "clock": {
+    "maximum": 30.0001,
+    "minimum": 0.0,
+    "semantics": "media-time",
+    "unit": "seconds"
+  },
+  "duration": 30.0001,
+  "entry": "visual-state.js",
+  "files": {
+    "recipe": "visual-recipe.json",
+    "rhythm": "rhythm-map.json",
+    "timeline": "visual-timeline.json"
+  },
+  "functions": {
+    "frame": "getBeatScopeFrame",
+    "scene": "getSceneState",
+    "timing": "getVisualState"
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "members": {
+      "AGENT.md": "684129da089d9b27a229bf31fbc465319aaf8b6a19e2dc566fdb86fc69c5668e",
+      "BEATSCOPE.md": "5c9e27cfddbed285927e9cff2cc65e11f780aeae21b5010dfcde4969b7883d62",
+      "README.md": "7277b3638859d7860ba3447ddede3187bd0f5964908e81668ff93ab014ece4da",
+      "SKILL.md": "ff974e001c4514a153c3d9ce7aea1b99c9cdcf17de14a05b031e7213562ba012",
+      "beatscope-runtime.js": "6c7ba395f63df73bfdc649b9eee889d66546a42d63e164fa08d643a606b133a9",
+      "consumer-probe.js": "256c21e9195918fa64af31371714d1f480d500998daf6cc0ac937286cd3e193c",
+      "references/schema.md": "7c9c874f1cd22190f2b42f63ff00477734436da0a86a182320837dcf574f6c6f",
+      "rhythm-map.json": "a44b472983339e2b70fc0f20a0ba2f018d724480715ec7af2f4d068cf7f64f6a",
+      "scene-director.js": "f063d1b545fdca1a15e832329c6b092262410e915c984602d41cc7d1730a154d",
+      "visual-recipe-data.js": "c0739917b7a8b834d2f8d935ad47a8c8e812fb9605ed2b6a6f1f7e0d9b3b46b3",
+      "visual-recipe.json": "1fa854fa70e7dfc772f378bedf34637d0523bca40327c139ff0a21cf07e37f12",
+      "visual-state.js": "f51c12afcfec14ba90799ab8e38c47f6961aedef7b52dc1424b7f5ce93692cb6",
+      "visual-timeline-data.js": "680479f0fcb3c48f8fd3a6c4285569c5e740e9768c16f13234b49ac3dafa2cc6",
+      "visual-timeline.json": "723fa408e83c8de343c7e6e7bb8d37b91deb17fef1990f35397e4af9f5e963d6",
+      "worker-example.js": "dac344cb1dfa2eb8b315475a5020e5b5919e35b540c871864e075c99b8753157"
+    }
+  },
+  "package_version": "0.9.0",
+  "probe": "consumer-probe.js",
+  "project_id": "e5d9366aa963",
+  "schema": "beatscope-package-1"
+}

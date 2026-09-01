@@ -306,6 +306,13 @@ def manifest_duration_errors(manifest: Mapping[str, Any], rhythm_map: Mapping[st
     return errors
 
 
+def _content_digest(members: Mapping[str, bytes]) -> str:
+    """Package digest over every member except the manifest itself."""
+    return package_member_digest(
+        {name: data for name, data in members.items() if name != MANIFEST_MEMBER}
+    )
+
+
 def validate_checkpoints(
     checkpoints: Any,
     members: Mapping[str, bytes] | None = None,
@@ -314,7 +321,9 @@ def validate_checkpoints(
 
     With ``members`` the recorded package digest must match the actual
     member set, so a checkpoint file cannot silently describe another
-    package than the one beside it.
+    package than the one beside it. The digest covers every member
+    except ``beatscope-package.json`` itself, so the same rule applies
+    to v0.8 packages and self-describing v0.9 ones.
     """
     errors: list[str] = []
     if not isinstance(checkpoints, dict):
@@ -326,7 +335,7 @@ def validate_checkpoints(
     package_sha = checkpoints.get("package_sha256")
     if not is_sha256_hex(package_sha):
         errors.append(f"package_sha256:invalid:{package_sha!r}")
-    elif members is not None and package_sha != package_member_digest(members):
+    elif members is not None and package_sha != _content_digest(members):
         errors.append("package_sha256:member-mismatch")
 
     duration = checkpoints.get("duration")

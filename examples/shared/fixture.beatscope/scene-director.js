@@ -412,6 +412,17 @@ function sceneStateAt(artifacts, indexes, time, clampAfterEnd) {
   return { scene, index, phase: clamp01((time - scene.startTime) / length) };
 }
 
+/** Media-time clamp shared by the query helpers (plan section 6): finite
+ * seconds pass through; NaN/before-track clamp to 0, beyond-track to the end. */
+function mediaTime(timeline, time) {
+  const parsed = Number(time) || 0;
+  return Number.isFinite(parsed)
+    ? parsed
+    : parsed > 0
+      ? Math.max(0, Number(timeline?.duration) || 0)
+      : 0;
+}
+
 /**
  * The owning scene block, or null. `options.clamp` also reports the final
  * scene at phase 1 after the duration; `options.reducedMotion` is accepted
@@ -420,7 +431,7 @@ function sceneStateAt(artifacts, indexes, time, clampAfterEnd) {
 export function sceneAt(recipe, timeline, indexes, time, options = {}) {
   const artifacts = normalizeVisualArtifacts(recipe, timeline);
   const resolvedIndexes = indexes || buildSceneIndexes(timeline);
-  const state = sceneStateAt(artifacts, resolvedIndexes, Number(time) || 0, options.clamp === true);
+  const state = sceneStateAt(artifacts, resolvedIndexes, mediaTime(timeline, time), options.clamp === true);
   if (!state) return null;
   return Object.freeze({
     id: state.scene.id,
@@ -441,7 +452,7 @@ export function transitionAt(recipe, timeline, indexes, time, options = {}) {
   const artifacts = normalizeVisualArtifacts(recipe, timeline);
   const resolvedIndexes = indexes || buildSceneIndexes(timeline);
   const reducedMotion = options.reducedMotion === true;
-  const state = transitionStateAt(artifacts, resolvedIndexes, Number(time) || 0);
+  const state = transitionStateAt(artifacts, resolvedIndexes, mediaTime(timeline, time));
   if (state.stage === 'idle') return null;
   const channels = treatmentChannels(state, reducedMotion);
   return Object.freeze({
@@ -561,10 +572,14 @@ export function createSceneDirector(recipe, timeline, options = {}) {
       const clampAfterEnd = queryOptions?.clamp === undefined
         ? settings.clamp
         : queryOptions.clamp === true;
+      // Media-time input contract (plan section 6): queries take finite
+      // seconds and clamp to the timeline bounds, so every frame stays
+      // JSON-serializable.
+      const queryTime = mediaTime(timeline, time);
       return buildFrame(
         artifacts,
         indexes,
-        Number(time) || 0,
+        queryTime,
         reducedMotion,
         clampAfterEnd,
       );

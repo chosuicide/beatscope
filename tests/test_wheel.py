@@ -1,8 +1,9 @@
-"""The built wheel must carry the v0.8.0 visual instrument modules.
+"""The built wheel must carry the visual instrument and handoff assets.
 
 The app is zero-build in the browser, but the wheel packages ``beatscope/web``
-as package data; a packaging regression that silently drops the new modules
-would ship a player without its particle instrument.
+and the export runtime as package data; a packaging regression that silently
+drops a module would ship a player without its particle instrument or a
+handoff without its self-verification probe (v0.9 plan section 4).
 """
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ REQUIRED_MODULES = [
     "beatscope/web/particle-field.js",
     "beatscope/web/particle-geometry.js",
     "beatscope/web/particle-shaders.js",
+    "beatscope/runtime/consumer-probe.js",
 ]
 
 

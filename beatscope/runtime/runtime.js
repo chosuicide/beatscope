@@ -234,10 +234,11 @@ export function energyAt(map, time, band = 'all') {
   return clamp(lerp(Number(frames[left]?.[band]) || 0, Number(frames[right]?.[band]) || 0, position - left));
 }
 
-/** Last onset at or before ``time`` with its age (§39). */
+/** Last onset at or before ``time`` with its age (§39). ``age`` is null
+ * before the first onset — JSON-serializable "none yet", not Infinity. */
 export function previousOnset(map, indexes, time) {
   const index = previousIndex(indexes.onsetTimes, Number(time) || 0);
-  if (index < 0) return { item: null, age: Infinity };
+  if (index < 0) return { item: null, age: null };
   const item = map.onsets[index];
   return { item, age: Math.max(0, (Number(time) || 0) - timeOf(item)) };
 }
@@ -246,7 +247,7 @@ export function previousOnset(map, indexes, time) {
 export function nearestOnset(map, indexes, time) {
   const t = Number(time) || 0;
   const times = indexes.onsetTimes;
-  if (!times.length) return { item: null, distance: Infinity };
+  if (!times.length) return { item: null, distance: null };
   const index = previousIndex(times, t);
   const candidates = [];
   if (index >= 0) candidates.push(index);
@@ -381,7 +382,15 @@ export function boundaryImpulse(map, indexes, time, decay = 2.0, maxAge = 4.0) {
  * apply their own compression), section from the extrapolated bar.
  */
 export function stateAt(map, indexes, time, options = {}) {
-  const rawTime = Number(time) || 0;
+  const parsed = Number(time) || 0;
+  // Media-time input contract (plan section 6): queries take finite
+  // seconds. NaN and before-track times clamp to 0, beyond-track times
+  // clamp to the track end, so every returned state stays JSON-serializable.
+  const rawTime = Number.isFinite(parsed)
+    ? parsed
+    : parsed > 0
+      ? Math.max(0, Number(map.duration) || 0)
+      : 0;
   const position = positionAt(map, indexes, rawTime, options);
   const impulse = onsetImpulse(map, indexes, rawTime);
   const accent = isAccentOnset(map, indexes, impulse.item) && impulse.value > 0
