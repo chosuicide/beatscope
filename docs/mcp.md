@@ -81,7 +81,10 @@ a stderr warning, never surfaced as tool errors.
 
 `project_id: 12-hex, detail?: "summary"|"timing"|"full" = "summary"`
 
-- `summary`: identity and counts, no arrays.
+- `summary`: identity and counts. When structural segments exist,
+  `structure.segment_energy` adds one compact row per segment with
+  frame-weighted mean `low`, `mid`, and `high` values. It never returns the
+  underlying energy arrays.
 - `timing`: adds beats, tempo segments, patterns, cues - never energy arrays.
 - `full`: the complete schema v4 JSON. If it exceeds the response budget the
   reply carries `truncated: true` and the resource URI
@@ -140,12 +143,30 @@ offset, has_more, next_offset}`.
 `project_id, destination (must end in .zip), overwrite? = false`
 
 Writes the portable agent handoff ZIP: `rhythm-map.json`,
-`beatscope-runtime.js`, `visual-state.js`, `BEATSCOPE.md`, `SKILL.md`,
+`beatscope-runtime.js`, `visual-state.js`, `worker-example.js`, `BEATSCOPE.md`, `SKILL.md`,
 `references/schema.md`, `README.md`. The destination parent must exist and
 live under an allowed root. The ZIP is written to a sibling temp file and
 moved into place with an atomic replace, so a crash never leaves a truncated
 file. An existing destination is kept unless `overwrite=true`. The response
 returns path, size, SHA-256, and the ZIP manifest - not the binary.
+
+## Module Worker use
+
+The exported runtime has no DOM, Audio, Canvas, or wall-clock dependency, so
+`visual-state.js` can run inside a browser module Worker. The ZIP includes a
+ready-to-use `worker-example.js` adapter:
+
+~~~js
+const worker = new Worker("./worker-example.js", { type: "module" });
+worker.onmessage = ({ data }) => render(data);
+
+// The main thread owns HTMLAudioElement; the Worker only receives its clock.
+worker.postMessage({ id: 1, time: audio.currentTime });
+~~~
+
+Serve the extracted package over HTTP with JavaScript module MIME types; module
+Workers cannot normally import siblings from a ZIP or `file://` URL. The Worker
+returns the same deterministic timing/scene frame as a direct main-thread call.
 
 ## Resources
 

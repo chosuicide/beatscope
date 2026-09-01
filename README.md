@@ -2,9 +2,9 @@
 
 English | [简体中文](README.zh-CN.md)
 
-A local personal project that turns a song's rhythm into a playable visual reference and a reusable timing package for coding agents.
+A local, audio-reactive instrument that turns one song into two things: a visual you can play, and timing data an agent can reuse.
 
-BeatScope lets you upload a track, play it in the browser, and watch a flowing particle instrument, delayed orbit belts, frequency traces, and a whole-song structure view respond to LOW, MID, HIGH, transients, and section changes. The same analysis is arranged into an eight-bar cue map and exported as a Codex package with its own <code>SKILL.md</code>, so the next visual project does not have to guess the timing of the same song again. Since v0.8 the structure itself is compiled into a deterministic visual recipe — per-family motifs, palette slots, and composition tokens — plus a scene timeline, so one scene director drives the player, the MCP surface, and the export package from the same files.
+Upload a track and BeatScope builds a beat grid, multiband energy, transients, tempo changes, and a neutral whole-song structure. The browser turns those facts into a seek-safe particle performance and an eight-bar motion cue map. The export turns the same analysis into a portable Codex package with its own <code>SKILL.md</code>, visual recipe, and scene timeline. The player, MCP server, and export all read the same timing model instead of inventing three slightly different versions of the song.
 
 [![BeatScope animated preview; click to play with sound](docs/demo/beatscope-preview.gif)](docs/demo/beatscope-demo.mp4)
 
@@ -14,11 +14,11 @@ BeatScope lets you upload a track, play it in the browser, and watch a flowing p
 
 ## Why I built it
 
-The difficult part of music visualisation is usually not drawing a shape that moves. It is deciding why it should move at this exact moment, how far it should move, and how the same animation should behave when two songs have completely different rhythmic density.
+The hard part of music visualisation is not making a shape move. It is deciding why it moves now, how much motion this moment deserves, and how the same system survives both a sparse track and a dense one.
 
 A direct peak-to-explosion mapping works for sparse music and quickly falls apart on a dense track. Looking only at total volume loses low-frequency weight, high-frequency detail, and section changes. Handing the same song to another agent later also means repeating those decisions from the beginning.
 
-BeatScope keeps that work. Python reads the audio, tracks beats and tempo changes, and extracts multiband energy. The browser uses <code>audio.currentTime</code> as its only clock. The particle system separates ordinary pulse, sustained turbulence, local impact, and rare hero events. The result can be watched directly or reused as timing evidence in the next creative build.
+BeatScope keeps those decisions as data. Python tracks the song; the browser samples <code>audio.currentTime</code>; the motion system separates ordinary pulse, sustained flow, local impact, and rare hero events. You can watch the result now, then hand the exact same timing evidence to the next creative build.
 
 ## What one session looks like
 
@@ -68,7 +68,7 @@ The same eight-bar window exposes IMPACT, LOW / SCALE, MID / FLOW, HIGH / FLASH,
 
 ![BeatScope Codex export panel](docs/screenshots/beatscope-codex-export.png)
 
-The package contains more than analysis JSON. It also carries a seek-safe <code>visual-state.js</code>, usage notes, the schema, and a project-level <code>SKILL.md</code>. Drop the ZIP into a new Codex project and the agent can reuse the same timing and visual semantics instead of listening and guessing again.
+The package contains more than analysis JSON. It carries a seek-safe <code>visual-state.js</code>, a ready-to-use module Worker adapter, the compiled scene artifacts, usage notes, the schema, and a project-level <code>SKILL.md</code>. Drop the ZIP into a new project and the agent starts with the song's timing and visual semantics already intact.
 
 ### The particle instrument
 
@@ -157,6 +157,7 @@ beatscope-codex.zip
 ├── references/schema.md
 ├── rhythm-map.json
 ├── visual-state.js
+├── worker-example.js
 ├── beatscope-runtime.js
 ├── scene-director.js
 ├── visual-recipe.json
@@ -167,7 +168,7 @@ beatscope-codex.zip
 └── README.md
 ~~~
 
-<code>visual-state.js</code> keeps <code>getVisualState(time)</code> — the shared runtime's <code>track.at(time)</code> — and, when the package carries compiled visual artifacts, adds <code>getSceneState(time)</code> and a one-call <code>getBeatScopeFrame(time)</code> returning <code>{ timing, scene }</code>. The browser player and the export package use the same <code>beatscope-runtime.js</code> and <code>scene-director.js</code>, so the state an agent consumes is produced by the same implementation the player shows. An agent can read beat phase, band energy, transient impulses, sections, and the compiled scene without analysing the audio again, and the scene recovers from pause, seek, or replay using the same playback time.
+<code>visual-state.js</code> keeps <code>getVisualState(time)</code> — the shared runtime's <code>track.at(time)</code> — and, when the package carries compiled visual artifacts, adds <code>getSceneState(time)</code> and a one-call <code>getBeatScopeFrame(time)</code> returning <code>{ timing, scene }</code>. The browser player and the export package use the same <code>beatscope-runtime.js</code> and <code>scene-director.js</code>. <code>worker-example.js</code> runs that API in a module Worker while the main thread keeps ownership of the audio element and sends <code>audio.currentTime</code>. Pause, seek, replay, main-thread use, and Worker use therefore resolve the same instant to the same frame.
 
 MIDI, CSV, PNG, and raw JSON remain under **Advanced tools**. MIDI is a quantised timing reference, not a reconstructed drum performance.
 
@@ -291,7 +292,7 @@ data is ever sent over the network.
 | Tool | Purpose |
 | --- | --- |
 | `beatscope_list_projects` | List cached projects (BPM, bars, backend, provenance) |
-| `beatscope_get_project` | Read a project as summary / timing / full JSON |
+| `beatscope_get_project` | Read summary / timing / full JSON; structure summaries include per-segment mean LOW / MID / HIGH energy |
 | `beatscope_analyze_audio` | Analyze and cache audio; progress and cancellation, multi-config coexistence |
 | `beatscope_get_visual_state` | Full visual state at one instant, identical to the web player; with compiled artifacts the response adds the `visual` block (scene, transition, composition) |
 | `beatscope_get_events` | beats / onsets / cues / patterns / segments / boundaries / scenes in a (start, end] window |
@@ -375,7 +376,7 @@ On the JavaScript side the grid and interaction tests cover page behaviour; the 
 
 ## Project status
 
-BeatScope now covers the complete local path from audio upload and playable visualisation to whole-song structure, an eight-bar cue map, and a Codex Skill export. v0.6.0 added real-timeline variable-tempo tracking and preserved tempo segments through runtime, MIDI, MCP, and Codex export. v0.6.1 rebuilt the player around a deterministic WebGL2 particle instrument with coherent body motion, flow-guided streamers, delayed orbit belts, adaptive budgets, and a safe fallback. v0.7.0 added deterministic whole-song structure analysis — bar-synchronous multi-view features, novelty-guided boundaries, and repeat families with variants — exposed natively in the rhythm IR, the runtime, MCP, the Codex export, and the player navigator. v0.8.0 turned that structure into a deterministic visual language: a compiler turns rhythm projects into visual recipes and scene timelines, one shared scene director drives the player, MCP, and the export package from the same artifacts, and a 28-gate visual benchmark keeps determinism, identity, motion continuity, and performance honest. The package is versioned 0.8.0 while the audio analyser intentionally stays at 0.7.0. BeatScope is still a personal experiment in progress; the next priority is keeping this visual language stable across more songs, devices, and recording conditions.
+BeatScope now covers the complete local path from audio upload to a playable visual, whole-song structure, an eight-bar cue map, MCP queries, and a portable Codex Skill. v0.6 established real-timeline tempo tracking and the particle instrument; v0.7 added neutral structural segmentation and repeat families; v0.8 compiled that structure into a deterministic visual recipe and scene timeline shared by the player, MCP, and exports. v0.8.1 completes two practical handoff paths: project summaries now report compact per-segment LOW / MID / HIGH means, and every export includes a tested module Worker adapter. The package is versioned 0.8.1 while the audio analyser intentionally remains at 0.7.0 and the visual recipe contract at 0.8.0. BeatScope remains a personal experiment, but its public timing contracts are regression-tested rather than left implicit.
 
 ## License
 

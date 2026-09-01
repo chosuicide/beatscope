@@ -2,9 +2,9 @@
 
 [English](README.md) | 简体中文
 
-一个把歌曲节奏变成可播放视觉参考与 Agent 可复用时序包的本地个人项目。
+一个本地音频响应乐器：把一首歌同时变成可播放的视觉，以及 Agent 可以继续复用的时序数据。
 
-BeatScope 允许用户上传一首歌，在浏览器里一边播放，一边查看随 LOW、MID、HIGH、瞬态与段落变化运动的流动粒子乐器、延迟轨道带、频段曲线和全曲结构。分析结果还会整理成 8 小节 cue map，并导出为带 <code>SKILL.md</code> 的 Codex 包，让后续视觉项目不必重新猜测同一首歌的节奏。v0.8 起，结构本身会被编译成确定性的视觉配方 —— 每个家族的 motif、调色板槽位与构图参数 —— 外加一条场景时间轴，由同一个场景 director 驱动网页播放器、MCP 接口与导出包。
+上传一首歌，BeatScope 会建立节拍网格、多频段能量、瞬态、速度变化与中性的全曲结构。浏览器把这些事实变成 seek-safe 的粒子演出和 8 小节运动提示图；导出则把同一份分析装进带 <code>SKILL.md</code>、视觉配方和场景时间轴的 Codex 包。播放器、MCP 与导出读取同一套时间模型，不再各自猜一遍歌曲。
 
 [![BeatScope 动态演示；点击播放原声视频](docs/demo/beatscope-preview.gif)](docs/demo/beatscope-demo.mp4)
 
@@ -14,11 +14,11 @@ BeatScope 允许用户上传一首歌，在浏览器里一边播放，一边查�
 
 ## 为什么做这个项目
 
-音乐可视化真正麻烦的部分通常不是画一个会动的图形，而是确定它为什么在这一刻动、应该动多大，以及同一套动画怎样适应节奏密度完全不同的歌曲。
+音乐可视化真正麻烦的不是让图形动起来，而是决定它为什么此刻要动、这一刻值得多大幅度，以及同一套系统怎样同时撑住稀疏和密集的歌曲。
 
 直接把每个峰值映射成一次爆炸，很快会遇到问题：稀疏歌曲看起来有冲击，密集歌曲却会让球体持续炸开；只看总音量又会丢失低频重量、高频细节和段落转换。下一次把音乐交给另一个 Agent 时，这些判断还要重新做一遍。
 
-BeatScope 尝试把这段工作留下来。Python 负责读取音频、追踪节拍与速度变化并提取多频段能量；浏览器使用 <code>audio.currentTime</code> 作为唯一时钟；粒子动画把普通节拍、连续湍流、局部冲击和稀有重击分成不同层级。最终结果既可以直接观看，也可以作为下一次创作的时间参考。
+BeatScope 把这些判断保存成数据。Python 负责追踪歌曲，浏览器只采样 <code>audio.currentTime</code>，运动系统把普通脉冲、持续流动、局部冲击与稀有重击分开处理。结果既能现在观看，也能把完全相同的时序证据交给下一次创作。
 
 ## 一次使用怎样展开
 
@@ -68,7 +68,7 @@ BeatScope 尝试把这段工作留下来。Python 负责读取音频、追踪节
 
 ![BeatScope Codex 导出区域](docs/screenshots/beatscope-codex-export.png)
 
-导出包不仅包含分析 JSON，还包含 seek-safe 的 <code>visual-state.js</code>、使用说明、Schema 与项目级 <code>SKILL.md</code>。把 ZIP 放进新的 Codex 项目，Agent 就能沿用同一套时间与视觉语义，而不是重新听歌猜节奏。
+导出包不只是一份分析 JSON。它还带有 seek-safe 的 <code>visual-state.js</code>、可直接使用的模块 Worker 适配器、编译后的场景产物、使用说明、Schema 与项目级 <code>SKILL.md</code>。把 ZIP 放进新项目，Agent 一开始就拥有完整的歌曲时序与视觉语义。
 
 ### 粒子乐器
 
@@ -157,6 +157,7 @@ beatscope-codex.zip
 ├── references/schema.md
 ├── rhythm-map.json
 ├── visual-state.js
+├── worker-example.js
 ├── beatscope-runtime.js
 ├── scene-director.js
 ├── visual-recipe.json
@@ -167,7 +168,7 @@ beatscope-codex.zip
 └── README.md
 ~~~
 
-<code>visual-state.js</code> 保留 <code>getVisualState(time)</code> —— 即共享运行时的 <code>track.at(time)</code> —— 并在包内带有编译视觉产物时追加 <code>getSceneState(time)</code> 与一次调用返回 <code>{ timing, scene }</code> 的 <code>getBeatScopeFrame(time)</code>。网页播放器和导出包使用同一份 <code>beatscope-runtime.js</code> 与 <code>scene-director.js</code>，因此 Agent 拿到的状态来自与播放器相同的实现。Agent 可以直接读取节拍相位、频段能量、瞬态脉冲、段落与编译后的场景，不必再次分析音频；暂停、拖动和跳转后仍然由同一个播放时间恢复画面。
+<code>visual-state.js</code> 保留 <code>getVisualState(time)</code> —— 即共享运行时的 <code>track.at(time)</code> —— 并在包内带有编译视觉产物时追加 <code>getSceneState(time)</code> 与一次调用返回 <code>{ timing, scene }</code> 的 <code>getBeatScopeFrame(time)</code>。网页播放器和导出包使用同一份 <code>beatscope-runtime.js</code> 与 <code>scene-director.js</code>。<code>worker-example.js</code> 可以把这套 API 放进模块 Worker，主线程只负责读取音频元素并发送 <code>audio.currentTime</code>。因此暂停、拖动、重播、主线程调用与 Worker 调用都会把同一时刻还原成同一帧。
 
 MIDI、CSV、PNG 和原始 JSON 仍然保留在 **Advanced tools** 中。MIDI 只是量化时间参考，不是重建出来的鼓组演奏。
 
@@ -284,7 +285,7 @@ beatscope-mcp
 | 工具 | 作用 |
 | --- | --- |
 | `beatscope_list_projects` | 列出缓存项目（BPM、小节、backend、provenance） |
-| `beatscope_get_project` | 读取项目 summary / timing / 完整 JSON |
+| `beatscope_get_project` | 读取 summary / timing / 完整 JSON；结构摘要附带逐段 LOW / MID / HIGH 均值 |
 | `beatscope_analyze_audio` | 分析音频并缓存；支持进度与取消，多配置可共存 |
 | `beatscope_get_visual_state` | 某一时刻的完整视觉状态，与网页播放器一致；带编译产物时响应追加 `visual` 块（scene、transition、composition） |
 | `beatscope_get_events` | (start, end] 区间内的 beats / onsets / cues / patterns / segments / boundaries / scenes |
@@ -359,7 +360,7 @@ JavaScript 侧：网格与交互测试覆盖页面行为；runtime、scene-direc
 
 ## 项目状态
 
-BeatScope 已完成从音频上传、播放式可视化、全曲结构、8 小节 cue map 到 Codex Skill 导出的完整本地流程。v0.6.0 增加了真实时间轴上的变速追踪，并把 tempo segments 保留到 runtime、MIDI、MCP 和 Codex 导出；v0.6.1 则把播放器重建为确定性的 WebGL2 粒子乐器，加入主体整体运动、流场拖尾、延迟轨道带、自适应预算和安全回退。v0.7.0 增加了确定性的全曲结构分析 —— 按小节聚合的多视图特征、novelty 引导的边界、带变体的重复家族 —— 并原生接入节奏 IR、runtime、MCP、Codex 导出与播放器导航。v0.8.0 把这套结构变成确定性的视觉语言：编译器把节奏项目变成视觉配方与场景时间轴，一个共享场景 director 用同一份产物驱动播放器、MCP 与导出包，28 个门槛的视觉基准守住确定性、身份、运动连续性与性能。软件包版本为 0.8.0，音频分析器有意保持 0.7.0。它仍是一个持续调整的个人实验；后续重点是让这套视觉语法在更多歌曲、设备和录制环境中保持稳定。
+BeatScope 现在覆盖从音频上传到可播放视觉、全曲结构、8 小节 cue map、MCP 查询与 Codex Skill 导出的完整本地流程。v0.6 建立了真实时间轴变速追踪和粒子乐器，v0.7 加入中性的结构分段与重复家族，v0.8 再把结构编译成由播放器、MCP 和导出共同使用的确定性视觉配方与场景时间轴。v0.8.1 补齐两个实际交接场景：项目摘要现在给出逐段 LOW / MID / HIGH 均值，每个导出包也包含经过测试的模块 Worker 适配器。软件包版本为 0.8.1，音频分析器有意保持 0.7.0，视觉配方契约保持 0.8.0。它仍是个人实验，但公开时序契约已经由回归测试固定，而不是只写在说明里。
 
 ## License
 
