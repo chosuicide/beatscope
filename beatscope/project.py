@@ -21,6 +21,8 @@ TIMELINE_FILENAME = "visual-timeline.json"
 # of identical bytes rather than an error.
 _ARTIFACT_LOCK_ATTEMPTS = 100
 _ARTIFACT_LOCK_DELAY_SECONDS = 0.01
+_ATOMIC_REPLACE_ATTEMPTS = 10
+_ATOMIC_REPLACE_DELAY_SECONDS = 0.01
 
 
 def _atomic_write_bytes(path: Path, data: bytes) -> None:
@@ -34,7 +36,18 @@ def _atomic_write_bytes(path: Path, data: bytes) -> None:
     try:
         with os.fdopen(descriptor, "wb") as handle:
             handle.write(data)
-        os.replace(tmp, path)
+        for attempt in range(_ATOMIC_REPLACE_ATTEMPTS):
+            try:
+                os.replace(tmp, path)
+                break
+            except PermissionError:
+                # Windows may briefly deny a replace when another thread or
+                # process has just replaced the same destination.  Each
+                # writer owns a unique temporary file, so a bounded retry is
+                # safe and preserves the final atomic hand-off.
+                if attempt + 1 == _ATOMIC_REPLACE_ATTEMPTS:
+                    raise
+                time.sleep(_ATOMIC_REPLACE_DELAY_SECONDS)
     finally:
         with contextlib.suppress(OSError):
             tmp.unlink()

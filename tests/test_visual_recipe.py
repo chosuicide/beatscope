@@ -457,7 +457,7 @@ def test_require_valid_without_timeline(artifacts):
 import copy
 import hashlib
 from pathlib import Path
-from threading import Barrier, Thread
+from threading import Barrier, Lock, Thread
 
 import beatscope.project as project_module
 import beatscope.visual_recipe as visual_recipe_module
@@ -952,13 +952,19 @@ def test_atomic_visual_writes_use_unique_temp_files(tmp_path, monkeypatch):
     """A stale cross-process lock must not make thread writers collide."""
     target = tmp_path / RECIPE_FILENAME
     barrier = Barrier(2)
+    seen_lock = Lock()
     original_replace = project_module.os.replace
     sources: list[Path] = []
     errors: list[Exception] = []
 
     def synchronized_replace(source, destination):
-        sources.append(Path(source))
-        barrier.wait(timeout=2)
+        source_path = Path(source)
+        with seen_lock:
+            first_attempt = source_path not in sources
+            if first_attempt:
+                sources.append(source_path)
+        if first_attempt:
+            barrier.wait(timeout=2)
         original_replace(source, destination)
 
     monkeypatch.setattr(project_module.os, "replace", synchronized_replace)
@@ -978,6 +984,25 @@ def test_atomic_visual_writes_use_unique_temp_files(tmp_path, monkeypatch):
     assert not errors
     assert len(sources) == 2
     assert sources[0] != sources[1]
+    assert target.read_bytes() == b"{}"
+    assert not list(tmp_path.glob(f".{RECIPE_FILENAME}.*.tmp"))
+
+
+def test_atomic_visual_write_retries_transient_permission_error(tmp_path, monkeypatch):
+    target = tmp_path / RECIPE_FILENAME
+    original_replace = project_module.os.replace
+    calls = {"count": 0}
+
+    def transient_failure(source, destination):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise PermissionError(13, "simulated Windows destination contention")
+        original_replace(source, destination)
+
+    monkeypatch.setattr(project_module.os, "replace", transient_failure)
+    project_module._atomic_write_bytes(target, b"{}")
+
+    assert calls["count"] == 2
     assert target.read_bytes() == b"{}"
     assert not list(tmp_path.glob(f".{RECIPE_FILENAME}.*.tmp"))
 
