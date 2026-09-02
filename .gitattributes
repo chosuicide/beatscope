@@ -1,6 +1,7 @@
 evaluations/fixtures/**/*.json text eol=lf
 evaluations/fixtures-manifest.json text eol=lf
 evaluations/beatscope_mcp.xml text eol=lf
+evaluations/agent-interoperability/TASK.md text eol=lf
 tests/fixtures/truth/*.json text eol=lf
 tests/fixtures/benchmark-baseline.json text eol=lf
 tests/fixtures/runtime/*.json text eol=lf
