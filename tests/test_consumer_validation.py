@@ -400,6 +400,13 @@ def test_probe_unavailable_without_node(tmp_path, monkeypatch):
     assert report["summary"]["unavailable"] == 3
 
 
+def test_worker_bootstrap_queues_messages_until_handler_is_ready():
+    source = cv._WORKER_SMOKE_BOOTSTRAP
+    assert "const pending = []" in source
+    assert "else pending.push(message)" in source
+    assert "pending.splice(0)" in source
+
+
 def test_usage_errors_for_missing_and_non_package_targets(tmp_path):
     with pytest.raises(ConsumerUsageError):
         validate_handoff(tmp_path / "does-not-exist.zip")

@@ -121,13 +121,20 @@ import { pathToFileURL } from 'node:url';
 
 if (typeof globalThis.self === 'undefined') {
   let handler = null;
+  const pending = [];
   globalThis.self = {
     get onmessage() { return handler; },
-    set onmessage(value) { handler = value; },
+    set onmessage(value) {
+      handler = value;
+      if (typeof handler === 'function') {
+        for (const message of pending.splice(0)) handler({ data: message });
+      }
+    },
     postMessage: (message) => parentPort.postMessage(message),
   };
   parentPort.on('message', (message) => {
     if (typeof handler === 'function') handler({ data: message });
+    else pending.push(message);
   });
 }
 await import(pathToFileURL(workerData.target).href);
