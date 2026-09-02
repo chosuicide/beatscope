@@ -6,3 +6,4 @@ tests/fixtures/benchmark-baseline.json text eol=lf
 tests/fixtures/runtime/*.json text eol=lf
 tests/fixtures/structure/*.json text eol=lf
 tests/fixtures/visual/*.json text eol=lf
+examples/shared/** -text
