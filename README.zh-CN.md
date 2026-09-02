@@ -2,9 +2,11 @@
 
 [English](README.md) | 简体中文
 
-一个本地音频响应乐器：把一首歌同时变成可播放的视觉，以及 Agent 可以继续复用的时序数据。
+**一首歌。一份确定性时序包。不同的视觉技术栈。**
 
-上传一首歌，BeatScope 会建立节拍网格、多频段能量、瞬态、速度变化与中性的全曲结构。浏览器把这些事实变成 seek-safe 的粒子演出和 8 小节运动提示图；导出则把同一份分析装进带 <code>SKILL.md</code>、视觉配方和场景时间轴的 Codex 包。播放器、MCP 与导出读取同一套时间模型，不再各自猜一遍歌曲。
+BeatScope 是一个本地音频响应乐器：把一首歌同时变成可播放的视觉，以及 Agent 可以继续复用的时序数据。v0.9 补完了这个闭环：导出包现在是自带说明的 handoff 契约，三个互相独立的视觉栈 —— Canvas 2D、Three.js 和 Remotion —— 通过同一个确定性帧函数驱动它，并且有验证命令来证明这一点。
+
+上传一首歌，BeatScope 会建立节拍网格、多频段能量、瞬态、速度变化与中性的全曲结构。浏览器把这些事实变成 seek-safe 的粒子演出和 8 小节运动提示图；导出则把同一份分析装进带 manifest、Agent 路由文档、自检 probe、<code>SKILL.md</code>、视觉配方和场景时间轴的可移植包。播放器、MCP、导出与三个参考消费者读取同一套时间模型，不再各自猜一遍歌曲。
 
 [![BeatScope 动态演示；点击播放原声视频](docs/demo/beatscope-preview.gif)](docs/demo/beatscope-demo.mp4)
 
@@ -12,13 +14,40 @@
 
 > BeatScope 展示的是节奏强度、频段分布和时间结构，不会把不确定的瞬态冒充成 kick、snare 或 808。音频在本机分析，临时上传文件会在处理后删除。
 
+## 一份包，三种视觉栈
+
+仓库内置一份冻结的 handoff fixture（<code>examples/shared/fixture.beatscope</code>，由 <code>fixture-lock.json</code> 以 sha256 锁定）和三个只共享这份包的参考消费者：
+
+| 示例 | 技术栈 | 时钟 | 证明什么 |
+| --- | --- | --- | --- |
+| [examples/canvas-particles](examples/canvas-particles) | Canvas 2D，零构建 | <code>audio.currentTime</code> | 播放/跳转/重播还原出完全一致的几何；reduced motion 把位移精确缩放到 0.25× |
+| [examples/threejs-geometry](examples/threejs-geometry) | three@0.169.0（import map，无打包器） | <code>audio.currentTime</code> | 框架胶水层保持 three 无关且纯净；seeded 几何；声明的 draw-call 预算 |
+| [examples/remotion-composition](examples/remotion-composition) | Remotion 4.0.520 | <code>frame / fps</code> | 同一秒在 24/30/60 fps 下映射到同一状态；越过最后场景后场景归属冻结而 timing 按文档外推 |
+
+每个消费者都是完整可运行的项目 —— 用任意静态服务器打开 <code>examples/canvas-particles/index.html</code>（Three.js 同理）并选择一个音频文件；Remotion 组合用 <code>npx remotion render</code> 离线渲染。它们各自 pinned 的依赖只存在于每个示例自己的 <code>package.json</code> 中，绝不进入 BeatScope 核心。
+
+整套契约就是一次函数调用：
+
+~~~js
+import { getBeatScopeFrame } from "./fixture.beatscope/visual-state.js";
+
+function paint(audioTime) {
+  const { timing, scene } = getBeatScopeFrame(audioTime);
+  // timing → bar, beat, beatPhase, low/mid/high, onset, accent
+  // scene  → composition (spread, twist, flow, orbit, void, contrast),
+  //          transition 包络, 家族身份
+}
+~~~
+
+消费者自行选择时钟（媒体时间或 frame/fps），可以把返回值映射到任何视觉属性，但绝不重新分析音频、绝不猜测时间戳、也绝不拷贝 BeatScope 播放器。
+
 ## 为什么做这个项目
 
 音乐可视化真正麻烦的不是让图形动起来，而是决定它为什么此刻要动、这一刻值得多大幅度，以及同一套系统怎样同时撑住稀疏和密集的歌曲。
 
 直接把每个峰值映射成一次爆炸，很快会遇到问题：稀疏歌曲看起来有冲击，密集歌曲却会让球体持续炸开；只看总音量又会丢失低频重量、高频细节和段落转换。下一次把音乐交给另一个 Agent 时，这些判断还要重新做一遍。
 
-BeatScope 把这些判断保存成数据。Python 负责追踪歌曲，浏览器只采样 <code>audio.currentTime</code>，运动系统把普通脉冲、持续流动、局部冲击与稀有重击分开处理。结果既能现在观看，也能把完全相同的时序证据交给下一次创作。
+BeatScope 把这些判断保存成数据。Python 负责追踪歌曲，浏览器只采样 <code>audio.currentTime</code>，运动系统把普通脉冲、持续流动、局部冲击与稀有重击分开处理。结果既能现在观看，也能把完全相同的时序证据交给下一次创作 —— 无论下一次用什么技术栈。
 
 ## 一次使用怎样展开
 
@@ -27,7 +56,7 @@ BeatScope 把这些判断保存成数据。Python 负责追踪歌曲，浏览器
             → 自动进入 Signal player
             → 播放、暂停、拖动与查看全曲结构
             → 在 8-bar cue map 中试听或框选循环
-            → 导出 Codex package 继续制作视觉项目
+            → 导出 handoff package 继续制作视觉项目
 ~~~
 
 1. 用户选择 WAV、FLAC、MP3、OGG 或 M4A 文件。
@@ -35,7 +64,7 @@ BeatScope 把这些判断保存成数据。Python 负责追踪歌曲，浏览器
 3. 页面平滑移动到播放器，粒子球、频段线和频谱随播放位置变化。
 4. Rhythm pattern overview（节奏概览）用整首歌的视角显示能量与段落，并允许跳转。
 5. 8-bar cue map 把当前窗口整理成 impact、scale、flow、flash 和 bloom 参考。
-6. Codex 导出包保存分析数据、视觉状态函数、说明与可移植 Skill。
+6. 导出包保存分析数据、确定性视觉状态函数、自带说明的契约、说明文档与可移植 Skill。
 
 <details>
 <summary>查看更多播放器状态</summary>
@@ -64,12 +93,6 @@ BeatScope 把这些判断保存成数据。Python 负责追踪歌曲，浏览器
 
 同一个八小节窗口同时展示 IMPACT、LOW / SCALE、MID / FLOW、HIGH / FLASH 与 ACCENT / BLOOM。它不是鼓组转写，而是一张面向动画的运动提示图：可以单击试听瞬态，也可以拖出循环，再把时间、强度与频段驱动交给下一段视觉代码。
 
-### Export for Codex：把分析结果带走
-
-![BeatScope Codex 导出区域](docs/screenshots/beatscope-codex-export.png)
-
-导出包不只是一份分析 JSON。它还带有 seek-safe 的 <code>visual-state.js</code>、可直接使用的模块 Worker 适配器、编译后的场景产物、使用说明、Schema 与项目级 <code>SKILL.md</code>。把 ZIP 放进新项目，Agent 一开始就拥有完整的歌曲时序与视觉语义。
-
 ### 粒子乐器
 
 ![BeatScope 瞬态冲击时刻的粒子乐器](docs/screenshots/particle-impact.png)
@@ -82,7 +105,7 @@ BeatScope 把这些判断保存成数据。Python 负责追踪歌曲，浏览器
 
 ### 结构场景：跟随歌曲的构图
 
-v0.8 把结构视图变成两个确定性产物。<code>visual-recipe.json</code> 给每个重复家族一个稳定身份 —— motif、调色板槽位、构图基准 —— 外加共享的转场时机与运动上限 token；<code>visual-timeline.json</code> 把这些身份落到真实歌曲上，形成场景与按真实节拍间隔定时的边界转场。共享的 <code>runtime/scene-director.js</code> 把两者变成一个 seek-safe 的状态函数：每个边界都经过 approach、cross、settle 包络，家族身份把构图带过变化，唯一允许不连续的只有边界脉冲。变体（<code>A′</code>）保留家族身份并只做两处有界次要变化，<code>BREAK</code> 使用保留的中性悬置处理。播放器通过 Follow structure 开关（产物存在前隐藏）和可访问的场景摘要暴露这些信息；每个场景内部节拍仍然保持局部响应。
+v0.8 把结构视图变成两个确定性产物。<code>visual-recipe.json</code> 给每个重复家族一个稳定身份 —— motif、调色板槽位、构图基准 —— 外加共享的转场时机与运动上限 token；<code>visual-timeline.json</code> 把这些身份落到真实歌曲上，形成场景与按真实节拍间隔定时的边界转场。共享的 <code>runtime/scene-director.js</code> 把两者变成一个 seek-safe 的状态函数：每个边界都经过 approach、cross、settle 包络，家族身份把构图带过变化，唯一允许不连续的只有边界脉冲。变体（<code>A′</code>)保留家族身份并只做两处有界次要变化，<code>BREAK</code> 使用保留的中性悬置处理。播放器通过 Follow structure 开关（产物存在前隐藏）和可访问的场景摘要暴露这些信息；每个场景内部节拍仍然保持局部响应。
 
 ## 音乐怎样影响画面
 
@@ -123,7 +146,7 @@ v0.6 在真实时间轴上追踪节拍与速度：拍点来自 novelty 引导的
 
 项目数据使用 schema v4（<code>schema_version: "4.0"</code>）写入并通过 validator 校验；v3 项目读取时自动迁移，结构数据放在可选的 <code>patterns.segments</code> 字段里，v0.7 之前编写的 v4 消费者不受影响。核心输出不包含 kick、snare、hihat 或 808 等乐器身份，也不把强度伪装成 confidence —— 页面显示的是 backend、pipeline 版本和可解释的诊断信息（来源方法、迁移记录、pregrid 合并数量、警告条数）。
 
-共享 JavaScript 运行时 <code>beatscope/runtime/runtime.js</code> 是纯 ESM，不依赖 DOM、Audio、Canvas 或系统时钟；<code>track.at(time)</code> 对相同输入始终返回相同结果，变速段落的小节/拍相位由相邻真实节拍与小节下拍推导，而不是假设全局 BPM。小节相位本身仍然是从第一个追踪拍开始的启发式连续编号（provenance 已标记为推断值），不是专用 downbeat 模型。v0.7 起 <code>track.at(time)</code> 还携带 <code>structure</code> 块 —— 当前段落、段内相位与距下一个边界的秒数 —— 以及 <code>structureLead</code>、<code>boundaryImpulse</code> 信号，全部是时间的纯函数。v0.8 起 <code>runtime/scene-director.js</code> 以同一纯度契约成为它的场景对应物：场景身份与转场包络都是播放时间的纯函数。网页播放器、页面诊断与 Codex 导出都构建在它们之上。
+共享 JavaScript 运行时 <code>beatscope/runtime/runtime.js</code> 是纯 ESM，不依赖 DOM、Audio、Canvas 或系统时钟；<code>track.at(time)</code> 对相同输入始终返回相同结果，变速段落的小节/拍相位由相邻真实节拍与小节下拍推导，而不是假设全局 BPM。小节相位本身仍然是从第一个追踪拍开始的启发式连续编号（provenance 已标记为推断值），不是专用 downbeat 模型。v0.7 起 <code>track.at(time)</code> 还携带 <code>structure</code> 块 —— 当前段落、段内相位与距下一个边界的秒数 —— 以及 <code>structureLead</code>、<code>boundaryImpulse</code> 信号，全部是时间的纯函数。v0.8 起 <code>runtime/scene-director.js</code> 以同一纯度契约成为它的场景对应物：场景身份与转场包络都是播放时间的纯函数。网页播放器、页面诊断、导出与参考消费者都构建在它们之上。
 
 ## 实测精度
 
@@ -149,10 +172,13 @@ v0.6 在真实时间轴上追踪节拍与速度：拍点来自 novelty 引导的
 
 视觉编排有第三套基准：<code>beatscope benchmark-visual</code> 编译十三个冻结场景 fixture，通过一个生成的 Node 进程把它们送进真实运行时（场景 director、motion director、粒子几何体，以及用于 draw call 计数的内联 WebGL2 stub）。它强制执行 28 个阻断门槛，覆盖确定性（配方/时间轴字节、查询顺序、seek、对照 MCP bridge 的跨端一致、密集 onset 稳定性）、身份（家族 motif 与调色板一致、变体稳定、BREAK 保留）、时间轴覆盖与转场时机、运动连续性（构图跨边界连续、仅脉冲可跳变、reduced motion 缩放、combined spread 上限、settle 精确落点），以及性能预算（场景查询 p95 低于 0.10 ms、director 查询 p95 低于 0.35 ms、每次渲染恰好一次 draw call、分配冒烟测试）。探测不可用（例如未安装 Node）的门槛会被记为 <code>unavailable</code>，绝不静默通过；每次运行还会校验 117 个 golden 检查点帧。
 
-## 给 Codex 的导出包
+## Handoff 导出包
 
 ~~~text
 beatscope-codex.zip
+├── beatscope-package.json   # v0.9 自描述 manifest：entry、能力、完整性
+├── AGENT.md                 # v0.9 面向消费 Agent 的路由文档
+├── consumer-probe.js        # v0.9 无依赖 probe：规范帧 + 检查点重放
 ├── SKILL.md
 ├── references/schema.md
 ├── rhythm-map.json
@@ -170,14 +196,33 @@ beatscope-codex.zip
 
 <code>visual-state.js</code> 保留 <code>getVisualState(time)</code> —— 即共享运行时的 <code>track.at(time)</code> —— 并在包内带有编译视觉产物时追加 <code>getSceneState(time)</code> 与一次调用返回 <code>{ timing, scene }</code> 的 <code>getBeatScopeFrame(time)</code>。网页播放器和导出包使用同一份 <code>beatscope-runtime.js</code> 与 <code>scene-director.js</code>。<code>worker-example.js</code> 可以把这套 API 放进模块 Worker，主线程只负责读取音频元素并发送 <code>audio.currentTime</code>。因此暂停、拖动、重播、主线程调用与 Worker 调用都会把同一时刻还原成同一帧。
 
+v0.9 让导出包自我描述。<code>beatscope-package.json</code> 声明入口模块、导出函数名、时钟语义（<code>media-time</code>、<code>[0, duration]</code>）、包真正携带的能力，以及覆盖每个成员的 sha256 完整性映射。<code>AGENT.md</code> 是消费 Agent 第一个读的短路由文档：导入哪个文件、喂什么时钟、为什么永远不需要重新分析、以及如何用 probe 验证。<code>consumer-probe.js</code> 是零依赖的 ESM probe，负责检查包内容、渲染规范帧并重放录制的检查点 —— 一个包要么通过它，要么说出自己哪里失败了。
+
 MIDI、CSV、PNG 和原始 JSON 仍然保留在 **Advanced tools** 中。MIDI 只是量化时间参考，不是重建出来的鼓组演奏。
+
+## 验证 handoff 与消费者
+
+两个命令即可检查契约，全程无需浏览器、无需网络：
+
+~~~powershell
+python -m beatscope.cli validate-handoff path\to\package.beatscope --checkpoints checkpoints.json
+python -m beatscope.cli validate-consumer examples\canvas-particles
+~~~
+
+<code>validate-handoff</code> 依次执行安全检查（路径穿越、重复与大小写冲突成员、体积上限）、manifest、独立哈希完整性、rhythm-map 合理性、对照录制检查点的 probe 重放、worker 冒烟与泄露扫描；只有在路径安全与完整性都通过之后才会执行 JavaScript。<code>validate-consumer</code> 在此之上追加消费者的声明、静态卫生与 node-probe 层。退出码诚实：<code>0</code> 全部必需检查通过，<code>1</code> 有检查失败，<code>2</code> 没有失败但某个必需层被跳过或不可用（例如交互消费者没有带 <code>--browser</code>）。交互消费者暴露冻结的 <code>__BEATSCOPE_CONSUMER__</code> 调试钩子；浏览器层本身在本版本中如实报告 <code>unavailable</code>，而不是假装运行过。
+
+## 跨 Agent 评估：pending，不声明
+
+<code>evaluations/agent-interoperability/</code> 冻结了评估基础设施：字节级稳定的任务文本（唯一允许的变化是目标框架占位符）、只记录元数据的严格 run recorder（不含 prompt、凭据或思考链；记录哈希锁定任务与包）、总权重为 100 的八类一致性评分表（艺术品味单独记录、不影响分数），以及确定性的 conformance 表 —— 见[自动生成的表格](evaluations/agent-interoperability/conformance.md)。
+
+与记录证据完全一致的状态：三个参考消费者通过了所有可自动化的必需门槛，而独立的 Coding Agent 运行记录目前为 **0**。"validated across Coding Agents" 的声明保持 **pending**，直到至少两个不同的 Coding Agent 产品在发布阈值下完成冻结任务（全新上下文运行、记录人工修复、审查生成源码、失败保持可见）。CI 只重放已入库的证据，绝不访问远程 Agent。
 
 ## 当前实现
 
 - 本地音频读取、格式检查与 FFmpeg 安全回退
 - 单一分析管线：节拍网格、瞬态、多频段能量和带重复家族的全曲结构段落
 - schema v4 校验、v3 项目迁移与来源/诊断元数据
-- 共享 JavaScript 运行时：网页与导出使用同一份时间查询实现
+- 共享 JavaScript 运行时：网页、导出与消费者使用同一份时间查询实现
 - 视觉配方编译器（<code>beatscope visual-build</code>）：结构变成家族身份、调色板槽位与场景时间轴，存放在项目旁
 - 共享场景 director（<code>runtime/scene-director.js</code>）：结构场景与边界包络是播放时间的纯函数
 - 确定性的 WebGL2 粒子乐器：整体叶瓣运动、流场拖尾、延迟轨道带、自适应质量分级与 Canvas 2D 回退
@@ -188,6 +233,10 @@ MIDI、CSV、PNG 和原始 JSON 仍然保留在 **Advanced tools** 中。MIDI �
 - 页面显示分析 backend 与可解释诊断，不显示虚假 confidence
 - 带 accuracy gates 的 benchmark，自动生成精度报告
 - 带有 28 个阻断级质量与性能门槛的视觉编排 benchmark（<code>beatscope benchmark-visual</code>）
+- 自描述的 handoff 契约：每个导出包含 manifest、AGENT.md 路由与零依赖 consumer probe
+- 退出码诚实的 handoff 与消费者验证命令（<code>validate-handoff</code>、<code>validate-consumer</code>）
+- 同一份包的三个参考消费者：Canvas 2D（零构建）、Three.js（pinned，import map）、Remotion（离线，frame/fps 时钟）
+- 冻结的跨 Agent 评估基础设施：任务、run recorder、评分表、conformance 表、只重放的 CI
 - Codex ZIP、Skill、JSON、CSV、PNG 和参考 MIDI 导出
 - 请求级临时文件、250 MB 上传限制和本地项目缓存
 - Python、纯 JavaScript 与 GitHub Actions 回归测试
@@ -201,7 +250,8 @@ MIDI、CSV、PNG 和原始 JSON 仍然保留在 **Advanced tools** 中。MIDI �
 | 本地服务 | Python HTTP server |
 | 播放 | HTML Audio、audio.currentTime |
 | 视觉 | WebGL2 粒子、Canvas 2D、原生 JavaScript、CSS |
-| 导出 | JSON、CSV、PNG、Standard MIDI、ZIP Skill package |
+| 参考消费者 | Canvas 2D、three.js 0.169.0、Remotion 4.0.520（依赖仅限示例目录） |
+| 导出 | JSON、CSV、PNG、Standard MIDI、ZIP handoff package |
 | 验证 | pytest、Node Test Runner、GitHub Actions |
 
 ## 项目结构
@@ -220,6 +270,8 @@ beatscope/
 ├── visual_recipe.py        # v0.8 结构 → 视觉配方/时间轴编译器
 ├── visual_recipe_schema.py # v0.8 视觉产物校验与规范字节
 ├── visual_benchmark.py     # v0.8 视觉编排基准与门槛
+├── consumer_contract.py    # v0.9 manifest/AGENT/probe/检查点契约规则
+├── consumer_validation.py  # v0.9 validate-handoff 与 validate-consumer 引擎
 ├── exports.py              # Codex、CSV、PNG 与 MIDI 导出
 ├── server.py               # 本地上传、项目与媒体服务
 ├── mcp/                    # MCP 服务器（service、PathPolicy、runtime bridge）
@@ -227,6 +279,7 @@ beatscope/
 ├── runtime/                # 共享 JavaScript 运行时（网页与导出同源）
 │   ├── runtime.js          #   track.at / quantize 等时间查询
 │   ├── scene-director.js   #   v0.8 结构场景与转场状态
+│   ├── consumer-probe.js   #   v0.9 随导出发布的零依赖包 probe
 │   └── visual-profile.js   #   pulse/turbulence/burst/hero 视觉预算
 ├── agent_skill/            # 打入 ZIP 的可移植 Skill
 └── web/
@@ -238,9 +291,15 @@ beatscope/
     ├── renderer.js         # 仪表刻度、结构与 cue map 渲染
     ├── audio.js            # 单一音频时钟与播放控制
     └── index.html
-skills/beatscope-visualizer/ # 仓库内 Skill
-tests/                       # Python 与 JavaScript 回归测试
+examples/                    # v0.9 消费同一份冻结包的参考消费者
+├── shared/                 #   fixture.beatscope、checkpoints.json、fixture-lock.json
+├── canvas-particles/       #   零构建 Canvas 2D 消费者
+├── threejs-geometry/       #   three@0.169.0 消费者（依赖仅限示例目录）
+└── remotion-composition/   #   Remotion 离线消费者（frame/fps 时钟）
 evaluations/                 # MCP evaluation 问答与固定 fixture
+└── agent-interoperability/ # v0.9 冻结任务、run recorder、评分表、报告
+tests/                       # Python 与 JavaScript 回归测试
+skills/beatscope-visualizer/ # 仓库内 Skill
 docs/                        # 截图、演示视频与 docs/mcp.md 契约文档
 ~~~
 
@@ -263,15 +322,19 @@ beatscope serve
 beatscope serve
 beatscope rhythm song.wav --drums drums.wav --beat-this song.beats --output rhythm.json
 beatscope visual-build rhythm.json
+beatscope validate-handoff examples\shared\fixture.beatscope --checkpoints examples\shared\checkpoints.json
+beatscope validate-consumer examples\canvas-particles
 beatscope separate song.wav --output-dir .beatscope-cache\song\stems --model htdemucs --device cuda
 beatscope benchmark
 beatscope benchmark-visual
 beatscope doctor
 ~~~
 
+运行参考消费者：把仓库根目录用静态服务器打开 —— 例如 <code>python -m http.server 8766</code> 后访问 <code>http://127.0.0.1:8766/examples/canvas-particles/</code> —— 再选择音频文件。Three.js 示例需先 <code>npm install</code> 安装 pinned 依赖；Remotion 组合在其目录内用 <code>npx remotion render</code> 离线渲染。
+
 ## MCP 服务器：让 Agent 直接使用节奏事实
 
-BeatScope 内置本地 MCP 服务器（`beatscope_mcp`）。Codex、Claude Desktop 等 MCP 客户端可以不经网页、不读源码，直接分析本地歌曲、按时间窗查询节拍、瞬态与 cue，并导出供 Agent 使用的 handoff ZIP。时间语义（bar/beat 相位、能量插值、onset 脉冲、量化）由与网页播放器和导出包完全相同的 JavaScript 运行时计算，三条路径不会各说各话。
+BeatScope 内置本地 MCP 服务器（`beatscope_mcp`）。Codex、Claude Desktop 等 MCP 客户端可以不经网页、不读源码，直接分析本地歌曲、按时间窗查询节拍、瞬态与 cue，并导出供 Agent 使用的 handoff ZIP。时间语义（bar/beat 相位、能量插值、onset 脉冲、量化）由与网页播放器和导出包完全相同的 JavaScript 运行时计算，所有路径不会各说各话。
 
 安装与启动：
 
@@ -340,27 +403,34 @@ beatscope serve --project rhythm.json
 ~~~powershell
 pytest -q
 python -m pytest tests\mcp -q
-node --test tests\test_grid.js tests\test_interaction.js tests\test_runtime.js tests\test_scene_director.js tests\test_visual_profile.js tests\test_playback_characterization.js tests\test_visual_stage.js tests\test_particle_geometry.js tests\test_particle_uniforms.js
+node --test tests\test_grid.js tests\test_interaction.js tests\test_runtime.js tests\test_scene_director.js tests\test_visual_profile.js tests\test_playback_characterization.js tests\test_playback_state.js tests\test_visual_stage.js tests\test_particle_geometry.js tests\test_particle_uniforms.js tests\test_consumer_probe.js tests\test_canvas_consumer.js tests\test_threejs_consumer.js tests\test_remotion_consumer.js
+beatscope validate-handoff examples\shared\fixture.beatscope --checkpoints examples\shared\checkpoints.json
 beatscope benchmark
 beatscope benchmark-structure
 beatscope benchmark-visual
 ~~~
 
-JavaScript 侧：网格与交互测试覆盖页面行为；runtime、scene-director 与 visual profile 测试覆盖共享运行时契约和纯度约束；characterization 测试比较网页播放器与 Codex 导出两条路径在同一时间点的输出一致性；visual-stage、particle-geometry 与 particle-uniform 测试固定了确定性 director 帧、点集确定性与 uniform 转换，并覆盖自适应质量分级与强制回退路径。Python 套件还会断言构建出的 wheel 包含粒子模块。结构测试覆盖按小节聚合的特征提取、边界与家族不变量、可选 schema 块、runtime 段落查询以及 MCP/导出一致性；结构基准把十个合成编曲对照冻结真值考核。视觉配方测试固定编译、身份与持久化规则，视觉基准测试固定门槛策略、每个门槛背后的运动语义，以及检查点文件逐字节一致的再生成。MCP 测试覆盖工具契约、路径安全、运行时一致性与导出。GitHub Actions 会在 Windows 与 Ubuntu、Python 3.10 与 3.12 上运行相同的核心检查。
+JavaScript 侧：网格与交互测试覆盖页面行为；runtime、scene-director 与 visual profile 测试覆盖共享运行时契约和纯度约束；characterization 测试比较网页播放器与导出两条路径在同一时间点的输出一致性；visual-stage、particle-geometry 与 particle-uniform 测试固定了确定性 director 帧、点集确定性与 uniform 转换，并覆盖自适应质量分级与强制回退路径。consumer 套件固定打包的 probe 以及 Canvas、Three.js、Remotion 三个消费者：声明诚实性、seek 确定性、reduced-motion 缩放、fps 不变的离线状态，以及对照共享 fixture 的检查点一致性。Python 套件还会断言构建出的 wheel 携带 probe 与粒子模块、每个示例都守在自己的声明之内、入库的评估证据可以逐字节重放。结构测试覆盖按小节聚合的特征提取、边界与家族不变量、可选 schema 块、runtime 段落查询以及 MCP/导出一致性；结构基准把十个合成编曲对照冻结真值考核。视觉配方测试固定编译、身份与持久化规则，视觉基准测试固定门槛策略、每个门槛背后的运动语义，以及检查点文件逐字节一致的再生成。MCP 测试覆盖工具契约、路径安全、运行时一致性与导出。GitHub Actions 在 Windows 与 Ubuntu、Python 3.10 与 3.12 上运行核心检查，外加一个 pinned consumer-evidence 任务验证 handoff 并强制示例 lockfile，以及一个带缓存的 Remotion 任务执行短离线渲染。
 
 ## 已知限制
 
+- 结果取决于 Coding Agent 与视觉需求本身；BeatScope 提供确定性的音乐时序，而不是成品美术指导。
+- v0.9 参考消费者基于 JavaScript；其他技术栈同样可以消费这份包，但未在此演示。
+- BeatScope 不识别乐器、情绪、歌词或语义上的歌曲角色。结构家族保持中性字母（<code>A</code>、<code>B</code>、<code>A′</code>），只表示重复关系，不是 Verse/Chorus。
+- 导出不包含源音频；包内只有时序事实。
+- 示例证明的是契约可移植性，不是普遍的框架支持。
+- 第三方依赖包与 Agent 生成的代码使用前仍需人工审查。
 - 内置分析不会可靠识别 kick、snare 或 808 身份，只报告瞬态和频段事实。
 - WebGL2 粒子乐器最多渲染 18,000 个主体点外加三条轨道带；WebGL2 不可用时 Canvas 2D 回退保持刻意较小的固定主体预算（最多 680 点），因此极高分辨率录屏仍建议使用支持 WebGL2 的浏览器。
-- 自动段落标签来自能量与重复关系，不等同于人工编曲标注。结构家族保持中性字母（<code>A</code>、<code>B</code>、<code>A′</code>）：只表示重复关系，不表示音乐角色；<code>BREAK</code> 表示近乎静音的例外。
 - 全曲结构检测宁可诚实也不强行切分：渐变演化、过短的音频和不清晰的重复都可能合法地只产生一个段落；边界携带的是 novelty 权重，而不是确定性声明。
 - 编译出的视觉配方描述的是结构，不是艺术指导：家族 motif 与调色板槽位是中性、确定性的起点，变体只做两处有界次要变化，<code>BREAK</code> 保持保留的悬置处理 —— 配方绝不把重复关系变成音乐角色。
+- 浏览器验证层在本版本中如实报告 <code>unavailable</code>：交互播放/跳转通过 Node probe 与示例测试套件验证，尚未通过自动化浏览器检查。
 - MP3 支持取决于本机 libsndfile 或 FFmpeg。
 - 这是本地创作与参考工具，不是 DAW、FLP 生成器或精确鼓组转录器。
 
 ## 项目状态
 
-BeatScope 现在覆盖从音频上传到可播放视觉、全曲结构、8 小节 cue map、MCP 查询与 Codex Skill 导出的完整本地流程。v0.6 建立了真实时间轴变速追踪和粒子乐器，v0.7 加入中性的结构分段与重复家族，v0.8 再把结构编译成由播放器、MCP 和导出共同使用的确定性视觉配方与场景时间轴。v0.8.1 补齐两个实际交接场景：项目摘要现在给出逐段 LOW / MID / HIGH 均值，每个导出包也包含经过测试的模块 Worker 适配器。软件包版本为 0.8.1，音频分析器有意保持 0.7.0，视觉配方契约保持 0.8.0。它仍是个人实验，但公开时序契约已经由回归测试固定，而不是只写在说明里。
+BeatScope 现在覆盖从音频上传到可播放视觉、全曲结构、8 小节 cue map、MCP 查询与可移植 handoff 包的完整本地流程。v0.6 建立了真实时间轴变速追踪和粒子乐器，v0.7 加入中性的结构分段与重复家族，v0.8 再把结构编译成由播放器、MCP 和导出共同使用的确定性视觉配方与场景时间轴，v0.8.1 补齐了实际交接路径（逐段能量摘要、经过测试的模块 Worker 适配器）。v0.9 把导出变成自描述契约 —— manifest、AGENT 路由、零依赖 probe —— 由 <code>validate-handoff</code> 与 <code>validate-consumer</code> 验证，并用三个互相独立的参考消费者（Canvas 2D、Three.js、Remotion）驱动同一份冻结 fixture 来证明，同时附带冻结的跨 Agent 评估基础设施（其运行记录诚实为零）。软件包版本为 0.9.0，音频分析器有意保持 0.7.0，视觉配方契约保持 0.8.0。它仍是个人实验，但公开时序契约已经由回归测试固定，而不是只写在说明里。
 
 ## License
 

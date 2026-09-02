@@ -1,2 +1,2 @@
 """BeatScope: small local audio-to-beatmap toolkit."""
-__version__ = "0.8.1"
+__version__ = "0.9.0"

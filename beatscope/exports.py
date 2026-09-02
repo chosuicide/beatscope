@@ -23,8 +23,9 @@ from .midi import TPQ, _meta_track, _meta_track_tempo_map, _tempo_map_tick, _tra
 from .visual_recipe import canonical_visual_bytes, compile_visual_artifacts
 from .visual_recipe_schema import InvalidVisualRecipe
 
-# The handoff package format version (plan section 4.3). This describes the
-# package contract, not the analyzer: ``beatscope.__version__`` stays 0.7.0.
+# The handoff package format version (plan section 4.3). This tracks the
+# package contract only: the audio analyser stays at schema.ANALYZER_VERSION
+# (0.7.0) and the visual recipe contract at 0.8.0.
 PACKAGE_VERSION = "0.9.0"
 
 
