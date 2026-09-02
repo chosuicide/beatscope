@@ -641,3 +641,177 @@ def test_sample_run_record_matches_schema_contract():
     allowed = set(run["properties"])
     assert set(sample) <= allowed
     assert is_sha256_hex(sample["task_sha256"])
+
+
+# ------------------------------------------------- evaluation replay gates
+
+
+def _eval_module(filename: str, name: str):
+    """Load an evaluation helper module (directory names are not packages)."""
+    import importlib.util
+
+    path = REPO_ROOT / "evaluations" / "agent-interoperability" / filename
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+EVAL_DIR = REPO_ROOT / "evaluations" / "agent-interoperability"
+
+
+def test_frozen_task_stays_stable_and_routable():
+    task = (EVAL_DIR / "TASK.md").read_text(encoding="utf-8")
+    # Plan section 13.1: the frozen instructions, byte for byte.
+    for anchor in (
+        "Build an original audio-reactive visual using the supplied BeatScope package.",
+        "Use the package's frame API as the only musical timing source.",
+        "Support play,\npause, seek, replay, and reduced motion.",
+        "Do not copy the BeatScope player.",
+        "Run the supplied validation command and report any unsupported requirement.",
+        "<TARGET_FRAMEWORK>",
+    ):
+        assert anchor in task, f"TASK.md lost anchor {anchor!r}"
+    digest = hashlib.sha256((EVAL_DIR / "TASK.md").read_bytes()).hexdigest()
+    assert is_sha256_hex(digest)
+
+
+def test_run_index_is_schema_shaped_and_hash_pinned():
+    index = json.loads((EVAL_DIR / "runs" / "index.json").read_text(encoding="utf-8"))
+    assert index["schema"] == "beatscope-agent-run-index-1"
+    assert isinstance(index["runs"], list)
+    task_sha256 = hashlib.sha256((EVAL_DIR / "TASK.md").read_bytes()).hexdigest()
+    lock = json.loads((REPO_ROOT / "examples" / "shared" / "fixture-lock.json").read_text(encoding="utf-8"))
+    for run in index["runs"]:
+        assert run["schema"] == "beatscope-agent-run-1"
+        assert run["task_sha256"] == task_sha256, "run record predates the frozen task"
+        assert run["package_sha256"] == lock["package_sha256"], "run record predates the frozen fixture"
+        assert run["validator"]["failed"] >= 0
+
+
+def test_recorder_rejects_private_or_underdocumented_records():
+    recorder = _eval_module("record_run.py", "beatscope_record_run")
+    record = {
+        "schema": "beatscope-agent-run-1",
+        "agent": "codex",
+        "model_family": "recorded-by-operator",
+        "date": "2026-09-01",
+        "task_sha256": "a" * 64,
+        "package_sha256": "b" * 64,
+        "framework": "canvas",
+        "attempts": 1,
+        "human_interventions": 0,
+        "validator": {"required": 6, "passed": 6, "failed": 0, "unavailable": 0},
+    }
+    assert recorder.structural_errors(dict(record)) == []
+
+    smuggled = dict(record)
+    smuggled["hidden_prompt"] = "the whole private transcript"
+    assert any("forbidden-keys" in error for error in recorder.structural_errors(smuggled))
+
+    credentialed = dict(record)
+    credentialed["artistic_note"] = "used key sk-abc123 during the run"
+    assert recorder.secret_errors(credentialed), "credential-shaped text must be rejected"
+
+    undocumented = dict(record)
+    undocumented["human_interventions"] = 2
+    assert any("human_repairs" in error for error in recorder.structural_errors(undocumented))
+
+
+def test_recorder_writes_append_only_records(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    recorder = _eval_module("record_run.py", "beatscope_record_run_writes")
+    monkeypatch.setattr(recorder, "RUNS_DIR", tmp_path / "runs")
+    record = {
+        "schema": "beatscope-agent-run-1",
+        "agent": "codex",
+        "model_family": "recorded-by-operator",
+        "date": "2026-09-01",
+        "task_sha256": hashlib.sha256((EVAL_DIR / "TASK.md").read_bytes()).hexdigest(),
+        "package_sha256": json.loads((REPO_ROOT / "examples" / "shared" / "fixture-lock.json").read_text(encoding="utf-8"))[
+            "package_sha256"
+        ],
+        "framework": "canvas",
+        "attempts": 1,
+        "human_interventions": 0,
+        "validator": {"required": 6, "passed": 6, "failed": 0, "unavailable": 0},
+    }
+    candidate = tmp_path / "candidate.json"
+    candidate.write_text(json.dumps(record), encoding="utf-8")
+
+    assert recorder.main(["--record", str(candidate)]) == 2  # review not confirmed
+    assert recorder.main(["--record", str(candidate), "--confirm-review"]) == 0
+    index = json.loads((tmp_path / "runs" / "index.json").read_text(encoding="utf-8"))
+    assert len(index["runs"]) == 1
+    assert index["runs"][0]["framework"] == "canvas"
+    # Evidence is append-only: the same record never overwrites itself.
+    assert recorder.main(["--record", str(candidate), "--confirm-review"]) == 1
+
+
+def test_checked_in_reports_are_normalized_and_honest():
+    reports_dir = EVAL_DIR / "reports"
+    expected = {
+        "handoff-fixture.json",
+        "canvas-particles.json",
+        "threejs-geometry.json",
+        "remotion-composition.json",
+    }
+    assert {path.name for path in reports_dir.glob("*.json")} == expected
+
+    handoff = json.loads((reports_dir / "handoff-fixture.json").read_text(encoding="utf-8"))
+    assert handoff["schema"] == "beatscope-consumer-report-1"
+    assert handoff["ok"] is True and handoff["exit_code"] == 0
+    assert handoff["target"] == "examples/shared/fixture.beatscope"
+
+    for name in ("canvas-particles", "threejs-geometry", "remotion-composition"):
+        report = json.loads((reports_dir / f"{name}.json").read_text(encoding="utf-8"))
+        assert report["target"] == f"examples/{name}"
+        status = {check["name"]: check["status"] for check in report["checks"]}
+        for layer in ("declaration", "handoff", "node-probe", "static"):
+            assert status[layer] == "passed", (name, layer)
+        assert report["summary"]["failed"] == 0
+        # Honest gaps stay visible instead of being dropped.
+        assert "unavailable" in status.values() or report["summary"]["unavailable"] >= 1
+
+
+@pytest.mark.skipif(_node_missing(), reason="node is required to replay probe-backed reports")
+def test_checked_in_reports_replay_byte_identically():
+    """CI's replay gate: regenerated evidence equals the checked-in bytes."""
+    recorder = _eval_module("record_reports.py", "beatscope_record_reports")
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        fresh_dir = Path(tmp) / "reports"
+        fresh_dir.mkdir()
+        for name, report in recorder.collect_reports():
+            fresh_dir.joinpath(name).write_text(
+                json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            )
+        for path in sorted((EVAL_DIR / "reports").glob("*.json")):
+            assert path.read_bytes() == fresh_dir.joinpath(path.name).read_bytes(), path.name
+
+
+def test_conformance_table_replays_from_checked_in_evidence():
+    generator = _eval_module("generate_conformance.py", "beatscope_generate_conformance")
+    regenerated = generator.build_markdown()
+    checked_in = (EVAL_DIR / "conformance.md").read_text(encoding="utf-8")
+    assert regenerated == checked_in
+    # With zero recorded runs the cross-Agent claim must stay pending.
+    assert "PENDING" in regenerated
+
+
+def test_ci_never_calls_remote_agents():
+    """Plan section 13: CI replays checked-in outputs, never model APIs."""
+    workflow = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    for forbidden in (
+        "api.openai.com",
+        "api.anthropic.com",
+        "api.deepseek.com",
+        "api.mistral.ai",
+        "openrouter.ai",
+        "generativelanguage.googleapis.com",
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "run-agent",
+    ):
+        assert forbidden not in workflow, f"CI must not reference {forbidden}"

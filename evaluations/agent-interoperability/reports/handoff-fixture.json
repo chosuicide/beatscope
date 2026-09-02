@@ -1,0 +1,81 @@
+{
+  "checks": [
+    {
+      "errors": [],
+      "name": "safety",
+      "notes": [
+        "directory:16 members read in place"
+      ],
+      "required": true,
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "name": "manifest",
+      "notes": [],
+      "required": true,
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "name": "integrity",
+      "notes": [],
+      "required": true,
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "name": "rhythm-map",
+      "notes": [],
+      "required": true,
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "name": "visual-artifacts",
+      "notes": [],
+      "required": false,
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "name": "node-probe",
+      "notes": [],
+      "required": true,
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "name": "checkpoints",
+      "notes": [],
+      "required": false,
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "name": "worker-smoke",
+      "notes": [],
+      "required": true,
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "name": "leakage",
+      "notes": [],
+      "required": false,
+      "status": "passed"
+    }
+  ],
+  "command": "validate-handoff",
+  "exit_code": 0,
+  "ok": true,
+  "schema": "beatscope-consumer-report-1",
+  "summary": {
+    "failed": 0,
+    "passed": 9,
+    "skipped": 0,
+    "total": 9,
+    "unavailable": 0
+  },
+  "target": "examples/shared/fixture.beatscope"
+}

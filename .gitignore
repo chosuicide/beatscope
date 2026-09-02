@@ -12,6 +12,7 @@ __pycache__/
 htmlcov/
 build/
 dist/
+out/
 videos/
 *.log
 node_modules/

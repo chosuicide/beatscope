@@ -40,10 +40,101 @@ jobs:
         run: python -m pytest tests/mcp -q
 
       - name: JavaScript tests
-        run: node --test tests/test_grid.js tests/test_interaction.js tests/test_runtime.js tests/test_scene_director.js tests/test_visual_profile.js tests/test_playback_characterization.js tests/test_playback_state.js tests/test_visual_stage.js tests/test_particle_geometry.js tests/test_particle_uniforms.js
+        run: node --test tests/test_grid.js tests/test_interaction.js tests/test_runtime.js tests/test_scene_director.js tests/test_visual_profile.js tests/test_playback_characterization.js tests/test_playback_state.js tests/test_visual_stage.js tests/test_particle_geometry.js tests/test_particle_uniforms.js tests/test_consumer_probe.js tests/test_canvas_consumer.js tests/test_threejs_consumer.js tests/test_remotion_consumer.js
 
       - name: Benchmark gates
         run: python -m beatscope.cli benchmark --output-dir build/benchmark-ci
 
       - name: MCP stdio smoke
         run: python -m pytest tests/mcp/test_stdio.py -q
+
+  consumer-evidence:
+    # One pinned job validates every handoff and consumer gate without
+    # multiplying the heavy matrix (plan section 19). It replays
+    # checked-in evidence only; it never contacts remote Agents.
+    name: Pinned consumer evidence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install BeatScope
+        run: python -m pip install -e ".[dev]"
+
+      - name: Validate the frozen handoff
+        run: python -m beatscope.cli validate-handoff examples/shared/fixture.beatscope --checkpoints examples/shared/checkpoints.json
+
+      - name: Example declaration, clock, static, and dependency gates
+        run: python -m pytest tests/test_examples.py -q
+
+      - name: Consumer contract and validation replay
+        run: python -m pytest tests/test_consumer_contract.py tests/test_consumer_validation.py -q
+
+      - name: JavaScript consumer suites
+        run: node --test tests/test_consumer_probe.js tests/test_canvas_consumer.js tests/test_threejs_consumer.js tests/test_remotion_consumer.js
+
+      - name: Enforce example lockfiles
+        run: |
+          npm ci --prefix examples/threejs-geometry --no-audit --no-fund
+          npm ci --prefix examples/remotion-composition --no-audit --no-fund
+
+      - name: Write conformance evidence artifacts
+        if: always()
+        run: |
+          mkdir -p build/consumer-evidence
+          python evaluations/agent-interoperability/record_reports.py --out build/consumer-evidence
+          python evaluations/agent-interoperability/generate_conformance.py
+          cp evaluations/agent-interoperability/conformance.md build/consumer-evidence/conformance.md
+
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: consumer-evidence
+          path: build/consumer-evidence
+          retention-days: 7
+
+  remotion-render:
+    # Remotion dependency/build/state tests in a separate cached job.
+    # A short smoke render may upload an artifact but is never published.
+    name: Remotion offline render evidence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: examples/remotion-composition/package-lock.json
+
+      - name: Install pinned Remotion dependencies
+        working-directory: examples/remotion-composition
+        run: npm ci --no-audit --no-fund
+
+      - name: Remotion state tests
+        run: node --test tests/test_remotion_consumer.js
+
+      - name: Bundle the composition
+        working-directory: examples/remotion-composition
+        run: npx remotion bundle src/index.ts --out=build/bundle
+
+      - name: Short smoke render (PNG sequence, no video muxing)
+        working-directory: examples/remotion-composition
+        run: npx remotion render src/index.ts BeatScopeScope out/sequence --frames=0-30 --sequence --image-format=png
+
+      - name: Upload smoke render artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: remotion-smoke-render
+          path: examples/remotion-composition/out/sequence
+          retention-days: 7

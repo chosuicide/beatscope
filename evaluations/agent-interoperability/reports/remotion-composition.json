@@ -1,0 +1,77 @@
+{
+  "checks": [
+    {
+      "errors": [],
+      "name": "declaration",
+      "notes": [],
+      "required": true,
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "name": "handoff",
+      "notes": [],
+      "required": true,
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "name": "node-probe",
+      "notes": [
+        "canonical frames match the recorded checkpoints"
+      ],
+      "required": true,
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "name": "static",
+      "notes": [
+        "scanned 4 source files"
+      ],
+      "required": true,
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "name": "browser",
+      "notes": [
+        "consumer declares no interactive playback"
+      ],
+      "required": false,
+      "status": "skipped"
+    },
+    {
+      "errors": [
+        "offline:tooling-not-wired-in-this-release"
+      ],
+      "name": "offline",
+      "notes": [
+        "offline validation arrives with the Remotion example commit"
+      ],
+      "required": true,
+      "status": "unavailable"
+    },
+    {
+      "errors": [],
+      "name": "visual-snapshot",
+      "notes": [
+        "non-blocking layer; human review of composition"
+      ],
+      "required": false,
+      "status": "skipped"
+    }
+  ],
+  "command": "validate-consumer",
+  "exit_code": 2,
+  "ok": false,
+  "schema": "beatscope-consumer-report-1",
+  "summary": {
+    "failed": 0,
+    "passed": 4,
+    "skipped": 2,
+    "total": 7,
+    "unavailable": 1
+  },
+  "target": "examples/remotion-composition"
+}
