@@ -54,6 +54,8 @@ jobs:
     # checked-in evidence only; it never contacts remote Agents.
     name: Pinned consumer evidence
     runs-on: ubuntu-latest
+    env:
+      BEATSCOPE_PINNED_CONSUMER_EVIDENCE: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -75,12 +77,6 @@ jobs:
       - name: Example declaration, clock, static, and dependency gates
         run: python -m pytest tests/test_examples.py -q
 
-      - name: Consumer contract and validation replay
-        run: python -m pytest tests/test_consumer_contract.py tests/test_consumer_validation.py -q
-
-      - name: JavaScript consumer suites
-        run: node --test tests/test_consumer_probe.js tests/test_canvas_consumer.js tests/test_threejs_consumer.js tests/test_remotion_consumer.js
-
       - name: Enforce example lockfiles
         run: |
           npm ci --prefix tests/browser --no-audit --no-fund
@@ -90,6 +86,12 @@ jobs:
       - name: Install pinned browser validator
         working-directory: tests/browser
         run: npx playwright install --with-deps chromium
+
+      - name: Consumer contract and validation replay
+        run: python -m pytest tests/test_consumer_contract.py tests/test_consumer_validation.py -q
+
+      - name: JavaScript consumer suites
+        run: node --test tests/test_consumer_probe.js tests/test_canvas_consumer.js tests/test_threejs_consumer.js tests/test_remotion_consumer.js
 
       - name: Real browser and offline consumer gates
         run: |
