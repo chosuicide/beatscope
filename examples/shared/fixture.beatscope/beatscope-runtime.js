@@ -234,11 +234,10 @@ export function energyAt(map, time, band = 'all') {
   return clamp(lerp(Number(frames[left]?.[band]) || 0, Number(frames[right]?.[band]) || 0, position - left));
 }
 
-/** Last onset at or before ``time`` with its age (§39). ``age`` is null
- * before the first onset — JSON-serializable "none yet", not Infinity. */
+/** Last onset at or before ``time`` with its age (§39). */
 export function previousOnset(map, indexes, time) {
   const index = previousIndex(indexes.onsetTimes, Number(time) || 0);
-  if (index < 0) return { item: null, age: null };
+  if (index < 0) return { item: null, age: Infinity };
   const item = map.onsets[index];
   return { item, age: Math.max(0, (Number(time) || 0) - timeOf(item)) };
 }
@@ -247,7 +246,7 @@ export function previousOnset(map, indexes, time) {
 export function nearestOnset(map, indexes, time) {
   const t = Number(time) || 0;
   const times = indexes.onsetTimes;
-  if (!times.length) return { item: null, distance: null };
+  if (!times.length) return { item: null, distance: Infinity };
   const index = previousIndex(times, t);
   const candidates = [];
   if (index >= 0) candidates.push(index);

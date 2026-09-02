@@ -39,6 +39,13 @@
     },
     {
       "errors": [],
+      "name": "executable-trust",
+      "notes": [],
+      "required": true,
+      "status": "passed"
+    },
+    {
+      "errors": [],
       "name": "node-probe",
       "notes": [],
       "required": true,
@@ -72,9 +79,9 @@
   "schema": "beatscope-consumer-report-1",
   "summary": {
     "failed": 0,
-    "passed": 9,
+    "passed": 10,
     "skipped": 0,
-    "total": 9,
+    "total": 10,
     "unavailable": 0
   },
   "target": "examples/shared/fixture.beatscope"

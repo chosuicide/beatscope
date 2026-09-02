@@ -202,14 +202,16 @@ MIDI, CSV, PNG, and raw JSON remain under **Advanced tools**. MIDI is a quantise
 
 ## Validating a handoff or a consumer
 
-Two commands check the contract without a browser and without any network access:
+The base checks are local and network-free. Add the opt-in execution layer that matches the consumer:
 
 ~~~powershell
 python -m beatscope.cli validate-handoff path\to\package.beatscope --checkpoints checkpoints.json
 python -m beatscope.cli validate-consumer examples\canvas-particles
+python -m beatscope.cli validate-consumer examples\canvas-particles --browser
+python -m beatscope.cli validate-consumer examples\remotion-composition --offline
 ~~~
 
-<code>validate-handoff</code> runs safety (path traversal, duplicate and case-collision members, size caps), manifest, independent hash integrity, rhythm-map sanity, probe replay against recorded checkpoints, worker smoke, and a leakage scan; JavaScript executes only after path safety and integrity both pass. <code>validate-consumer</code> adds the consumer's declaration, static hygiene, and node-probe layers on top. Exit codes are honest: <code>0</code> all required checks passed, <code>1</code> something failed, <code>2</code> nothing failed but a required layer was skipped or unavailable (for example, an interactive consumer checked without <code>--browser</code>). Interactive consumers expose a frozen <code>__BEATSCOPE_CONSUMER__</code> debug hook; the browser layer itself reports <code>unavailable</code> in this release rather than pretending to run.
+<code>validate-handoff</code> checks archive paths, manifest shape, independent hashes, rhythm data, executable bytes against the installed BeatScope templates, checkpoint replay, worker startup, and leakage. Package JavaScript runs only after all four trust gates — path safety, manifest, integrity, and executable-template identity — pass. <code>validate-consumer --browser</code> starts pinned Chromium, loads a synthetic local WAV, and checks play/pause, seek, replay, deterministic frames, reduced-motion timing, console errors, and the frozen debug hook. <code>--offline</code> loads the declared frame adapter and checks repeatability plus 24/30/60fps parity. Exit <code>0</code> means every requested required layer passed; <code>1</code> is a contract failure; <code>2</code> means a required layer was skipped or its tooling is unavailable. Browser tooling is pinned under <code>tests/browser</code> and enforced in CI.
 
 ## Cross-Agent evaluation: pending, not claimed
 

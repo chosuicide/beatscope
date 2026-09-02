@@ -122,6 +122,7 @@ def test_frozen_fixture_passes_every_check_in_directory_form():
         "integrity": "passed",
         "rhythm-map": "passed",
         "visual-artifacts": "passed",
+        "executable-trust": "passed",
         "node-probe": "passed",
         "checkpoints": "passed",
         "worker-smoke": "passed",
@@ -285,13 +286,21 @@ def test_missing_member_fails_integrity_and_skips_node(tmp_path):
     assert statuses["worker-smoke"]["status"] == "skipped"
 
 
-def test_tampered_manifest_still_gets_probe_diagnostics(tmp_path):
+def test_tampered_manifest_blocks_javascript_execution(tmp_path, monkeypatch):
+    called = False
+
+    def forbidden_probe(*args, **kwargs):
+        nonlocal called
+        called = True
+        raise AssertionError("untrusted package JavaScript must not execute")
+
+    monkeypatch.setattr(cv, "_run_probe", forbidden_probe)
     zip_path = _zip_fixture(tmp_path / "tampered.zip")
     with zipfile.ZipFile(zip_path) as archive:
         members = {name: archive.read(name) for name in archive.namelist()}
     manifest = json.loads(members[MANIFEST_MEMBER])
-    manifest["duration"] += 1.0
-    rebuilt = tmp_path / "tampered-duration.zip"
+    manifest["entry"] = "../outside.mjs"
+    rebuilt = tmp_path / "tampered-entry.zip"
     with zipfile.ZipFile(rebuilt, "w") as archive:
         for name, data in members.items():
             archive.writestr(name, json.dumps(manifest).encode() if name == MANIFEST_MEMBER else data)
@@ -299,8 +308,8 @@ def test_tampered_manifest_still_gets_probe_diagnostics(tmp_path):
     assert report["exit_code"] == 1
     statuses = _status_by_name(report)
     assert statuses["manifest"]["status"] == "failed"
-    assert statuses["node-probe"]["status"] == "failed"
-    assert any("duration" in error for error in statuses["node-probe"]["errors"])
+    assert statuses["node-probe"]["status"] == "skipped"
+    assert called is False
 
 
 def test_corrupted_member_fails_integrity(tmp_path):
@@ -330,11 +339,11 @@ def test_tampered_checkpoints_are_caught_by_the_probe_replay(tmp_path):
     assert any(error.startswith("replay:") for error in replay_errors), replay_errors
 
 
-def test_worker_smoke_detects_a_broken_worker(tmp_path):
+def test_executable_trust_rejects_a_rehashed_broken_worker(tmp_path):
     package = _copy_package(tmp_path / "fixture.beatscope")
     worker_path = package / "worker-example.js"
     worker_path.write_text("export const broken = true;\n", encoding="utf-8")
-    # Keep integrity green so the smoke test itself is what fails.
+    # Self-authored integrity remains green; template trust must still fail.
     manifest_path = package / MANIFEST_MEMBER
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["integrity"]["members"]["worker-example.js"] = sha256_hex(worker_path.read_bytes())
@@ -343,7 +352,8 @@ def test_worker_smoke_detects_a_broken_worker(tmp_path):
     assert report["exit_code"] == 1
     statuses = _status_by_name(report)
     assert statuses["integrity"]["status"] == "passed"
-    assert statuses["worker-smoke"]["status"] == "failed"
+    assert statuses["executable-trust"]["status"] == "failed"
+    assert statuses["worker-smoke"]["status"] == "skipped"
 
 
 def test_smuggled_audio_member_fails_leakage(tmp_path):
@@ -491,14 +501,32 @@ def test_consumer_playback_requires_the_browser_flag(tmp_path):
     assert any("--browser" in note for note in browser["notes"])
 
 
-def test_consumer_browser_tooling_is_unavailable_not_passed(tmp_path):
+def test_consumer_propagates_a_browser_contract_failure(tmp_path, monkeypatch):
     root = tmp_path / "examples"
     _copy_package(root / "packages" / "fixture.beatscope")
     example = _consumer_example(root, "canvas-fake", playback=True)
+    monkeypatch.setattr(cv, "_browser_check", lambda *args: cv._failed_check("browser", ["browser:hook-missing"]))
+    report = validate_consumer(example, validation_root=root, browser=True)
+    assert report["exit_code"] == 1
+    browser = _status_by_name(report)["browser"]
+    assert browser["status"] == "failed" and browser["required"] is True
+
+
+def test_consumer_browser_reports_missing_tooling_honestly(tmp_path, monkeypatch):
+    root = tmp_path / "examples"
+    _copy_package(root / "packages" / "fixture.beatscope")
+    example = _consumer_example(root, "canvas-fake", playback=True)
+    monkeypatch.setattr(cv, "_playwright_module", lambda: None)
     report = validate_consumer(example, validation_root=root, browser=True)
     assert report["exit_code"] == 2
-    browser = _status_by_name(report)["browser"]
-    assert browser["status"] == "unavailable" and browser["required"] is True
+    assert _status_by_name(report)["browser"]["status"] == "unavailable"
+
+
+def test_silent_rhythm_map_is_valid():
+    rhythm = json.loads((FIXTURE_DIR / "rhythm-map.json").read_text(encoding="utf-8"))
+    rhythm["onsets"] = []
+    check = cv._rhythm_check({"rhythm-map.json": json.dumps(rhythm).encode("utf-8")})
+    assert check["status"] == "passed"
 
 
 def test_consumer_node_probe_fails_without_checkpoints(tmp_path):

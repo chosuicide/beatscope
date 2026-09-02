@@ -1,0 +1,9 @@
+{
+  "name": "beatscope-browser-validation",
+  "version": "0.9.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "playwright": "1.61.0"
+  }
+}

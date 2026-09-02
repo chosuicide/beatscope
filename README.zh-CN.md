@@ -202,14 +202,16 @@ MIDI、CSV、PNG 和原始 JSON 仍然保留在 **Advanced tools** 中。MIDI �
 
 ## 验证 handoff 与消费者
 
-两个命令即可检查契约，全程无需浏览器、无需网络：
+基础检查完全在本地运行且无需网络；再按消费者类型显式开启对应执行层：
 
 ~~~powershell
 python -m beatscope.cli validate-handoff path\to\package.beatscope --checkpoints checkpoints.json
 python -m beatscope.cli validate-consumer examples\canvas-particles
+python -m beatscope.cli validate-consumer examples\canvas-particles --browser
+python -m beatscope.cli validate-consumer examples\remotion-composition --offline
 ~~~
 
-<code>validate-handoff</code> 依次执行安全检查（路径穿越、重复与大小写冲突成员、体积上限）、manifest、独立哈希完整性、rhythm-map 合理性、对照录制检查点的 probe 重放、worker 冒烟与泄露扫描；只有在路径安全与完整性都通过之后才会执行 JavaScript。<code>validate-consumer</code> 在此之上追加消费者的声明、静态卫生与 node-probe 层。退出码诚实：<code>0</code> 全部必需检查通过，<code>1</code> 有检查失败，<code>2</code> 没有失败但某个必需层被跳过或不可用（例如交互消费者没有带 <code>--browser</code>）。交互消费者暴露冻结的 <code>__BEATSCOPE_CONSUMER__</code> 调试钩子；浏览器层本身在本版本中如实报告 <code>unavailable</code>，而不是假装运行过。
+<code>validate-handoff</code> 检查归档路径、manifest 形状、独立哈希、rhythm 数据、可执行文件是否与当前 BeatScope 模板逐字节一致、检查点重放、worker 启动与泄露。只有路径安全、manifest、完整性、可执行模板身份四道门槛全部通过，包内 JavaScript 才会运行。<code>validate-consumer --browser</code> 会真正启动固定版本 Chromium，加载本地合成 WAV，并检查播放/暂停、seek、重播、帧确定性、reduced-motion 时序、控制台错误与冻结调试钩子；<code>--offline</code> 则加载声明的帧适配器，核对重复运行与 24/30/60fps 一致性。退出码 <code>0</code> 表示所请求的必需层全部通过，<code>1</code> 表示契约失败，<code>2</code> 表示必需层被跳过或工具不可用。浏览器工具固定在 <code>tests/browser</code>，并由 CI 强制执行。
 
 ## 跨 Agent 评估：pending，不声明
 

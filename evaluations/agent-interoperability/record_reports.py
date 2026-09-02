@@ -8,8 +8,8 @@ write anything that re-introduces machine-specific content.
 
 Each interactive consumer is validated with ``--browser`` semantics and
 the offline consumer with ``--offline`` semantics, so every declared
-capability layer carries a definitive status: ``passed`` or the honest
-``unavailable`` while browser tooling is not wired in this release.
+capability layer carries a definitive status. CI installs the pinned
+browser tooling, so all three reference consumers must report ``passed``.
 
 Usage:
 

@@ -115,9 +115,7 @@ for (const time of TIMES) {
     assert.ok(Math.abs(exported.onset.age - web.onsetAge) < 1e-12);
     assert.equal(exported.onset.item.id, expected.item.id);
   } else {
-    // v0.9: no onset yet reports age null (JSON-serializable "none yet")
-    // instead of Infinity, which the consumer probe must be able to hash.
-    assert.equal(web.onsetAge, null);
+    assert.equal(web.onsetAge, Infinity);
   }
   const exportedAccent = exported.accent ? exported.accent.value : 0;
   assert.equal(exportedAccent, web.accent, `accent carrier mismatch at t=${time}`);

@@ -1,8 +1,8 @@
 {
-  "checkpoint_sha256": "33e66dafa240520eba9eb246a6833b8c78c7a979d9979dec19ed590be6cc20c9",
+  "checkpoint_sha256": "63903c082c9bf14bc20663c522aaf97a1f6b054d494b0b4a982f2a3fa569e0a6",
   "duration": 30.0001,
   "generator_version": "consumer-fixture-1",
-  "package_sha256": "e3889b7fd03bed6622de128c0d90552785a5e4b0f71e172b963f54b2552affd5",
+  "package_sha256": "40d6e8ef184b9044c18150fb496d0a1c06faba6b26d3fc46c461cdd7a9b1699d",
   "rhythm_sha256": "a44b472983339e2b70fc0f20a0ba2f018d724480715ec7af2f4d068cf7f64f6a",
   "schema": "beatscope-consumer-fixture-lock-1"
 }

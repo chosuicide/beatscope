@@ -4,7 +4,7 @@
 // the current time and frame — never an accumulated delta — so seek and
 // replay land on identical geometry.
 import * as THREE from "three";
-import { getBeatScopeFrame } from "../shared/fixture.beatscope/visual-state.js";
+import { getBeatScopeFrame } from "../../shared/fixture.beatscope/visual-state.js";
 import { mapFrame, familyColor, pointOpacity } from "./beatscope-mapping.js";
 import { seededShell } from "./seeded-geometry.js";
 
@@ -19,12 +19,19 @@ const reducedCheckbox = document.getElementById("reduced-motion");
 const statusLabel = document.getElementById("status");
 const fallback = document.getElementById("webgl-fallback");
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+let renderer = null;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+} catch (error) {
+  fallback.hidden = false;
+  statusLabel.textContent = `WebGL unavailable: ${error?.message || "renderer initialization failed"}`;
+}
 
 // Honest fallback when WebGL is unavailable or the context is lost.
 canvas.addEventListener("webglcontextlost", (event) => {
   event.preventDefault();
+  renderer = null;
   fallback.hidden = false;
   statusLabel.textContent = "WebGL context lost: rendering stopped, audio keeps playing.";
 });
@@ -71,7 +78,7 @@ window.__BEATSCOPE_CONSUMER__ = Object.freeze({
     reducedMotion: reducedMotion(),
     seed: SEED,
     particleCount: COUNT,
-    drawCalls: renderer.info.render.calls,
+    drawCalls: renderer?.info.render.calls ?? 0,
   }),
 });
 
@@ -109,6 +116,7 @@ function formatTime(seconds) {
 }
 
 function resize() {
+  if (!renderer) return;
   const ratio = window.devicePixelRatio || 1;
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
@@ -136,7 +144,7 @@ function paint() {
   material.color.setHex(familyColor(frame));
   material.opacity = Math.max(0, Math.min(1, pointOpacity(frame, reducedMotion())));
 
-  renderer.render(scene, camera);
+  if (renderer) renderer.render(scene, camera);
   elapsedLabel.textContent = formatTime(time);
   if (Number.isFinite(audio.duration)) {
     totalLabel.textContent = formatTime(duration());

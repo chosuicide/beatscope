@@ -769,8 +769,10 @@ def test_checked_in_reports_are_normalized_and_honest():
         for layer in ("declaration", "handoff", "node-probe", "static"):
             assert status[layer] == "passed", (name, layer)
         assert report["summary"]["failed"] == 0
-        # Honest gaps stay visible instead of being dropped.
-        assert "unavailable" in status.values() or report["summary"]["unavailable"] >= 1
+        requested = "offline" if name == "remotion-composition" else "browser"
+        irrelevant = "browser" if requested == "offline" else "offline"
+        assert status[requested] == "passed"
+        assert status[irrelevant] == "skipped"
 
 
 @pytest.mark.skipif(_node_missing(), reason="node is required to replay probe-backed reports")

@@ -27,7 +27,7 @@
       "errors": [],
       "name": "static",
       "notes": [
-        "scanned 4 source files"
+        "scanned 5 source files"
       ],
       "required": true,
       "status": "passed"
@@ -42,15 +42,13 @@
       "status": "skipped"
     },
     {
-      "errors": [
-        "offline:tooling-not-wired-in-this-release"
-      ],
+      "errors": [],
       "name": "offline",
       "notes": [
-        "offline validation arrives with the Remotion example commit"
+        "frame/FPS checks: deterministic, fpsInvariant, negativeClamp, validDuration"
       ],
       "required": true,
-      "status": "unavailable"
+      "status": "passed"
     },
     {
       "errors": [],
@@ -63,15 +61,15 @@
     }
   ],
   "command": "validate-consumer",
-  "exit_code": 2,
-  "ok": false,
+  "exit_code": 0,
+  "ok": true,
   "schema": "beatscope-consumer-report-1",
   "summary": {
     "failed": 0,
-    "passed": 4,
+    "passed": 5,
     "skipped": 2,
     "total": 7,
-    "unavailable": 1
+    "unavailable": 0
   },
   "target": "examples/remotion-composition"
 }

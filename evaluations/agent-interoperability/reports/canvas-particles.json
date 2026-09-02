@@ -33,15 +33,13 @@
       "status": "passed"
     },
     {
-      "errors": [
-        "browser:tooling-not-wired-in-this-release"
-      ],
+      "errors": [],
       "name": "browser",
       "notes": [
-        "browser validation arrives with the interactive example commits"
+        "real Chromium checks: frozenHook, playback, reducedMotionTiming, replay, seek, seekDeterministic"
       ],
       "required": true,
-      "status": "unavailable"
+      "status": "passed"
     },
     {
       "errors": [],
@@ -63,15 +61,15 @@
     }
   ],
   "command": "validate-consumer",
-  "exit_code": 2,
-  "ok": false,
+  "exit_code": 0,
+  "ok": true,
   "schema": "beatscope-consumer-report-1",
   "summary": {
     "failed": 0,
-    "passed": 4,
+    "passed": 5,
     "skipped": 2,
     "total": 7,
-    "unavailable": 1
+    "unavailable": 0
   },
   "target": "examples/canvas-particles"
 }

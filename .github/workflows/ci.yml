@@ -83,8 +83,19 @@ jobs:
 
       - name: Enforce example lockfiles
         run: |
+          npm ci --prefix tests/browser --no-audit --no-fund
           npm ci --prefix examples/threejs-geometry --no-audit --no-fund
           npm ci --prefix examples/remotion-composition --no-audit --no-fund
+
+      - name: Install pinned browser validator
+        working-directory: tests/browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Real browser and offline consumer gates
+        run: |
+          python -m beatscope.cli validate-consumer examples/canvas-particles --browser --checkpoints examples/shared/checkpoints.json
+          python -m beatscope.cli validate-consumer examples/threejs-geometry --browser --checkpoints examples/shared/checkpoints.json
+          python -m beatscope.cli validate-consumer examples/remotion-composition --offline --checkpoints examples/shared/checkpoints.json
 
       - name: Write conformance evidence artifacts
         if: always()

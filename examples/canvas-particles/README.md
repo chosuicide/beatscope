@@ -50,12 +50,10 @@ regenerable from the test suite and never ships in Git.
 python -c "from beatscope.cli import main; main(['validate-consumer','examples/canvas-particles'])"
 ```
 
-Layers validated read-only: declaration, referenced handoff package
-(safety, manifest, integrity, probe, checkpoints, worker, leakage), and
-static source hygiene. The browser layer reports as not requested unless
-you pass `--browser`; interactive browser probing is wired by the later
-v0.9 commits, and until then `--browser` reports `unavailable` — an
-honest gap, never a silent pass.
+The base command validates the declaration, handoff package, checkpoints,
+worker, leakage, and static source hygiene. Add `--browser` to launch the
+pinned Chromium probe and exercise real audio loading, play/pause, seek,
+replay, reduced motion, deterministic frames, and console cleanliness.
 
 Node-side checkpoint parity for this consumer's geometry lives in
 `tests/test_canvas_consumer.js` (`node --test tests/test_canvas_consumer.js`).

@@ -63,6 +63,29 @@ function canonicalizeValue(value, seen) {
   }
 }
 
+/**
+ * v0.8's public runtime uses positive Infinity as the no-previous-onset
+ * sentinel. Preserve that runtime contract, but normalize the one documented
+ * carrier to null in checkpoint JSON. Other non-finite values remain errors.
+ */
+function normalizeRuntimeSentinels(value, seen = new Set()) {
+  if (!Array.isArray(value) && !isPlainObject(value)) return value;
+  if (seen.has(value)) throw new TypeError("frame value is cyclic");
+  seen.add(value);
+  try {
+    if (Array.isArray(value)) return value.map((item) => normalizeRuntimeSentinels(item, seen));
+    const normalized = {};
+    for (const [key, item] of Object.entries(value)) {
+      normalized[key] = item === Number.POSITIVE_INFINITY && (key === "age" || key === "onsetAge")
+        ? null
+        : normalizeRuntimeSentinels(item, seen);
+    }
+    return normalized;
+  } finally {
+    seen.delete(value);
+  }
+}
+
 function describe(value) {
   const tag = Object.prototype.toString.call(value);
   const label = typeof value.constructor === "function" ? value.constructor.name : "Object";
@@ -75,7 +98,8 @@ function canonicalFrameObject(moduleNamespace, time, options) {
   if (typeof frameFunction !== "function") {
     throw new TypeError(`package does not export the frame function "${name}"`);
   }
-  return canonicalizeValue(frameFunction(time, options ? options.frameOptions : undefined), new Set());
+  const frame = normalizeRuntimeSentinels(frameFunction(time, options ? options.frameOptions : undefined));
+  return canonicalizeValue(frame, new Set());
 }
 
 /**
@@ -290,7 +314,7 @@ export async function inspectPackage(manifest, moduleNamespace) {
     const firstPass = new Map();
     for (const time of ascending) {
       try {
-        firstPass.set(time, JSON.stringify(canonicalizeValue(frameFunction(time), new Set())));
+        firstPass.set(time, JSON.stringify(canonicalizeValue(normalizeRuntimeSentinels(frameFunction(time)), new Set())));
       } catch (error) {
         serializable = false;
         errors.push(`${name}:unserializable-output:${fmtTime(time)}:${error.message}`);
@@ -301,7 +325,7 @@ export async function inspectPackage(manifest, moduleNamespace) {
       for (const time of shuffled) {
         let second;
         try {
-          second = JSON.stringify(canonicalizeValue(frameFunction(time), new Set()));
+          second = JSON.stringify(canonicalizeValue(normalizeRuntimeSentinels(frameFunction(time)), new Set()));
         } catch (error) {
           serializable = false;
           errors.push(`${name}:unserializable-output:${fmtTime(time)}:${error.message}`);
@@ -309,14 +333,14 @@ export async function inspectPackage(manifest, moduleNamespace) {
         }
         if (firstPass.get(time) !== second) orderAgrees = false;
       }
-      const repeat = JSON.stringify(canonicalizeValue(frameFunction(duration / 2), new Set()));
+      const repeat = JSON.stringify(canonicalizeValue(normalizeRuntimeSentinels(frameFunction(duration / 2)), new Set()));
       if (repeat !== firstPass.get(duration / 2)) stateless = false;
 
       for (const bad of [-1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
         let returned = true;
         let output;
         try {
-          output = frameFunction(bad);
+          output = normalizeRuntimeSentinels(frameFunction(bad));
         } catch {
           returned = false; // rejecting invalid input is documented behavior
         }

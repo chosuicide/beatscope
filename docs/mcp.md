@@ -120,8 +120,9 @@ same `track.at(time)` the web player and the export package use):
 `bar, beat, beatIndex, beatPhase, barPhase, low, mid, high, all, onset
 {item, age, value}, accent, section`, and on v0.7 projects a `structure`
 block with the current segment's `id, family, variant, label, index,
-startTime, endTime, phase, nextBoundaryTime, secondsToBoundary`. A `null`
-onset age or accent means no previous onset exists at that time; a `null`
+startTime, endTime, phase, nextBoundaryTime, secondsToBoundary`. The direct
+JavaScript runtime uses `Infinity` before the first onset; MCP's JSON transport
+encodes that sentinel as a `null` onset age. A `null` accent means no previous accent exists; a `null`
 structure means the project carries no segments.
 
 ### beatscope_get_events

@@ -30,12 +30,14 @@ import re
 import shutil
 import subprocess
 import tempfile
+import wave
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any, Mapping
 
 from beatscope.consumer_contract import (
     CHECKPOINT_SCHEMA,
+    ENTRY_MEMBER,
     MANIFEST_MEMBER,
     PROBE_MEMBER,
     RHYTHM_MEMBER,
@@ -48,6 +50,14 @@ from beatscope.consumer_contract import (
     valid_member_path,
     validate_checkpoints,
     validate_manifest,
+)
+from beatscope.exports import (
+    _probe_source,
+    _runtime_source,
+    _scene_director_source,
+    _visual_data_module,
+    _visual_state_source,
+    _worker_example_source,
 )
 from beatscope.visual_recipe_schema import (
     validate_visual_recipe,
@@ -74,6 +84,7 @@ NODE_TIMEOUT_SECONDS = 60.0
 WORKER_TIMEOUT_SECONDS = 30.0
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+RUNTIME_DIR = Path(__file__).resolve().parent / "runtime"
 
 _AUDIO_SUFFIXES = frozenset({".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac", ".opus", ".aiff"})
 _SOURCE_SUFFIXES = frozenset({".js", ".mjs", ".cjs", ".ts", ".jsx", ".tsx", ".html"})
@@ -406,13 +417,85 @@ def _rhythm_check(members: Mapping[str, bytes] | None) -> dict[str, Any]:
     if not isinstance(duration, (int, float)) or isinstance(duration, bool) or duration <= 0:
         errors.append(f"duration:must-be-positive-number, got {duration!r}")
     onsets = rhythm_map.get("onsets")
-    if not isinstance(onsets, list) or not onsets:
-        errors.append("onsets:must-be-a-non-empty-list")
+    # Silence/no-track projects are valid Rhythm IR and intentionally carry
+    # no fabricated events. The validator checks the container type, not
+    # whether the song happened to produce an onset.
+    if not isinstance(onsets, list):
+        errors.append("onsets:must-be-a-list")
     return _check("rhythm-map", STATUS_PASSED if not errors else STATUS_FAILED, errors=errors)
 
 
+def _executable_trust_check(
+    manifest: dict[str, Any] | None,
+    members: Mapping[str, bytes] | None,
+) -> dict[str, Any]:
+    """Verify executable members against BeatScope's installed templates.
+
+    A self-authored integrity map proves consistency, not trust. Before Node
+    runs anything, every executable module must therefore be the exact output
+    the installed BeatScope version would generate from the validated package
+    data. The actual probe process uses the installed probe source as a second
+    boundary; the package-supplied probe is compared but never executed.
+    """
+    if members is None or manifest is None:
+        return _check(
+            "executable-trust",
+            STATUS_SKIPPED,
+            notes=["skipped: manifest unavailable"],
+            required=True,
+        )
+    errors: list[str] = []
+    if manifest.get("entry") != ENTRY_MEMBER:
+        errors.append(f"executable:unsupported-entry:{manifest.get('entry')!r}")
+    if manifest.get("probe") != PROBE_MEMBER:
+        errors.append(f"executable:unsupported-probe:{manifest.get('probe')!r}")
+    try:
+        rhythm = json.loads(members[RHYTHM_MEMBER].decode("utf-8"))
+    except (KeyError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        return _failed_check("executable-trust", [f"executable:rhythm-unreadable:{error}"])
+
+    capabilities = manifest.get("capabilities")
+    scenes = bool(isinstance(capabilities, dict) and capabilities.get("scenes"))
+    visual_artifacts: tuple[dict[str, Any], dict[str, Any]] | None = None
+    if scenes:
+        try:
+            recipe = json.loads(members[RECIPE_MEMBER].decode("utf-8"))
+            timeline = json.loads(members[TIMELINE_MEMBER].decode("utf-8"))
+            visual_artifacts = (recipe, timeline)
+        except (KeyError, UnicodeDecodeError, json.JSONDecodeError) as error:
+            return _failed_check("executable-trust", [f"executable:visual-unreadable:{error}"])
+
+    expected: dict[str, bytes] = {
+        "beatscope-runtime.js": _runtime_source().encode("utf-8"),
+        PROBE_MEMBER: _probe_source().encode("utf-8"),
+        WORKER_MEMBER: _worker_example_source().encode("utf-8"),
+        ENTRY_MEMBER: _visual_state_source(rhythm, visual_artifacts).encode("utf-8"),
+    }
+    if visual_artifacts is not None:
+        recipe, timeline = visual_artifacts
+        expected.update(
+            {
+                "scene-director.js": _scene_director_source().encode("utf-8"),
+                "visual-recipe-data.js": _visual_data_module("VISUAL_RECIPE", recipe).encode("utf-8"),
+                "visual-timeline-data.js": _visual_data_module("VISUAL_TIMELINE", timeline).encode("utf-8"),
+            }
+        )
+    for name, trusted in expected.items():
+        actual = members.get(name)
+        if actual is None:
+            errors.append(f"executable:missing:{name}")
+        elif actual != trusted:
+            errors.append(f"executable:untrusted-bytes:{name}")
+    return _check(
+        "executable-trust",
+        STATUS_PASSED if not errors else STATUS_FAILED,
+        errors=errors,
+    )
+
+
 def _visual_check(manifest: dict[str, Any] | None, members: Mapping[str, bytes] | None) -> dict[str, Any]:
-    has_scenes = bool(manifest.get("capabilities", {}).get("scenes")) if isinstance(manifest, dict) else False
+    capabilities = manifest.get("capabilities") if isinstance(manifest, dict) else None
+    has_scenes = bool(isinstance(capabilities, dict) and capabilities.get("scenes"))
     if members is None or manifest is None:
         return _check("visual-artifacts", STATUS_SKIPPED, notes=["skipped: manifest unavailable"], required=False)
     if not has_scenes:
@@ -443,10 +526,12 @@ def _run_probe(
     workdir: Path,
     timeout: float,
 ) -> tuple[dict[str, Any] | None, list[str]]:
-    """Run the package's own probe; fixed argument array, isolated cwd."""
+    """Run BeatScope's trusted probe; fixed argument array, isolated cwd."""
+    trusted_probe = workdir / "consumer-probe.mjs"
+    trusted_probe.write_text(_probe_source(), encoding="utf-8")
     command = [
         node,
-        str((root / PROBE_MEMBER).resolve()),
+        str(trusted_probe.resolve()),
         str(root.resolve()),
     ]
     if checkpoints_file is not None:
@@ -546,7 +631,8 @@ def _worker_check(
     workdir: Path,
     timeout: float,
 ) -> dict[str, Any]:
-    declared = bool(isinstance(manifest, dict) and manifest.get("capabilities", {}).get("module_worker"))
+    capabilities = manifest.get("capabilities") if isinstance(manifest, dict) else None
+    declared = bool(isinstance(capabilities, dict) and capabilities.get("module_worker"))
     if not declared:
         notes = [] if manifest is None else ["capabilities.module_worker is false"]
         return _check("worker-smoke", STATUS_SKIPPED, notes=notes, required=False)
@@ -649,16 +735,19 @@ def validate_handoff(
         checks.append(_integrity_check(manifest, members))
     checks.append(_rhythm_check(members))
     checks.append(_visual_check(manifest, members))
+    checks.append(_executable_trust_check(manifest, members))
 
     checkpoints_file = Path(checkpoints) if checkpoints is not None else target.parent / "checkpoints.json"
     if not checkpoints_file.is_file():
         checkpoints_file = None
 
-    # JavaScript runs only after path safety AND integrity both pass; a
-    # manifest-only failure still gets probe diagnostics but no execution.
+    # JavaScript runs only after path safety, manifest, integrity, and the
+    # executable-template trust boundary all pass. Integrity alone is only
+    # self-consistency: an attacker can hash their own malicious package.
     status_by_name = {check["name"]: check["status"] for check in checks}
     execute_ok = all(
-        status_by_name.get(name) == STATUS_PASSED for name in ("safety", "integrity")
+        status_by_name.get(name) == STATUS_PASSED
+        for name in ("safety", "manifest", "integrity", "executable-trust")
     )
     probe_report: dict[str, Any] | None = None
     with tempfile.TemporaryDirectory(prefix="beatscope-validate-") as temp:
@@ -716,7 +805,91 @@ def load_declaration(example_dir: Path) -> tuple[dict[str, Any] | None, list[str
         for key in ("playback", "seek", "offline_frame", "reduced_motion"):
             if not isinstance(capabilities.get(key), bool):
                 errors.append(f"declaration:capabilities.{key}:must-be-a-boolean")
+        if capabilities.get("offline_frame") is True:
+            offline_entry = declaration.get("offline_entry")
+            if not isinstance(offline_entry, str) or not offline_entry.strip():
+                errors.append("declaration:offline_entry:must-be-a-non-empty-string for offline consumers")
     return declaration, errors
+
+
+def _run_json_command(command: list[str], workdir: Path, timeout: float) -> tuple[dict[str, Any] | None, list[str]]:
+    try:
+        completed = subprocess.run(
+            command, cwd=workdir, env=_child_env(), capture_output=True,
+            text=True, timeout=timeout, check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return None, [f"timeout after {timeout:g}s"]
+    except OSError as error:
+        return None, [f"spawn-failed:{error}"]
+    try:
+        report = json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        excerpt = (completed.stderr or completed.stdout or "").strip()[:400]
+        return None, [f"unparsable-report:{excerpt}"]
+    errors = [str(error) for error in report.get("errors", [])]
+    if completed.returncode != 0 and not errors:
+        errors.append(f"exit-{completed.returncode}")
+    return report, errors
+
+
+def _playwright_module() -> Path | None:
+    configured = os.environ.get("BEATSCOPE_PLAYWRIGHT_MODULE")
+    candidates = [
+        Path(configured) if configured else None,
+        REPO_ROOT / "tests" / "browser" / "node_modules" / "playwright" / "index.mjs",
+    ]
+    return next((candidate.resolve() for candidate in candidates if candidate and candidate.is_file()), None)
+
+
+def _browser_check(entry_page: Path, allowed_root: Path, node: str | None, timeout: float) -> dict[str, Any]:
+    if node is None:
+        return _check("browser", STATUS_UNAVAILABLE, errors=["browser:node-not-found-on-PATH"])
+    playwright = _playwright_module()
+    if playwright is None:
+        return _check(
+            "browser", STATUS_UNAVAILABLE, errors=["browser:playwright-module-not-found"],
+            notes=["install tests/browser dependencies or set BEATSCOPE_PLAYWRIGHT_MODULE"],
+        )
+    with tempfile.TemporaryDirectory(prefix="beatscope-browser-") as temp:
+        workdir = Path(temp)
+        audio = workdir / "probe.wav"
+        with wave.open(str(audio), "wb") as output:
+            output.setnchannels(1)
+            output.setsampwidth(2)
+            output.setframerate(8000)
+            output.writeframes(b"\0\0" * (8000 * 12))
+        report, errors = _run_json_command(
+            [node, str((RUNTIME_DIR / "consumer-browser.mjs").resolve()), str(playwright),
+             str(allowed_root), entry_page.relative_to(allowed_root).as_posix(), str(audio)],
+            workdir, timeout,
+        )
+    if report is None:
+        return _failed_check("browser", [f"browser:{error}" for error in errors])
+    if any("Executable doesn't exist" in error for error in errors):
+        return _check("browser", STATUS_UNAVAILABLE, errors=errors, notes=["install the pinned Chromium browser"])
+    return _check(
+        "browser", STATUS_PASSED if report.get("ok") and not errors else STATUS_FAILED,
+        errors=errors, notes=[f"real Chromium checks: {', '.join(sorted(report.get('checks', {})))}"],
+    )
+
+
+def _offline_check(example_dir: Path, declaration: dict[str, Any], node: str | None, timeout: float) -> dict[str, Any]:
+    if node is None:
+        return _check("offline", STATUS_UNAVAILABLE, errors=["offline:node-not-found-on-PATH"])
+    module = (example_dir / str(declaration["offline_entry"])).resolve()
+    if not module.is_relative_to(example_dir.resolve()) or not module.is_file():
+        return _failed_check("offline", [f"offline:entry-missing-inside-example:{declaration['offline_entry']}"])
+    with tempfile.TemporaryDirectory(prefix="beatscope-offline-") as temp:
+        report, errors = _run_json_command(
+            [node, str((RUNTIME_DIR / "consumer-offline.mjs").resolve()), str(module)], Path(temp), timeout,
+        )
+    if report is None:
+        return _failed_check("offline", [f"offline:{error}" for error in errors])
+    return _check(
+        "offline", STATUS_PASSED if report.get("ok") and not errors else STATUS_FAILED,
+        errors=errors, notes=[f"frame/FPS checks: {', '.join(sorted(report.get('checks', {})))}"],
+    )
 
 
 def _static_check(example_dir: Path) -> dict[str, Any]:
@@ -779,6 +952,7 @@ def validate_consumer(
     offline_frame = capabilities.get("offline_frame") is True
 
     package_path: Path | None = None
+    entry_page: Path | None = None
     if declaration is not None and not declaration_errors:
         candidate_package = (example_dir / str(declaration["package_path"])).resolve()
         if not candidate_package.is_relative_to(allowed_root):
@@ -842,6 +1016,7 @@ def validate_consumer(
             checks.append(_failed_check("node-probe", probe_errors))
 
     checks.append(_static_check(example_dir))
+    node = shutil.which("node")
 
     if not playback:
         checks.append(_check("browser", STATUS_SKIPPED, notes=["consumer declares no interactive playback"], required=False))
@@ -855,14 +1030,10 @@ def validate_consumer(
             )
         )
     else:
-        checks.append(
-            _check(
-                "browser",
-                STATUS_UNAVAILABLE,
-                errors=["browser:tooling-not-wired-in-this-release"],
-                notes=["browser validation arrives with the interactive example commits"],
-            )
-        )
+        if entry_page is None:
+            checks.append(_check("browser", STATUS_SKIPPED, notes=["skipped: declaration invalid"]))
+        else:
+            checks.append(_browser_check(entry_page, allowed_root, node, node_timeout))
 
     if not offline_frame:
         checks.append(_check("offline", STATUS_SKIPPED, notes=["consumer declares no offline rendering"], required=False))
@@ -876,14 +1047,10 @@ def validate_consumer(
             )
         )
     else:
-        checks.append(
-            _check(
-                "offline",
-                STATUS_UNAVAILABLE,
-                errors=["offline:tooling-not-wired-in-this-release"],
-                notes=["offline validation arrives with the Remotion example commit"],
-            )
-        )
+        if declaration is None:
+            checks.append(_check("offline", STATUS_SKIPPED, notes=["skipped: declaration invalid"]))
+        else:
+            checks.append(_offline_check(example_dir, declaration, node, node_timeout))
 
     checks.append(
         _check("visual-snapshot", STATUS_SKIPPED, notes=["non-blocking layer; human review of composition"], required=False)

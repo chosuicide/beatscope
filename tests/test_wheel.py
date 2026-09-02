@@ -21,6 +21,8 @@ REQUIRED_MODULES = [
     "beatscope/web/particle-geometry.js",
     "beatscope/web/particle-shaders.js",
     "beatscope/runtime/consumer-probe.js",
+    "beatscope/runtime/consumer-browser.mjs",
+    "beatscope/runtime/consumer-offline.mjs",
 ]
 
 
