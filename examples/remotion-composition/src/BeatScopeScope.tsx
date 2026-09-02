@@ -2,14 +2,13 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { frameTime, sceneState } from "./state.js";
 
-// Offline composition: structure drives layout. The scene's composition
-// channels place three structural blocks; boundary transitions ease the
-// layout, so the visual responds to song structure, not only amplitude.
-const BLOCK_TONES: Record<string, [string, string, string]> = {
-  A: ["#232833", "#5d7d8f", "#cfdde2"],
-  B: ["#2e2018", "#a8613c", "#f0bd8c"],
-  C: ["#241f2e", "#6f5f8f", "#d8cfdd"],
-};
+const INK = "#10100f";
+const PAPER = "#f1f0e9";
+const SIGNAL = "#e23d24";
+
+function pad(value: number, width = 2) {
+  return String(Math.max(0, Math.floor(value))).padStart(width, "0");
+}
 
 const BeatScopeScope: React.FC = () => {
   const frame = useCurrentFrame();
@@ -17,47 +16,150 @@ const BeatScopeScope: React.FC = () => {
   const time = frameTime(frame, fps);
   const state = sceneState(time);
 
-  const tones = BLOCK_TONES[state.scene.family] ?? BLOCK_TONES.A;
-  const { spread, twist, orbit, void: voidChannel } = state.composition;
-  const motion = state.transition.impulse;
-  const columns = 2 + Math.round(state.composition.flow * 2);
-  const blockCount = columns * 3;
-  const blocks = [];
-  for (let i = 0; i < blockCount; i += 1) {
-    const row = Math.floor(i / columns);
-    const column = i % columns;
-    const tone = tones[(row + state.scene.variant) % tones.length];
-    const lift = state.timing.low * 60 * (1 - row * 0.25);
-    blocks.push(
-      <div
-        key={i}
-        style={{
-          position: "absolute",
-          left: `${8 + column * (84 / columns) + spread * 6 + orbit * 4 * Math.sin(state.timing.barPhase * Math.PI * 2 + i)}%`,
-          top: `${12 + row * 26 - lift * 0.2}%`,
-          width: `${76 / columns}%`,
-          height: `${18 + state.timing.mid * 8}%`,
-          background: tone,
-          opacity: 0.55 + state.timing.high * 0.45,
-          transform: `rotate(${twist * 6 + motion * 2}deg) translateY(${-lift}px)`,
-          borderRadius: 6,
-        }}
-      />,
-    );
-  }
+  const family = state.scene.family || "A";
+  const variant = state.scene.variant > 0 ? "′" : "";
+  const label = `${family}${variant}`;
+  const boundary = state.transition.cross;
+  const beat = state.timing.accent;
+  const pulse = Math.max(boundary, beat * 0.72);
+  const split = 42 + state.composition.spread * 8;
+  const seconds = Math.floor(time);
+  const timecode = `${pad(seconds / 60)}:${pad(seconds % 60)}:${pad((time % 1) * fps)}`;
+  const redWidth = 7 + state.timing.high * 31;
+  const wordOffset = (state.timing.barPhase - 0.5) * 54;
 
-  const voidOffset = voidChannel * 40;
   return (
-    <AbsoluteFill style={{ background: "#14161c", overflow: "hidden" }}>
+    <AbsoluteFill
+      style={{
+        background: PAPER,
+        color: INK,
+        overflow: "hidden",
+        fontFamily: "Arial Narrow, Arial, sans-serif",
+      }}
+    >
       <div
         style={{
           position: "absolute",
           inset: 0,
-          transform: `translateY(${voidOffset}px)`,
+          background: INK,
+          clipPath: `polygon(${split}% 0, 100% 0, 100% 100%, ${split - boundary * 11}% 100%)`,
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: `${18 + state.timing.mid * 22}%`,
+          width: `${redWidth}%`,
+          height: 12 + pulse * 34,
+          background: SIGNAL,
+          transform: `translateX(${-12 + pulse * 22}%)`,
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          left: "5%",
+          top: "5%",
+          fontFamily: "Courier New, monospace",
+          fontSize: 22,
+          letterSpacing: 3,
         }}
       >
-        {blocks}
+        BEATSCOPE / OFFLINE FRAME
       </div>
+
+      <div
+        style={{
+          position: "absolute",
+          left: "5%",
+          top: "17%",
+          width: "36%",
+          fontSize: 270,
+          fontWeight: 900,
+          lineHeight: 0.78,
+          letterSpacing: -24,
+          transform: `translateX(${wordOffset}px) scaleX(${0.86 + state.timing.low * 0.22})`,
+          transformOrigin: "left center",
+        }}
+      >
+        {label}
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          left: "5%",
+          bottom: "8%",
+          display: "flex",
+          gap: 32,
+          alignItems: "baseline",
+          fontFamily: "Courier New, monospace",
+        }}
+      >
+        <span style={{ color: SIGNAL, fontSize: 46, fontWeight: 700 }}>{timecode}</span>
+        <span style={{ fontSize: 18, letterSpacing: 2 }}>
+          PHASE {Math.round(state.scene.phase * 100)}%
+        </span>
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          right: "4%",
+          top: "9%",
+          width: "50%",
+          color: PAPER,
+          textAlign: "right",
+          fontSize: 34,
+          letterSpacing: 8,
+          fontWeight: 700,
+          transform: `translateY(${boundary * 28}px)`,
+        }}
+      >
+        STRUCTURE {label}
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          right: "4%",
+          bottom: "8%",
+          width: "48%",
+          height: 144,
+          display: "grid",
+          gridTemplateColumns: "repeat(16, 1fr)",
+          gap: 8,
+          alignItems: "end",
+        }}
+      >
+        {Array.from({ length: 16 }, (_, index) => {
+          const alternating = index % 3 === 0 ? state.timing.high : state.timing.mid;
+          const phase = (state.timing.beatPhase + index / 16) % 1;
+          const height = 14 + alternating * 70 + (1 - phase) * beat * 45;
+          return (
+            <div
+              key={index}
+              style={{
+                height,
+                background: index % 5 === 0 ? SIGNAL : PAPER,
+                opacity: 0.38 + alternating * 0.62,
+              }}
+            />
+          );
+        })}
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          border: `${2 + boundary * 13}px solid ${boundary > 0.45 ? SIGNAL : "transparent"}`,
+          pointerEvents: "none",
+        }}
+      />
     </AbsoluteFill>
   );
 };

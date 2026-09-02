@@ -1,153 +1,31 @@
-/* Canvas reference consumer styles: stable, readable transport with
-   visible focus states. The visual itself stays expressive; the
-   controls never move. */
-
-:root {
-  color-scheme: dark;
-  --bg: #14161c;
-  --panel: #1d2029;
-  --ink: #e8e6e1;
-  --muted: #9aa3b2;
-  --focus: #ffd166;
-  --edge: #2c313d;
+:root { color-scheme: light; --paper:#f0efe9; --ink:#151515; --muted:#66645f; --accent:#c74424; }
+* { box-sizing: border-box; }
+body { margin:0; min-height:100dvh; background:var(--paper); color:var(--ink); font:15px/1.45 "Arial Narrow","Aptos Narrow",Arial,sans-serif; }
+.shell { width:min(1180px,calc(100% - 40px)); margin:0 auto; padding:30px 0 42px; display:grid; grid-template-columns:minmax(0,1fr) 260px; }
+.head { min-height:148px; padding:0 28px 22px 0; border-bottom:1px solid var(--ink); }
+.kicker { margin:0 0 18px; color:var(--accent); font:700 11px/1 ui-monospace,SFMono-Regular,Consolas,monospace; letter-spacing:.08em; text-transform:uppercase; }
+.head h1 { margin:0; max-width:720px; font-size:clamp(2.5rem,6vw,5.8rem); line-height:.88; letter-spacing:-.065em; }
+.lede { margin:18px 0 0; max-width:52ch; color:var(--muted); }
+#stage { grid-column:1; width:100%; height:560px; display:block; border:0; border-bottom:1px solid var(--ink); background:var(--paper); }
+.transport,.options { grid-column:2; padding:20px; border-left:1px solid var(--ink); }
+.transport { grid-row:1 / span 2; display:grid; align-content:end; gap:18px; border-bottom:1px solid var(--ink); }
+.options { grid-row:3; display:grid; align-content:start; gap:18px; }
+button { min-height:50px; border:1px solid var(--ink); border-radius:0; background:var(--ink); color:var(--paper); font:700 13px/1 ui-monospace,SFMono-Regular,Consolas,monospace; cursor:pointer; transition:transform 140ms cubic-bezier(.2,0,0,1),background 140ms ease; }
+button:hover { background:var(--accent); }
+button:active { transform:translateY(1px); }
+.seek { display:flex; }
+.seek input { width:100%; accent-color:var(--accent); }
+.time { color:var(--muted); font:12px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace; white-space:nowrap; }
+.file,.toggle { display:grid; gap:8px; color:var(--muted); }
+.file input { width:100%; color:var(--ink); }
+.status { margin:0; color:var(--muted); font-size:.82rem; }
+button:focus-visible,input:focus-visible,canvas:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.visually-hidden { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+@media (max-width:760px) {
+  .shell { width:min(100% - 24px,680px); grid-template-columns:1fr; }
+  .head,#stage,.transport,.options { grid-column:1; grid-row:auto; border-left:0; }
+  .head { min-height:0; padding-right:0; }
+  #stage { height:430px; }
+  .transport,.options { border-bottom:1px solid var(--ink); padding-inline:0; }
 }
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font: 15px/1.5 system-ui, "Segoe UI", sans-serif;
-}
-
-.shell {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 16px;
-  display: grid;
-  gap: 12px;
-}
-
-.head h1 {
-  font-size: 1.15rem;
-  margin: 0 0 4px;
-}
-
-.lede {
-  margin: 0;
-  color: var(--muted);
-  max-width: 62ch;
-}
-
-#stage {
-  width: 100%;
-  height: 380px;
-  display: block;
-  border: 1px solid var(--edge);
-  border-radius: 8px;
-  background: #171a22;
-}
-
-.transport {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--panel);
-  border: 1px solid var(--edge);
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-
-.transport button {
-  min-width: 84px;
-  padding: 8px 14px;
-  font: inherit;
-  border-radius: 6px;
-  border: 1px solid var(--edge);
-  background: #262b38;
-  color: var(--ink);
-  cursor: pointer;
-}
-
-.seek {
-  flex: 1;
-  display: flex;
-}
-
-.seek input {
-  width: 100%;
-  accent-color: var(--focus);
-}
-
-.time {
-  font-variant-numeric: tabular-nums;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.options {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 16px;
-  background: var(--panel);
-  border: 1px solid var(--edge);
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-
-.file {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-}
-
-.file input {
-  color: var(--ink);
-  max-width: 260px;
-}
-
-.toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.status {
-  flex-basis: 100%;
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-/* Keyboard focus must always be visible (plan section 17). */
-button:focus-visible,
-input:focus-visible,
-canvas:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-
-/* UI motion respects the OS setting; the canvas toggle changes live. */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
-  }
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
-}
+@media (prefers-reduced-motion:reduce) { * { transition-duration:.01ms !important; animation-duration:.01ms !important; } }

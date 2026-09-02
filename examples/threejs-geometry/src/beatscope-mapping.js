@@ -20,11 +20,11 @@ export function mapFrame(frame, time) {
  * emission intensity instead of pretending to know the next palette.
  */
 const FAMILY_COLORS = Object.freeze({
-  A: 0x5d7d8f,
-  B: 0xa8613c,
-  C: 0x6f5f8f,
+  A: 0x76d4e8,
+  B: 0x9aa7ff,
+  C: 0xd6f4ff,
 });
-const NEUTRAL_COLOR = 0x5d7d8f;
+const NEUTRAL_COLOR = 0x76d4e8;
 
 export function familyColor(frame) {
   const family = frame.scene?.family;

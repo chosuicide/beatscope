@@ -18,13 +18,21 @@ Upload a track and BeatScope builds a beat grid, multiband energy, transients, t
 
 The repository ships a frozen handoff fixture (<code>examples/shared/fixture.beatscope</code>, sha256-pinned by <code>fixture-lock.json</code>) and three reference consumers that share nothing but that package:
 
-| Example | Stack | Clock | What it proves |
+| Example | Work | Stack and clock | What stays deterministic |
 | --- | --- | --- | --- |
-| [examples/canvas-particles](examples/canvas-particles) | Canvas 2D, zero-build | <code>audio.currentTime</code> | play/seek/replay resolve to identical geometry; reduced motion scales displacement to exactly 0.25× |
-| [examples/threejs-geometry](examples/threejs-geometry) | three@0.169.0 via import map, no bundler | <code>audio.currentTime</code> | framework glue stays three-free and pure; seeded geometry; declared draw-call budget |
-| [examples/remotion-composition](examples/remotion-composition) | Remotion 4.0.520 | <code>frame / fps</code> | the same second maps to the same state at 24/30/60 fps; scene ownership freezes beyond the last scene while timing extrapolates |
+| [examples/canvas-particles](examples/canvas-particles) | Monochrome signal print | Canvas 2D, zero-build; <code>audio.currentTime</code> | play/seek/replay resolve to identical geometry; reduced motion scales displacement to exactly 0.25× |
+| [examples/threejs-geometry](examples/threejs-geometry) | Suspended braided sculpture | three@0.169.0 via import map; <code>audio.currentTime</code> | framework glue stays three-free and pure; seeded geometry; declared draw-call budget |
+| [examples/remotion-composition](examples/remotion-composition) | Black, white, and red editorial cut | Remotion 4.0.520; <code>frame / fps</code> | the same second maps to the same state at 24/30/60 fps; scene ownership freezes beyond the last scene while timing extrapolates |
 
-Each consumer is a complete, runnable project — open <code>examples/canvas-particles/index.html</code> (or the Three.js one) through any static server and pick an audio file; the Remotion composition renders offline with <code>npx remotion render</code>. Their pinned dependencies live in each example's own <code>package.json</code> and never enter BeatScope's core.
+These are three different works, not three ports of one particle demo. They share timing facts and nothing else about their visual metaphor. Each consumer is a complete, runnable project: open the Canvas or Three.js page through any static server and pick an audio file; the Remotion composition renders offline with <code>npx remotion render</code>. Their pinned dependencies live in each example's own <code>package.json</code> and never enter BeatScope's core.
+
+[![Three reference works driven by one BeatScope package](docs/demo/consumer-showcase.gif)](docs/demo/consumer-showcase.mp4)
+
+| Canvas: signal print | Three.js: braided sculpture | Remotion: editorial cut |
+| --- | --- | --- |
+| ![Warm monochrome Canvas signal print](docs/demo/consumer-canvas.png) | ![Cold Three.js braided signal sculpture](docs/demo/consumer-threejs.png) | ![Black, white, and red Remotion editorial frame](docs/demo/consumer-remotion.png) |
+
+The captures above use the repository's frozen fixture. They contain no bundled source audio.
 
 The whole contract is one function call:
 

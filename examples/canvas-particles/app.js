@@ -62,17 +62,51 @@ function formatTime(seconds) {
 }
 
 function draw(frame, size) {
-  const [shadow, accent, highlight] = framePalette(frame);
-  context.fillStyle = shadow;
+  const [, accent] = framePalette(frame);
+  const timing = frame.timing;
+  const scene = frame.scene;
+  const impulse = timing.onset?.value ?? 0;
+  const accentHit = timing.accent?.value ?? 0;
+  context.fillStyle = "#f0efe9";
   context.fillRect(0, 0, size.width, size.height);
   const points = particlePoints(field, frame, size, reducedMotion());
-  for (const point of points) {
-    context.globalAlpha = Math.max(0, Math.min(1, point.alpha));
-    context.fillStyle = point.sparkle ? highlight : accent;
+
+  context.strokeStyle = "#151515";
+  context.lineCap = "round";
+  for (let row = 0; row < 30; row += 1) {
+    const offset = row * 56;
     context.beginPath();
-    context.arc(point.x, point.y, Math.max(0.4, point.radius), 0, Math.PI * 2);
-    context.fill();
+    for (let column = 0; column < 56; column += 1) {
+      const point = points[offset + column];
+      if (column === 0) context.moveTo(point.x, point.y);
+      else context.lineTo(point.x, point.y);
+    }
+    const depth = row / 29;
+    context.globalAlpha = 0.09 + (1 - depth) * 0.24 + impulse * 0.16;
+    context.lineWidth = 0.45 + timing.low * 1.8 + (row % 6 === 0 ? 0.8 : 0);
+    context.stroke();
   }
+
+  context.globalAlpha = 0.25 + timing.high * 0.7;
+  context.fillStyle = accent;
+  for (let i = 0; i < 18; i += 1) {
+    const x = ((i + timing.beatPhase) / 18) * size.width;
+    const height = 8 + timing.high * 70 * ((i % 5) / 4);
+    context.fillRect(x, size.height - height - 18, 1.2, height);
+  }
+  if (accentHit > 0) {
+    context.globalAlpha = Math.min(0.78, accentHit * 0.7);
+    const width = size.width * (0.08 + accentHit * 0.2);
+    context.fillRect(size.width * timing.barPhase - width / 2, 0, width, size.height);
+  }
+
+  context.globalAlpha = 0.82;
+  context.fillStyle = "#151515";
+  context.font = "600 12px ui-monospace, SFMono-Regular, Consolas, monospace";
+  context.fillText(`BAR ${String(timing.bar).padStart(2, "0")}  BEAT ${timing.beat}`, 18, 28);
+  context.textAlign = "right";
+  context.fillText(scene ? `${scene.scene.family}${scene.scene.variant ? "'" : ""}` : "LEGACY", size.width - 18, 28);
+  context.textAlign = "left";
   context.globalAlpha = 1;
 }
 

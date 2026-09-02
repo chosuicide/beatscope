@@ -18,13 +18,21 @@ BeatScope 是一个本地音频响应乐器：把一首歌同时变成可播放�
 
 仓库内置一份冻结的 handoff fixture（<code>examples/shared/fixture.beatscope</code>，由 <code>fixture-lock.json</code> 以 sha256 锁定）和三个只共享这份包的参考消费者：
 
-| 示例 | 技术栈 | 时钟 | 证明什么 |
+| 示例 | 作品方向 | 技术栈与时钟 | 保持确定性的部分 |
 | --- | --- | --- | --- |
-| [examples/canvas-particles](examples/canvas-particles) | Canvas 2D，零构建 | <code>audio.currentTime</code> | 播放/跳转/重播还原出完全一致的几何；reduced motion 把位移精确缩放到 0.25× |
-| [examples/threejs-geometry](examples/threejs-geometry) | three@0.169.0（import map，无打包器） | <code>audio.currentTime</code> | 框架胶水层保持 three 无关且纯净；seeded 几何；声明的 draw-call 预算 |
-| [examples/remotion-composition](examples/remotion-composition) | Remotion 4.0.520 | <code>frame / fps</code> | 同一秒在 24/30/60 fps 下映射到同一状态；越过最后场景后场景归属冻结而 timing 按文档外推 |
+| [examples/canvas-particles](examples/canvas-particles) | 黑白信号印刷 | Canvas 2D，零构建；<code>audio.currentTime</code> | 播放/跳转/重播还原出完全一致的几何；reduced motion 把位移精确缩放到 0.25× |
+| [examples/threejs-geometry](examples/threejs-geometry) | 悬浮编织信号雕塑 | three@0.169.0（import map）；<code>audio.currentTime</code> | 框架胶水层保持 three 无关且纯净；seeded 几何；声明的 draw-call 预算 |
+| [examples/remotion-composition](examples/remotion-composition) | 黑白红编辑式短片 | Remotion 4.0.520；<code>frame / fps</code> | 同一秒在 24/30/60 fps 下映射到同一状态；越过最后场景后场景归属冻结而 timing 按文档外推 |
 
-每个消费者都是完整可运行的项目 —— 用任意静态服务器打开 <code>examples/canvas-particles/index.html</code>（Three.js 同理）并选择一个音频文件；Remotion 组合用 <code>npx remotion render</code> 离线渲染。它们各自 pinned 的依赖只存在于每个示例自己的 <code>package.json</code> 中，绝不进入 BeatScope 核心。
+它们是三件不同作品，不是同一颗粒子球移植到三个框架；三者只共享时序事实，不共享视觉隐喻。每个消费者都是完整可运行的项目：用任意静态服务器打开 Canvas 或 Three.js 页面并选择音频文件；Remotion 组合用 <code>npx remotion render</code> 离线渲染。它们各自 pinned 的依赖只存在于每个示例自己的 <code>package.json</code> 中，绝不进入 BeatScope 核心。
+
+[![同一份 BeatScope 时序包驱动的三件参考作品](docs/demo/consumer-showcase.gif)](docs/demo/consumer-showcase.mp4)
+
+| Canvas：信号印刷 | Three.js：编织雕塑 | Remotion：编辑式短片 |
+| --- | --- | --- |
+| ![暖色黑白 Canvas 信号印刷](docs/demo/consumer-canvas.png) | ![冷色 Three.js 编织信号雕塑](docs/demo/consumer-threejs.png) | ![黑白红 Remotion 编辑式画面](docs/demo/consumer-remotion.png) |
+
+以上截图来自仓库内冻结的 fixture，不包含任何源音频。
 
 整套契约就是一次函数调用：
 

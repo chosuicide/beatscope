@@ -37,16 +37,34 @@ canvas.addEventListener("webglcontextlost", (event) => {
 });
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(55, canvas.clientWidth / canvas.clientHeight, 0.1, 50);
-camera.position.set(0, 0.4, 2.9);
+scene.background = new THREE.Color(0x081016);
+scene.fog = new THREE.FogExp2(0x081016, 0.17);
+const camera = new THREE.PerspectiveCamera(48, canvas.clientWidth / canvas.clientHeight, 0.1, 50);
+camera.position.set(0, 0.2, 4.2);
 
 const COUNT = 1400;
 const SEED = 42;
 const geometry = new THREE.BufferGeometry();
-geometry.setAttribute("position", new THREE.BufferAttribute(seededShell(COUNT, SEED), 3));
-const material = new THREE.PointsMaterial({ size: 0.035, transparent: true, opacity: 0.85 });
+const source = seededShell(COUNT, SEED);
+const braid = new Float32Array(source.length);
+for (let i = 0; i < COUNT; i += 1) {
+  const progress = i / (COUNT - 1);
+  const strand = i % 3;
+  const angle = progress * Math.PI * 15 + strand * ((Math.PI * 2) / 3);
+  const radius = 0.72 + source[i * 3] * 0.18;
+  braid[i * 3] = Math.cos(angle) * radius;
+  braid[i * 3 + 1] = (progress - 0.5) * 3.4 + source[i * 3 + 1] * 0.12;
+  braid[i * 3 + 2] = Math.sin(angle) * radius + source[i * 3 + 2] * 0.12;
+}
+geometry.setAttribute("position", new THREE.BufferAttribute(braid, 3));
+const material = new THREE.PointsMaterial({ size: 0.025, transparent: true, opacity: 0.88, blending: THREE.AdditiveBlending, depthWrite: false });
 const cloud = new THREE.Points(geometry, material);
 scene.add(cloud);
+
+const cageGeometry = new THREE.WireframeGeometry(new THREE.CylinderGeometry(0.92, 0.92, 3.7, 18, 7, true));
+const cageMaterial = new THREE.LineBasicMaterial({ color: 0x25424d, transparent: true, opacity: 0.18 });
+const cage = new THREE.LineSegments(cageGeometry, cageMaterial);
+scene.add(cage);
 
 function reducedMotion() {
   return reducedCheckbox.checked === true;
@@ -134,11 +152,16 @@ function paint() {
 
   // Rotation and scale derive from t and the frame — never from deltas.
   cloud.rotation.y = mapped.cameraPhase + mapped.twist * Math.PI * motion;
-  cloud.rotation.x = frame.timing.beatPhase * Math.PI * 0.15 * motion;
+  cloud.rotation.z = (frame.timing.barPhase - 0.5) * 0.22 * motion;
   const accent = frame.timing.accent?.value ?? 0;
   const scale = mapped.scale * (1 + accent * 0.12 * motion);
   cloud.scale.setScalar(scale);
-  camera.position.z = 2.9 + Math.sin(mapped.cameraPhase * 0.7) * 0.3 * motion;
+  const boundary = frame.scene?.transition?.cross ?? 0;
+  cage.rotation.y = -mapped.cameraPhase * 0.35;
+  cage.scale.set(1 + boundary * 0.18, 1 - boundary * 0.05, 1 + boundary * 0.18);
+  cageMaterial.opacity = 0.12 + frame.timing.mid * 0.2;
+  camera.position.x = Math.sin(mapped.cameraPhase * 0.55) * 0.5 * motion;
+  camera.position.z = 4.2 + Math.cos(mapped.cameraPhase * 0.4) * 0.25 * motion;
   camera.lookAt(0, 0, 0);
 
   material.color.setHex(familyColor(frame));

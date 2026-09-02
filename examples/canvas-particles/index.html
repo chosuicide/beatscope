@@ -3,25 +3,24 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>BeatScope Canvas reference consumer — planar particle field</title>
+    <title>BeatScope Canvas reference consumer - Signal press</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="shell">
       <audio id="audio" preload="metadata"></audio>
       <header class="head">
-        <h1>Planar particle field</h1>
+        <p class="kicker">Canvas 2D / signal press</p>
+        <h1>Rhythm drawn like ink.</h1>
         <p class="lede">
-          A BeatScope consumer example: the package is the only musical
-          timing source, the audio element is the only clock, and the
-          canvas is redrawn as a pure function of the current media time.
+          Fifty-six traces fold the same timing package into a monochrome moving print.
         </p>
       </header>
 
       <canvas
         id="stage"
         role="img"
-        aria-label="Planar particle field that moves with the music: rows of particles ripple with low frequencies, bend with mid frequencies, and sparkle with high frequencies."
+        aria-label="Monochrome signal print: layered traces bend with low and mid frequencies while high-frequency events cut bright marks through the field."
       >
         Your browser does not support canvas. The BeatScope timing data for
         this visual is still available through the package's
@@ -39,7 +38,7 @@
 
       <section class="options" aria-label="Options">
         <label class="file">
-          <span>Audio file:</span>
+          <span>Audio</span>
           <input id="audio-file" type="file" accept="audio/*" />
         </label>
         <label class="toggle">

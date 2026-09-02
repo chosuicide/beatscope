@@ -1,4 +1,4 @@
-# Remotion reference composition
+# Remotion reference composition: editorial cut
 
 The offline-rendering proof (plan section 12): the same handoff package
 drives a deterministic Remotion composition where the clock is
@@ -23,9 +23,10 @@ no `requestAnimationFrame`.
 - Duration derives from the package: `compositionDuration(fps) =
   ceil(30.0001 * fps)`; beyond-duration frames clamp to the final state,
   and start offsets clamp to zero.
-- The composition uses **structure for layout**: the owning scene's
-  family and composition channels arrange structural blocks, and
-  boundary transitions ease them — not just amplitude bars.
+- The composition uses **structure for editing**: neutral family letters
+  become the title system, structural boundaries cut the black and white
+  field, and beat accents drive short red interruptions. It deliberately
+  shares no particle or spectrum metaphor with the browser examples.
 - No per-frame JSON scan: the composition imports the package's
   precompiled data modules once through `visual-state.js`.
 
@@ -53,7 +54,7 @@ node tests/test_remotion_consumer.js
 ## Flashing-content responsibility
 
 The reference composition contains no unsafe flashing (bounded
-translates, opacity >= 0.55, no full-frame inversions), but authored
+translates, no full-frame inversions), but authored
 variants are the author's responsibility: anyone adapting this
 composition must review flashing content before publishing renders.
 
@@ -62,5 +63,6 @@ composition must review flashing content before publishing renders.
 - `npm run render` needs Chrome/Headless Shell, which Remotion
   downloads on first render; CI rendering is wired by the later v0.9
   commits.
-- The visual is deliberately simple: the point is the offline frame
-  contract, not art direction.
+- The included composition is one art direction, not a required skin.
+  Replace the React tree freely while keeping `state.js` as the sole
+  media-time adapter.
