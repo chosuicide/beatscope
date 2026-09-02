@@ -213,7 +213,9 @@ def test_agent_document_routes_the_agent():
 
 def test_probe_ships_in_package_and_stays_dependency_free():
     members, manifest = _unpacked_export()
-    assert members["consumer-probe.js"] == PROBE_SOURCE_PATH.read_bytes()
+    # Export reads text with universal-newline normalization, so compare the
+    # canonical UTF-8 payload rather than checkout-specific CRLF bytes.
+    assert members["consumer-probe.js"] == PROBE_SOURCE_PATH.read_text(encoding="utf-8").encode("utf-8")
     source = members["consumer-probe.js"].decode("utf-8")
     assert len(members["consumer-probe.js"]) <= PROBE_SIZE_BUDGET
     for export_name in ("inspectPackage", "canonicalFrame", "runCheckpointSuite", "assertSeekDeterminism"):
