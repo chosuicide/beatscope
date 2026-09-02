@@ -248,7 +248,8 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    slug = re.sub(r"[^a-z0-9]+", "-", f"{record['agent']}-{record['framework']}-{record['date']}").strip("-")
+    slug_source = f"{record['agent']}-{record['framework']}-{record['date']}".lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", slug_source).strip("-")
     target = RUNS_DIR / f"{slug}.json"
     if target.exists():
         # Evidence is append-only; overwriting would hide a prior run.

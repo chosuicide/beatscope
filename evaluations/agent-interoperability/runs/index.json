@@ -1,4 +1,26 @@
 {
-  "runs": [],
+  "runs": [
+    {
+      "agent": "Codex",
+      "artistic_note": "Fresh-context Codex run produced an original dependency-free Canvas work named Orbital Notation using only the frozen task and handoff package.",
+      "attempts": 3,
+      "date": "2026-09-02",
+      "framework": "canvas",
+      "human_interventions": 1,
+      "human_repairs": [
+        "Operator supplied the pinned Playwright module and explicit evaluation validation root for the final browser validation; generated source was unchanged."
+      ],
+      "model_family": "Codex default (not disclosed by task API)",
+      "package_sha256": "40d6e8ef184b9044c18150fb496d0a1c06faba6b26d3fc46c461cdd7a9b1699d",
+      "schema": "beatscope-agent-run-1",
+      "task_sha256": "1ada3d6e9f377dad7862c1b528980f0d0824c0f1f1dd8ab864c0b3f04a6ce7b1",
+      "validator": {
+        "failed": 0,
+        "passed": 5,
+        "required": 5,
+        "unavailable": 0
+      }
+    }
+  ],
   "schema": "beatscope-agent-run-index-1"
 }

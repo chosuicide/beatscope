@@ -634,7 +634,7 @@ def test_sample_run_record_matches_schema_contract():
     run = schema["$defs"]["agent-run"]
     sample = {
         "schema": "beatscope-agent-run-1",
-        "agent": "codex",
+        "agent": "Codex",
         "model_family": "recorded-by-operator",
         "date": "2026-09-01",
         "task_sha256": "a" * 64,
@@ -733,7 +733,7 @@ def test_recorder_writes_append_only_records(tmp_path: Path, monkeypatch: pytest
     monkeypatch.setattr(recorder, "RUNS_DIR", tmp_path / "runs")
     record = {
         "schema": "beatscope-agent-run-1",
-        "agent": "codex",
+        "agent": "Codex",
         "model_family": "recorded-by-operator",
         "date": "2026-09-01",
         "task_sha256": hashlib.sha256((EVAL_DIR / "TASK.md").read_bytes()).hexdigest(),
@@ -750,6 +750,7 @@ def test_recorder_writes_append_only_records(tmp_path: Path, monkeypatch: pytest
 
     assert recorder.main(["--record", str(candidate)]) == 2  # review not confirmed
     assert recorder.main(["--record", str(candidate), "--confirm-review"]) == 0
+    assert (tmp_path / "runs" / "codex-canvas-2026-09-01.json").is_file()
     index = json.loads((tmp_path / "runs" / "index.json").read_text(encoding="utf-8"))
     assert len(index["runs"]) == 1
     assert index["runs"][0]["framework"] == "canvas"

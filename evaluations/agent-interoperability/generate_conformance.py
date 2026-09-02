@@ -85,9 +85,9 @@ def build_markdown() -> str:
         )
     lines.append("")
     lines.append(
-        "Browser layers report `unavailable` because interactive browser tooling is not wired "
-        "into this release; the interactive consumers still pass every automatable required "
-        "layer, and the missing layer stays visible instead of being dropped."
+        "Browser and offline layers are replayed by the pinned CI evidence job. If their tooling "
+        "is absent in another environment, the validator reports `unavailable` explicitly instead "
+        "of dropping the layer."
     )
     lines.append("")
 
