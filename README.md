@@ -3,7 +3,7 @@
 English | [简体中文](README.zh-CN.md)
 
 [![CI](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml/badge.svg)](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.9.0-c65032)](https://github.com/chosuicide/beatscope/releases)
+[![Version](https://img.shields.io/badge/version-0.10.0-c65032)](https://github.com/chosuicide/beatscope/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
 **Turn a local song into a playable rhythm map — then hand the same deterministic timing to Canvas, Three.js, Remotion, or a coding agent.**
@@ -32,6 +32,31 @@ beatscope serve
 ```
 
 Open `http://127.0.0.1:8765`, choose a WAV, FLAC, MP3, OGG, or M4A file, and press play. Analysis is local; request-scoped temporary files are removed after processing.
+
+## Work with BeatScope from the browser
+
+BeatScope Director exposes the loaded track as eight WebMCP tools. An Agent can
+inspect any moment, read bounded events, find and compare visual ranges, then
+focus, audition, and loop a range in the same player the user is watching.
+
+Run the Director demo locally: it ships a pre-analyzed track that this
+repository synthesized for exactly this purpose — never a commercial recording.
+
+```powershell
+python scripts/build_webmcp_demo.py
+python tests/browser/webmcp_demo_server.py --port 8770 --directory build/webmcp-demo
+```
+
+Open `http://127.0.0.1:8770/?demo=webmcp` in a WebMCP-capable browser; the header shows `WEBMCP READY · 8 TOOLS`.
+
+Before letting an Agent drive, the ground rules:
+
+- **Two entries, one model.** WebMCP is the in-browser collaboration entry; the local stdio [MCP server](docs/mcp.md) stays the developer entry. Both read the same Rhythm IR through the same deterministic runtime — only transport and lifecycle differ.
+- **No audio leaves the page.** Tools answer from the loaded analysis, so the Agent queries timing facts, not sound. The Studio's local upload-and-analyze flow is unchanged.
+- **Neutral labels, suggestions only.** Structure appears as repeat families (`A`, `B`, `A′`) — never "verse" or "chorus" — and a candidate range is a measured suggestion to audition, not musical truth.
+- **Visible and reversible.** Every tool call is announced in the on-page Agent ledger, and the most recent Agent action can be undone from the UI.
+
+Tool names, schemas, limits, error codes, and example prompts: [docs/webmcp.md](docs/webmcp.md).
 
 ## One package, different visual languages
 
@@ -183,6 +208,7 @@ For dense mixes, optional Beat This and Demucs inputs are available through `.[h
 
 ## Documentation
 
+- [WebMCP Director tools](docs/webmcp.md)
 - [MCP server and client setup](docs/mcp.md)
 - [Consumer conformance](evaluations/agent-interoperability/conformance.md)
 - [Frozen cross-Agent task](evaluations/agent-interoperability/TASK.md)

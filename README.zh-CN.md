@@ -3,7 +3,7 @@
 [English](README.md) | 简体中文
 
 [![CI](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml/badge.svg)](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.9.0-c65032)](https://github.com/chosuicide/beatscope/releases)
+[![Version](https://img.shields.io/badge/version-0.10.0-c65032)](https://github.com/chosuicide/beatscope/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
 **把一首本地歌曲变成可播放的节奏地图，再把同一份确定性时序交给 Canvas、Three.js、Remotion 或 Coding Agent。**
@@ -32,6 +32,28 @@ beatscope serve
 ```
 
 打开 `http://127.0.0.1:8765`，选择 WAV、FLAC、MP3、OGG 或 M4A 文件并播放。分析完全在本地完成，请求产生的临时文件会在处理后清理。
+
+## 在浏览器里与 BeatScope 协作
+
+BeatScope Director 把当前加载的曲目以八个 WebMCP 工具暴露给页面内的 Agent。它可以查看任意时刻、读取有界事件、寻找并比较视觉段落，然后在用户正在观看的同一个播放器里 Focus、试听并循环该段落。
+
+在本地运行 Director Demo：Demo 包内置一段预分析曲目，由本仓库专门合成——绝非商业录音。
+
+```powershell
+python scripts/build_webmcp_demo.py
+python tests/browser/webmcp_demo_server.py --port 8770 --directory build/webmcp-demo
+```
+
+用支持 WebMCP 的浏览器打开 `http://127.0.0.1:8770/?demo=webmcp`，页头会显示 `WEBMCP READY · 8 TOOLS`。
+
+让 Agent 上手之前，先记住几条基本规则：
+
+- **两个入口，同一模型。** WebMCP 是浏览器内协作入口；本地 stdio [MCP 服务](docs/mcp.md) 仍是开发者入口。两者通过同一确定性 runtime 读取同一份 Rhythm IR，只是传输与生命周期不同。
+- **音频不离开页面。** 工具只应答已加载的分析结果，Agent 查询的是时序事实而非声音本身；本地 Studio 的上传与本机分析流程保持不变。
+- **中性标签，仅供参考。** 结构只以重复家族（`A`、`B`、`A′`）呈现，从不假装“主歌”或“副歌”；候选段落是供试听的测量建议，不是音乐真理。
+- **可见且可撤销。** 每次工具调用都会记录在页面上的 Agent ledger 中，最近一次 Agent 动作可以在 UI 里撤销。
+
+工具名、Schema、限制、错误码与示例 prompt：[docs/webmcp.md](docs/webmcp.md)。
 
 ## 一份时序包，不同的视觉语言
 
@@ -183,6 +205,7 @@ beatscope benchmark
 
 ## 文档
 
+- [WebMCP Director 工具](docs/webmcp.md)
 - [MCP 服务与客户端设置](docs/mcp.md)
 - [消费者符合性结果](evaluations/agent-interoperability/conformance.md)
 - [冻结的跨 Agent 任务](evaluations/agent-interoperability/TASK.md)

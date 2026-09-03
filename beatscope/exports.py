@@ -26,7 +26,7 @@ from .visual_recipe_schema import InvalidVisualRecipe
 # The handoff package format version (plan section 4.3). This tracks the
 # package contract only: the audio analyser stays at schema.ANALYZER_VERSION
 # (0.7.0) and the visual recipe contract at 0.8.0.
-PACKAGE_VERSION = "0.9.0"
+PACKAGE_VERSION = "0.10.0"
 
 
 def _agent_skill_file(relative_path: str) -> str:

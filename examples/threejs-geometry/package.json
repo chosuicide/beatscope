@@ -1,6 +1,6 @@
 {
   "name": "beatscope-example-threejs-geometry",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "private": true,
   "description": "BeatScope reference consumer: Three.js realtime geometry driven by the handoff package's frame API",
   "type": "module",
