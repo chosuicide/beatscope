@@ -19,6 +19,11 @@ export const state = {
   adjustments: { bpm: null, origin: null },
   hoverStep: null,
   loopSelection: null,
+  // Director collaboration state (v0.10 plan sections 5.2-5.3): written only
+  // through the explicit mutations below, read by WebMCP queries and the UI.
+  agentFocus: null,
+  agentActions: [],
+  agentUndo: [],
 };
 
 const listeners = new Set();
@@ -46,6 +51,11 @@ export function setProject(project, projectId = null) {
   state.selectedCell = null;
   state.loopSelection = null;
   state.playbackTime = 0;
+  // A new project invalidates Agent collaboration state (plan 18.2 #14):
+  // focus, ledger, and undo snapshots all describe the previous track.
+  state.agentFocus = null;
+  state.agentActions = [];
+  state.agentUndo = [];
   state.adjustments = {
     bpm: project?.tempo?.global_bpm || project?.tempo?.bpm || null,
     origin: project?.grid?.origin ?? null,
@@ -95,7 +105,63 @@ export function setPlayback(time, isPlaying) {
 }
 
 export function toggleLoop() {
-  state.loop = !state.loop;
+  return setLoopEnabled(!state.loop);
+}
+
+// --- Director mutations (v0.10 plan section 15.3) ---------------------------
+// One mutation per concern; every UI control and every Agent action goes
+// through these so the store stays the single source of truth.
+
+const MAX_LEDGER_ENTRIES = 8;
+const MAX_UNDO_SNAPSHOTS = 8;
+let agentActionSequence = 0;
+
+export function setLoopSelection(selection) {
+  state.loopSelection = selection
+    ? { start: Math.max(0, Math.floor(Number(selection.start) || 0)), end: Math.max(0, Math.floor(Number(selection.end) || 0)) }
+    : null;
+  notify('loopSelectionChanged', state.loopSelection);
+}
+
+export function setLoopEnabled(enabled) {
+  state.loop = Boolean(enabled);
   notify('loopToggled', state.loop);
   return state.loop;
+}
+
+export function setAgentFocus(focus) {
+  state.agentFocus = focus ? { ...focus } : null;
+  notify('agentFocusChanged', state.agentFocus);
+}
+
+export function clearAgentFocus() {
+  state.agentFocus = null;
+  notify('agentFocusChanged', null);
+}
+
+export function appendAgentAction(action) {
+  agentActionSequence += 1;
+  state.agentActions = [
+    ...state.agentActions.slice(-(MAX_LEDGER_ENTRIES - 1)),
+    {
+      id: agentActionSequence,
+      kind: String(action?.kind || 'unknown'),
+      label: String(action?.label || 'Unknown action'),
+      at: Date.now(), // Ledger display only; never part of a tool response.
+    },
+  ];
+  notify('agentActionsChanged', state.agentActions);
+}
+
+export function pushAgentUndo(snapshot) {
+  state.agentUndo = [
+    ...state.agentUndo.slice(-(MAX_UNDO_SNAPSHOTS - 1)),
+    snapshot,
+  ];
+}
+
+export function popAgentUndo() {
+  const snapshot = state.agentUndo.length ? state.agentUndo[state.agentUndo.length - 1] : null;
+  if (snapshot) state.agentUndo = state.agentUndo.slice(0, -1);
+  return snapshot;
 }
