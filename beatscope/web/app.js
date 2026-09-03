@@ -1,11 +1,12 @@
-import { state, subscribe, setProject, setSubdivision, setStartBar, setSelectedOnset, toggleLoop } from './state.js';
+import { state, subscribe, setProject, setSubdivision, setStartBar, setSelectedOnset, toggleLoop, clearAgentFocus, setAgentFocusActive } from './state.js';
 import { fetchProject, fetchVisualArtifacts, getAudioUrl, getMidiExportUrl, getCsvExportUrl, getCodexExportUrl } from './api.js';
-import { initAudio, setAudioSource, togglePlay, seek, previewTransient } from './audio.js';
+import { initAudio, setAudioSource, togglePlay, seek, previewTransient, play, pause } from './audio.js';
 import { renderStaticMap, renderOverlay, renderOverview, exportStaticPng, structuralSegmentAt, structureSummary } from './renderer.js';
 import { createVisualStage, installVisualDebug } from './visual-stage.js';
 import { updateInspector } from './inspector.js';
 import { initImportHandlers, showEmptyState, showErrorState } from './import.js';
 import { gridPosition, metrics, formatTime, timeAtBar } from './grid.js';
+import { undoLastAgentAction } from './webmcp/actions.js';
 
 const $ = (selector) => document.querySelector(selector);
 const app = $('#app');
@@ -29,6 +30,14 @@ const volumeRange = $('#volumeRange');
 const followPlayback = $('#followPlayback');
 const followStructureControl = $('#followStructureControl');
 const followStructure = $('#followStructure');
+// Agent collaboration surfaces (v0.10 plan sections 5.2-5.3).
+const agentFocusReadout = $('#agentFocusReadout');
+const agentFocusText = $('#agentFocusText');
+const clearAgentFocusButton = $('#clearAgentFocus');
+const agentCollab = $('#agentCollab');
+const agentLedgerSummary = $('#agentLedgerSummary');
+const agentLedgerList = $('#agentLedgerList');
+const undoAgentActionButton = $('#undoAgentAction');
 
 const controls = {
   filename: $('#filename'), status: $('#status'), timecode: $('#timecode'), currentTime: $('#currentTime'),
@@ -313,8 +322,77 @@ subscribe((event, payload) => {
   } else if (event === 'loopToggled') {
     controls.loop.textContent = payload ? 'Loop on' : 'Loop 8 bars';
     controls.loop.classList.toggle('is-active', payload);
+  } else if (event === 'agentFocusChanged' || event === 'agentFocusActiveChanged') {
+    updateAgentFocusUI();
+    renderOverview(overviewCanvas, state);
+  } else if (event === 'agentActionsChanged') {
+    updateAgentLedgerUI();
   }
 });
+
+// --- Agent collaboration UI (v0.10 plan sections 5.2-5.4) --------------------
+
+function updateAgentFocusUI() {
+  if (!agentFocusReadout || !agentFocusText) return;
+  const focus = state.agentFocus;
+  if (!focus) {
+    agentFocusReadout.hidden = true;
+    return;
+  }
+  const active = state.agentFocusActive !== false;
+  const bars = `BARS ${String(focus.startBar).padStart(2, '0')}—${String(focus.endBar).padStart(2, '0')}`;
+  const reason = focus.reason ? focus.reason.toUpperCase() : '';
+  agentFocusText.textContent = `AGENT FOCUS · ${bars}${reason ? ` · ${reason}` : ''}${active ? '' : ' · OVERRIDDEN'}`;
+  agentFocusReadout.classList.toggle('is-inactive', !active);
+  agentFocusReadout.hidden = false;
+}
+
+function updateAgentLedgerUI() {
+  if (!agentCollab || !agentLedgerSummary || !agentLedgerList) return;
+  const actions = state.agentActions;
+  agentCollab.hidden = actions.length === 0;
+  agentLedgerSummary.textContent = `Agent actions (${actions.length})`;
+  agentLedgerList.replaceChildren(...actions.map((action, index) => {
+    const row = document.createElement('li');
+    const indexSpan = document.createElement('span');
+    indexSpan.className = 'agent-ledger-index';
+    indexSpan.textContent = String(index + 1).padStart(2, '0');
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'agent-ledger-label';
+    labelSpan.textContent = action.label;
+    row.append(indexSpan, labelSpan);
+    return row;
+  }));
+}
+
+// User control (plan section 5.4): clicking the overview or dragging a cue-map
+// selection keeps the Agent's focus but shows it as overridden. Clear removes
+// the focus only - playback, the loop, and the window selection stay put.
+function markAgentFocusOverridden() {
+  if (state.agentFocus && state.agentFocusActive !== false) setAgentFocusActive(false);
+}
+
+if (clearAgentFocusButton) {
+  clearAgentFocusButton.onclick = () => {
+    clearAgentFocus();
+    renderOverview(overviewCanvas, state);
+  };
+}
+
+if (undoAgentActionButton) {
+  undoAgentActionButton.onclick = async () => {
+    const result = await undoLastAgentAction({
+      getState: () => state,
+      seek: (time) => seek(time),
+      play: async () => { play(); return state.isPlaying; },
+      pause: () => pause(),
+    });
+    if (result.undone) {
+      updateProjectUI();
+      updatePlaybackUI();
+    }
+  };
+}
 
 if (mapStack && 'ResizeObserver' in window) {
   const mapResizeObserver = new ResizeObserver(() => queueMapRefresh());
@@ -404,6 +482,7 @@ if (mapOverlay) {
   };
   mapOverlay.onpointerup = (event) => {
     const hit = mapHit(event);
+    if (pointer && dragging) markAgentFocusOverridden();
     if (pointer && !dragging && hit) {
       setSelectedOnset(hit.onset, hit.cell);
       previewTransient(hit.onset?.time ?? hit.onset?.raw_time ?? hit.time);
@@ -419,6 +498,7 @@ if (mapOverlay) {
 
 overviewCanvas.onclick = (event) => {
   if (!state.project) return;
+  markAgentFocusOverridden();
   const rect = overviewCanvas.getBoundingClientRect();
   const bars = Number(state.project.grid?.bars) || 1;
   const margin = 18;

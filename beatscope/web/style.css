@@ -109,6 +109,22 @@ input[type="range"] { height: 1rem; accent-color: var(--accent); }
 .overview-meta { display: flex; justify-content: space-between; gap: 1rem; margin-top: .65rem; color: var(--muted); font: .64rem/1.4 monospace; }
 .analysis-meta { margin-top: .5rem; color: var(--muted); font: .64rem/1.5 monospace; }
 
+/* Agent collaboration (v0.10 plan sections 5.2-5.4): a quiet meta-line
+   readout and a native collapsible ledger. No capsules, no icons, no glow. */
+.agent-focus-readout { display: inline-flex; align-items: baseline; gap: .55rem; min-width: 0; color: var(--accent-dark); white-space: nowrap; }
+.agent-focus-readout #agentFocusText { overflow: hidden; text-overflow: ellipsis; }
+.agent-focus-readout.is-inactive { color: var(--muted); }
+.agent-focus-readout .text-button { flex: none; }
+.agent-collab { display: flex; align-items: baseline; gap: 1rem; margin-top: .55rem; }
+.agent-ledger { flex: 1; min-width: 0; }
+.agent-ledger summary { cursor: pointer; color: var(--muted); font: .64rem/1.4 monospace; list-style-position: outside; }
+.agent-ledger summary:hover { color: var(--ink); }
+.agent-ledger-list { max-height: 11rem; margin: .5rem 0 0; padding: 0; overflow-y: auto; list-style: none; }
+.agent-ledger-list li { display: flex; gap: .7rem; padding: .18rem 0; border-top: 1px solid var(--line); font: .62rem/1.5 monospace; }
+.agent-ledger-index { flex: none; color: var(--accent-dark); }
+.agent-ledger-label { min-width: 0; overflow: hidden; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; }
+.agent-collab .text-button { flex: none; }
+
 .grid-heading { align-items: center; }
 .grid-tools { display: flex; align-items: center; gap: .45rem; }
 .grid-select { display: flex; align-items: center; gap: .45rem; margin-left: .7rem; color: var(--muted); font-size: .66rem; }
@@ -177,6 +193,8 @@ input[type="range"] { height: 1rem; accent-color: var(--accent); }
   .grid-tools { width: 100%; }
   .visual-stage-stack { height: 34rem; }
   .overview-meta { flex-direction: column; }
+  .agent-focus-readout { white-space: normal; }
+  .agent-collab { align-items: flex-start; flex-direction: column; gap: .45rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

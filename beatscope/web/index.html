@@ -42,7 +42,14 @@
       <section id="overviewSection" class="overview-section" aria-labelledby="overview-title">
         <div class="section-heading compact-heading"><div><h2 id="overview-title">Rhythm pattern overview</h2></div><label class="follow-control"><input id="followPlayback" type="checkbox" checked><span>Follow playback</span></label></div>
         <div class="overview-shell"><canvas id="overview" width="1400" height="192" tabindex="0" aria-label="Song structure and whole-track energy navigation"></canvas></div>
-        <div class="overview-meta"><span id="rangeLabel">No track loaded</span><span>Select a bar to move the eight-bar window</span><span id="structureHint" hidden>Shift+← / → jump between song segments</span></div>
+        <div class="overview-meta"><span id="rangeLabel">No track loaded</span><span>Select a bar to move the eight-bar window</span><span id="structureHint" hidden>Shift+← / → jump between song segments</span><span id="agentFocusReadout" class="agent-focus-readout" hidden><span id="agentFocusText"></span><button id="clearAgentFocus" class="text-button" type="button">Clear</button></span></div>
+        <div id="agentCollab" class="agent-collab" hidden>
+          <details id="agentLedger" class="agent-ledger">
+            <summary id="agentLedgerSummary">Agent actions (0)</summary>
+            <ol id="agentLedgerList" class="agent-ledger-list"></ol>
+          </details>
+          <button id="undoAgentAction" class="text-button" type="button">Undo last</button>
+        </div>
         <p id="analysisMeta" class="analysis-meta" hidden></p>
       </section>
 

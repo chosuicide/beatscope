@@ -1179,6 +1179,32 @@ export function renderOverview(canvas, state) {
   ctx.lineWidth = 1.5;
   ctx.strokeRect(windowX + .5, structureTop + structureHeight + .5, Math.max(2, windowWidth - 1), height - structureTop - structureHeight - 10);
 
+  // Agent Focus (v0.10 plan section 5.2): a quiet orange bracket over the
+  // focused [startTime, endTime) span. A faint wash, two 1px boundary lines,
+  // and a short top bracket that stays above the structure labels. Static by
+  // contract: no blink, no glow, identical under prefers-reduced-motion.
+  const focus = state.agentFocus;
+  const focusStart = Number(focus?.startTime);
+  const focusEnd = Number(focus?.endTime);
+  if (Number.isFinite(focusStart) && Number.isFinite(focusEnd) && duration > 0) {
+    const focusActive = state.agentFocusActive !== false;
+    const alpha = focusActive ? 1 : .45;
+    const bracketTop = structureTop - 8;
+    const focusBottom = height - 10;
+    const rawStart = left + clamp(focusStart / duration) * innerWidth;
+    const rawEnd = left + clamp(focusEnd / duration) * innerWidth;
+    const focusX = Math.max(left, Math.min(rawStart, width - right));
+    const focusEndX = Math.max(focusX + 2, Math.min(Math.max(rawEnd, focusX + 2), width - right));
+    const focusWidth = focusEndX - focusX;
+    ctx.fillStyle = ACCENT;
+    ctx.globalAlpha = focusActive ? .06 : .028;
+    ctx.fillRect(focusX, bracketTop, focusWidth, focusBottom - bracketTop);
+    ctx.globalAlpha = 1;
+    line(ctx, focusX, bracketTop, focusX, focusBottom, ACCENT, 1, .78 * alpha);
+    line(ctx, focusEndX, bracketTop, focusEndX, focusBottom, ACCENT, 1, .78 * alpha);
+    line(ctx, focusX, bracketTop, focusEndX, bracketTop, ACCENT, 1.2, alpha);
+  }
+
   const playheadX = left + clamp(state.playbackTime / duration) * innerWidth;
   line(ctx, playheadX, structureTop - 5, playheadX, height - 9, ACCENT, 1.7);
   ctx.fillStyle = ACCENT;

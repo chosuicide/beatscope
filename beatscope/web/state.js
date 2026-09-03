@@ -22,6 +22,9 @@ export const state = {
   // Director collaboration state (v0.10 plan sections 5.2-5.3): written only
   // through the explicit mutations below, read by WebMCP queries and the UI.
   agentFocus: null,
+  // False once the user overrides the focus (plan section 5.4): the focus is
+  // kept and drawn dimmed until the next agent action re-activates it.
+  agentFocusActive: false,
   agentActions: [],
   agentUndo: [],
 };
@@ -54,6 +57,7 @@ export function setProject(project, projectId = null) {
   // A new project invalidates Agent collaboration state (plan 18.2 #14):
   // focus, ledger, and undo snapshots all describe the previous track.
   state.agentFocus = null;
+  state.agentFocusActive = false;
   state.agentActions = [];
   state.agentUndo = [];
   state.adjustments = {
@@ -131,11 +135,18 @@ export function setLoopEnabled(enabled) {
 
 export function setAgentFocus(focus) {
   state.agentFocus = focus ? { ...focus } : null;
+  state.agentFocusActive = Boolean(focus);
   notify('agentFocusChanged', state.agentFocus);
+}
+
+export function setAgentFocusActive(active) {
+  state.agentFocusActive = Boolean(active);
+  notify('agentFocusActiveChanged', state.agentFocusActive);
 }
 
 export function clearAgentFocus() {
   state.agentFocus = null;
+  state.agentFocusActive = false;
   notify('agentFocusChanged', null);
 }
 
