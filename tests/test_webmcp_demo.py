@@ -139,17 +139,19 @@ def test_build_html_and_js_references_resolve() -> None:
             assert (output / relative).is_file(), f"index.html references missing file {attr_value}"
         # Every static JS import must land inside the bundle (this is what
         # keeps the ../runtime/* URL mapping honest in a static host).
-        # Resolution uses URL semantics, like the browser: a relative
-        # specifier can climb to the bundle root but never above it.
+        # Resolution uses URL semantics under a non-root deployment prefix,
+        # like GitHub Pages. No import may escape /beatscope/.
         import urllib.parse
 
         for js_file in list(output.glob("*.js")) + list((output / "webmcp").glob("*.js")) + list((output / "runtime").glob("*.js")):
             text = js_file.read_text(encoding="utf-8")
-            base = "http://demo/" + js_file.relative_to(output).as_posix()
+            base = "http://demo/beatscope/" + js_file.relative_to(output).as_posix()
             for specifier in re.findall(r"""from\s+['"]([^'"]+)['"]""", text) + re.findall(r"""import\s+['"]([^'"]+)['"]""", text):
                 if not specifier.startswith("."):
                     continue
-                target = urllib.parse.urljoin(base, specifier).removeprefix("http://demo/")
+                resolved = urllib.parse.urljoin(base, specifier)
+                assert resolved.startswith("http://demo/beatscope/"), f"{js_file.name} import escapes hosting prefix: {specifier}"
+                target = resolved.removeprefix("http://demo/beatscope/")
                 assert (output / target).is_file(), f"{js_file.name} imports missing {specifier}"
     finally:
         import shutil

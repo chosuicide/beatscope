@@ -6,6 +6,7 @@
  * store (not a private copy), and stay reversible through the undo stack.
  */
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 import {
   focusRange,
@@ -150,7 +151,10 @@ function fingerprint() {
   const { deps } = setup();
   const result = setLoopRange(deps, { enabled: true, startBar: 9, endBar: 16 });
   assert.equal(result.ok, true);
-  assert.deepEqual(state.loopSelection, { start: 8 * 16, end: 16 * 16 - 1 });
+  assert.deepEqual(state.loopSelection, {
+    start: 8 * 16, end: 16 * 16 - 1,
+    startBar: 9, endBar: 16, startTime: 8 * BAR, endTime: 16 * BAR,
+  });
   assert.equal(state.loop, true);
   assert.equal(result.loop.startTime, 8 * BAR);
   assert.equal(result.loop.endTime, 16 * BAR);
@@ -166,7 +170,10 @@ function fingerprint() {
   assert.equal(stopped.loop.enabled, false);
   assert.equal(stopped.loop.startBar, 9);
   assert.equal(stopped.loop.endBar, 16);
-  assert.deepEqual(state.loopSelection, { start: 8 * 16, end: 16 * 16 - 1 });
+  assert.equal(state.loopSelection.start, 8 * 16);
+  assert.equal(state.loopSelection.end, 16 * 16 - 1);
+  assert.equal(state.loopSelection.startTime, 8 * BAR);
+  assert.equal(state.loopSelection.endTime, 16 * BAR);
   assert.equal(state.loop, false);
   assert.deepEqual(player.calls, []);
 }
@@ -178,6 +185,8 @@ function fingerprint() {
   await assertCode(() => controlPlayback(deps, { action: 'seek', bar: 999 }), 'OUT_OF_RANGE');
   await assertCode(() => controlPlayback(deps, { action: 'seek', time: -1 }), 'INVALID_RANGE');
   await assertCode(() => controlPlayback(deps, { action: 'seek', bar: 3, beat: 9 }), 'OUT_OF_RANGE');
+  await assertCode(() => controlPlayback(deps, { action: 'seek', bar: 3, preRollBeats: 1.5 }), 'INVALID_RANGE');
+  await assertCode(() => controlPlayback(deps, { action: 'seek', bar: 3, preRollBeats: 17 }), 'INVALID_RANGE');
   await assertCode(() => setLoopRange(deps, { enabled: true }), 'INVALID_RANGE');
   await assertCode(() => setLoopRange(deps, { enabled: true, startBar: 1, endBar: 99 }), 'OUT_OF_RANGE');
   await assertCode(() => setLoopRange(deps, { enabled: 'yes' }), 'INVALID_RANGE');
@@ -208,11 +217,35 @@ function fingerprint() {
   clearAgentFocus();
   assert.equal(state.agentFocus, null);
   assert.equal(state.loop, true);
-  assert.deepEqual(state.loopSelection, { start: 8 * 16, end: 16 * 16 - 1 });
+  assert.equal(state.loopSelection.start, 8 * 16);
+  assert.equal(state.loopSelection.end, 16 * 16 - 1);
   assert.equal(state.playbackTime, 4 * BAR);
 }
 
-// --- 13. undo restores page state, never the project --------------------------
+// --- 13. variable-tempo loops keep the real beat-grid boundaries ------------
+{
+  const project = JSON.parse(await readFile(
+    new URL('./fixtures/runtime/variable-tempo-project.json', import.meta.url),
+    'utf-8',
+  ));
+  loadProject(project);
+  const player = makeFakePlayer();
+  const result = setLoopRange(player.deps, { enabled: true, startBar: 2, endBar: 2 });
+  assert.equal(result.loop.startTime, project.beats.find((beat) => beat.bar === 2 && beat.beat_in_bar === 1).time);
+  assert.equal(result.loop.endTime, project.beats.find((beat) => beat.bar === 3 && beat.beat_in_bar === 1).time);
+  assert.equal(state.loopSelection.startTime, result.loop.startTime);
+  assert.equal(state.loopSelection.endTime, result.loop.endTime);
+}
+
+// --- 14. a missing stored beat never falls back to a fabricated grid time ---
+{
+  const { project, player } = setup();
+  project.meter = { numerator: 3, denominator: 8 };
+  project.beats = project.beats.filter((beat) => !(beat.bar === 2 && beat.beat_in_bar === 3));
+  await assertCode(() => controlPlayback(player.deps, { action: 'seek', bar: 2, beat: 3 }), 'OUT_OF_RANGE');
+}
+
+// --- 15. undo restores page state, never the project --------------------------
 {
   const project = makeStructuredProject();
   loadProject(project);
@@ -244,7 +277,7 @@ function fingerprint() {
   assert.equal(result.undone, false);
 }
 
-// --- 14. switching projects clears Agent collaboration state ------------------
+// --- 16. switching projects clears Agent collaboration state ------------------
 {
   const { deps } = setup();
   focusRange(deps, { startBar: 1, endBar: 8, reason: 'intro' });
@@ -258,7 +291,7 @@ function fingerprint() {
   assert.equal(state.loop, false);
 }
 
-// --- 15. ledger labels are deterministic and bounded --------------------------
+// --- 17. ledger labels are deterministic and bounded --------------------------
 {
   assert.deepEqual(ledgerEntryFor('get_project_context'), {
     kind: 'inspect_context',

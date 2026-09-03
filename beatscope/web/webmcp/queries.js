@@ -76,7 +76,12 @@ function barsCount(project) {
 
 function beatsPerBar(project) {
   const meter = project?.meter || {};
-  return clampN(Math.floor(finite(meter.beats_per_bar ?? meter.beatsPerBar, 4)), 1, 32);
+  return clampN(Math.floor(finite(meter.numerator ?? meter.beats_per_bar ?? meter.beatsPerBar, 4)), 1, 32);
+}
+
+function beatUnit(project) {
+  const meter = project?.meter || {};
+  return clampN(Math.floor(finite(meter.denominator ?? meter.beat_unit, 4)), 1, 32);
 }
 
 function segmentsOf(project) {
@@ -238,6 +243,15 @@ function loopSummary(page) {
   if (!page.loopSelection || !page.project) {
     return { enabled: Boolean(page.loop), startTime: null, endTime: null };
   }
+  const exactStart = finite(page.loopSelection.startTime, NaN);
+  const exactEnd = finite(page.loopSelection.endTime, NaN);
+  if (Number.isFinite(exactStart) && Number.isFinite(exactEnd) && exactEnd > exactStart) {
+    return {
+      enabled: Boolean(page.loop),
+      startTime: round4(exactStart),
+      endTime: round4(exactEnd),
+    };
+  }
   const timing = metrics(page.project, page.subdivision, page.adjustments);
   const step = finite(timing.step, 0);
   if (step <= 0) return { enabled: Boolean(page.loop), startTime: null, endTime: null };
@@ -300,7 +314,7 @@ export function projectContext(page) {
       duration: round4(trackDuration(project)),
       globalBpm: Number(finite(project?.tempo?.global_bpm ?? project?.tempo?.bpm, 0).toFixed(2)),
       bars: barsCount(project),
-      timeSignature: [beatsPerBar(project), Math.floor(finite(project?.meter?.beat_unit, 4)) || 4],
+      timeSignature: [beatsPerBar(project), beatUnit(project)],
       variableTempo: variableTempoOf(project),
     },
     playback: {
@@ -423,6 +437,9 @@ function resolveEventWindow(page, input) {
     }
     const duration = trackDuration(project);
     const clampedEnd = Math.min(endTime, duration);
+    if (startTime >= duration || clampedEnd <= startTime) {
+      throw new WebMcpError('OUT_OF_RANGE', `The track ends at ${round4(duration)} seconds.`);
+    }
     if (clampedEnd - startTime > MAX_EVENT_SPAN_SECONDS) {
       throw new WebMcpError('INVALID_RANGE', `Time windows are capped at ${MAX_EVENT_SPAN_SECONDS} seconds.`);
     }
@@ -544,7 +561,9 @@ export function eventsWindow(page, input = {}) {
   }
 
   events.sort((a, b) => {
-    if (a.time !== b.time) return a.time - b.time;
+    const aTime = finite(a.time ?? a.startTime, 0);
+    const bTime = finite(b.time ?? b.startTime, 0);
+    if (aTime !== bTime) return aTime - bTime;
     return KIND_ORDER[a.kind] - KIND_ORDER[b.kind];
   });
 

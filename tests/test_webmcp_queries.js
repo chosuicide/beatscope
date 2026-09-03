@@ -283,6 +283,7 @@ function assertNoLeaks(value, path = '$') {
   assert.equal(stateAtTime(page, { time: 999 }).time, 64);
   await assertCode(() => eventsWindow(page, { startBar: 8, endBar: 2 }), 'INVALID_RANGE');
   await assertCode(() => eventsWindow(page, { startTime: 4, endTime: 1 }), 'INVALID_RANGE');
+  await assertCode(() => eventsWindow(page, { startTime: 1000, endTime: 1001 }), 'OUT_OF_RANGE');
   await assertCode(() => eventsWindow(page, { startTime: 0, endTime: 4, startBar: 1, endBar: 8 }), 'INVALID_RANGE');
   await assertCode(() => eventsWindow(page, { startBar: 1, endBar: 65 }), 'INVALID_RANGE');
   await assertCode(() => findVisualMoments(page, { kind: 'nope' }), 'INVALID_RANGE');
@@ -294,7 +295,27 @@ function assertNoLeaks(value, path = '$') {
   );
 }
 
-// --- 14. every result JSON-serializes and round-trips -----------------------
+// --- 14. Rhythm IR meter fields and mixed-event chronology are preserved ----
+{
+  const project = makeStructuredProject();
+  project.meter = { numerator: 3, denominator: 8 };
+  const page = pageFor(project);
+  assert.deepEqual(projectContext(page).track.timeSignature, [3, 8]);
+  const result = eventsWindow(page, {
+    startBar: 17,
+    endBar: 24,
+    include: INCLUDES,
+    limit: 200,
+  });
+  const eventTime = (event) => event.time ?? event.startTime;
+  for (let index = 1; index < result.events.length; index += 1) {
+    assert.ok(eventTime(result.events[index - 1]) <= eventTime(result.events[index]), `event ${index} is out of order`);
+  }
+  assert.ok(result.events.some((event) => event.kind === 'segment'));
+  assert.ok(result.events.some((event) => event.kind === 'boundary'));
+}
+
+// --- 15. every result JSON-serializes and round-trips -----------------------
 {
   const page = pageFor(makeStructuredProject(), { playbackTime: 8 });
   const results = {
@@ -313,7 +334,7 @@ function assertNoLeaks(value, path = '$') {
   }
 }
 
-// --- 15. identical inputs return deep-equal results -------------------------
+// --- 16. identical inputs return deep-equal results -------------------------
 {
   const page = pageFor(makeStructuredProject(), { playbackTime: 20 });
   const calls = [

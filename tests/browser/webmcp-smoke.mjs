@@ -31,7 +31,10 @@ const fail = (message) => {
 };
 
 const browser = await chromium.launch({
-  args: ['--autoplay-policy=no-user-gesture-required', '--mute-audio'],
+  // Chromium 141 on Windows can internally pause a headless media element
+  // when the process-wide --mute-audio flag is present. Mute the element
+  // instead: playback still exercises the real media clock without sound.
+  args: ['--autoplay-policy=no-user-gesture-required'],
 });
 const page = await browser.newPage();
 const pageErrors = [];
@@ -66,6 +69,7 @@ try {
     const audio = document.querySelector('#audio');
     return Boolean(audio && audio.currentSrc && audio.readyState >= 3);
   }, null, { timeout: 20000 });
+  await page.evaluate(() => { document.querySelector('#audio').muted = true; });
 
   const registered = await page.evaluate(() => [...window.__capturedWebMcpTools.keys()].sort());
   const expected = [

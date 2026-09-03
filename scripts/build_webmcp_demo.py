@@ -93,11 +93,17 @@ def copy_web_assets(output: Path) -> None:
     for name in WEB_HTML + WEB_CSS:
         shutil.copyfile(WEB_ROOT / name, output / name)
     for source in sorted(WEB_ROOT.glob("*.js")):
-        shutil.copyfile(source, output / source.name)
+        # Source modules live beside beatscope/runtime, while the static
+        # bundle nests runtime inside itself. Rewrite only that known import
+        # edge so the bundle also works below a host prefix such as
+        # /beatscope/ on GitHub Pages.
+        text = source.read_text(encoding="utf-8").replace("../runtime/", "./runtime/")
+        (output / source.name).write_text(text, encoding="utf-8")
     webmcp = output / "webmcp"
     webmcp.mkdir(exist_ok=True)
     for source in sorted((WEB_ROOT / "webmcp").glob("*.js")):
-        shutil.copyfile(source, webmcp / source.name)
+        text = source.read_text(encoding="utf-8").replace("../../runtime/", "../runtime/")
+        (webmcp / source.name).write_text(text, encoding="utf-8")
     runtime = output / "runtime"
     runtime.mkdir(exist_ok=True)
     for source in sorted(RUNTIME_ROOT.glob("*.js")):

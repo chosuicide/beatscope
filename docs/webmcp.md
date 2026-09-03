@@ -69,9 +69,10 @@ decimals, and nothing in a tool path consults a wall clock or randomness:
 the same query over the same project returns byte-identical JSON. Responses
 are bounded - no filesystem paths, no audio bytes, no uncapped arrays.
 
-Every successful tool call - read or action - is announced in the on-page
-Agent ledger with a bounded label such as `Inspected events in bars 17—24`
-or `Looped bars 11—18`.
+Every successful page-changing action is announced in the on-page Agent
+ledger with a bounded label such as `Focused bars 11—18` or `Looped bars
+11—18`. Read tools leave playback, focus, loop state, and the ledger
+byte-identical, matching their `readOnlyHint: true` annotation.
 
 ## Read tools
 
@@ -115,10 +116,11 @@ inclusive) - never both. `include`: 1-5 unique kinds from `beats`, `onsets`,
 
 Windows are capped at 64 bars or 180 seconds. Beats, onsets, boundaries, and
 cues use the half-open `(start, end]` slice; segments appear on any overlap.
-Events sort by `(time, kind)` - at equal times, segments come before
-boundaries, boundaries before beats, beats before onsets, onsets before
-cues. The response carries `range {startTime, endTime, startBar, endBar}`,
-the capped `events`, `total`, and `truncated`.
+Events sort by `(time, kind)` (`startTime` is the segment timestamp). At
+equal times, segments come before boundaries, boundaries before beats,
+beats before onsets, onsets before cues. The response carries `range
+{startTime, endTime, startBar, endBar}`, the capped `events`, `total`, and
+`truncated`.
 
 ### find_visual_moments
 
@@ -184,7 +186,8 @@ button is the fallback. The tool never changes the Agent Focus or the loop.
 `enabled`: boolean; when `true`, `startBar` and `endBar` (1-based,
 inclusive) are required. `enabled=false` stops looping but keeps the range
 so the user can re-enable it. It does not seek, play, pause, or touch the
-Agent Focus.
+Agent Focus. Loop boundaries retain the stored downbeat timestamps, so a
+tempo change cannot silently expand or shorten the requested bars.
 
 ## Reversal belongs to the user
 

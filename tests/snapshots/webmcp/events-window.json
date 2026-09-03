@@ -8,6 +8,16 @@
   },
   "events": [
     {
+      "kind": "segment",
+      "family": "B",
+      "label": "B",
+      "variant": 0,
+      "startBar": 17,
+      "endBar": 24,
+      "startTime": 32,
+      "endTime": 48
+    },
+    {
       "kind": "onset",
       "time": 32.125,
       "strength": 0.65,
@@ -66,6 +76,12 @@
       "time": 33,
       "strength": 0.8,
       "accent": true
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 33,
+      "onset": 137
     },
     {
       "kind": "onset",
@@ -128,6 +144,12 @@
       "accent": true
     },
     {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 34,
+      "onset": 145
+    },
+    {
       "kind": "onset",
       "time": 34.125,
       "strength": 0.65,
@@ -186,6 +208,12 @@
       "time": 35,
       "strength": 0.8,
       "accent": true
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 35,
+      "onset": 153
     },
     {
       "kind": "onset",
@@ -248,6 +276,12 @@
       "accent": true
     },
     {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 36,
+      "onset": 161
+    },
+    {
       "kind": "onset",
       "time": 36.125,
       "strength": 0.65,
@@ -306,6 +340,12 @@
       "time": 37,
       "strength": 0.8,
       "accent": true
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 37,
+      "onset": 169
     },
     {
       "kind": "onset",
@@ -368,6 +408,12 @@
       "accent": true
     },
     {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 38,
+      "onset": 177
+    },
+    {
       "kind": "onset",
       "time": 38.125,
       "strength": 0.65,
@@ -426,6 +472,12 @@
       "time": 39,
       "strength": 0.8,
       "accent": true
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 39,
+      "onset": 185
     },
     {
       "kind": "onset",
@@ -488,6 +540,12 @@
       "accent": true
     },
     {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 40,
+      "onset": 193
+    },
+    {
       "kind": "onset",
       "time": 40.125,
       "strength": 0.65,
@@ -546,6 +604,12 @@
       "time": 41,
       "strength": 0.8,
       "accent": true
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 41,
+      "onset": 201
     },
     {
       "kind": "onset",
@@ -608,6 +672,12 @@
       "accent": true
     },
     {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 42,
+      "onset": 209
+    },
+    {
       "kind": "onset",
       "time": 42.125,
       "strength": 0.65,
@@ -666,6 +736,12 @@
       "time": 43,
       "strength": 0.8,
       "accent": true
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 43,
+      "onset": 217
     },
     {
       "kind": "onset",
@@ -728,6 +804,12 @@
       "accent": true
     },
     {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 44,
+      "onset": 225
+    },
+    {
       "kind": "onset",
       "time": 44.125,
       "strength": 0.65,
@@ -786,6 +868,12 @@
       "time": 45,
       "strength": 0.8,
       "accent": true
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 45,
+      "onset": 233
     },
     {
       "kind": "onset",
@@ -848,6 +936,12 @@
       "accent": true
     },
     {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 46,
+      "onset": 241
+    },
+    {
       "kind": "onset",
       "time": 46.125,
       "strength": 0.65,
@@ -908,6 +1002,12 @@
       "accent": true
     },
     {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 47,
+      "onset": 249
+    },
+    {
       "kind": "onset",
       "time": 47.125,
       "strength": 0.65,
@@ -956,112 +1056,6 @@
       "accent": false
     },
     {
-      "kind": "onset",
-      "time": 48,
-      "strength": 0.8,
-      "accent": true
-    },
-    {
-      "kind": "segment",
-      "family": "B",
-      "label": "B",
-      "variant": 0,
-      "startBar": 17,
-      "endBar": 24,
-      "startTime": 32,
-      "endTime": 48
-    },
-    {
-      "kind": "cue",
-      "cue": "accent",
-      "time": 33,
-      "onset": 137
-    },
-    {
-      "kind": "cue",
-      "cue": "accent",
-      "time": 34,
-      "onset": 145
-    },
-    {
-      "kind": "cue",
-      "cue": "accent",
-      "time": 35,
-      "onset": 153
-    },
-    {
-      "kind": "cue",
-      "cue": "accent",
-      "time": 36,
-      "onset": 161
-    },
-    {
-      "kind": "cue",
-      "cue": "accent",
-      "time": 37,
-      "onset": 169
-    },
-    {
-      "kind": "cue",
-      "cue": "accent",
-      "time": 38,
-      "onset": 177
-    },
-    {
-      "kind": "cue",
-      "cue": "accent",
-      "time": 39,
-      "onset": 185
-    },
-    {
-      "kind": "cue",
-      "cue": "accent",
-      "time": 40,
-      "onset": 193
-    },
-    {
-      "kind": "cue",
-      "cue": "accent",
-      "time": 41,
-      "onset": 201
-    },
-    {
-      "kind": "cue",
-      "cue": "accent",
-      "time": 42,
-      "onset": 209
-    },
-    {
-      "kind": "cue",
-      "cue": "accent",
-      "time": 43,
-      "onset": 217
-    },
-    {
-      "kind": "cue",
-      "cue": "accent",
-      "time": 44,
-      "onset": 225
-    },
-    {
-      "kind": "cue",
-      "cue": "accent",
-      "time": 45,
-      "onset": 233
-    },
-    {
-      "kind": "cue",
-      "cue": "accent",
-      "time": 46,
-      "onset": 241
-    },
-    {
-      "kind": "cue",
-      "cue": "accent",
-      "time": 47,
-      "onset": 249
-    },
-    {
       "kind": "boundary",
       "time": 48,
       "bar": 25,
@@ -1072,6 +1066,12 @@
       "time": 48,
       "bar": 25,
       "beat": 1
+    },
+    {
+      "kind": "onset",
+      "time": 48,
+      "strength": 0.8,
+      "accent": true
     },
     {
       "kind": "cue",

@@ -12,7 +12,6 @@
 import { TOOL_DEFINITIONS, ERROR_MESSAGES } from './schemas.js';
 import { WebMcpError, errorResult } from './responses.js';
 import { trackForProject } from '../../runtime/runtime.js';
-import { appendAgentAction } from '../state.js';
 import {
   projectContext,
   stateAtTime,
@@ -24,16 +23,7 @@ import {
   focusRange,
   controlPlayback,
   setLoopRange,
-  ledgerEntryFor,
 } from './actions.js';
-
-const READ_TOOLS = new Set([
-  'get_project_context',
-  'get_state_at_time',
-  'get_events',
-  'find_visual_moments',
-  'compare_ranges',
-]);
 
 /** A fresh snapshot of the page truth for one tool call (plan section 3.1). */
 function buildPage(state) {
@@ -87,9 +77,6 @@ export function installWebMCP(deps = {}) {
       if (!state.project) return errorResult('NO_TRACK', ERROR_MESSAGES.NO_TRACK);
       const page = buildPage(state);
       const result = await handlers[definition.name](input || {}, page);
-      if (READ_TOOLS.has(definition.name)) {
-        appendAgentAction(ledgerEntryFor(definition.name, input || {}));
-      }
       return result;
     } catch (error) {
       if (error instanceof WebMcpError) {

@@ -114,6 +114,7 @@ const session = installWebMCP({
   loadProject(makeQuietProject());
   const contextB = await mock.tools.get('get_project_context').definition.execute({}, {});
   assert.equal(contextB.track.bars, 4);
+  assert.equal(state.agentActions.length, 0, 'read-only tools must not mutate the Agent ledger');
 }
 
 // --- 6. dispose aborts every registration signal ------------------------------

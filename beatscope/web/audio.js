@@ -21,9 +21,16 @@ export function initAudio(element) {
       let loopStart;
       let loopEnd;
       if (state.loopSelection) {
-        const timing = metrics(state.project, state.subdivision, state.adjustments);
-        loopStart = timing.origin + state.loopSelection.start * timing.step;
-        loopEnd = timing.origin + (state.loopSelection.end + 1) * timing.step;
+        const exactStart = Number(state.loopSelection.startTime);
+        const exactEnd = Number(state.loopSelection.endTime);
+        if (Number.isFinite(exactStart) && Number.isFinite(exactEnd) && exactEnd > exactStart) {
+          loopStart = exactStart;
+          loopEnd = exactEnd;
+        } else {
+          const timing = metrics(state.project, state.subdivision, state.adjustments);
+          loopStart = timing.origin + state.loopSelection.start * timing.step;
+          loopEnd = timing.origin + (state.loopSelection.end + 1) * timing.step;
+        }
       } else {
         loopStart = timeAtBar(state.startBar + 1, state.project, state.adjustments);
         loopEnd = timeAtBar(state.startBar + state.viewBars + 1, state.project, state.adjustments);

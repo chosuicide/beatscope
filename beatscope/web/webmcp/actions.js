@@ -47,7 +47,12 @@ function trackDuration(project) {
 
 function timeSignatureBeatsPerBar(project) {
   const meter = project?.meter || {};
-  return Math.max(1, Math.min(32, Math.floor(Number(meter.beats_per_bar ?? meter.beatsPerBar) || 4)));
+  return Math.max(1, Math.min(32, Math.floor(Number(meter.numerator ?? meter.beats_per_bar ?? meter.beatsPerBar) || 4)));
+}
+
+function timeSignatureBeatUnit(project) {
+  const meter = project?.meter || {};
+  return Math.max(1, Math.min(32, Math.floor(Number(meter.denominator ?? meter.beat_unit) || 4)));
 }
 
 /** Snapshot taken BEFORE an action mutates anything (plan section 24, Phase 3). */
@@ -208,9 +213,15 @@ export async function controlPlayback(deps, input = {}) {
   const duration = trackDuration(project);
   const hasStoredBeats = Array.isArray(project.beats) && project.beats.length > 0;
   const timingSource = hasStoredBeats ? 'stored-beats' : 'synthetic-grid';
+  if (input.preRollBeats !== undefined
+    && (!Number.isInteger(Number(input.preRollBeats))
+      || Number(input.preRollBeats) < 0
+      || Number(input.preRollBeats) > 16)) {
+    throw new WebMcpError('INVALID_RANGE', 'preRollBeats must be an integer from 0 to 16.');
+  }
   const preRoll = input.preRollBeats === undefined
     ? 0
-    : Math.max(0, Math.min(16, Math.floor(Number(input.preRollBeats) || 0)));
+    : Number(input.preRollBeats);
 
   let targetTime;
   let seekTime;
@@ -240,7 +251,7 @@ export async function controlPlayback(deps, input = {}) {
     if (beat < 1 || beat > timeSignatureBeatsPerBar(project)) {
       throw new WebMcpError(
         'OUT_OF_RANGE',
-        `Beat ${beat} does not exist in a ${timeSignatureBeatsPerBar(project)}/4 bar.`,
+        `Beat ${beat} does not exist in a ${timeSignatureBeatsPerBar(project)}/${timeSignatureBeatUnit(project)} bar.`,
       );
     }
     const stored = hasStoredBeats ? storedBeatTime(project, bar, beat) : null;
@@ -251,13 +262,15 @@ export async function controlPlayback(deps, input = {}) {
       } else {
         seekTime = targetTime;
       }
-    } else {
+    } else if (!hasStoredBeats) {
       // Beat-less project: the runtime's synthetic grid is the only honest clock.
       const gridTime = Number(timeAtBar(bar, project, state.adjustments)) || 0;
       const bpm = Number(project?.tempo?.global_bpm ?? project?.tempo?.bpm) || 120;
       targetTime = gridTime + (beat - 1) * (60 / bpm);
       seekTime = Math.max(0, targetTime - preRoll * (60 / bpm));
       targetTime = Math.min(targetTime, duration);
+    } else {
+      throw new WebMcpError('OUT_OF_RANGE', `Bar ${bar}, beat ${beat} is not present in the stored beat grid.`);
     }
   } else {
     throw new WebMcpError('INVALID_RANGE', 'seek needs a time or a bar.');
@@ -326,10 +339,18 @@ export function setLoopRange(deps, input = {}) {
     let endBar = null;
     if (selection) {
       const timing = metrics(project, state.subdivision, state.adjustments);
-      startBar = Math.floor(selection.start / state.subdivision) + 1;
-      endBar = Math.floor((selection.end + 1) / state.subdivision);
-      startTime = round4(timing.origin + selection.start * timing.step);
-      endTime = round4(timing.origin + (selection.end + 1) * timing.step);
+      startBar = Number.isFinite(Number(selection.startBar))
+        ? Number(selection.startBar)
+        : Math.floor(selection.start / state.subdivision) + 1;
+      endBar = Number.isFinite(Number(selection.endBar))
+        ? Number(selection.endBar)
+        : Math.floor((selection.end + 1) / state.subdivision);
+      startTime = Number.isFinite(Number(selection.startTime))
+        ? round4(selection.startTime)
+        : round4(timing.origin + selection.start * timing.step);
+      endTime = Number.isFinite(Number(selection.endTime))
+        ? round4(selection.endTime)
+        : round4(timing.origin + (selection.end + 1) * timing.step);
     }
     return {
       ok: true,
@@ -342,7 +363,14 @@ export function setLoopRange(deps, input = {}) {
   const startStep = (range.startBar - 1) * subdivision;
   const endStep = range.endBar * subdivision - 1;
 
-  setLoopSelection({ start: startStep, end: endStep });
+  setLoopSelection({
+    start: startStep,
+    end: endStep,
+    startBar: range.startBar,
+    endBar: range.endBar,
+    startTime: range.startTime,
+    endTime: range.endTime,
+  });
   setLoopEnabled(true);
   appendAgentAction(ledgerEntryFor('set_loop_range', { enabled: true, ...range }));
 

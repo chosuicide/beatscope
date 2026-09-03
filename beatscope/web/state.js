@@ -121,9 +121,18 @@ const MAX_UNDO_SNAPSHOTS = 8;
 let agentActionSequence = 0;
 
 export function setLoopSelection(selection) {
-  state.loopSelection = selection
-    ? { start: Math.max(0, Math.floor(Number(selection.start) || 0)), end: Math.max(0, Math.floor(Number(selection.end) || 0)) }
-    : null;
+  if (!selection) {
+    state.loopSelection = null;
+  } else {
+    state.loopSelection = {
+      start: Math.max(0, Math.floor(Number(selection.start) || 0)),
+      end: Math.max(0, Math.floor(Number(selection.end) || 0)),
+    };
+    for (const key of ['startBar', 'endBar', 'startTime', 'endTime']) {
+      const value = Number(selection[key]);
+      if (Number.isFinite(value)) state.loopSelection[key] = value;
+    }
+  }
   notify('loopSelectionChanged', state.loopSelection);
 }
 
