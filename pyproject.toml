@@ -34,8 +34,13 @@ include = ["beatscope*"]
 
 [tool.setuptools.package-data]
 beatscope = [
-  "web/*.html", "web/*.js", "web/*.css",
+  "web/*.html", "web/*.js", "web/*.css", "web/webmcp/*.js",
   "runtime/*.js", "runtime/*.mjs",
   "agent_skill/*.md", "agent_skill/references/*.md",
   "mcp/*.mjs", "mcp/data/*.json",
 ]
+
+# Release policy (v0.10): the WebMCP Director modules ship in the wheel so
+# the Studio player works offline; the frozen demo audio/fixtures stay out -
+# they belong to the static demo bundle that scripts/build_webmcp_demo.py
+# assembles and the demo host serves (see docs/webmcp.md).

@@ -20,9 +20,20 @@ REQUIRED_MODULES = [
     "beatscope/web/particle-field.js",
     "beatscope/web/particle-geometry.js",
     "beatscope/web/particle-shaders.js",
+    "beatscope/web/webmcp/schemas.js",
+    "beatscope/web/webmcp/queries.js",
+    "beatscope/web/webmcp/actions.js",
+    "beatscope/web/webmcp/responses.js",
+    "beatscope/web/webmcp/register.js",
     "beatscope/runtime/consumer-probe.js",
     "beatscope/runtime/consumer-browser.mjs",
     "beatscope/runtime/consumer-offline.mjs",
+]
+
+# Release policy (v0.10): the frozen demo audio/fixtures are static-host
+# assets, not wheel payload (see pyproject package-data comment).
+EXCLUDED_MODULES = [
+    "beatscope/web/demo/audio.mp3",
 ]
 
 
@@ -46,3 +57,5 @@ def test_wheel_contains_particle_modules(tmp_path: Path) -> None:
     names = zipfile.ZipFile(wheels[0]).namelist()
     missing = [name for name in REQUIRED_MODULES if name not in names]
     assert not missing, f"modules missing from the built wheel: {missing}"
+    leaked = [name for name in EXCLUDED_MODULES if name in names]
+    assert not leaked, f"demo assets must stay out of the wheel: {leaked}"

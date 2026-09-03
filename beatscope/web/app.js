@@ -70,6 +70,10 @@ let sceneArtifactsAvailable = false;
 let artifactsLoadToken = 0;
 let lastReadoutKey = null;
 let lastSceneKey = null;
+// Frozen WebMCP demo (v0.10 plan section 17.2): /?demo=webmcp loads a
+// pre-analysed track plus its visual artifacts instead of the local API.
+const demoMode = new URLSearchParams(window.location.search).get('demo') === 'webmcp';
+let demoArtifacts = null;
 
 function followStructurePreference() {
   try {
@@ -82,10 +86,14 @@ function followStructurePreference() {
 async function loadVisualArtifacts() {
   const token = ++artifactsLoadToken;
   let artifacts = null;
-  try {
-    artifacts = await fetchVisualArtifacts(state.projectId);
-  } catch (_) {
-    artifacts = null;
+  if (demoArtifacts) {
+    artifacts = demoArtifacts;
+  } else {
+    try {
+      artifacts = await fetchVisualArtifacts(state.projectId);
+    } catch (_) {
+      artifacts = null;
+    }
   }
   let available = false;
   try {
@@ -570,6 +578,7 @@ controls.projectFile.onchange = async (event) => {
   if (!file) return;
   try {
     const project = JSON.parse(await file.text());
+    demoArtifacts = null; // a user project never wears the demo scene
     setProject(project, project.project_id || null);
     if (project.project_id) setAudioSource(getAudioUrl(project.project_id));
   } catch (error) {
@@ -665,6 +674,32 @@ initImportHandlers({
 });
 
 (async () => {
+  if (demoMode) {
+    // Frozen demo entry (plan section 17.2): parallel-fetch the analysed
+    // demo project, recipe and timeline; never call /api/project. Relative
+    // URLs keep the page working under any static hosting base path.
+    try {
+      const [projectResponse, recipeResponse, timelineResponse] = await Promise.all([
+        fetch('demo/project.json'),
+        fetch('demo/visual-recipe.json'),
+        fetch('demo/visual-timeline.json'),
+      ]);
+      if (!projectResponse.ok) throw new Error(`demo project ${projectResponse.status}`);
+      const project = await projectResponse.json();
+      // The artifacts must be in place before setProject: the projectLoaded
+      // handler reads them synchronously instead of calling the visual API.
+      demoArtifacts = recipeResponse.ok && timelineResponse.ok
+        ? { recipe: await recipeResponse.json(), timeline: await timelineResponse.json() }
+        : null;
+      setProject(project, 'webmcp-demo');
+      setAudioSource('demo/audio.mp3');
+    } catch (_) {
+      demoArtifacts = null;
+      showEmptyState();
+    }
+    updateProjectUI();
+    return;
+  }
   try {
     const response = await fetch('/api/project');
     if (response.ok) {

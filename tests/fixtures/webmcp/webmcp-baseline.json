@@ -1,0 +1,63 @@
+{
+  "schema": "beatscope-webmcp-benchmark-baseline-1",
+  "updated": "2026-09-03",
+  "policy": "thresholds_ms are machine-independent hard gates enforced by tests/test_webmcp_benchmark.js on every run; observed_ms are informational and rewritten only by 'node tests/test_webmcp_benchmark.js --accept-baseline'. Never hand-edit observed values.",
+  "thresholds_ms": {
+    "short": {
+      "context_x100": 40,
+      "state_at_time_x1000": 100,
+      "events_max_window_x10": 60,
+      "moments_all_kinds_x10": 250,
+      "compare_four_ranges_x10": 100
+    },
+    "typical": {
+      "context_x100": 40,
+      "state_at_time_x1000": 100,
+      "events_max_window_x10": 60,
+      "moments_all_kinds_x10": 400,
+      "compare_four_ranges_x10": 150
+    },
+    "long": {
+      "context_x100": 40,
+      "state_at_time_x1000": 100,
+      "events_max_window_x10": 60,
+      "moments_all_kinds_x10": 1500,
+      "compare_four_ranges_x10": 300
+    },
+    "actions": {
+      "actions_x1000": 100
+    },
+    "lifecycle": {
+      "install_dispose_x100": 100
+    }
+  },
+  "observed_ms": {
+    "short": {
+      "context_x100": 1.95,
+      "state_at_time_x1000": 4.78,
+      "events_max_window_x10": 3.13,
+      "moments_all_kinds_x10": 13.29,
+      "compare_four_ranges_x10": 4.85
+    },
+    "typical": {
+      "context_x100": 0.47,
+      "state_at_time_x1000": 2.52,
+      "events_max_window_x10": 2.95,
+      "moments_all_kinds_x10": 19.71,
+      "compare_four_ranges_x10": 6.71
+    },
+    "long": {
+      "context_x100": 0.75,
+      "state_at_time_x1000": 2.38,
+      "events_max_window_x10": 2.96,
+      "moments_all_kinds_x10": 77.9,
+      "compare_four_ranges_x10": 15.09
+    },
+    "actions": {
+      "actions_x1000": 4.03
+    },
+    "lifecycle": {
+      "install_dispose_x100": 2.42
+    }
+  }
+}

@@ -40,7 +40,7 @@ jobs:
         run: python -m pytest tests/mcp -q
 
       - name: JavaScript tests
-        run: node --test tests/test_grid.js tests/test_interaction.js tests/test_runtime.js tests/test_scene_director.js tests/test_visual_profile.js tests/test_playback_characterization.js tests/test_playback_state.js tests/test_visual_stage.js tests/test_particle_geometry.js tests/test_particle_uniforms.js tests/test_consumer_probe.js tests/test_canvas_consumer.js tests/test_threejs_consumer.js tests/test_remotion_consumer.js
+        run: node --test tests/test_grid.js tests/test_interaction.js tests/test_runtime.js tests/test_scene_director.js tests/test_visual_profile.js tests/test_playback_characterization.js tests/test_playback_state.js tests/test_visual_stage.js tests/test_particle_geometry.js tests/test_particle_uniforms.js tests/test_consumer_probe.js tests/test_canvas_consumer.js tests/test_threejs_consumer.js tests/test_remotion_consumer.js tests/test_webmcp_queries.js tests/test_webmcp_actions.js tests/test_webmcp_registration.js tests/test_webmcp_benchmark.js
 
       - name: Benchmark gates
         run: python -m beatscope.cli benchmark --output-dir build/benchmark-ci
@@ -150,4 +150,62 @@ jobs:
         with:
           name: remotion-smoke-render
           path: examples/remotion-composition/out/sequence
+          retention-days: 7
+
+  webmcp-demo:
+    # Light Director-demo gate (v0.10 plan section 26): build the static
+    # bundle, run its Python gates, then replay the browser round trip once
+    # on Ubuntu. Never multiplied across the OS/Python matrix; on failure the
+    # screenshot and server log are uploaded, on success the demo audio is
+    # NOT re-uploaded as an artifact.
+    name: WebMCP Director demo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install BeatScope with dev dependencies
+        run: python -m pip install -e ".[dev]"
+
+      - name: Build the static WebMCP demo
+        run: |
+          export SOURCE_DATE_EPOCH=1788360000
+          python scripts/build_webmcp_demo.py
+
+      - name: Demo fixture and bundle gates
+        run: python -m pytest tests/test_webmcp_demo.py -q
+
+      - name: Install locked browser dependencies
+        run: npm ci --prefix tests/browser --no-audit --no-fund
+
+      - name: Install pinned browser validator
+        working-directory: tests/browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser smoke over the static demo
+        run: |
+          python tests/browser/webmcp_demo_server.py --port 8770 --directory build/webmcp-demo &
+          SERVER_PID=$!
+          sleep 2
+          node tests/browser/webmcp-smoke.mjs http://127.0.0.1:8770
+          STATUS=$?
+          kill $SERVER_PID || true
+          exit $STATUS
+
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: webmcp-demo-failure
+          path: |
+            build/webmcp-evidence
+            build/webmcp-demo/index.html
           retention-days: 7

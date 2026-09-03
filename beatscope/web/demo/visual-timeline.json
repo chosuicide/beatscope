@@ -1,0 +1,97 @@
+{
+  "schema": "beatscope-visual-timeline-1",
+  "recipe_version": "0.8.0",
+  "project_id": "7daf0055c52f",
+  "duration": 60.0,
+  "mode": "structure",
+  "scenes": [
+    {
+      "id": "scene-001",
+      "segment_id": "segment-001",
+      "segment_index": 0,
+      "family": "A",
+      "variant": 0,
+      "label": "A",
+      "start_time": 0.0,
+      "end_time": 19.9924,
+      "motif": "orbital-weave",
+      "variant_delta": {
+        "spread": 0.0,
+        "twist": 0.0,
+        "flow": 0.0,
+        "orbit": 0.0,
+        "void": 0.0,
+        "contrast": 0.0
+      }
+    },
+    {
+      "id": "scene-002",
+      "segment_id": "segment-002",
+      "segment_index": 1,
+      "family": "B",
+      "variant": 0,
+      "label": "B",
+      "start_time": 19.9924,
+      "end_time": 39.9906,
+      "motif": "compact-triad",
+      "variant_delta": {
+        "spread": 0.0,
+        "twist": 0.0,
+        "flow": 0.0,
+        "orbit": 0.0,
+        "void": 0.0,
+        "contrast": 0.0
+      }
+    },
+    {
+      "id": "scene-003",
+      "segment_id": "segment-003",
+      "segment_index": 2,
+      "family": "A",
+      "variant": 0,
+      "label": "A",
+      "start_time": 39.9906,
+      "end_time": 60.0,
+      "motif": "orbital-weave",
+      "variant_delta": {
+        "spread": 0.0,
+        "twist": 0.0,
+        "flow": 0.0,
+        "orbit": 0.0,
+        "void": 0.0,
+        "contrast": 0.0
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "id": "transition-001",
+      "boundary_bar": 11,
+      "time": 19.9924,
+      "from_scene": "scene-001",
+      "to_scene": "scene-002",
+      "treatment": "radial-part",
+      "strength": 1.0,
+      "driver": "rhythm",
+      "lead_seconds": 0.50215,
+      "settle_seconds": 0.753225
+    },
+    {
+      "id": "transition-002",
+      "boundary_bar": 21,
+      "time": 39.9906,
+      "from_scene": "scene-002",
+      "to_scene": "scene-003",
+      "treatment": "flow-shear",
+      "strength": 0.9046,
+      "driver": "timbre",
+      "lead_seconds": 0.5021,
+      "settle_seconds": 0.75315
+    }
+  ],
+  "diagnostics": {
+    "scene_count": 3,
+    "transition_count": 2,
+    "warnings": []
+  }
+}
