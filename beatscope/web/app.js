@@ -72,8 +72,36 @@ let lastReadoutKey = null;
 let lastSceneKey = null;
 // Frozen WebMCP demo (v0.10 plan section 17.2): /?demo=webmcp loads a
 // pre-analysed track plus its visual artifacts instead of the local API.
-const demoMode = new URLSearchParams(window.location.search).get('demo') === 'webmcp';
+const staticDemoMode = document.documentElement.dataset.staticDemo === 'true';
+const demoMode = staticDemoMode || new URLSearchParams(window.location.search).get('demo') === 'webmcp';
 let demoArtifacts = null;
+
+function applyStaticDemoControls() {
+  if (!staticDemoMode) return;
+  const dropZone = $('#dropZone');
+  const selectAudio = $('#selectAudioBtn');
+  const label = dropZone?.querySelector('.drop-zone-label');
+  const meta = dropZone?.querySelector('.drop-zone-meta');
+  if (label) label.textContent = 'Static Director demo';
+  if (meta) meta.textContent = 'Included synthetic track · run BeatScope locally to analyze your own audio';
+  if (dropZone) {
+    dropZone.removeAttribute('role');
+    dropZone.removeAttribute('tabindex');
+    dropZone.removeAttribute('aria-label');
+    dropZone.setAttribute('aria-disabled', 'true');
+  }
+  if (selectAudio) {
+    selectAudio.disabled = true;
+    selectAudio.textContent = 'Local Studio required';
+  }
+  controls.audioInput.disabled = true;
+  controls.replaceAudio.disabled = true;
+  controls.replaceAudio.textContent = 'Demo track';
+  for (const control of [controls.exportMidi, controls.exportCsv, controls.exportCodex]) {
+    control.disabled = true;
+    control.title = 'Available when BeatScope Studio is running locally';
+  }
+}
 
 function followStructurePreference() {
   try {
@@ -546,7 +574,9 @@ seekRange.oninput = (event) => seek(Number(event.target.value));
 controls.seekBack.onclick = () => seek(state.playbackTime - 5);
 controls.seekForward.onclick = () => seek(state.playbackTime + 5);
 volumeRange.oninput = (event) => { audioElement.volume = Number(event.target.value); };
-controls.replaceAudio.onclick = () => controls.audioInput.click();
+controls.replaceAudio.onclick = () => {
+  if (!staticDemoMode) controls.audioInput.click();
+};
 
 audioElement.addEventListener('loadedmetadata', () => {
   seekRange.max = String(audioElement.duration || 0);
@@ -666,12 +696,14 @@ const webmcpSession = installWebMCP({
 });
 if (webmcpSession.status === 'ready') webmcpState = 'registered';
 refreshWebMcpStatus();
-initImportHandlers({
-  onLoaded: () => {
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    $('#visualSection')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
-  },
-});
+if (!staticDemoMode) {
+  initImportHandlers({
+    onLoaded: () => {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      $('#visualSection')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    },
+  });
+}
 
 (async () => {
   if (demoMode) {
@@ -698,6 +730,7 @@ initImportHandlers({
       showEmptyState();
     }
     updateProjectUI();
+    applyStaticDemoControls();
     return;
   }
   try {

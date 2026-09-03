@@ -118,10 +118,21 @@ def test_build_output_is_complete() -> None:
         assert build_info["schema"] == "beatscope-webmcp-demo-build-info-1"
         assert build_info["commit"]
         assert build_info["version"]
+        html = (output / "index.html").read_text(encoding="utf-8")
+        assert 'data-static-demo="true"' in html
+        assert 'class="wordmark" href="./index.html"' in html
     finally:
         import shutil
 
         shutil.rmtree(output, ignore_errors=True)
+
+
+def test_static_build_disables_backend_only_controls() -> None:
+    app = (REPO_ROOT / "beatscope" / "web" / "app.js").read_text(encoding="utf-8")
+    assert "staticDemoMode ||" in app
+    assert "if (!staticDemoMode) {\n  initImportHandlers" in app
+    assert "applyStaticDemoControls();" in app
+    assert "Local Studio required" in app
 
 
 def test_build_html_and_js_references_resolve() -> None:

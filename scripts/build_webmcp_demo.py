@@ -92,6 +92,16 @@ def verify_fixture_lock() -> None:
 def copy_web_assets(output: Path) -> None:
     for name in WEB_HTML + WEB_CSS:
         shutil.copyfile(WEB_ROOT / name, output / name)
+    # GitHub Pages is a static host: mark this build so the app always loads
+    # the frozen Director fixture and never exposes controls that POST to the
+    # local Python API. Source builds remain unchanged and fully interactive.
+    html_path = output / "index.html"
+    html = html_path.read_text(encoding="utf-8").replace(
+        '<html lang="en">',
+        '<html lang="en" data-static-demo="true">',
+        1,
+    ).replace('class="wordmark" href="/"', 'class="wordmark" href="./index.html"', 1)
+    html_path.write_text(html, encoding="utf-8")
     for source in sorted(WEB_ROOT.glob("*.js")):
         # Source modules live beside beatscope/runtime, while the static
         # bundle nests runtime inside itself. Rewrite only that known import

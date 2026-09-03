@@ -39,7 +39,7 @@ BeatScope Director exposes the loaded track as eight WebMCP tools. An Agent can
 inspect any moment, read bounded events, find and compare visual ranges, then
 focus, audition, and loop a range in the same player the user is watching.
 
-**[Open the live Director demo](https://chosuicide.github.io/beatscope/?demo=webmcp)** — no install or audio upload required.
+**[Open the live Director demo](https://chosuicide.github.io/beatscope/?demo=webmcp)** — no install required. It is a static, pre-analyzed demo; run Studio locally to analyze your own audio.
 
 [![WebMCP Director focusing and auditioning a measured transition](docs/demo/webmcp-director.gif)](docs/demo/webmcp-director.mp4)
 

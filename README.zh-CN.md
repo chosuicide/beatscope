@@ -37,7 +37,7 @@ beatscope serve
 
 BeatScope Director 把当前加载的曲目以八个 WebMCP 工具暴露给页面内的 Agent。它可以查看任意时刻、读取有界事件、寻找并比较视觉段落，然后在用户正在观看的同一个播放器里 Focus、试听并循环该段落。
 
-**[打开在线 Director Demo](https://chosuicide.github.io/beatscope/?demo=webmcp)** —— 无需安装，也无需上传音频。
+**[打开在线 Director Demo](https://chosuicide.github.io/beatscope/?demo=webmcp)** —— 无需安装。这是使用预分析曲目的静态 Demo；如需分析自己的音频，请在本地运行 Studio。
 
 [![WebMCP Director 聚焦并试听测得的结构转场](docs/demo/webmcp-director.gif)](docs/demo/webmcp-director.mp4)
 
