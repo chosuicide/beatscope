@@ -1,0 +1,304 @@
+{
+  "structural_transition": {
+    "ok": true,
+    "query": {
+      "kind": "structural_transition",
+      "windowBars": 8,
+      "band": "all"
+    },
+    "candidates": [
+      {
+        "id": "structural_transition:17-24",
+        "rank": 1,
+        "startBar": 17,
+        "endBar": 24,
+        "startTime": 32,
+        "endTime": 48,
+        "anchorTime": 32,
+        "reason": "Strong structural boundary with a large adjacent energy change.",
+        "facts": {
+          "boundaryNovelty": 0.9,
+          "energyBefore": 0.4642,
+          "energyAfter": 0.7268,
+          "onsetDensity": 8,
+          "peakStrength": 0.95,
+          "dominantBand": "low"
+        }
+      },
+      {
+        "id": "structural_transition:25-32",
+        "rank": 2,
+        "startBar": 25,
+        "endBar": 32,
+        "startTime": 48,
+        "endTime": 64,
+        "anchorTime": 48,
+        "reason": "Strong structural boundary with a large adjacent energy change.",
+        "facts": {
+          "boundaryNovelty": 0.72,
+          "energyBefore": 0.7268,
+          "energyAfter": 0.4637,
+          "onsetDensity": 3.9375,
+          "peakStrength": 0.8,
+          "dominantBand": "high"
+        }
+      },
+      {
+        "id": "structural_transition:9-16",
+        "rank": 3,
+        "startBar": 9,
+        "endBar": 16,
+        "startTime": 16,
+        "endTime": 32,
+        "anchorTime": 16,
+        "reason": "Strong structural boundary with a large adjacent energy change.",
+        "facts": {
+          "boundaryNovelty": 0.55,
+          "energyBefore": 0.3703,
+          "energyAfter": 0.4642,
+          "onsetDensity": 4,
+          "peakStrength": 0.95,
+          "dominantBand": "high"
+        }
+      }
+    ]
+  },
+  "strong_transient": {
+    "ok": true,
+    "query": {
+      "kind": "strong_transient",
+      "windowBars": 8,
+      "band": "all"
+    },
+    "candidates": [
+      {
+        "id": "strong_transient:17-24",
+        "rank": 1,
+        "startBar": 17,
+        "endBar": 24,
+        "startTime": 32,
+        "endTime": 48,
+        "anchorTime": 32,
+        "reason": "Highest measured transient strength.",
+        "facts": {
+          "boundaryNovelty": null,
+          "energyBefore": null,
+          "energyAfter": null,
+          "onsetDensity": 8,
+          "peakStrength": 0.95,
+          "dominantBand": "low"
+        }
+      },
+      {
+        "id": "strong_transient:9-16",
+        "rank": 2,
+        "startBar": 9,
+        "endBar": 16,
+        "startTime": 16,
+        "endTime": 32,
+        "anchorTime": 16,
+        "reason": "Highest measured transient strength.",
+        "facts": {
+          "boundaryNovelty": null,
+          "energyBefore": null,
+          "energyAfter": null,
+          "onsetDensity": 4,
+          "peakStrength": 0.95,
+          "dominantBand": "high"
+        }
+      },
+      {
+        "id": "strong_transient:25-32",
+        "rank": 3,
+        "startBar": 25,
+        "endBar": 32,
+        "startTime": 48,
+        "endTime": 64,
+        "anchorTime": 48,
+        "reason": "Highest measured transient strength.",
+        "facts": {
+          "boundaryNovelty": null,
+          "energyBefore": null,
+          "energyAfter": null,
+          "onsetDensity": 3.9375,
+          "peakStrength": 0.8,
+          "dominantBand": "high"
+        }
+      }
+    ]
+  },
+  "energy_lift": {
+    "ok": true,
+    "query": {
+      "kind": "energy_lift",
+      "windowBars": 8,
+      "band": "all"
+    },
+    "candidates": [
+      {
+        "id": "energy_lift:17-24",
+        "rank": 1,
+        "startBar": 17,
+        "endBar": 24,
+        "startTime": 32,
+        "endTime": 48,
+        "anchorTime": 32,
+        "reason": "Energy rises across this range.",
+        "facts": {
+          "boundaryNovelty": null,
+          "energyBefore": 0.4671,
+          "energyAfter": 0.7272,
+          "onsetDensity": 8,
+          "peakStrength": 0.95,
+          "dominantBand": "low"
+        }
+      },
+      {
+        "id": "energy_lift:9-16",
+        "rank": 2,
+        "startBar": 9,
+        "endBar": 16,
+        "startTime": 16,
+        "endTime": 32,
+        "anchorTime": 16,
+        "reason": "Energy rises across this range.",
+        "facts": {
+          "boundaryNovelty": null,
+          "energyBefore": 0.3715,
+          "energyAfter": 0.4637,
+          "onsetDensity": 4,
+          "peakStrength": 0.95,
+          "dominantBand": "high"
+        }
+      },
+      {
+        "id": "energy_lift:2-9",
+        "rank": 3,
+        "startBar": 2,
+        "endBar": 9,
+        "startTime": 2,
+        "endTime": 18,
+        "anchorTime": 2,
+        "reason": "Energy rises across this range.",
+        "facts": {
+          "boundaryNovelty": null,
+          "energyBefore": 0.37,
+          "energyAfter": 0.3701,
+          "onsetDensity": 4,
+          "peakStrength": 0.8,
+          "dominantBand": "low"
+        }
+      }
+    ]
+  },
+  "energy_drop": {
+    "ok": true,
+    "query": {
+      "kind": "energy_drop",
+      "windowBars": 8,
+      "band": "all"
+    },
+    "candidates": [
+      {
+        "id": "energy_drop:25-32",
+        "rank": 1,
+        "startBar": 25,
+        "endBar": 32,
+        "startTime": 48,
+        "endTime": 64,
+        "anchorTime": 48,
+        "reason": "Energy falls across this range.",
+        "facts": {
+          "boundaryNovelty": null,
+          "energyBefore": 0.7239,
+          "energyAfter": 0.4638,
+          "onsetDensity": 3.9375,
+          "peakStrength": 0.8,
+          "dominantBand": "high"
+        }
+      },
+      {
+        "id": "energy_drop:18-25",
+        "rank": 2,
+        "startBar": 18,
+        "endBar": 25,
+        "startTime": 34,
+        "endTime": 50,
+        "anchorTime": 34,
+        "reason": "Energy falls across this range.",
+        "facts": {
+          "boundaryNovelty": null,
+          "energyBefore": 0.7272,
+          "energyAfter": 0.7272,
+          "onsetDensity": 7.5,
+          "peakStrength": 0.95,
+          "dominantBand": "low"
+        }
+      }
+    ]
+  },
+  "quiet_contrast": {
+    "ok": true,
+    "query": {
+      "kind": "quiet_contrast",
+      "windowBars": 8,
+      "band": "all"
+    },
+    "candidates": [
+      {
+        "id": "quiet_contrast:1-8",
+        "rank": 1,
+        "startBar": 1,
+        "endBar": 8,
+        "startTime": 0,
+        "endTime": 16,
+        "anchorTime": 0,
+        "reason": "Quietest measured window in the track.",
+        "facts": {
+          "boundaryNovelty": null,
+          "energyBefore": null,
+          "energyAfter": 0.3703,
+          "onsetDensity": 4,
+          "peakStrength": 0.8,
+          "dominantBand": "low"
+        }
+      },
+      {
+        "id": "quiet_contrast:25-32",
+        "rank": 2,
+        "startBar": 25,
+        "endBar": 32,
+        "startTime": 48,
+        "endTime": 64,
+        "anchorTime": 48,
+        "reason": "Quietest measured window in the track.",
+        "facts": {
+          "boundaryNovelty": 0.72,
+          "energyBefore": null,
+          "energyAfter": 0.4637,
+          "onsetDensity": 3.9375,
+          "peakStrength": 0.8,
+          "dominantBand": "high"
+        }
+      },
+      {
+        "id": "quiet_contrast:9-16",
+        "rank": 3,
+        "startBar": 9,
+        "endBar": 16,
+        "startTime": 16,
+        "endTime": 32,
+        "anchorTime": 16,
+        "reason": "Quietest measured window in the track.",
+        "facts": {
+          "boundaryNovelty": 0.55,
+          "energyBefore": null,
+          "energyAfter": 0.4642,
+          "onsetDensity": 4,
+          "peakStrength": 0.95,
+          "dominantBand": "high"
+        }
+      }
+    ]
+  }
+}

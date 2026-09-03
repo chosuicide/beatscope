@@ -1,0 +1,85 @@
+{
+  "ok": true,
+  "track": {
+    "displayName": "Director Fixture",
+    "duration": 64,
+    "globalBpm": 120,
+    "bars": 32,
+    "timeSignature": [
+      4,
+      4
+    ],
+    "variableTempo": false
+  },
+  "playback": {
+    "time": 0,
+    "playing": false,
+    "bar": 1,
+    "beat": 1,
+    "loop": {
+      "enabled": false,
+      "startTime": null,
+      "endTime": null
+    }
+  },
+  "structure": {
+    "available": true,
+    "current": {
+      "family": "A",
+      "label": "A",
+      "variant": 0,
+      "startBar": 1,
+      "endBar": 8,
+      "phase": 0
+    },
+    "segments": [
+      {
+        "family": "A",
+        "label": "A",
+        "variant": 0,
+        "startBar": 1,
+        "endBar": 8,
+        "startTime": 0,
+        "endTime": 16
+      },
+      {
+        "family": "A",
+        "label": "A'",
+        "variant": 1,
+        "startBar": 9,
+        "endBar": 16,
+        "startTime": 16,
+        "endTime": 32
+      },
+      {
+        "family": "B",
+        "label": "B",
+        "variant": 0,
+        "startBar": 17,
+        "endBar": 24,
+        "startTime": 32,
+        "endTime": 48
+      },
+      {
+        "family": "A",
+        "label": "A'",
+        "variant": 1,
+        "startBar": 25,
+        "endBar": 32,
+        "startTime": 48,
+        "endTime": 64
+      }
+    ],
+    "total": 4,
+    "truncated": false
+  },
+  "capabilities": [
+    "get_state_at_time",
+    "get_events",
+    "find_visual_moments",
+    "compare_ranges",
+    "focus_range",
+    "control_playback",
+    "set_loop_range"
+  ]
+}

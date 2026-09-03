@@ -1,0 +1,98 @@
+{
+  "before": {
+    "ok": true,
+    "time": 31.9,
+    "position": {
+      "bar": 16,
+      "beat": 4,
+      "beatPhase": 0.8,
+      "barPhase": 0.95
+    },
+    "energy": {
+      "all": 0.4234,
+      "low": 0.4301,
+      "mid": 0.3681,
+      "high": 0.5
+    },
+    "onset": {
+      "impulse": 0.0454,
+      "age": 0.15,
+      "strength": 0.5,
+      "accent": false
+    },
+    "structure": {
+      "family": "A",
+      "label": "A'",
+      "variant": 1,
+      "phase": 0.9937,
+      "secondsToBoundary": 0.1
+    },
+    "scene": {
+      "available": false
+    }
+  },
+  "at": {
+    "ok": true,
+    "time": 32,
+    "position": {
+      "bar": 17,
+      "beat": 1,
+      "beatPhase": 0,
+      "barPhase": 0
+    },
+    "energy": {
+      "all": 0.6878,
+      "low": 0.7811,
+      "mid": 0.6689,
+      "high": 0.6406
+    },
+    "onset": {
+      "impulse": 0.95,
+      "age": 0,
+      "strength": 0.95,
+      "accent": true
+    },
+    "structure": {
+      "family": "B",
+      "label": "B",
+      "variant": 0,
+      "phase": 0,
+      "secondsToBoundary": 16
+    },
+    "scene": {
+      "available": false
+    }
+  },
+  "after": {
+    "ok": true,
+    "time": 32.1,
+    "position": {
+      "bar": 17,
+      "beat": 1,
+      "beatPhase": 0.2,
+      "barPhase": 0.05
+    },
+    "energy": {
+      "all": 0.6926,
+      "low": 0.7859,
+      "mid": 0.6727,
+      "high": 0.6429
+    },
+    "onset": {
+      "impulse": 0.1918,
+      "age": 0.1,
+      "strength": 0.95,
+      "accent": true
+    },
+    "structure": {
+      "family": "B",
+      "label": "B",
+      "variant": 0,
+      "phase": 0.0063,
+      "secondsToBoundary": 15.9
+    },
+    "scene": {
+      "available": false
+    }
+  }
+}

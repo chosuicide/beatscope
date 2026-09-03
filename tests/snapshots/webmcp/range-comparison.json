@@ -1,0 +1,74 @@
+{
+  "ok": true,
+  "ranges": [
+    {
+      "label": "First A",
+      "startBar": 1,
+      "endBar": 8,
+      "startTime": 0,
+      "endTime": 16,
+      "duration": 16,
+      "onsets": 64,
+      "onsetDensity": 4,
+      "peakStrength": 0.8,
+      "energy": {
+        "all": {
+          "mean": 0.3703,
+          "peak": 0.4099
+        },
+        "low": {
+          "mean": 0.4502,
+          "peak": 0.4899
+        },
+        "mid": {
+          "mean": 0.3802,
+          "peak": 0.4119
+        },
+        "high": {
+          "mean": 0.2805,
+          "peak": 0.3866
+        }
+      },
+      "dominantBand": "low",
+      "families": [
+        "A"
+      ]
+    },
+    {
+      "label": "A-prime",
+      "startBar": 9,
+      "endBar": 16,
+      "startTime": 16,
+      "endTime": 32,
+      "duration": 16,
+      "onsets": 64,
+      "onsetDensity": 4,
+      "peakStrength": 0.95,
+      "energy": {
+        "all": {
+          "mean": 0.4642,
+          "peak": 0.5556
+        },
+        "low": {
+          "mean": 0.471,
+          "peak": 0.6056
+        },
+        "mid": {
+          "mean": 0.4008,
+          "peak": 0.5185
+        },
+        "high": {
+          "mean": 0.5204,
+          "peak": 0.5703
+        }
+      },
+      "dominantBand": "high",
+      "families": [
+        "A"
+      ]
+    }
+  ],
+  "differences": [
+    "A-prime has 86% higher high-band mean than First A."
+  ]
+}

@@ -1,0 +1,1085 @@
+{
+  "ok": true,
+  "range": {
+    "startTime": 32,
+    "endTime": 48,
+    "startBar": 17,
+    "endBar": 24
+  },
+  "events": [
+    {
+      "kind": "onset",
+      "time": 32.125,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 32.25,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 32.375,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 32.5,
+      "bar": 17,
+      "beat": 2
+    },
+    {
+      "kind": "onset",
+      "time": 32.5,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 32.625,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 32.75,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 32.875,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 33,
+      "bar": 17,
+      "beat": 3
+    },
+    {
+      "kind": "onset",
+      "time": 33,
+      "strength": 0.8,
+      "accent": true
+    },
+    {
+      "kind": "onset",
+      "time": 33.125,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 33.25,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 33.375,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 33.5,
+      "bar": 17,
+      "beat": 4
+    },
+    {
+      "kind": "onset",
+      "time": 33.5,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 33.625,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 33.75,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 33.875,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 34,
+      "bar": 18,
+      "beat": 1
+    },
+    {
+      "kind": "onset",
+      "time": 34,
+      "strength": 0.95,
+      "accent": true
+    },
+    {
+      "kind": "onset",
+      "time": 34.125,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 34.25,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 34.375,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 34.5,
+      "bar": 18,
+      "beat": 2
+    },
+    {
+      "kind": "onset",
+      "time": 34.5,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 34.625,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 34.75,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 34.875,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 35,
+      "bar": 18,
+      "beat": 3
+    },
+    {
+      "kind": "onset",
+      "time": 35,
+      "strength": 0.8,
+      "accent": true
+    },
+    {
+      "kind": "onset",
+      "time": 35.125,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 35.25,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 35.375,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 35.5,
+      "bar": 18,
+      "beat": 4
+    },
+    {
+      "kind": "onset",
+      "time": 35.5,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 35.625,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 35.75,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 35.875,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 36,
+      "bar": 19,
+      "beat": 1
+    },
+    {
+      "kind": "onset",
+      "time": 36,
+      "strength": 0.95,
+      "accent": true
+    },
+    {
+      "kind": "onset",
+      "time": 36.125,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 36.25,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 36.375,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 36.5,
+      "bar": 19,
+      "beat": 2
+    },
+    {
+      "kind": "onset",
+      "time": 36.5,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 36.625,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 36.75,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 36.875,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 37,
+      "bar": 19,
+      "beat": 3
+    },
+    {
+      "kind": "onset",
+      "time": 37,
+      "strength": 0.8,
+      "accent": true
+    },
+    {
+      "kind": "onset",
+      "time": 37.125,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 37.25,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 37.375,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 37.5,
+      "bar": 19,
+      "beat": 4
+    },
+    {
+      "kind": "onset",
+      "time": 37.5,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 37.625,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 37.75,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 37.875,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 38,
+      "bar": 20,
+      "beat": 1
+    },
+    {
+      "kind": "onset",
+      "time": 38,
+      "strength": 0.95,
+      "accent": true
+    },
+    {
+      "kind": "onset",
+      "time": 38.125,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 38.25,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 38.375,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 38.5,
+      "bar": 20,
+      "beat": 2
+    },
+    {
+      "kind": "onset",
+      "time": 38.5,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 38.625,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 38.75,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 38.875,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 39,
+      "bar": 20,
+      "beat": 3
+    },
+    {
+      "kind": "onset",
+      "time": 39,
+      "strength": 0.8,
+      "accent": true
+    },
+    {
+      "kind": "onset",
+      "time": 39.125,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 39.25,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 39.375,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 39.5,
+      "bar": 20,
+      "beat": 4
+    },
+    {
+      "kind": "onset",
+      "time": 39.5,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 39.625,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 39.75,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 39.875,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 40,
+      "bar": 21,
+      "beat": 1
+    },
+    {
+      "kind": "onset",
+      "time": 40,
+      "strength": 0.95,
+      "accent": true
+    },
+    {
+      "kind": "onset",
+      "time": 40.125,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 40.25,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 40.375,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 40.5,
+      "bar": 21,
+      "beat": 2
+    },
+    {
+      "kind": "onset",
+      "time": 40.5,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 40.625,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 40.75,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 40.875,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 41,
+      "bar": 21,
+      "beat": 3
+    },
+    {
+      "kind": "onset",
+      "time": 41,
+      "strength": 0.8,
+      "accent": true
+    },
+    {
+      "kind": "onset",
+      "time": 41.125,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 41.25,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 41.375,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 41.5,
+      "bar": 21,
+      "beat": 4
+    },
+    {
+      "kind": "onset",
+      "time": 41.5,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 41.625,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 41.75,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 41.875,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 42,
+      "bar": 22,
+      "beat": 1
+    },
+    {
+      "kind": "onset",
+      "time": 42,
+      "strength": 0.95,
+      "accent": true
+    },
+    {
+      "kind": "onset",
+      "time": 42.125,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 42.25,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 42.375,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 42.5,
+      "bar": 22,
+      "beat": 2
+    },
+    {
+      "kind": "onset",
+      "time": 42.5,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 42.625,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 42.75,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 42.875,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 43,
+      "bar": 22,
+      "beat": 3
+    },
+    {
+      "kind": "onset",
+      "time": 43,
+      "strength": 0.8,
+      "accent": true
+    },
+    {
+      "kind": "onset",
+      "time": 43.125,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 43.25,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 43.375,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 43.5,
+      "bar": 22,
+      "beat": 4
+    },
+    {
+      "kind": "onset",
+      "time": 43.5,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 43.625,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 43.75,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 43.875,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 44,
+      "bar": 23,
+      "beat": 1
+    },
+    {
+      "kind": "onset",
+      "time": 44,
+      "strength": 0.95,
+      "accent": true
+    },
+    {
+      "kind": "onset",
+      "time": 44.125,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 44.25,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 44.375,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 44.5,
+      "bar": 23,
+      "beat": 2
+    },
+    {
+      "kind": "onset",
+      "time": 44.5,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 44.625,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 44.75,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 44.875,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 45,
+      "bar": 23,
+      "beat": 3
+    },
+    {
+      "kind": "onset",
+      "time": 45,
+      "strength": 0.8,
+      "accent": true
+    },
+    {
+      "kind": "onset",
+      "time": 45.125,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 45.25,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 45.375,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 45.5,
+      "bar": 23,
+      "beat": 4
+    },
+    {
+      "kind": "onset",
+      "time": 45.5,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 45.625,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 45.75,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 45.875,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 46,
+      "bar": 24,
+      "beat": 1
+    },
+    {
+      "kind": "onset",
+      "time": 46,
+      "strength": 0.95,
+      "accent": true
+    },
+    {
+      "kind": "onset",
+      "time": 46.125,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 46.25,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 46.375,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 46.5,
+      "bar": 24,
+      "beat": 2
+    },
+    {
+      "kind": "onset",
+      "time": 46.5,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 46.625,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 46.75,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 46.875,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 47,
+      "bar": 24,
+      "beat": 3
+    },
+    {
+      "kind": "onset",
+      "time": 47,
+      "strength": 0.8,
+      "accent": true
+    },
+    {
+      "kind": "onset",
+      "time": 47.125,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 47.25,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 47.375,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "beat",
+      "time": 47.5,
+      "bar": 24,
+      "beat": 4
+    },
+    {
+      "kind": "onset",
+      "time": 47.5,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 47.625,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 47.75,
+      "strength": 0.6,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 47.875,
+      "strength": 0.65,
+      "accent": false
+    },
+    {
+      "kind": "onset",
+      "time": 48,
+      "strength": 0.8,
+      "accent": true
+    },
+    {
+      "kind": "segment",
+      "family": "B",
+      "label": "B",
+      "variant": 0,
+      "startBar": 17,
+      "endBar": 24,
+      "startTime": 32,
+      "endTime": 48
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 33,
+      "onset": 137
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 34,
+      "onset": 145
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 35,
+      "onset": 153
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 36,
+      "onset": 161
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 37,
+      "onset": 169
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 38,
+      "onset": 177
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 39,
+      "onset": 185
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 40,
+      "onset": 193
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 41,
+      "onset": 201
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 42,
+      "onset": 209
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 43,
+      "onset": 217
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 44,
+      "onset": 225
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 45,
+      "onset": 233
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 46,
+      "onset": 241
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 47,
+      "onset": 249
+    },
+    {
+      "kind": "boundary",
+      "time": 48,
+      "bar": 25,
+      "novelty": 0.72
+    },
+    {
+      "kind": "beat",
+      "time": 48,
+      "bar": 25,
+      "beat": 1
+    },
+    {
+      "kind": "cue",
+      "cue": "accent",
+      "time": 48,
+      "onset": 257
+    }
+  ],
+  "total": 178,
+  "truncated": false
+}
