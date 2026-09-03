@@ -37,6 +37,8 @@ beatscope serve
 
 BeatScope Director 把当前加载的曲目以八个 WebMCP 工具暴露给页面内的 Agent。它可以查看任意时刻、读取有界事件、寻找并比较视觉段落，然后在用户正在观看的同一个播放器里 Focus、试听并循环该段落。
 
+[![WebMCP Director 聚焦并试听测得的结构转场](docs/demo/webmcp-director.gif)](docs/demo/webmcp-director.mp4)
+
 在本地运行 Director Demo：Demo 包内置一段预分析曲目，由本仓库专门合成——绝非商业录音。
 
 ```powershell
@@ -51,7 +53,7 @@ python tests/browser/webmcp_demo_server.py --port 8770 --directory build/webmcp-
 - **两个入口，同一模型。** WebMCP 是浏览器内协作入口；本地 stdio [MCP 服务](docs/mcp.md) 仍是开发者入口。两者通过同一确定性 runtime 读取同一份 Rhythm IR，只是传输与生命周期不同。
 - **音频不离开页面。** 工具只应答已加载的分析结果，Agent 查询的是时序事实而非声音本身；本地 Studio 的上传与本机分析流程保持不变。
 - **中性标签，仅供参考。** 结构只以重复家族（`A`、`B`、`A′`）呈现，从不假装“主歌”或“副歌”；候选段落是供试听的测量建议，不是音乐真理。
-- **可见且可撤销。** 每次工具调用都会记录在页面上的 Agent ledger 中，最近一次 Agent 动作可以在 UI 里撤销。
+- **可见且可撤销。** 会改变页面的 Agent 动作会进入页面 ledger；只读查询保持真正只读。最近一次动作可以直接在 UI 中撤销。
 
 工具名、Schema、限制、错误码与示例 prompt：[docs/webmcp.md](docs/webmcp.md)。
 

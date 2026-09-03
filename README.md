@@ -39,6 +39,8 @@ BeatScope Director exposes the loaded track as eight WebMCP tools. An Agent can
 inspect any moment, read bounded events, find and compare visual ranges, then
 focus, audition, and loop a range in the same player the user is watching.
 
+[![WebMCP Director focusing and auditioning a measured transition](docs/demo/webmcp-director.gif)](docs/demo/webmcp-director.mp4)
+
 Run the Director demo locally: it ships a pre-analyzed track that this
 repository synthesized for exactly this purpose — never a commercial recording.
 
@@ -54,7 +56,7 @@ Before letting an Agent drive, the ground rules:
 - **Two entries, one model.** WebMCP is the in-browser collaboration entry; the local stdio [MCP server](docs/mcp.md) stays the developer entry. Both read the same Rhythm IR through the same deterministic runtime — only transport and lifecycle differ.
 - **No audio leaves the page.** Tools answer from the loaded analysis, so the Agent queries timing facts, not sound. The Studio's local upload-and-analyze flow is unchanged.
 - **Neutral labels, suggestions only.** Structure appears as repeat families (`A`, `B`, `A′`) — never "verse" or "chorus" — and a candidate range is a measured suggestion to audition, not musical truth.
-- **Visible and reversible.** Every tool call is announced in the on-page Agent ledger, and the most recent Agent action can be undone from the UI.
+- **Visible and reversible.** Page-changing Agent actions appear in the on-page ledger; read-only inspection stays read-only. The latest action can be undone from the UI.
 
 Tool names, schemas, limits, error codes, and example prompts: [docs/webmcp.md](docs/webmcp.md).
 
