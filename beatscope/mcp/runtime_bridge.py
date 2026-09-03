@@ -114,6 +114,11 @@ class RuntimeBridge:
                 future.set_exception(
                     RuntimeUnavailable(f"BeatScope runtime worker error: {message.get('error')}")
                 )
+        # stdout can reach EOF before asyncio's Windows proactor publishes the
+        # subprocess return code. Reap it first so an immediate follow-up call
+        # cannot mistake the dead worker for a running one and wait for a
+        # response that will never arrive.
+        await process.wait()
         # EOF: the worker process is gone; everything still pending fails.
         self._fail_pending(
             _WorkerBroken("BeatScope runtime worker exited unexpectedly.")
