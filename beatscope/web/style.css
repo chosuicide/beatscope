@@ -38,6 +38,10 @@ button:disabled { cursor: not-allowed; opacity: .34; }
 .topbar-track span { margin-top: .18rem; color: var(--muted); font-size: .68rem; }
 .topbar-actions { display: flex; align-items: center; gap: .45rem; }
 .topbar-actions > .mono { min-width: 6.7rem; margin-right: .35rem; color: var(--muted); font-size: .72rem; text-align: right; }
+/* WebMCP status (v0.10 plan section 5.1): tiny low-contrast text, one orange
+   dot when ready - never a green glow, never a capsule. */
+.webmcp-status { color: var(--muted); font: 650 .62rem/1 monospace; letter-spacing: .1em; white-space: nowrap; }
+.webmcp-status.is-ready::before { display: inline-block; width: .32rem; height: .32rem; margin-right: .4rem; border-radius: 50%; background: var(--accent); content: ''; }
 
 button { border: 0; cursor: pointer; transition: transform 140ms ease, background-color 180ms ease, color 180ms ease, border-color 180ms ease; }
 button:active:not(:disabled) { transform: translateY(1px); }

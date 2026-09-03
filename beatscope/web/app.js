@@ -7,6 +7,7 @@ import { updateInspector } from './inspector.js';
 import { initImportHandlers, showEmptyState, showErrorState } from './import.js';
 import { gridPosition, metrics, formatTime, timeAtBar } from './grid.js';
 import { undoLastAgentAction } from './webmcp/actions.js';
+import { installWebMCP } from './webmcp/register.js';
 
 const $ = (selector) => document.querySelector(selector);
 const app = $('#app');
@@ -38,6 +39,8 @@ const agentCollab = $('#agentCollab');
 const agentLedgerSummary = $('#agentLedgerSummary');
 const agentLedgerList = $('#agentLedgerList');
 const undoAgentActionButton = $('#undoAgentAction');
+// Topbar WebMCP status (v0.10 plan section 5.1).
+const webmcpStatus = $('#webmcpStatus');
 
 const controls = {
   filename: $('#filename'), status: $('#status'), timecode: $('#timecode'), currentTime: $('#currentTime'),
@@ -182,6 +185,7 @@ function updateProjectUI() {
       lastSceneKey = null;
     }
     setDisabled(true);
+    refreshWebMcpStatus();
     renderAll();
     return;
   }
@@ -212,6 +216,7 @@ function updateProjectUI() {
   setDisabled(false);
   controls.prev.disabled = state.startBar <= 0;
   controls.next.disabled = state.startBar + state.viewBars >= bars;
+  refreshWebMcpStatus();
   renderAll();
 }
 
@@ -601,6 +606,57 @@ window.addEventListener('keydown', (event) => {
 
 window.addEventListener('resize', renderAll);
 initAudio(audioElement);
+
+// --- WebMCP Director registration (v0.10 plan sections 5.1, 6) ---------------
+// Four status texts only: UNAVAILABLE / LOAD A TRACK / READY · 8 TOOLS / ERROR.
+// Registration failure degrades to the status text alone; the player keeps
+// working without WebMCP.
+let webmcpState = 'unsupported';
+
+function refreshWebMcpStatus() {
+  if (!webmcpStatus) return;
+  webmcpStatus.classList.toggle('is-ready', webmcpState === 'registered' && Boolean(state.project));
+  if (webmcpState === 'unsupported') webmcpStatus.textContent = 'WEBMCP UNAVAILABLE';
+  else if (webmcpState === 'error') webmcpStatus.textContent = 'WEBMCP ERROR';
+  else if (state.project) webmcpStatus.textContent = 'WEBMCP READY · 8 TOOLS';
+  else webmcpStatus.textContent = 'WEBMCP · LOAD A TRACK';
+}
+
+const webmcpSession = installWebMCP({
+  getState: () => state,
+  hasAudio: () => Boolean(audioElement && audioElement.src),
+  seek: (time) => seek(time),
+  // play() must report honest autoplay failures for requiresUserGesture, so
+  // the dep awaits the media element directly (audio.js play() is
+  // fire-and-forget by design).
+  play: async () => {
+    if (!audioElement || !audioElement.src) return false;
+    try {
+      await audioElement.play();
+      return !audioElement.paused;
+    } catch (_) {
+      return false;
+    }
+  },
+  pause: () => pause(),
+  readAudioTime: () => (audioElement ? audioElement.currentTime || 0 : 0),
+  setFollowPlayback: (enabled) => { if (followPlayback) followPlayback.checked = Boolean(enabled); },
+  scrollPlayerIntoView: () => {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    $('#visualSection')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+  },
+  sceneAt: (time) => (sceneArtifactsAvailable ? visualStageController.sceneAt(time) : null),
+  onStatus: (status) => {
+    // 'registering' arrives synchronously inside installWebMCP before the
+    // return, so it maps to the same optimistic state the sync status check
+    // sets below; 'ready'/'error' confirm or flip it once Promise.all lands.
+    if (status === 'ready' || status === 'registering') webmcpState = 'registered';
+    else if (status === 'error') webmcpState = 'error';
+    refreshWebMcpStatus();
+  },
+});
+if (webmcpSession.status === 'ready') webmcpState = 'registered';
+refreshWebMcpStatus();
 initImportHandlers({
   onLoaded: () => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
