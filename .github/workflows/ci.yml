@@ -33,6 +33,9 @@ jobs:
       - name: Install BeatScope with MCP support
         run: python -m pip install -e ".[dev,mcp]"
 
+      - name: Python lint
+        run: python -m ruff check beatscope scripts tests evaluations
+
       - name: Python tests
         run: python -m pytest -q
 
@@ -40,7 +43,7 @@ jobs:
         run: python -m pytest tests/mcp -q
 
       - name: JavaScript tests
-        run: node --test tests/test_grid.js tests/test_interaction.js tests/test_runtime.js tests/test_scene_director.js tests/test_visual_profile.js tests/test_playback_characterization.js tests/test_playback_state.js tests/test_visual_stage.js tests/test_particle_geometry.js tests/test_particle_uniforms.js tests/test_consumer_probe.js tests/test_canvas_consumer.js tests/test_threejs_consumer.js tests/test_remotion_consumer.js tests/test_webmcp_queries.js tests/test_webmcp_actions.js tests/test_webmcp_registration.js tests/test_webmcp_benchmark.js
+        run: npm run test:js
 
       - name: Benchmark gates
         run: python -m beatscope.cli benchmark --output-dir build/benchmark-ci
@@ -50,7 +53,7 @@ jobs:
 
   consumer-evidence:
     # One pinned job validates every handoff and consumer gate without
-    # multiplying the heavy matrix (plan section 19). It replays
+    # multiplying the heavy matrix. It replays
     # checked-in evidence only; it never contacts remote Agents.
     name: Pinned consumer evidence
     runs-on: ubuntu-latest
@@ -153,7 +156,7 @@ jobs:
           retention-days: 7
 
   webmcp-demo:
-    # Light Director-demo gate (v0.10 plan section 26): build the static
+    # Light Director-demo gate: build the static
     # bundle, run its Python gates, then replay the browser round trip once
     # on Ubuntu. Never multiplied across the OS/Python matrix; on failure the
     # screenshot and server log are uploaded, on success the demo audio is
