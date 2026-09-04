@@ -8,6 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..backends.base import (
+    AnalysisCancelled,
     AnalysisEvidence,
     AnalyzerBackend,
     CancelCallback,
