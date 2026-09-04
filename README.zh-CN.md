@@ -3,7 +3,7 @@
 [English](README.md) | 简体中文
 
 [![CI](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml/badge.svg)](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.10.0-c65032)](https://github.com/chosuicide/beatscope/releases)
+[![Version](https://img.shields.io/badge/version-0.10.1-c65032)](https://github.com/chosuicide/beatscope/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
 **把一首本地歌曲变成可播放的节奏地图，再把同一份确定性时序交给 Canvas、Three.js、Remotion 或 Coding Agent。**
@@ -185,6 +185,8 @@ BeatScope 把信息分为三层：
 
 音频 benchmark 含 11 个带冻结真值的合成场景：固定、密集、稀疏、离网格、重低音、静音、突然变速、渐变速度、微漂移和八度陷阱。当前全部门槛通过。tempo-change 的拍点 F1 从 `0.16` 提升到 `1.00`；两个速度段误差为 `0.185 / 0.325 BPM`，变速点误差 `0.01 s`，接缝没有漏拍或多拍。
 
+这些确定性合成 fixture 用精确真值守住回归，不代表项目已经证明了真实音乐上的 MIR 准确率。下一阶段会补公开数据集评测。
+
 结构另有十种编排 benchmark。视觉编排另有 28 个阻断门槛，覆盖 Seek/顺序确定性、家族身份、边界连续性、reduced-motion 比例、draw call 和运行时预算。CI 在 Windows、Ubuntu、Python 3.10 与 3.12 上运行，并包含固定浏览器消费者和 Remotion 离线证据任务。
 
 ```powershell
@@ -234,6 +236,7 @@ beatscope validate-handoff examples\shared\fixture.beatscope --checkpoints examp
 - 导出包和示例不包含原始音频。
 - MP3 需要本地 libsndfile 支持或 FFmpeg。
 - 很长、渐变或结构含糊的歌曲可能诚实地只得到一个结构段。
+- 当前准确度数字来自确定性合成 fixture；项目尚未发布真实公开数据集结果。
 
 ## 许可证
 

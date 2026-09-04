@@ -3,7 +3,7 @@
 English | [简体中文](README.zh-CN.md)
 
 [![CI](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml/badge.svg)](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.10.0-c65032)](https://github.com/chosuicide/beatscope/releases)
+[![Version](https://img.shields.io/badge/version-0.10.1-c65032)](https://github.com/chosuicide/beatscope/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
 **Turn a local song into a playable rhythm map — then hand the same deterministic timing to Canvas, Three.js, Remotion, or a coding agent.**
@@ -188,6 +188,8 @@ The built-in WebGL2 instrument is one demonstration, not the product boundary. I
 
 The audio benchmark contains 11 synthetic cases with frozen ground truth: fixed, dense, sparse, off-grid, bass-heavy, silence, abrupt tempo change, gradual drift, micro-drift, and an octave trap. All current gates pass. The tempo-change case improved from beat F1 `0.16` to `1.00`; its two tempo segments land within `0.185 / 0.325 BPM`, with a `0.01 s` change-point error and no missing or extra seam beat.
 
+These deterministic synthetic fixtures are regression evidence with exact ground truth, not a claim of real-world music-information-retrieval accuracy. Public-dataset evaluation is the next validation milestone.
+
 Structure has a separate ten-arrangement benchmark. Visual orchestration has 28 blocking gates covering seek/order determinism, family identity, boundary continuity, reduced-motion scaling, draw-call count, and runtime budgets. CI runs on Windows and Ubuntu with Python 3.10 and 3.12, plus pinned browser-consumer and Remotion offline evidence jobs.
 
 ```powershell
@@ -237,6 +239,7 @@ The repository includes Python, JavaScript, browser, package-integrity, MCP, ben
 - Source audio is not included in exports or examples.
 - MP3 support requires local libsndfile support or FFmpeg.
 - Very long, gradual, or ambiguous arrangements may honestly resolve to one structural segment.
+- Current accuracy figures come from deterministic synthetic fixtures; real-world public-dataset results are not published yet.
 
 ## License
 
