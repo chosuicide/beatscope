@@ -48,8 +48,17 @@ jobs:
           Copy-Item (Get-Command node).Source "$tools/node.exe"
           Copy-Item -Recurse tests/browser/node_modules/playwright "$tools/node_modules/playwright"
           Copy-Item -Recurse tests/browser/node_modules/playwright-core "$tools/node_modules/playwright-core"
-          $ffmpeg = Get-ChildItem C:\tools -Recurse -Filter ffmpeg.exe | Select-Object -First 1 -ExpandProperty FullName
-          if (-not $ffmpeg) { throw "Chocolatey FFmpeg binary not found" }
+          # Chocolatey's layout differs across runner images (C:\tools is gone
+          # on current windows-latest), so look in the package directory first
+          # and prefer a real binary over the shim, which only forwards.
+          $candidates = @(
+            Get-ChildItem "$env:ProgramData\chocolatey\lib\ffmpeg" -Recurse -Filter ffmpeg.exe -ErrorAction SilentlyContinue
+            Get-ChildItem "C:\tools" -Recurse -Filter ffmpeg.exe -ErrorAction SilentlyContinue
+          )
+          $ffmpeg = ($candidates | Where-Object { $_.FullName -match '\\bin\\' } | Select-Object -First 1 -ExpandProperty FullName)
+          if (-not $ffmpeg) { $ffmpeg = ($candidates | Select-Object -First 1 -ExpandProperty FullName) }
+          if (-not $ffmpeg) { $ffmpeg = (Get-Command ffmpeg -ErrorAction SilentlyContinue).Source }
+          if (-not $ffmpeg -or -not (Test-Path $ffmpeg)) { throw "FFmpeg binary not found after choco install" }
           Copy-Item $ffmpeg "$tools/ffmpeg.exe"
           Copy-Item packaging/PORTABLE-README.txt "$app/README.txt"
           Copy-Item packaging/THIRD-PARTY-NOTICES.txt "$app/THIRD-PARTY-NOTICES.txt"
