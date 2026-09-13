@@ -17,6 +17,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_MODULES = [
     "beatscope/event_evidence.py",
+    "beatscope/chart_labels.py",
+    "beatscope/event_ranker.py",
     "beatscope/web/visual-stage.js",
     "beatscope/web/particle-field.js",
     "beatscope/web/particle-geometry.js",

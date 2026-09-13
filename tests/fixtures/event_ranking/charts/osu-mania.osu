@@ -1,0 +1,17 @@
+osu file format v14
+
+[General]
+AudioFilename: mania.ogg
+Mode: 3
+
+[Metadata]
+Version:Mania Probe
+
+[Difficulty]
+KeyCount: 7
+
+[HitObjects]
+64,192,300,128,0,900:0:0:0:0:
+192,192,300,1,0
+320,192,700,1,0
+448,192,1200,1,0

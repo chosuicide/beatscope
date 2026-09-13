@@ -1,0 +1,14 @@
+osu file format v14
+
+[General]
+AudioFilename: catch.ogg
+Mode: 2
+
+[Metadata]
+Version:Catch Probe
+
+[Difficulty]
+CircleSize:4
+
+[HitObjects]
+256,192,500,1,0

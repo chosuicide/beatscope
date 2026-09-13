@@ -1,0 +1,15 @@
+osu file format v14
+
+[General]
+AudioFilename: taiko.ogg
+Mode: 1
+
+[Metadata]
+Version:Taiko Probe
+
+[Difficulty]
+CircleSize:2
+
+[HitObjects]
+256,192,500,1,0
+256,192,1500,2,0

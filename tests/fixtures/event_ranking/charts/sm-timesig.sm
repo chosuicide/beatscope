@@ -1,0 +1,9 @@
+#TITLE:Time Sig Probe;
+#MUSIC:x.ogg;
+#BPMS:0=120.000;
+#TIMESIGNATURES:8=3=4;
+#NOTES:
+:dance-single:Easy:1:
+1000
+0000
+;

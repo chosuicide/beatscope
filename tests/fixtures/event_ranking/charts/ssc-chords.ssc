@@ -1,0 +1,14 @@
+#VERSION:0.83;
+#TITLE:Chord Probe;
+#MUSIC:chord-audio.ogg;
+#BPMS:0=60.000;
+#NOTEDATA;
+#STEPSTYPE:dance-single;
+#DIFFICULTY:Chords;
+#METER:4;
+#NOTES:
+2000
+3000
+000M
+000L
+;

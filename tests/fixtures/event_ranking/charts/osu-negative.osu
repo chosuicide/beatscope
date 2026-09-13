@@ -1,0 +1,11 @@
+osu file format v14
+
+[General]
+AudioFilename: x.ogg
+Mode: 0
+
+[Metadata]
+Version:Negative Probe
+
+[HitObjects]
+256,192,-500,1,0

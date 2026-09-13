@@ -1,0 +1,17 @@
+#TITLE:BPM Stop Probe;
+#MUSIC:bpm-stop-audio.ogg;
+#OFFSET:-0.500000;
+#BPMS:0=60.000,4=120.000;
+#STOPS:4=1.000;
+#NOTES:
+:dance-single:Hard:3:
+1000
+0000
+0000
+1000
+,
+1000
+1000
+0000
+0000
+;

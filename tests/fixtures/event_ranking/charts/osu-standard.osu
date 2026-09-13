@@ -1,0 +1,16 @@
+osu file format v14
+
+[General]
+AudioFilename: std audio.mp3
+Mode: 0
+
+[Metadata]
+Version:Standard Probe
+
+[Difficulty]
+CircleSize:4
+
+[HitObjects]
+256,192,500,8,12
+256,192,1000,1,0
+256,192,2000,2,0
