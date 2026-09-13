@@ -220,6 +220,12 @@ export async function renderMovie(
     if (input.action !== 'start' && input.action !== 'cancel') {
       throw new ToolError('invalid_input', 'action must be start or cancel.', 'Pick one of those actions.');
     }
+    if (input.action === 'start' && input.seed !== undefined) {
+      const seed = Number(input.seed);
+      if (!Number.isInteger(seed) || seed < 0 || seed > LIMITS.seed_max) {
+        throw new ToolError('invalid_input', `seed must be an integer from 0 to ${LIMITS.seed_max}.`, 'Send a 24-bit seed.');
+      }
+    }
     const active = snapshot.movieJob && ['queued', 'running', 'rendering'].includes(String(snapshot.movieJob.state));
 
     if (input.action === 'cancel') {
@@ -239,12 +245,6 @@ export async function renderMovie(
     }
     if (!snapshot.rendererAvailable) {
       throw new ToolError('render_unavailable', 'The local renderer is not available in this session.', 'Check the studio setup and try again.');
-    }
-    if (input.seed !== undefined) {
-      const seed = Number(input.seed);
-      if (!Number.isInteger(seed) || seed < 0 || seed > LIMITS.seed_max) {
-        throw new ToolError('invalid_input', `seed must be an integer from 0 to ${LIMITS.seed_max}.`, 'Send a 24-bit seed.');
-      }
     }
     if (active) {
       const progress = Math.round(Number(snapshot.movieJob?.progress ?? 0) * 100);

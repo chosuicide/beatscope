@@ -62,6 +62,14 @@ test('invalid render and seed input never reaches the page', async () => {
   }
 });
 
+test('invalid render input wins over renderer availability', async () => {
+  const port = readyPort({ rendererAvailable: false });
+  const result = await renderMovie(port, { action: 'start', seed: 16777216 });
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, 'invalid_input');
+  assert.equal(port.calls.length, 0);
+});
+
 // --- playback ---------------------------------------------------------------
 
 test('play, pause and seek use the port exactly once', async () => {

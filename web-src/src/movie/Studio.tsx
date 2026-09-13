@@ -116,7 +116,16 @@ export default function MovieStudio() {
     auditionCleanup.current?.();
     auditionRef.current = { time: element.currentTime, playing: !element.paused };
     seek(start);
-    const stop = () => { if (element.currentTime >= end - 0.02) { element.pause(); cleanup(); } };
+    const stop = () => {
+      if (element.currentTime >= end - 0.02) {
+        element.pause();
+        // `timeupdate` is intentionally coarse and can arrive after the media
+        // clock has crossed the requested boundary.  Land on the exact end so
+        // the visible player, Agent result and subsequent restore are stable.
+        seek(end);
+        cleanup();
+      }
+    };
     const cleanup = () => {
       element.removeEventListener('timeupdate', stop);
       signal.removeEventListener('abort', cleanup);
