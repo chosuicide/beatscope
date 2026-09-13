@@ -61,7 +61,6 @@ from beatscope.consumer_contract import (  # noqa: E402
 )
 from beatscope.exports import generate_codex_export  # noqa: E402
 from beatscope.pipeline import analyze_track  # noqa: E402
-from beatscope.visual_recipe import compile_visual_artifacts  # noqa: E402
 
 GENERATOR_VERSION = "consumer-fixture-1"
 LOCK_SCHEMA = "beatscope-consumer-fixture-lock-1"
@@ -243,9 +242,6 @@ def analyze_project(wav_path: Path) -> dict[str, Any]:
     assert len(boundaries) >= 2, f"need two structural boundaries, found {boundaries}"
     for found, want in zip(boundaries, expected):
         assert abs(found - want) < 0.75, f"boundary {found} is not near the arranged {want}"
-
-    recipe, timeline = compile_visual_artifacts(project)
-    assert len(timeline["scenes"]) >= 3, "visual artifacts must carry real scenes, not legacy mode"
     return project
 
 

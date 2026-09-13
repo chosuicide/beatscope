@@ -73,4 +73,4 @@ Task directories under `.beatscope-cache/movies/` contain source-analysis snapsh
 
 The existing analysis engine, relevance model and export contracts are unchanged. The template uses the approved consumer-side anchor/support policy, not a fixed every-two-beat grid. Thresholds and response spacing are artistic choices, not musical facts or confidence. Unsupported/missing ranking fails honestly. No new musical timestamps are invented. FFmpeg trims/muxes audio and encodes frames; no external-footage preprocessing is exercised by this procedural template.
 
-The old Canvas remains at `/app/?canvas=1`; the prior composition experiment remains at `/app/?composition=1`. No old UI source or completed prototype video was deleted. This change has not been pushed or released.
+The studio is the only page the server serves. The canvas workspace, the composition workbench and the old studio page (`/legacy.html`) were retired together with the compiled visual layer they were built on, so `/app/?canvas=1` and `/app/?composition=1` no longer resolve to anything.

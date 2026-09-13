@@ -32,7 +32,7 @@ from beatscope.direction import (
 
 ROOT = Path(__file__).resolve().parents[1]
 CORPUS = json.loads((ROOT / "tests" / "fixtures" / "direction" / "contract-corpus.json").read_text(encoding="utf-8"))
-ABA_RHYTHM = json.loads((ROOT / "tests" / "fixtures" / "visual" / "visual-aba.rhythm.json").read_text(encoding="utf-8"))
+ABA_RHYTHM = json.loads((ROOT / "tests" / "fixtures" / "structure" / "aba.rhythm.json").read_text(encoding="utf-8"))
 
 
 def _codes(messages: list[str]) -> list[str]:

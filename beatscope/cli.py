@@ -120,79 +120,6 @@ def run_doctor() -> int:
 PROJECT_ID_ARGUMENT = re.compile(r"[0-9a-fA-F]{12}")
 
 
-def run_visual_build(args: argparse.Namespace) -> int:
-    """Compile visual artifacts for a project ID or a rhythm JSON file (v0.8)."""
-    from .project import ProjectManager, write_visual_artifacts
-    from .schema import validate_rhythm_v4
-    from .visual_recipe import compile_visual_artifacts
-
-    source = Path(args.project)
-    manager = ProjectManager()
-    if source.is_file():
-        try:
-            rhythm = json.loads(source.read_text(encoding="utf-8"))
-        except ValueError as exc:
-            print(f"error: {source} is not valid JSON: {exc}", file=sys.stderr)
-            return 1
-        if not isinstance(rhythm, dict):
-            print(f"error: {source} must hold a Rhythm Project object", file=sys.stderr)
-            return 1
-        errors = validate_rhythm_v4(rhythm)
-        if errors:
-            print("error: invalid Rhythm Project v4: " + "; ".join(errors), file=sys.stderr)
-            return 1
-        out_dir = args.output_dir if args.output_dir is not None else source.parent
-        recipe, timeline = compile_visual_artifacts(rhythm)
-        write_visual_artifacts(out_dir, rhythm, recipe, timeline)
-        regenerated = True
-    else:
-        candidate = args.project.strip()
-        # Only a bare 12-hex project ID selects a cached project; anything
-        # else that is not an existing file is a user error, never a lookup.
-        if not PROJECT_ID_ARGUMENT.fullmatch(candidate):
-            print(
-                f"error: '{args.project}' is neither a readable rhythm JSON file "
-                "nor a 12-hex project ID",
-                file=sys.stderr,
-            )
-            return 1
-        try:
-            rhythm = manager.get_project_rhythm(candidate)
-        except OSError as exc:
-            print(f"error: cannot access project '{candidate}': {exc}", file=sys.stderr)
-            return 1
-        if rhythm is None:
-            print(
-                f"error: project '{candidate}' has no cached rhythm; analyze the "
-                "audio first or pass a rhythm JSON path",
-                file=sys.stderr,
-            )
-            return 1
-        if args.output_dir is not None:
-            recipe, timeline = compile_visual_artifacts(rhythm)
-            write_visual_artifacts(args.output_dir, rhythm, recipe, timeline)
-            out_dir = args.output_dir
-            regenerated = True
-        else:
-            result = manager.ensure_visual_artifacts(rhythm, force=args.force)
-            recipe = result["recipe"]
-            timeline = result["timeline"]
-            out_dir = result["project_dir"]
-            regenerated = result["regenerated"]
-
-    status = "regenerated" if regenerated else "already current"
-    print(f"Visual artifacts {status} in {out_dir}")
-    diagnostics = recipe["diagnostics"]
-    print(
-        f"  mode: {recipe['mode']}  families: {diagnostics['family_count']}  "
-        f"scenes: {timeline['diagnostics']['scene_count']}  "
-        f"transitions: {timeline['diagnostics']['transition_count']}"
-    )
-    for warning in diagnostics.get("warnings") or []:
-        print(f"  warning: {warning}")
-    return 0
-
-
 def run_validate_handoff(args: argparse.Namespace) -> int:
     """Validate one handoff package; never modifies the target (v0.9)."""
     from .consumer_validation import ConsumerUsageError, format_report, validate_handoff
@@ -314,31 +241,6 @@ def main(argv: list[str] | None = None) -> int:
     bench_struct.add_argument("--output-dir", type=Path, default=Path("build") / "structure-benchmark")
     bench_struct.add_argument("--fixtures-dir", type=Path, help="reuse a fixture directory instead of generating one")
 
-    # benchmark-visual (v0.8): scene orchestration acceptance gates
-    bench_visual = sub.add_parser(
-        "benchmark-visual",
-        help="run the visual orchestration benchmark against frozen scene fixtures",
-    )
-    bench_visual.add_argument("--output-dir", type=Path, default=Path("build") / "visual-benchmark")
-    bench_visual.add_argument("--fixtures-dir", type=Path, help="reuse a visual fixture directory instead of the frozen one")
-
-    # visual-build (v0.8): deterministic visual artifact compilation
-    vis_build = sub.add_parser(
-        "visual-build",
-        help="compile or refresh visual recipe and timeline artifacts",
-    )
-    vis_build.add_argument("project", help="project ID or path to a rhythm JSON file")
-    vis_build.add_argument(
-        "--output-dir",
-        type=Path,
-        help="write the artifacts here instead of next to the project rhythm",
-    )
-    vis_build.add_argument(
-        "--force",
-        action="store_true",
-        help="recompile even when stored artifacts already match the rhythm fingerprint",
-    )
-
     # validate-handoff (v0.9): read-only package validation
     validate_handoff = sub.add_parser(
         "validate-handoff",
@@ -442,21 +344,6 @@ def main(argv: list[str] | None = None) -> int:
         failed = results["gates"]["failed"]
         print(f"Gates failed: {', '.join(failed) if failed else 'none'}")
         return 1 if failed else 0
-
-    if args.command == "benchmark-visual":
-        from .visual_benchmark import run_visual_benchmark
-
-        results = run_visual_benchmark(args.output_dir, args.fixtures_dir)
-        print(f"Visual benchmark written to {results['output_dir']}")
-        failed = results["gates"]["failed"]
-        pending = results["gates"].get("pending") or []
-        print(f"Gates failed: {', '.join(failed) if failed else 'none'}")
-        if pending:
-            print(f"Gates pending for later v0.8 commits: {', '.join(pending)}")
-        return 1 if failed else 0
-
-    if args.command == "visual-build":
-        return run_visual_build(args)
 
     if args.command == "validate-handoff":
         return run_validate_handoff(args)

@@ -121,9 +121,9 @@ def test_frozen_fixture_passes_every_check_in_directory_form():
         "manifest": "passed",
         "integrity": "passed",
         "rhythm-map": "passed",
-        # The fixture is the timing-only package: there are no visual artifacts
-        # to validate, and the check honestly reports that instead of passing.
-        "visual-artifacts": "skipped",
+        # The fixture is the timing-only package: the compiled visual layer is
+        # retired, so there is nothing to validate and the check says so.
+        "visual-layer": "skipped",
         "executable-trust": "passed",
         "node-probe": "passed",
         "checkpoints": "passed",

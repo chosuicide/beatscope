@@ -115,8 +115,9 @@ Analyzes a local audio file into a cached project. Rules:
 
 `project_id, time: seconds >= 0`
 
-One instant of visual state, computed by the shared JavaScript runtime (the
-same `track.at(time)` the web player and the export package use):
+The measured facts at one instant, computed by the shared JavaScript runtime
+(the same `track.at(time)` the web player makes, and the same call the
+exported package exposes as `getVisualState(time)`):
 `bar, beat, beatIndex, beatPhase, barPhase, low, mid, high, all, onset
 {item, age, value}, accent, section`, and on v0.7 projects a `structure`
 block with the current segment's `id, family, variant, label, index,
@@ -124,6 +125,11 @@ startTime, endTime, phase, nextBoundaryTime, secondsToBoundary`. The direct
 JavaScript runtime uses `Infinity` before the first onset; MCP's JSON transport
 encodes that sentinel as a `null` onset age. A `null` accent means no previous accent exists; a `null`
 structure means the project carries no segments.
+
+The name follows the package function: this is the state a visualizer samples,
+not a visual language. The response carries no scene, transition, or
+composition data, for the same reason the handoff ships none - see
+`BEATSCOPE.md` in an exported package.
 
 ### beatscope_get_events
 
@@ -134,8 +140,9 @@ runtime's `between` op; `beats`, `cues` (accent/impact/scale/flow/flash/bloom),
 and `pattern` bars are binary-sliced facts. `include` selects among `beats`,
 `onsets`, `cues`, `patterns`, and - on v0.7 projects - `segments`
 (`{kind, time, end, family, label, index}`, any overlap with the window) and
-`boundaries` (`{kind, time, bar, novelty, drivers}`). Windows are capped at
-600 s.
+`boundaries` (`{kind, time, bar, novelty, drivers}`); any other value is
+rejected, and there is no scene or transition kind to ask for. Windows are
+capped at 600 s.
 Results are sorted by `(time, kind)` and paginated with `{total, count,
 offset, has_more, next_offset}`.
 
@@ -151,10 +158,13 @@ chronological fallback.
 
 `project_id, destination (must end in .zip), overwrite? = false`
 
-Writes the portable agent handoff ZIP: `rhythm-map.json`, optional
-`response-relevance.json`,
-`beatscope-runtime.js`, `visual-state.js`, `worker-example.js`, `BEATSCOPE.md`, `SKILL.md`,
-`references/schema.md`, `README.md`. The destination parent must exist and
+Writes the portable agent handoff ZIP: `beatscope-package.json`, `README.md`,
+`AGENT.md`, `rhythm-map.json`, `rhythm.mid`, `rhythm.csv`, optional
+`response-relevance.json` and its `response-relevance-data.js` copy,
+`visual-state.js`, `beatscope-runtime.js`, `worker-example.js`,
+`consumer-probe.js`, `BEATSCOPE.md`, `SKILL.md`, `references/schema.md`, and
+`LICENSE`. It carries measured timing facts and no visual layer - no recipe, no
+scene timeline, no task statement. The destination parent must exist and
 live under an allowed root. The ZIP is written to a sibling temp file and
 moved into place with an atomic replace, so a crash never leaves a truncated
 file. An existing destination is kept unless `overwrite=true`. The response
@@ -176,7 +186,7 @@ worker.postMessage({ id: 1, time: audio.currentTime });
 
 Serve the extracted package over HTTP with JavaScript module MIME types; module
 Workers cannot normally import siblings from a ZIP or `file://` URL. The Worker
-returns the same deterministic timing/scene frame as a direct main-thread call.
+returns the same deterministic timing frame as a direct main-thread call.
 
 ## Resources
 

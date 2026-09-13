@@ -3,6 +3,8 @@ import json
 
 import pytest
 
+from pydantic import ValidationError
+
 from beatscope.mcp.errors import ProjectNotFound
 from beatscope.mcp.models import EventsInput, GetProjectInput, ListProjectsInput
 from mcp_support import PRIVATE_AUDIO, PROJECT_A, PROJECT_B
@@ -250,80 +252,68 @@ async def test_get_events_segments_overlap_window_and_leak_no_matrices(mcp_env):
     assert boundary["novelty"] == 0.78 and boundary["drivers"] == {"harmony": 0.83}
     # No feature vectors anywhere in the response.
     assert "vector" not in json.dumps(wide)
-# --- v0.8 visual block and compiled-artifact events (plan section 15) -------
+
+
+# --- the handoff scope: measured facts, and no visual layer -----------------
+#
+# The exported package ships timing facts and states no visual language, so
+# the server must not read, count, or promise compiled scenes and transitions.
+# These tests fail if that layer comes back through this seam.
 
 FORBIDDEN_EVENT_KEYS = {"kick", "snare", "hihat", "bass_808", "confidence",
                         "emotion", "mood", "feeling", "instrument", "role"}
 
 
-def test_get_project_visual_block_summary_and_timing(mcp_env):
+def _keys(node):
+    """Every dict key anywhere in a JSON-shaped payload."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            yield key
+            yield from _keys(value)
+    elif isinstance(node, list):
+        for item in node:
+            yield from _keys(item)
+
+
+def test_get_project_carries_no_visual_layer(mcp_env):
     service = mcp_env.service()
-    summary = service.get_project(GetProjectInput(project_id=PROJECT_A))
-    assert summary["visual"] == {
-        "available": True,
-        "recipe_version": "0.8.0",
-        "mode": "legacy",
-        "families": 1,
-        "scenes": 1,
-        "transitions": 0,
-    }
-    timing = service.get_project(GetProjectInput(project_id=PROJECT_A, detail="timing"))
-    block = dict(timing["visual"])
-    fingerprint = block.pop("artifact_fingerprint")
-    assert isinstance(fingerprint, str) and len(fingerprint) == 64
-    assert block == summary["visual"]  # timing only adds the fingerprint
+    for detail in ("summary", "timing", "full"):
+        result = service.get_project(GetProjectInput(project_id=PROJECT_A, detail=detail))
+        assert "visual" not in result
+        names = set(_keys(result))
+        assert not {"visual", "recipe", "scenes", "transitions", "timeline"} & names
 
 
-def test_visual_metadata_degrades_without_artifacts(mcp_env):
+def test_service_has_no_visual_artifact_seam(mcp_env):
+    """No recipe/timeline loader survives in the service layer."""
     service = mcp_env.service()
-    assert service._visual_metadata(PROJECT_A, None, "summary") == {"available": False}
-    assert service._visual_metadata(PROJECT_A, None, "timing") == {"available": False}
+    for attribute in ("load_visual_artifacts", "_visual_metadata", "_recipe_path", "_timeline_path"):
+        assert not hasattr(service, attribute)
 
 
-def test_scene_and_transition_event_window_semantics():
-    from beatscope.mcp.service import _scene_events, _transition_events
-
-    timeline = {
-        "scenes": [
-            {"id": "scene-001", "segment_id": "seg-1", "family": "A", "variant": 0,
-             "label": "A", "motif": "compact-triad", "start_time": 0.0, "end_time": 4.0},
-            {"id": "scene-002", "segment_id": "seg-2", "family": "B", "variant": 1,
-             "label": "B", "motif": "orbital-weave", "start_time": 4.0, "end_time": 8.0},
-        ],
-        "transitions": [
-            {"id": "trans-001", "boundary_bar": 2, "time": 4.0, "from_scene": "scene-001",
-             "to_scene": "scene-002", "treatment": "phase-turn", "driver": "boundary_density",
-             "strength": 0.8, "lead_seconds": 0.5, "settle_seconds": 0.75},
-        ],
-    }
-    # Scenes are spans: they overlap (start, end] windows like segments do.
-    assert [s["id"] for s in _scene_events(timeline, 3.9, 4.1)] == ["scene-001", "scene-002"]
-    assert _scene_events(timeline, 4.0, 4.0) == []
-    assert [s["id"] for s in _scene_events(timeline, 5.0, 6.0)] == ["scene-002"]
-    first = _scene_events(timeline, 0.0, 1.0)[0]
-    assert first["family"] == "A" and first["motif"] == "compact-triad"
-    # Transitions are instants with start < time <= end.
-    assert [t["id"] for t in _transition_events(timeline, 3.9, 4.1)] == ["trans-001"]
-    assert [t["id"] for t in _transition_events(timeline, 3.0, 4.0)] == ["trans-001"]
-    assert _transition_events(timeline, 4.0, 4.0) == []
-    transition = _transition_events(timeline, 0.0, 8.0)[0]
-    assert transition["treatment"] == "phase-turn" and transition["strength"] == 0.8
-    for event in _scene_events(timeline, 0.0, 8.0) + _transition_events(timeline, 0.0, 8.0):
-        assert not FORBIDDEN_EVENT_KEYS & set(event)
+def test_events_include_rejects_visual_artifacts():
+    """'scenes'/'transitions' are not part of the queried fact set."""
+    for included in ("scenes", "transitions"):
+        with pytest.raises(ValidationError):
+            EventsInput(project_id=PROJECT_A, start=0.0, end=8.0, include={included})
 
 
 @pytest.mark.anyio
-async def test_get_events_scenes_come_from_compiled_timeline(mcp_env):
+async def test_event_payloads_invent_no_identity(mcp_env):
+    """Measured facts only: no instrument, mood, or confidence labels.
+
+    Onsets come from the JavaScript runtime and are covered at the protocol
+    layer; this pins the facts the service slices itself.
+    """
     mcp_env.seed()
     service = mcp_env.service()
     result = await service.get_events(EventsInput(
-        project_id=PROJECT_A, start=6.0, end=7.0,
-        include={"scenes", "transitions"},
+        project_id=PROJECT_A, start=0.0, end=8.0,
+        include={"beats", "cues", "patterns", "segments", "boundaries"},
     ))
-    assert [event["kind"] for event in result["events"]] == ["scene"]
-    scene = result["events"][0]
-    assert scene["time"] == 0.0 and scene["end"] == 8.0  # span overlaps the window
-    assert scene["family"] == "LEGACY"
-    serialized = json.dumps(result)
-    assert not any(word in serialized for word in FORBIDDEN_EVENT_KEYS)
-    assert not any(FORBIDDEN_EVENT_KEYS & set(event) for event in result["events"])
+    assert result["total"] > 0
+    for event in result["events"]:
+        assert not FORBIDDEN_EVENT_KEYS & set(event)
+    serialized = _json(result)
+    for word in FORBIDDEN_EVENT_KEYS:
+        assert word not in serialized

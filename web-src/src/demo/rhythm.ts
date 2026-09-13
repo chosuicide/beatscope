@@ -189,23 +189,4 @@ function demoEnergy(): DemoEnergy {
 export const DEMO_SOURCE_RHYTHM_SHA256 = 'c235e01f04b7e9e0940b30c918d6bab8b9eda06feea8cebc101e897a403ca0e5';
 export const DEMO_PROJECT_ID = DEMO_SOURCE_RHYTHM_SHA256.slice(0, 12);
 
-/**
- * Legacy v0.11 state shape for the frozen WebMCP tools: the same facts in
- * the normalizeMap-compatible wrapper (tempo/grid/source + beats/onsets).
- */
-let cachedLegacy: Record<string, unknown> | null = null;
-export function demoLegacyProject(): Record<string, unknown> {
-  if (cachedLegacy) return cachedLegacy;
-  const r = demoRhythm();
-  cachedLegacy = {
-    project_id: r.project_id,
-    source: { duration: r.duration, file: 'beyond-the-fog.synth.wav' },
-    tempo: { global_bpm: r.bpm },
-    grid: { origin: 0, default_subdivision: 16 },
-    beats: r.beats,
-    onsets: r.onsets,
-  };
-  return cachedLegacy;
-}
-
 export type { DirectionDocument };

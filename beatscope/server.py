@@ -221,8 +221,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         # Static assets; /runtime/* maps to the shared JS runtime modules.
-        # `/` routes to the Beathi Canvas app (web/app); the legacy Studio
-        # page stays reachable at /legacy.html until the Round 5 removal.
+        # `/` routes to the Beathi studio build in web/app, the only page.
         if path == "/":
             self._send(302, b"", "text/plain", {"Location": "/app/"})
             return

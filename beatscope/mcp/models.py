@@ -61,12 +61,13 @@ class EventsInput(StrictModel):
     project_id: str = Field(pattern=PROJECT_ID_PATTERN)
     start: float = Field(ge=0)
     end: float = Field(gt=0)
-    # "segments"/"boundaries" are the v0.7 whole-song structure facts;
-    # "scenes"/"transitions" are the v0.8 compiled visual artifacts (plan
-    # section 15); the legacy per-bar "patterns" include stays untouched.
+    # "segments"/"boundaries" are the whole-song structure facts; the per-bar
+    # "patterns" include stays untouched. Compiled visual scenes and
+    # transitions are deliberately absent: the handoff carries measured timing
+    # facts only, so the server must not offer a scene layer the package no
+    # longer ships.
     include: set[Literal[
         "beats", "onsets", "cues", "patterns", "segments", "boundaries",
-        "scenes", "transitions",
     ]] = Field(
         default_factory=lambda: {"beats", "onsets", "cues"}
     )

@@ -3,18 +3,16 @@
 [English](README.md) | 简体中文
 
 [![CI](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml/badge.svg)](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.11.0-c65032)](https://github.com/chosuicide/beatscope/releases)
+[![Version](https://img.shields.io/badge/version-0.12.0-c65032)](https://github.com/chosuicide/beatscope/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
 **把可测量的音乐时序交给 Coding Agent：精确拍点、原始事件、结构，以及由调用方限定数量的响应时刻。**
 
-[![BeatScope 播放器动态预览；点击观看有声视频](docs/demo/beatscope-preview.gif)](docs/demo/beatscope-demo.mp4)
-
 BeatScope 同时提供三个部分：
 
-- **Studio**：上传音频、检查节拍与结构、循环八小节，并观看可安全 Seek 的音乐视觉仪器。
-- **时序包**：导出不包含原始音频、可移植且能自检的 `.beatscope` 交接包。
-- **Runtime + MCP**：让视觉项目或 Coding Agent 读取同一帧，或按固定预算选择响应点，无需重新分析音乐。
+- **Studio**：上传一首歌，直接得到一支音乐视频：BeatScope 测量音乐，工作室依据这些测量剪出一支确定性的片子，并在页面里播放。
+- **时序包**：把同一份测量导出为不含原始音频、可移植且能自检的 `.beatscope` 交接包。
+- **Runtime + MCP**：让视觉项目或 Coding Agent 读取同一份事实，或按固定预算选择响应点，无需重新分析音乐。
 
 它报告时间、瞬态强度、频段分布和中性的重复结构，但**不会**把不确定事件硬说成 kick、snare 或 808。
 
@@ -45,43 +43,7 @@ pip install -e ".[dev]"
 beatscope serve
 ```
 
-打开 `http://127.0.0.1:8765`，选择 WAV、FLAC、MP3、OGG 或 M4A 文件并播放。分析完全在本地完成，请求产生的临时文件会在处理后清理。
-
-## 做一张自己的作品（本地预览）
-
-在本地服务打开 `/app/?composition=1`。新工作台以一张作品为中心：添加文字或媒体，拖动和缩放对象，再决定哪些对象跟着音乐响应。选择 **Stay still**，让它保持静止，也完全可以。
-
-三种视觉背景沿用 Butterchurn 原始预设及其音频响应，并注明作者。前景对象读取 BeatScope 的实测事件时间和可选的 v0.11 排序。这是两套独立来源；背景的反馈画面不保证在跳转后逐像素复现。
-
-**Export for Agent** 会打包作品文档、媒体、共享的前景运行时、原时序包、预览页和校验值。解压后运行 `node probe.mjs`，再运行 `python -m http.server 8080`。在预览页重新选择原音频，SHA-256 匹配后才能播放。压缩包不包含音频。
-
-目前是本地预览，不是新发布版本。旧工作台和 WebMCP Director 的入口仍保留。新编辑器暂为英文界面，提供两种前景响应算子，不导出视频文件；新作品包的跨 Agent 验证尚未完成。
-
-## 在浏览器里与 BeatScope 协作
-
-BeatScope Director 把当前加载的曲目以八个 WebMCP 工具暴露给页面内的 Agent。它可以查看任意时刻、读取有界事件、寻找并比较视觉段落，然后在用户正在观看的同一个播放器里 Focus、试听并循环该段落。
-
-**[打开在线 Director Demo](https://chosuicide.github.io/beatscope/?demo=webmcp)** —— 无需安装。这是使用预分析曲目的静态 Demo；如需分析自己的音频，请在本地运行 Studio。
-
-[![WebMCP Director 聚焦并试听测得的结构转场](docs/demo/webmcp-director.gif)](docs/demo/webmcp-director.mp4)
-
-也可以在本地运行 Director Demo。Demo 包内置一段预分析曲目，由本仓库专门合成——绝非商业录音。
-
-```powershell
-python scripts/build_webmcp_demo.py
-python tests/browser/webmcp_demo_server.py --port 8770 --directory build/webmcp-demo
-```
-
-用支持 WebMCP 的浏览器打开 `http://127.0.0.1:8770/?demo=webmcp`，页头会显示 `WEBMCP READY · 8 TOOLS`。
-
-让 Agent 上手之前，先记住几条基本规则：
-
-- **两个入口，同一模型。** WebMCP 是浏览器内协作入口；本地 stdio [MCP 服务](docs/mcp.md) 仍是开发者入口。两者通过同一确定性 runtime 读取同一份 Rhythm IR，只是传输与生命周期不同。
-- **音频不离开页面。** 工具只应答已加载的分析结果，Agent 查询的是时序事实而非声音本身；本地 Studio 的上传与本机分析流程保持不变。
-- **中性标签，仅供参考。** 结构只以重复家族（`A`、`B`、`A′`）呈现，从不假装“主歌”或“副歌”；候选段落是供试听的测量建议，不是音乐真理。
-- **可见且可撤销。** 会改变页面的 Agent 动作会进入页面 ledger；只读查询保持真正只读。最近一次动作可以直接在 UI 中撤销。
-
-工具名、Schema、限制、错误码与示例 prompt：[docs/webmcp.md](docs/webmcp.md)。
+打开 `http://127.0.0.1:8765`，选择 WAV、FLAC、MP3、OGG 或 M4A 文件：工作室会测量它、剪出片子并直接播放。分析和渲染都在本地完成，请求产生的临时文件会在处理后清理。
 
 ## 一份时序包，不同的视觉语言
 
@@ -137,17 +99,11 @@ function render(time) {
 
 ### Studio
 
-![BeatScope 全曲结构导航](docs/screenshots/beatscope-track-structure.png)
-
-全曲导航把能量、瞬态密度和重复结构放在一起。字母只表示重复关系，不是假装识别段落名称：`A′` 与 `A` 有关，但不意味着“副歌”或“主歌”。点击小节可直接 Seek，`Shift+←/→` 可跳转到结构边界。
-
-![BeatScope 八小节动效提示图](docs/screenshots/beatscope-cue-map.png)
-
-当前八小节会给出 `IMPACT`、`LOW / SCALE`、`MID / FLOW`、`HIGH / FLASH` 和 `ACCENT / BLOOM`。点击 cue 可试听附近瞬态，拖拽可设置循环，并且不会让歌曲重新播放。
+打开 `http://127.0.0.1:8765`，丢进一首歌，工作室会测量它、依据测量剪出一支片子并直接播放——一个页面，没有剪辑时间线。同一个页面负责导出下面的时序包。细节见 [docs/local-movie.md](docs/local-movie.md)。
 
 ### 交接包
 
-每次导出都会带上节奏地图、确定性 runtime、场景文件、Agent 路由说明、Skill、完整性哈希和零依赖探针：
+每次导出都会带上节奏地图、确定性 runtime、Agent 路由说明、Skill、完整性哈希和零依赖探针；并且刻意**不含任何视觉层**：没有配方、没有场景时间线、没有风格、没有任务陈述，因为视觉是消费者自己的决定，而一个预先定好视觉的包会让 agent 不再去问用户想要什么。
 
 ```text
 project.beatscope/
@@ -188,7 +144,7 @@ beatscope-mcp
 | `beatscope_list_projects` | 查找本地缓存的分析项目 |
 | `beatscope_get_project` | 读取时序、来源和结构摘要 |
 | `beatscope_analyze_audio` | 带进度与取消能力地分析本地音频 |
-| `beatscope_get_visual_state` | 查询某个时刻的精确视觉状态 |
+| `beatscope_get_visual_state` | 查询某一时刻的测量事实——即包里的 `getVisualState(time)`，改由 MCP 提供 |
 | `beatscope_get_events` | 查询时间窗内的事实；也可用 `response_budget` 选择排序后的原时刻 onset |
 | `beatscope_export_package` | 原子写入可移植交接包 |
 
@@ -196,15 +152,13 @@ beatscope-mcp
 
 ## 为什么它不会越播越偏
 
-BeatScope 把信息分为三层：
+BeatScope 把信息分为三层，但只有前两层会被交付：
 
 1. **事实**：拍点时间、瞬态和多频段能量。
 2. **语义**：变速段、小节、量化 cue、结构边界和重复家族。
-3. **表现**：动效预算、结构场景和过渡包络。
+3. **表现**：动效预算、结构场景和过渡包络。这一层是消费者自己的决定：它不出现在包里，不经 MCP 提供，也不作为任务被写死，所以拿到测量结果的一方仍然可以去问用户想要什么。
 
 零依赖 JavaScript runtime 不接触 DOM、Audio、Canvas 或墙上时钟。播放器、MCP bridge、导出包和参考消费者查询的是同一套模型，而不是各自保存一份略有差异的歌曲解释。
-
-内置 WebGL2 粒子仪器只是示例，不是产品边界。它通过播放时间驱动三瓣粒子场、流向拖尾和延迟轨道带，保持单次 draw call，并提供自适应质量、Canvas 后备与实时 reduced-motion。
 
 <details>
 <summary><strong>准确度、确定性与 benchmark 门槛</strong></summary>
@@ -215,12 +169,11 @@ BeatScope 把信息分为三层：
 
 v0.11 的响应排序器另有封存测试集：23 首歌曲、144 张有授权的 StepMania 谱面，来源在开发阶段完全隔离。相对只看 onset strength 的基线，成对一致率提升 `0.0238`、NDCG@10 提升 `0.2983`、预算内召回提升 `0.0847`；成对提升的 95% bootstrap 区间为 `[0.0146, 0.0336]`。这些数字衡量的是与游戏谱面式人类共识的一致程度，不是普适的“音乐重要性”。
 
-结构另有十种编排 benchmark。视觉编排另有 28 个阻断门槛，覆盖 Seek/顺序确定性、家族身份、边界连续性、reduced-motion 比例、draw call 和运行时预算。CI 在 Windows、Ubuntu、Python 3.10 与 3.12 上运行，并包含固定浏览器消费者和 Remotion 离线证据任务。
+结构另有十种编排 benchmark。当前 Studio 另有确定性时序、剪辑计划、编码失败安全、TypeScript 与生产构建门禁。CI 在 Windows、Ubuntu、Python 3.10 与 3.12 上运行，并包含固定浏览器消费者和 Remotion 离线证据任务。
 
 ```powershell
 beatscope benchmark
 beatscope benchmark-structure
-beatscope benchmark-visual
 ```
 
 </details>
@@ -230,7 +183,6 @@ beatscope benchmark-visual
 ```powershell
 beatscope serve
 beatscope rhythm song.wav --output rhythm.json
-beatscope visual-build rhythm.json
 beatscope doctor
 beatscope benchmark
 ```
@@ -239,7 +191,6 @@ beatscope benchmark
 
 ## 文档
 
-- [WebMCP Director 工具](docs/webmcp.md)
 - [MCP 服务与客户端设置](docs/mcp.md)
 - [消费者符合性结果](evaluations/agent-interoperability/conformance.md)
 - [冻结的跨 Agent 任务](evaluations/agent-interoperability/TASK.md)

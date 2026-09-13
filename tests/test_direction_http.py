@@ -18,7 +18,7 @@ from beatscope.project import ProjectManager
 from beatscope.web_api import WebApi
 
 ROOT = Path(__file__).resolve().parents[1]
-ABA_RHYTHM = json.loads((ROOT / "tests" / "fixtures" / "visual" / "visual-aba.rhythm.json").read_text(encoding="utf-8"))
+ABA_RHYTHM = json.loads((ROOT / "tests" / "fixtures" / "structure" / "aba.rhythm.json").read_text(encoding="utf-8"))
 PROJECT_ID = "62bce8192088"
 DIRECTION_URL = f"/api/projects/{PROJECT_ID}/direction"
 WORKSPACE_URL = f"/api/projects/{PROJECT_ID}/workspace"

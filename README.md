@@ -3,18 +3,16 @@
 English | [简体中文](README.zh-CN.md)
 
 [![CI](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml/badge.svg)](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.11.0-c65032)](https://github.com/chosuicide/beatscope/releases)
+[![Version](https://img.shields.io/badge/version-0.12.0-c65032)](https://github.com/chosuicide/beatscope/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
 **Give a coding agent measured music timing — exact beats, raw events, structure, and a caller-sized set of moments worth responding to.**
 
-[![BeatScope player in motion; click for the video with sound](docs/demo/beatscope-preview.gif)](docs/demo/beatscope-demo.mp4)
-
 BeatScope brings three parts together:
 
-- **Studio** — upload audio, inspect beats and structure, loop an eight-bar window, and watch a seek-safe visual instrument.
-- **Timing package** — export the song as a portable, self-checking `.beatscope` handoff with no source audio inside.
-- **Runtime + MCP** — let a visual project or coding agent query the same frame, or spend a fixed response budget, without re-analysing the music.
+- **Studio** — upload a song and get a music video: BeatScope measures the track, the studio cuts a deterministic film on those measurements, and the film plays back in the page.
+- **Timing package** — export the same measurements as a portable, self-checking `.beatscope` handoff with no source audio inside.
+- **Runtime + MCP** — let a visual project or coding agent query the same facts, or spend a fixed response budget, without re-analysing the music.
 
 It reports timing, transient strength, frequency distribution, and neutral structural repetition. It does **not** pretend uncertain events are kicks, snares, or 808s.
 
@@ -45,46 +43,7 @@ pip install -e ".[dev]"
 beatscope serve
 ```
 
-Open `http://127.0.0.1:8765`, choose a WAV, FLAC, MP3, OGG, or M4A file, and press play. Analysis is local; request-scoped temporary files are removed after processing.
-
-## Compose an artwork (local preview)
-
-Open `/app/?composition=1` on your local server. The new workspace puts one artwork in the centre: add text or media, drag and resize objects, then choose which ones respond to the music. **Stay still** is a valid choice.
-
-The three background materials use Butterchurn's original presets and audio response, with author credits. Foreground objects use BeatScope's measured event times and optional v0.11 ranking. These are separate systems; background feedback is not guaranteed to reproduce the same pixels after seeking.
-
-**Export for Agent** saves the artwork, its media, shared foreground runtime, original timing package, preview page and checksums. Unzip it, run `node probe.mjs`, then `python -m http.server 8080`. Relink the original audio in the preview; its SHA-256 must match. Audio is excluded from the archive.
-
-This is a local preview, not a new published release. The existing workspace and WebMCP Director remain available at their original entry points. The new editor currently has an English interface, two foreground response operators, and no video-file export. Cross-Agent validation of the new composition package is still pending.
-
-## Work with BeatScope from the browser
-
-BeatScope Director exposes the loaded track as eight WebMCP tools. An Agent can
-inspect any moment, read bounded events, find and compare visual ranges, then
-focus, audition, and loop a range in the same player the user is watching.
-
-**[Open the live Director demo](https://chosuicide.github.io/beatscope/?demo=webmcp)** — no install required. It is a static, pre-analyzed demo; run Studio locally to analyze your own audio.
-
-[![WebMCP Director focusing and auditioning a measured transition](docs/demo/webmcp-director.gif)](docs/demo/webmcp-director.mp4)
-
-Or run the Director demo locally. It ships a pre-analyzed track that this
-repository synthesized for exactly this purpose — never a commercial recording.
-
-```powershell
-python scripts/build_webmcp_demo.py
-python tests/browser/webmcp_demo_server.py --port 8770 --directory build/webmcp-demo
-```
-
-Open `http://127.0.0.1:8770/?demo=webmcp` in a WebMCP-capable browser; the header shows `WEBMCP READY · 8 TOOLS`.
-
-Before letting an Agent drive, the ground rules:
-
-- **Two entries, one model.** WebMCP is the in-browser collaboration entry; the local stdio [MCP server](docs/mcp.md) stays the developer entry. Both read the same Rhythm IR through the same deterministic runtime — only transport and lifecycle differ.
-- **No audio leaves the page.** Tools answer from the loaded analysis, so the Agent queries timing facts, not sound. The Studio's local upload-and-analyze flow is unchanged.
-- **Neutral labels, suggestions only.** Structure appears as repeat families (`A`, `B`, `A′`) — never "verse" or "chorus" — and a candidate range is a measured suggestion to audition, not musical truth.
-- **Visible and reversible.** Page-changing Agent actions appear in the on-page ledger; read-only inspection stays read-only. The latest action can be undone from the UI.
-
-Tool names, schemas, limits, error codes, and example prompts: [docs/webmcp.md](docs/webmcp.md).
+Open `http://127.0.0.1:8765` and choose a WAV, FLAC, MP3, OGG, or M4A file: the studio measures it, cuts the film, and plays it back. Analysis and rendering are local; request-scoped temporary files are removed after processing.
 
 ## One package, different visual languages
 
@@ -141,13 +100,7 @@ local audio
 
 ### Studio
 
-![BeatScope whole-song structure navigator](docs/screenshots/beatscope-track-structure.png)
-
-The whole-song navigator shows energy, transient density, and repeated structural families. Letters mean recurrence, never guessed roles: `A′` is related to `A`, not “Chorus” or “Verse”. Click a bar to seek; use `Shift+←/→` to jump between boundaries.
-
-![BeatScope eight-bar motion cue map](docs/screenshots/beatscope-cue-map.png)
-
-The current eight bars expose `IMPACT`, `LOW / SCALE`, `MID / FLOW`, `HIGH / FLASH`, and `ACCENT / BLOOM`. Click a cue to audition it or drag a loop without restarting playback.
+Open `http://127.0.0.1:8765`, drop in a song, and the studio measures it, cuts a film from those measurements, and plays it back — one page and no editing timeline. The same page exports the timing package below. Details: [docs/local-movie.md](docs/local-movie.md).
 
 ### Handoff package
 
@@ -192,7 +145,7 @@ The local stdio server exposes six tools:
 | `beatscope_list_projects` | Find locally cached analyses |
 | `beatscope_get_project` | Read timing, provenance, and structure summaries |
 | `beatscope_analyze_audio` | Analyse local audio with progress and cancellation |
-| `beatscope_get_visual_state` | Resolve the exact visual state at one time |
+| `beatscope_get_visual_state` | Resolve the measured facts at one instant — the package's `getVisualState(time)`, over MCP |
 | `beatscope_get_events` | Query facts in a window; optionally spend `response_budget` on ranked, unshifted onsets |
 | `beatscope_export_package` | Write a portable handoff atomically |
 
@@ -200,15 +153,16 @@ Paths are restricted by `BEATSCOPE_ALLOWED_ROOTS`; analysis and queries stay loc
 
 ## Why it stays in sync
 
-BeatScope separates three layers:
+BeatScope separates three layers, and only the first two travel:
 
 1. **Facts** — beat timestamps, transients, and multiband energy.
 2. **Semantics** — tempo segments, bars, quantised cues, boundaries, and repeat families.
 3. **Presentation** — motion budgets, structural scenes, and transition envelopes.
+   This one is the consumer's decision: it is not shipped, not served over MCP,
+   and not stated as a task, so whoever receives the measurements can still ask
+   the user what they want.
 
 The dependency-free JavaScript runtime has no DOM, Audio, Canvas, or wall-clock dependency. The player, MCP bridge, exported package, and reference consumers query that same model instead of carrying slightly different copies of the song.
-
-The built-in WebGL2 instrument is one demonstration, not the product boundary. It renders a three-lobed field, flow-guided streamers, and delayed orbit belts from playback time in one draw call, with adaptive quality, a Canvas fallback, and live reduced-motion support.
 
 <details>
 <summary><strong>Accuracy, determinism, and benchmark gates</strong></summary>
@@ -219,12 +173,11 @@ These deterministic synthetic fixtures are regression evidence with exact ground
 
 The v0.11 response ranker has a separate sealed holdout: 23 songs and 144 licensed StepMania charts from a source excluded from development. Against raw onset strength, it improves pairwise agreement by `0.0238`, NDCG@10 by `0.2983`, and recall-at-budget by `0.0847`; the 95% bootstrap interval for pairwise gain is `[0.0146, 0.0336]`. This measures agreement with gameplay-oriented human chart consensus, not universal musical importance.
 
-Structure has a separate ten-arrangement benchmark. Visual orchestration has 28 blocking gates covering seek/order determinism, family identity, boundary continuity, reduced-motion scaling, draw-call count, and runtime budgets. CI runs on Windows and Ubuntu with Python 3.10 and 3.12, plus pinned browser-consumer and Remotion offline evidence jobs.
+Structure has a separate ten-arrangement benchmark. The current Studio has deterministic timing, cut-plan, encoder-safety, TypeScript, and production-build gates. CI runs on Windows and Ubuntu with Python 3.10 and 3.12, plus pinned browser-consumer and Remotion offline evidence jobs.
 
 ```powershell
 beatscope benchmark
 beatscope benchmark-structure
-beatscope benchmark-visual
 ```
 
 </details>
@@ -234,7 +187,6 @@ beatscope benchmark-visual
 ```powershell
 beatscope serve
 beatscope rhythm song.wav --output rhythm.json
-beatscope visual-build rhythm.json
 beatscope doctor
 beatscope benchmark
 ```
@@ -243,7 +195,6 @@ For dense mixes, optional Beat This and Demucs inputs are available through `.[h
 
 ## Documentation
 
-- [WebMCP Director tools](docs/webmcp.md)
 - [MCP server and client setup](docs/mcp.md)
 - [Consumer conformance](evaluations/agent-interoperability/conformance.md)
 - [Frozen cross-Agent task](evaluations/agent-interoperability/TASK.md)

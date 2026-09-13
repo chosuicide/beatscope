@@ -76,8 +76,7 @@ Instruments stay opaque on purpose, so data never sits directly on the drawing:
 
 ## Not part of this freeze
 
-Other surfaces keep their own structure and palette: the Beathi Canvas
-workspace (`?canvas`, `web-src/src/App.tsx`, frozen separately by the v0.12
-design gate in `docs/design/beathi-canvas/`), the new workbench
-(`?composition=1`, `web-src/src/composition/Workspace.tsx` — see README), and
-`/legacy.html`, which is scheduled for removal.
+This is the only surface the product ships. The previous ones — the canvas
+workspace (`?canvas`), the composition workbench (`?composition=1`), and the
+old studio page (`/legacy.html`) — were retired together with the compiled
+visual layer they were built on; `/` routes to this studio and nothing else.

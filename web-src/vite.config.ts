@@ -3,9 +3,8 @@ import { defineConfig } from 'vite';
 import { readFileSync } from 'node:fs';
 
 // Build output is emitted into the Python-packaged static directory under
-// web/app (plan §3.4); beatscope/web keeps the legacy Studio modules beside
-// it until the Round 5 coverage-map removal. Base stays relative so the same
-// build works when served at /app/ and from a Pages-style subpath.
+// web/app (plan §3.4); web/app is the only page the server serves. Base stays
+// relative so the same build works when served at /app/ and from any subpath.
 export default defineConfig({
   base: './',
   plugins: [react(), {

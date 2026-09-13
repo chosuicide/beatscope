@@ -44,6 +44,39 @@ def test_upload_rejects_oversized_length():
         thread.join(timeout=2)
 
 
+def test_studio_is_the_only_page(tmp_path):
+    """`/` serves the studio build; the retired pages are gone for good.
+
+    The old studio page and its module tree were deleted with the compiled
+    visual layer, so nothing may still answer for them.
+    """
+    server, thread = running_server()
+    try:
+        conn = http.client.HTTPConnection(*server.server_address)
+
+        conn.request('GET', '/')
+        root = conn.getresponse()
+        assert root.status == 302 and root.getheader('Location') == '/app/'
+        root.read()
+
+        conn.request('GET', '/app/')
+        page = conn.getresponse()
+        assert page.status == 200
+        body = page.read().decode('utf-8')
+        assert 'id="root"' in body and 'Beathi' in body
+
+        for retired in ('/legacy.html', '/app.js', '/style.css', '/visual-stage.js',
+                        '/webmcp/register.js', '/demo/project.json'):
+            conn.request('GET', retired)
+            response = conn.getresponse()
+            assert response.status == 404, f'{retired} still answers with {response.status}'
+            response.read()
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
 def test_project_routes_serve_map_and_audio(tmp_path):
     audio = tmp_path / 'project.wav'
     with wave.open(str(audio), 'wb') as f:
@@ -130,11 +163,11 @@ def test_job_analysis_and_range_audio(tmp_path):
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
-# --- v0.8 compiled visual artifact routes (plan section 13) ------------------
+# --- the retired visual layer has no HTTP surface ---------------------------
 
 
-def _seed_visual_project(projects_root, project_id='0a1b2c3d4e5f'):
-    """Seed one compilable project: rhythm.json + project.json in the cache."""
+def _seed_project(projects_root, project_id='0a1b2c3d4e5f'):
+    """Seed one cached project: rhythm.json + project.json."""
     import json as _json
     fixture = Path(__file__).parent / 'fixtures' / 'runtime' / 'characterization-project.json'
     rhythm = _json.loads(fixture.read_text(encoding='utf-8'))
@@ -149,70 +182,22 @@ def _seed_visual_project(projects_root, project_id='0a1b2c3d4e5f'):
     return rhythm
 
 
-def test_visual_artifact_routes_serve_canonical_bytes_with_etag(tmp_path):
-    from beatscope.project import ProjectManager
-    from beatscope.visual_recipe import canonical_visual_bytes
-    from beatscope.web_api import WebApi
+def test_visual_artifact_routes_are_gone(tmp_path):
+    """The compiled recipe/timeline routes no longer exist.
 
-    projects = tmp_path / 'projects'
-    rhythm = _seed_visual_project(projects)
-    api = WebApi(ProjectManager(tmp_path))
-
-    status, headers, body = api.handle_get('/api/projects/0a1b2c3d4e5f/visual-recipe', {}, {})
-    assert status == 200
-    assert headers['Content-Type'] == 'application/json; charset=utf-8'
-    recipe = json.loads(body.decode('utf-8'))
-    assert recipe['schema'] == 'beatscope-visual-recipe-1'
-    assert body == canonical_visual_bytes(recipe)
-    etag = headers['ETag']
-    assert etag == '"' + hashlib.sha256(body).hexdigest() + '"'
-
-    status, headers, body = api.handle_get('/api/projects/0a1b2c3d4e5f/visual-timeline', {}, {})
-    assert status == 200
-    timeline = json.loads(body.decode('utf-8'))
-    assert timeline['schema'] == 'beatscope-visual-timeline-1'
-    assert body == canonical_visual_bytes(timeline)
-    assert headers['ETag'] == '"' + hashlib.sha256(body).hexdigest() + '"'
-    # The compiled timeline instantiates the recipe's families on the song.
-    assert [scene['family'] for scene in timeline['scenes']] == ['LEGACY']
-    assert recipe['diagnostics']['artifact_fingerprint']
-
-
-def test_visual_artifact_routes_honour_if_none_match(tmp_path):
+    The product ships measured timing facts and no visual layer, so a request
+    for the old artifact documents must not resolve to anything - not even for
+    a project whose rhythm would once have compiled into them.
+    """
     from beatscope.project import ProjectManager
     from beatscope.web_api import WebApi
 
-    _seed_visual_project(tmp_path / 'projects')
-    api = WebApi(ProjectManager(tmp_path))
-    _, headers, _ = api.handle_get('/api/projects/0a1b2c3d4e5f/visual-recipe', {}, {})
-    etag = headers['ETag']
-
-    status, headers, body = api.handle_get(
-        '/api/projects/0a1b2c3d4e5f/visual-recipe', {}, {'If-None-Match': etag})
-    assert status == 304
-    assert body == b''
-    assert headers['ETag'] == etag
-    assert headers['Content-Type'] == 'application/json; charset=utf-8'
-
-    # A different validator re-serves the full document.
-    status, _, body = api.handle_get(
-        '/api/projects/0a1b2c3d4e5f/visual-recipe', {}, {'If-None-Match': '"0123abcd"'})
-    assert status == 200 and len(body) > 0
-    # Case-insensitive header lookup.
-    status, _, _ = api.handle_get(
-        '/api/projects/0a1b2c3d4e5f/visual-recipe', {}, {'if-none-match': etag})
-    assert status == 304
-
-
-def test_visual_artifact_routes_unknown_project_is_404(tmp_path):
-    from beatscope.project import ProjectManager
-    from beatscope.web_api import WebApi
-
+    _seed_project(tmp_path / 'projects')
     api = WebApi(ProjectManager(tmp_path))
     for route in ('visual-recipe', 'visual-timeline'):
-        status, headers, body = api.handle_get(f'/api/projects/zz9x/{route}', {}, {})
-        assert status == 404
-        assert 'error' in json.loads(body.decode('utf-8'))
+        status, _, body = api.handle_get(f'/api/projects/0a1b2c3d4e5f/{route}', {}, {})
+        assert status == 404, f'{route} still answers with {status}'
+        assert b'visual' not in body.lower()
 
 
 def test_response_relevance_route_is_canonical_and_cacheable(tmp_path):
@@ -220,7 +205,7 @@ def test_response_relevance_route_is_canonical_and_cacheable(tmp_path):
     from beatscope.response_relevance import canonical_response_relevance_bytes
     from beatscope.web_api import WebApi
 
-    rhythm = _seed_visual_project(tmp_path / 'projects')
+    rhythm = _seed_project(tmp_path / 'projects')
     api = WebApi(ProjectManager(tmp_path))
     route = '/api/projects/0a1b2c3d4e5f/response-relevance'
 

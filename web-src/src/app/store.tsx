@@ -97,8 +97,6 @@ export interface AppState {
   toasts: Toast[];
   proposal: Proposal | null;
   proposalState: ProposalState;
-  /** legacy-shape project facts for the frozen WebMCP tools */
-  legacyProject: unknown;
 }
 
 export type Action =
@@ -159,7 +157,6 @@ export const initialAppState: AppState = {
   toasts: [],
   proposal: null,
   proposalState: 'hidden',
-  legacyProject: null,
 };
 
 export function reducer(state: AppState, action: Action, history: History): { state: AppState; history: History } {

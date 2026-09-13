@@ -54,14 +54,9 @@ from beatscope.consumer_contract import (
 from beatscope.exports import (
     _probe_source,
     _runtime_source,
-    _scene_director_source,
     _visual_data_module,
     _visual_state_source,
     _worker_example_source,
-)
-from beatscope.visual_recipe_schema import (
-    validate_visual_recipe,
-    validate_visual_timeline,
 )
 
 REPORT_SCHEMA = "beatscope-consumer-report-1"
@@ -463,17 +458,13 @@ def _executable_trust_check(
         return _failed_check("executable-trust", [f"executable:rhythm-unreadable:{error}"])
 
     capabilities = manifest.get("capabilities")
-    scenes = bool(isinstance(capabilities, dict) and capabilities.get("scenes"))
+    # A package that claims a compiled visual layer is not something this
+    # version can trust: the handoff ships measured timing facts only, so the
+    # claim means the package came from an older product.
+    if isinstance(capabilities, dict) and capabilities.get("scenes"):
+        return _failed_check("executable-trust", ["executable:unsupported-capability:scenes"])
     has_response = bool(isinstance(capabilities, dict) and capabilities.get("response_relevance"))
-    visual_artifacts: tuple[dict[str, Any], dict[str, Any]] | None = None
     response_relevance: dict[str, Any] | None = None
-    if scenes:
-        try:
-            recipe = json.loads(members[RECIPE_MEMBER].decode("utf-8"))
-            timeline = json.loads(members[TIMELINE_MEMBER].decode("utf-8"))
-            visual_artifacts = (recipe, timeline)
-        except (KeyError, UnicodeDecodeError, json.JSONDecodeError) as error:
-            return _failed_check("executable-trust", [f"executable:visual-unreadable:{error}"])
     if has_response:
         try:
             response_relevance = json.loads(members["response-relevance.json"].decode("utf-8"))
@@ -485,18 +476,9 @@ def _executable_trust_check(
         PROBE_MEMBER: _probe_source().encode("utf-8"),
         WORKER_MEMBER: _worker_example_source().encode("utf-8"),
         ENTRY_MEMBER: _visual_state_source(
-            rhythm, visual_artifacts, response_relevance
+            rhythm, response_relevance
         ).encode("utf-8"),
     }
-    if visual_artifacts is not None:
-        recipe, timeline = visual_artifacts
-        expected.update(
-            {
-                "scene-director.js": _scene_director_source().encode("utf-8"),
-                "visual-recipe-data.js": _visual_data_module("VISUAL_RECIPE", recipe).encode("utf-8"),
-                "visual-timeline-data.js": _visual_data_module("VISUAL_TIMELINE", timeline).encode("utf-8"),
-            }
-        )
     if response_relevance is not None:
         expected["response-relevance-data.js"] = _visual_data_module(
             "RESPONSE_RELEVANCE", response_relevance
@@ -516,30 +498,22 @@ def _executable_trust_check(
     )
 
 
-def _visual_check(manifest: dict[str, Any] | None, members: Mapping[str, bytes] | None) -> dict[str, Any]:
-    capabilities = manifest.get("capabilities") if isinstance(manifest, dict) else None
-    has_scenes = bool(isinstance(capabilities, dict) and capabilities.get("scenes"))
+def _visual_layer_check(manifest: dict[str, Any] | None, members: Mapping[str, bytes] | None) -> dict[str, Any]:
+    """Report leftovers of the retired visual layer without failing the run.
+
+    The handoff ships measured timing facts only. A manifest that *claims* the
+    layer is refused by the executable-trust check; this one only notices
+    compiled members that came along anyway, so a stale package is visible in
+    the report instead of silently passing.
+    """
     if members is None or manifest is None:
-        return _check("visual-artifacts", STATUS_SKIPPED, notes=["skipped: manifest unavailable"], required=False)
-    if not has_scenes:
-        notes = []
-        for member in (RECIPE_MEMBER, TIMELINE_MEMBER):
-            if member in members:
-                notes.append(f"unexpected-member-despite-scenes-false:{member}")
-        return _check("visual-artifacts", STATUS_SKIPPED, notes=notes, required=False)
-    errors: list[str] = []
-    documents: dict[str, Any] = {}
-    for member in (RHYTHM_MEMBER, RECIPE_MEMBER, TIMELINE_MEMBER):
-        try:
-            documents[member] = json.loads(members[member].decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError, KeyError) as error:
-            errors.append(f"unreadable:{member}:{error}")
-    if not errors:
-        errors.extend(validate_visual_recipe(documents[RECIPE_MEMBER]))
-        errors.extend(
-            validate_visual_timeline(documents[TIMELINE_MEMBER], documents[RHYTHM_MEMBER], documents[RECIPE_MEMBER])
-        )
-    return _check("visual-artifacts", STATUS_PASSED if not errors else STATUS_FAILED, errors=errors, required=False)
+        return _check("visual-layer", STATUS_SKIPPED, notes=["skipped: manifest unavailable"], required=False)
+    notes = [
+        f"unexpected-member:{member}"
+        for member in (RECIPE_MEMBER, TIMELINE_MEMBER)
+        if member in members
+    ]
+    return _check("visual-layer", STATUS_SKIPPED, notes=notes, required=False)
 
 
 def _run_probe(
@@ -757,7 +731,7 @@ def validate_handoff(
         checks.append(manifest_check)
         checks.append(_integrity_check(manifest, members))
     checks.append(_rhythm_check(members))
-    checks.append(_visual_check(manifest, members))
+    checks.append(_visual_layer_check(manifest, members))
     checks.append(_executable_trust_check(manifest, members))
 
     checkpoints_file = Path(checkpoints) if checkpoints is not None else target.parent / "checkpoints.json"

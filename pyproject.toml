@@ -34,7 +34,7 @@ include = ["beatscope*"]
 
 [tool.setuptools.package-data]
 beatscope = [
-  "web/*.html", "web/*.js", "web/*.mjs", "web/*.css", "web/webmcp/*.js",
+  "web/*.html", "web/*.mjs",
   "web/app/*.html", "web/app/*.webp", "web/app/assets/*", "web/app/demo-media/*", "web/app/fonts/*",
   "runtime/*.js", "runtime/*.mjs",
   "agent_skill/*.md", "agent_skill/references/*.md",
@@ -42,10 +42,9 @@ beatscope = [
   "data/*.json",
 ]
 
-# Release policy: the WebMCP Director modules ship in the wheel so
-# the Studio player works offline; the frozen demo audio/fixtures stay out -
-# they belong to the static demo bundle that scripts/build_webmcp_demo.py
-# assembles and the demo host serves (see docs/webmcp.md).
+# Release policy: the studio page and the shared runtime modules ship in the
+# wheel so a local install serves the studio offline; the built frontend under
+# web/app is packaged the same way.
 
 [tool.ruff]
 target-version = "py310"

@@ -179,13 +179,14 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
     @mcp.tool(
         name="beatscope_get_project",
         description=(
-            "Read one BeatScope project. detail='summary' returns identity, counts, and "
-            "compact per-segment mean low/mid/high energy when structure is available; "
-            "'timing' adds beats, tempo segments, patterns, and cues (no energy arrays); "
-            "'full' returns the complete schema v4 JSON unless it exceeds the response "
-            "budget, in which case it points at the beatscope://projects/{id}/rhythm resource. "
-            "Every detail also carries a visual block: whether compiled visual artifacts "
-            "exist, their recipe version and mode, and family/scene/transition counts."
+            "Read one BeatScope project's measured facts. detail='summary' returns "
+            "identity, counts, and compact per-segment mean low/mid/high energy when "
+            "structure is available; 'timing' adds beats, tempo segments, patterns, "
+            "and cues (no energy arrays); 'full' returns the complete schema v4 JSON "
+            "unless it exceeds the response budget, in which case it points at the "
+            "beatscope://projects/{id}/rhythm resource. Like the exported handoff, "
+            "this view carries no visual layer: no compiled scene, transition, or "
+            "recipe data is counted, named, or returned."
         ),
         annotations=_read_only("Read a BeatScope project"),
     )
@@ -203,14 +204,14 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
     @mcp.tool(
         name="beatscope_get_visual_state",
         description=(
-            "Visual state at one audio instant, computed by the shared JavaScript "
-            "runtime: bar, beat, beatIndex, beat/bar phases, low/mid/high/all "
-            "energy, onset impulse, accent, section. Mirrors the web player's "
-            "track.at(time) exactly; null onset age or accent means no previous "
-            "onset exists. When the project has compiled visual artifacts, an "
-            "additive visual block reports the structural scene (family, variant, "
-            "motif, phase), the boundary transition stage, and the scene "
-            "composition channels at the same instant."
+            "The measured facts at one audio instant, computed by the shared "
+            "JavaScript runtime: bar, beat, beatIndex, beat/bar phases, low/mid/high/all "
+            "energy, onset impulse, accent, section. The same call the web player makes "
+            "and the same one the exported handoff exposes as getVisualState(time), so "
+            "both carriers agree exactly; null onset age or accent means no previous "
+            "onset exists. The name follows that package function - it is the state a "
+            "visualizer samples, not a visual language. The response carries no scene, "
+            "transition, or composition data."
         ),
         annotations=_read_only("Read BeatScope visual state"),
     )
@@ -229,10 +230,9 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
         name="beatscope_get_events",
         description=(
             "List BeatScope events in a time window (start, end]: beats, onsets "
-            "(runtime boundary semantics), cues by type, and pattern bars. "
-            "include also accepts 'scenes' (compiled visual scenes overlapping "
-            "the window) and 'transitions' (boundary transitions with "
-            "start < time <= end), carrying identity/timing only. Windows are "
+            "(runtime boundary semantics), cues by type, pattern bars, whole-song "
+            "segments, and structural boundaries - the measured facts the handoff "
+            "carries, and nothing about a visual layer. Windows are "
             "capped at 600 s - split longer ranges into separate queries. "
             "Results are sorted by time and kind, then paginated."
             " Set response_budget to select that many existing onsets by the "
