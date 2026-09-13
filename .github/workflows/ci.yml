@@ -252,6 +252,11 @@ jobs:
           sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: Browser round trip including a real render
+        env:
+          BEATSCOPE_MV_ENCODER: png
+          BEATSCOPE_MV_PAGES: "6"
+          BEATSCOPE_MV_PRESET: ultrafast
+          BEATSCOPE_MV_CRF: "28"
         run: |
           mkdir -p build
           python tests/browser/studio_webmcp_server.py --port 8772 > build/studio-render-server.json &

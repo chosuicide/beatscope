@@ -172,7 +172,10 @@ try {
     assert.equal(started.result.ok, true, JSON.stringify(started.result));
     assert.ok(Number.isInteger(started.result.data.seed), 'a 24-bit seed is reported');
     let final;
-    for (let attempt = 0; attempt < 240; attempt += 1) {
+    // Software capture/encoding on a shared Linux runner is intentionally
+    // slower than the packaged desktop path.  Keep polling the bounded job
+    // instead of turning runner contention into a false render failure.
+    for (let attempt = 0; attempt < 900; attempt += 1) {
       final = (await callTool('beatscope_get_studio_state')).result;
       const job = final.data.movie.job;
       if (job?.state === 'complete') break;

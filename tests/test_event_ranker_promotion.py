@@ -14,7 +14,9 @@ MODEL = ROOT / "beatscope" / "data" / "response-ranker-v3.json"
 
 
 def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    """Hash the canonical LF text artifact, independent of checkout policy."""
+    canonical = path.read_text(encoding="utf-8").replace("\r\n", "\n").encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
 
 
 def test_promoted_model_and_evidence_are_cryptographically_linked():

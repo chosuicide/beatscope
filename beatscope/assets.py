@@ -378,7 +378,11 @@ class AssetStore:
             "width": sniffed.get("width"),
             "height": sniffed.get("height"),
             "duration": round(float(sniffed["duration"]), 6) if sniffed.get("duration") is not None else None,
-            "display_name": Path(display_name).name[:120] or "asset",
+            # A browser may submit a Windows fakepath even when the server is
+            # running on POSIX.  ``Path.name`` only understands the host
+            # separator, so normalize both separators before retaining the
+            # harmless display leaf.
+            "display_name": str(display_name).replace("\\", "/").rsplit("/", 1)[-1][:120] or "asset",
             "bytes": incoming,
         }
         entries.append(entry)

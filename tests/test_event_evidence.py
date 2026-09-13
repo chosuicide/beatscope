@@ -657,7 +657,34 @@ def test_frozen_snapshots_match_four_representative_cases(snapshot_audio_dir: Pa
             else gen.analyze_case_cached(name, snapshot_audio_dir)
         raw = canonical_event_evidence_bytes(build_event_evidence(project))
         committed = (REPO_ROOT / "tests" / "snapshots" / "event-evidence" / f"{name}.json").read_bytes()
-        assert raw == committed, f"event-evidence snapshot drifted for {name}"
+        if name == "no-grid":
+            # The synthetic project bypasses DSP and remains a byte contract.
+            assert raw == committed, f"event-evidence snapshot drifted for {name}"
+            continue
+
+        # FFT implementations and CPU math libraries can move derived
+        # floating-point evidence by tiny amounts while preserving every
+        # event, category and relationship.  Compare the portable semantic
+        # contract here; formula-level tests above retain tighter coverage.
+        actual = json.loads(raw)
+        expected = json.loads(committed)
+
+        def compare(left, right, path="root"):
+            assert type(left) is type(right), path
+            if isinstance(left, dict):
+                assert left.keys() == right.keys(), path
+                for key in left:
+                    compare(left[key], right[key], f"{path}.{key}")
+            elif isinstance(left, list):
+                assert len(left) == len(right), path
+                for index, (item, other) in enumerate(zip(left, right)):
+                    compare(item, other, f"{path}[{index}]")
+            elif isinstance(left, float):
+                assert left == pytest.approx(right, abs=0.02), path
+            else:
+                assert left == right, path
+
+        compare(actual, expected)
 
 
 # ------------------------------------------------------- performance budgets

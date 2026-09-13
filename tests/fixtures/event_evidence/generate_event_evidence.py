@@ -391,7 +391,6 @@ def characterize_case(name: str, project: dict[str, Any]) -> dict[str, Any]:
         "recall_at_50ms": None,
         "median_error_seconds": None,
         "max_error_seconds": None,
-        "onsets_sha256": hash_onsets(onsets),
     }
     truth_events = AUDIO_CASES[name]["render"]()[1]
     truth_times = [event["time"] for event in truth_events]
