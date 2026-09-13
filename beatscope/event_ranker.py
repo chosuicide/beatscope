@@ -1,5 +1,6 @@
-"""The shipping ranker: the promoted model is data/response-ranker-v3.json.
-Later generations under scripts/ are research history.
+"""The shipping ranker is the promoted model under beatscope/data, reached only
+through the response adapter; later generations under scripts/ are research
+history. See ARCHITECTURE.md for the authority map.
 Deterministic pairwise chart-consensus response ranker (v0.11 Round 2).
 
 A dormant module: it learns one narrow ordering - which of two detected
