@@ -120,6 +120,13 @@ A separate fresh-context Codex run received only the frozen task and handoff, th
 
 In a WebMCP-capable browser the studio registers seven tools, so an Agent can inspect the loaded song, ask for a bounded set of original response timestamps, explain why the movie cuts where it does, audition a passage, start a seeded render, and prepare the timing package — without receiving the source audio or running a second analysis. Buttons and tools call the same functions; every page-changing call appears in a strip above the transport, with Restore after an audition. Ordinary browsers show nothing new. Everything runs on the user's machine, and response relevance is an ordering value, never a probability or a confidence. Contract, budgets and local verification: [docs/webmcp-studio.md](docs/webmcp-studio.md).
 
+## Watch the promo
+
+The 48-second film is one song, measured and handed to another agent: the cut,
+the pacing and the visual language are its work, on our timing.
+
+[![The promo film's title card](docs/demo/beathi-promo-poster.webp)](docs/demo/beathi-promo.mp4)
+
 ## MCP
 
 ```powershell
