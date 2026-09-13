@@ -24,6 +24,7 @@ REQUIRED_MODULES = [
     "beatscope/web/particle-field.js",
     "beatscope/web/particle-geometry.js",
     "beatscope/web/particle-shaders.js",
+    "beatscope/data/response-ranker-v3.json",
     "beatscope/web/webmcp/schemas.js",
     "beatscope/web/webmcp/queries.js",
     "beatscope/web/webmcp/actions.js",

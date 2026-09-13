@@ -69,6 +69,7 @@ V081_MEMBERS = frozenset(
 )
 V090_CONTRACT_MEMBERS = frozenset({"beatscope-package.json", "AGENT.md", "consumer-probe.js"})
 V090_MEMBERS = V081_MEMBERS | V090_CONTRACT_MEMBERS
+R3_RESPONSE_MEMBERS = frozenset({"response-relevance.json", "response-relevance-data.js"})
 
 AUDIO_SUFFIXES = {".wav", ".wave", ".mp3", ".flac", ".ogg", ".m4a", ".aiff", ".aif", ".opus"}
 
@@ -145,10 +146,10 @@ def test_frozen_package_exports_public_v08_functions():
     assert "export function getBeatScopeFrame" in shim
 
 
-def test_export_member_set_matches_v090_contract():
-    """v0.8.1 members plus the self-describing contract, nothing else."""
+def test_export_member_set_adds_only_r3_response_sidecar():
+    """Fresh exports add the response sidecar without rewriting the frozen v0.9 fixture."""
     archive = zipfile.ZipFile(io.BytesIO(generate_codex_export(_rhythm_for_export())))
-    assert set(archive.namelist()) == V090_MEMBERS
+    assert set(archive.namelist()) == V090_MEMBERS | R3_RESPONSE_MEMBERS
 
 
 def test_export_manifest_is_valid_honest_and_deterministic():
@@ -162,8 +163,10 @@ def test_export_manifest_is_valid_honest_and_deterministic():
     assert manifest["capabilities"]["scenes"] is ("visual-recipe.json" in members)
     assert manifest["capabilities"]["structure"] is bool(rhythm_map.get("patterns", {}).get("segments"))
     assert manifest["capabilities"]["module_worker"] is ("worker-example.js" in members)
+    assert manifest["capabilities"]["response_relevance"] is True
     assert manifest["functions"]["frame"] == "getBeatScopeFrame"
     assert manifest["functions"]["timing"] == "getVisualState"
+    assert manifest["functions"]["response_events"] == "getResponseEvents"
     # Two exports of the same input are byte-identical, manifest included.
     assert generate_codex_export(_rhythm_for_export()) == generate_codex_export(_rhythm_for_export())
 

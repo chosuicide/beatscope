@@ -55,9 +55,31 @@ export async function cancelJob(jobId) {
 }
 
 export async function fetchProject(projectId) {
-  const res = await fetch(`/api/projects/${projectId}`);
+  const [res, relevanceRes] = await Promise.all([
+    fetch(`/api/projects/${projectId}`),
+    fetch(`/api/projects/${projectId}/response-relevance`).catch(() => null),
+  ]);
   if (!res.ok) throw new Error(`Failed to load project ${projectId}`);
-  return await res.json();
+  const project = await res.json();
+  if (relevanceRes?.ok) {
+    const sidecar = await relevanceRes.json();
+    if (sidecar?.project_id === project.project_id) project.response_relevance = sidecar;
+  }
+  return project;
+}
+
+export async function fetchLegacyProject() {
+  const [res, relevanceRes] = await Promise.all([
+    fetch('/api/project'),
+    fetch('/api/project/response-relevance').catch(() => null),
+  ]);
+  if (!res.ok) return null;
+  const project = await res.json();
+  if (relevanceRes?.ok) {
+    const sidecar = await relevanceRes.json();
+    if (sidecar?.project_id === project.project_id) project.response_relevance = sidecar;
+  }
+  return project;
 }
 
 /**

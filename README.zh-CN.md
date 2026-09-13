@@ -3,10 +3,10 @@
 [English](README.md) | 简体中文
 
 [![CI](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml/badge.svg)](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.10.1-c65032)](https://github.com/chosuicide/beatscope/releases)
+[![Version](https://img.shields.io/badge/version-0.11.0-c65032)](https://github.com/chosuicide/beatscope/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
-**把一首本地歌曲变成可播放的节奏地图，再把同一份确定性时序交给 Canvas、Three.js、Remotion 或 Coding Agent。**
+**把可测量的音乐时序交给 Coding Agent：精确拍点、原始事件、结构，以及由调用方限定数量的响应时刻。**
 
 [![BeatScope 播放器动态预览；点击观看有声视频](docs/demo/beatscope-preview.gif)](docs/demo/beatscope-demo.mp4)
 
@@ -14,9 +14,23 @@ BeatScope 同时提供三个部分：
 
 - **Studio**：上传音频、检查节拍与结构、循环八小节，并观看可安全 Seek 的音乐视觉仪器。
 - **时序包**：导出不包含原始音频、可移植且能自检的 `.beatscope` 交接包。
-- **Runtime + MCP**：让视觉项目或 Coding Agent 在同一播放时刻读取同一帧，无需重新分析音乐。
+- **Runtime + MCP**：让视觉项目或 Coding Agent 读取同一帧，或按固定预算选择响应点，无需重新分析音乐。
 
 它报告时间、瞬态强度、频段分布和中性的重复结构，但**不会**把不确定事件硬说成 kick、snare 或 808。
+
+## 给响应数量设预算，而不是追着每个 onset 动
+
+密集歌曲里可能同时存在很多有效瞬态。即使时间戳都对，让动画或剪辑响应全部事件仍会显得抽搐。BeatScope v0.11 保留完整原始事件层，并新增可选的 `response_relevance` 排序；它来自有授权的人类谱面共识。
+
+最终选择仍由消费者决定。调用方给出数量，而不是相信一个神奇阈值：
+
+```js
+const selection = track.responseBetween(startTime, endTime, 12);
+// selection.events：12 个原有 onset，返回前恢复为时间顺序
+// response_relevance：只用于排序，不是概率或置信度
+```
+
+它不会创建、删除、量化或移动 onset。缺少 sidecar 时，同一个调用会明确返回按时间顺序回退，而不会伪装成用了模型。
 
 ## 三分钟开始
 
@@ -102,6 +116,7 @@ function render(time) {
    │
    ├─ 拍点 + 变速段
    ├─ 瞬态 + LOW / MID / HIGH 能量
+   ├─ 基于同一批瞬态的可选响应排序
    └─ 中性结构：A / B / A′ + 边界
                 │
                 ├─ Studio 播放器与八小节 cue map
@@ -129,6 +144,7 @@ project.beatscope/
 ├── beatscope-package.json
 ├── AGENT.md
 ├── rhythm-map.json
+├── response-relevance.json
 ├── visual-state.js
 ├── visual-recipe.json
 ├── visual-timeline.json
@@ -140,7 +156,7 @@ project.beatscope/
 └── references/schema.md
 ```
 
-交接包绝不携带原始音频。消费者可以先验证路径、manifest、哈希、可执行模板、检查点和时钟语义，再运行包内 JavaScript。
+交接包绝不携带原始音频。`response-relevance.json` 只包含 onset id 和有界排序值，不会提供替代时间戳。消费者可以先验证路径、manifest、哈希、可执行模板、检查点和时钟语义，再运行包内 JavaScript。
 
 ```powershell
 beatscope validate-handoff path\to\project.beatscope --checkpoints checkpoints.json
@@ -163,7 +179,7 @@ beatscope-mcp
 | `beatscope_get_project` | 读取时序、来源和结构摘要 |
 | `beatscope_analyze_audio` | 带进度与取消能力地分析本地音频 |
 | `beatscope_get_visual_state` | 查询某个时刻的精确视觉状态 |
-| `beatscope_get_events` | 查询时间窗内的拍点、瞬态、cue、边界或场景 |
+| `beatscope_get_events` | 查询时间窗内的事实；也可用 `response_budget` 选择排序后的原时刻 onset |
 | `beatscope_export_package` | 原子写入可移植交接包 |
 
 路径受 `BEATSCOPE_ALLOWED_ROOTS` 限制，分析和查询都留在本机。完整配置见 [MCP 契约与客户端设置](docs/mcp.md)。
@@ -185,7 +201,9 @@ BeatScope 把信息分为三层：
 
 音频 benchmark 含 11 个带冻结真值的合成场景：固定、密集、稀疏、离网格、重低音、静音、突然变速、渐变速度、微漂移和八度陷阱。当前全部门槛通过。tempo-change 的拍点 F1 从 `0.16` 提升到 `1.00`；两个速度段误差为 `0.185 / 0.325 BPM`，变速点误差 `0.01 s`，接缝没有漏拍或多拍。
 
-这些确定性合成 fixture 用精确真值守住回归，不代表项目已经证明了真实音乐上的 MIR 准确率。下一阶段会补公开数据集评测。
+这些确定性合成 fixture 用精确真值守住回归，不代表项目已经全面证明真实音乐上的 MIR 准确率。
+
+v0.11 的响应排序器另有封存测试集：23 首歌曲、144 张有授权的 StepMania 谱面，来源在开发阶段完全隔离。相对只看 onset strength 的基线，成对一致率提升 `0.0238`、NDCG@10 提升 `0.2983`、预算内召回提升 `0.0847`；成对提升的 95% bootstrap 区间为 `[0.0146, 0.0336]`。这些数字衡量的是与游戏谱面式人类共识的一致程度，不是普适的“音乐重要性”。
 
 结构另有十种编排 benchmark。视觉编排另有 28 个阻断门槛，覆盖 Seek/顺序确定性、家族身份、边界连续性、reduced-motion 比例、draw call 和运行时预算。CI 在 Windows、Ubuntu、Python 3.10 与 3.12 上运行，并包含固定浏览器消费者和 Remotion 离线证据任务。
 
@@ -233,10 +251,11 @@ beatscope validate-handoff examples\shared\fixture.beatscope --checkpoints examp
 - BeatScope 提供确定性音乐时序，不替代完整的艺术指导。
 - 结构家族描述重复关系，不识别情绪、歌词或主歌/副歌。
 - 内置分析器报告瞬态与频段证据，不判断乐器身份。
+- `response_relevance` 是从谱面共识学到的预算排序值，不是概率、置信度或音乐真理。
 - 导出包和示例不包含原始音频。
 - MP3 需要本地 libsndfile 支持或 FFmpeg。
 - 很长、渐变或结构含糊的歌曲可能诚实地只得到一个结构段。
-- 当前准确度数字来自确定性合成 fixture；项目尚未发布真实公开数据集结果。
+- 拍点、速度与结构的准确度仍主要依赖确定性合成 fixture。响应排序器目前只有一个有授权的 StepMania 封存来源；更多曲风、格式和公开 MIR 数据集仍待补齐。
 
 ## 许可证
 

@@ -480,6 +480,18 @@ export function eventsWindow(page, input = {}) {
     throw new WebMcpError('INVALID_RANGE', 'include must be 1-5 unique event kinds.');
   }
   const limit = clampN(Math.floor(finite(input.limit, 100)), 1, 200);
+  const hasResponseBudget = input.responseBudget !== undefined && input.responseBudget !== null;
+  let responseBudget = null;
+  if (hasResponseBudget) {
+    responseBudget = Number(input.responseBudget);
+    if (typeof input.responseBudget !== 'number' || !Number.isInteger(responseBudget)
+      || responseBudget < 1 || responseBudget > 200) {
+      throw new WebMcpError('INVALID_RANGE', 'responseBudget must be an integer from 1 to 200.');
+    }
+    if (!includes.includes('onsets')) {
+      throw new WebMcpError('INVALID_RANGE', 'responseBudget requires include to contain onsets.');
+    }
+  }
   const window = resolveEventWindow(page, input);
   const { startTime, endTime } = window;
   const accents = accentIdSet(project);
@@ -500,14 +512,33 @@ export function eventsWindow(page, input = {}) {
     }
   }
 
+  let responseSelection = null;
   if (includes.includes('onsets')) {
-    for (const onset of page.track.between(startTime, endTime)) {
-      events.push({
+    const selection = hasResponseBudget
+      ? page.track.responseBetween(startTime, endTime, responseBudget)
+      : null;
+    const onsets = selection ? selection.events : page.track.between(startTime, endTime);
+    for (const onset of onsets) {
+      const fact = {
         kind: 'onset',
         time: round4(finite(onset?.time ?? onset?.raw_time, 0)),
         strength: round4(clampN(finite(onset?.strength, 0), 0, 1)),
         accent: Boolean(onset?.accent) || accents.has(onset?.id),
-      });
+      };
+      if (selection?.available && onset?.response_relevance !== null
+        && onset?.response_relevance !== undefined) {
+        fact.responseRelevance = round4(clampN(finite(onset.response_relevance, 0), 0, 1));
+      }
+      events.push(fact);
+    }
+    if (selection) {
+      responseSelection = {
+        available: Boolean(selection.available),
+        semantics: selection.semantics ?? null,
+        strategy: String(selection.strategy),
+        candidates: Math.max(0, Math.floor(finite(selection.total, 0))),
+        selected: Math.max(0, Math.floor(finite(selection.selected, 0))),
+      };
     }
   }
 
@@ -567,7 +598,7 @@ export function eventsWindow(page, input = {}) {
     return KIND_ORDER[a.kind] - KIND_ORDER[b.kind];
   });
 
-  return {
+  const result = {
     ok: true,
     range: {
       startTime: round4(window.startTime),
@@ -579,6 +610,8 @@ export function eventsWindow(page, input = {}) {
     total: events.length,
     truncated: events.length > limit,
   };
+  if (responseSelection) result.responseSelection = responseSelection;
+  return result;
 }
 
 // ---------------------------------------------------------------------------

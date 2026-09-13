@@ -14,6 +14,7 @@ from .jobs import JobManager
 from .schema import load_rhythm_project
 from .web_api import WebApi, MAX_UPLOAD_BYTES
 from .exports import generate_rhythm_midi, generate_rhythm_csv, generate_codex_export
+from .response_relevance import build_response_relevance, canonical_response_relevance_bytes
 
 ROOT = Path(__file__).parent / "web"
 RUNTIME_ROOT = Path(__file__).parent / "runtime"
@@ -56,6 +57,27 @@ class Handler(BaseHTTPRequestHandler):
                     self._send(200, json.dumps(rhythm, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
                     return
             self._send(404, b"No project configured", "text/plain")
+            return
+
+        if path == "/api/project/response-relevance":
+            rhythm = PROJECT_MAP
+            if rhythm is None:
+                projects = PROJECT_MANAGER.list_projects()
+                if projects:
+                    rhythm = PROJECT_MANAGER.get_project_rhythm(projects[-1].get("project_id"))
+            if rhythm is None:
+                self._send(404, b"No project configured", "text/plain")
+                return
+            try:
+                body = canonical_response_relevance_bytes(build_response_relevance(rhythm))
+            except (KeyError, TypeError, ValueError):
+                self._send(
+                    422,
+                    b'{"error":"Response relevance is unavailable for this project"}',
+                    "application/json",
+                )
+                return
+            self._send(200, body, "application/json; charset=utf-8")
             return
 
         # Exports for a project supplied directly with `beatscope serve --project`.

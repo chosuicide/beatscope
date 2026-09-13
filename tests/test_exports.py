@@ -255,6 +255,7 @@ def test_codex_export_keeps_tempo_segments_and_no_local_paths(tmp_path):
 FULL_VISUAL_MANIFEST = {
     "beatscope-package.json", "AGENT.md", "consumer-probe.js",
     "rhythm-map.json", "beatscope-runtime.js", "scene-director.js",
+    "response-relevance.json", "response-relevance-data.js",
     "visual-recipe.json", "visual-timeline.json",
     "visual-recipe-data.js", "visual-timeline-data.js",
     "visual-state.js", "worker-example.js", "BEATSCOPE.md", "SKILL.md",
@@ -287,6 +288,15 @@ def test_codex_export_includes_visual_artifacts():
         assert recipe["recipe_version"] == "0.8.0"
         assert recipe["diagnostics"]["artifact_fingerprint"]
         assert [scene["family"] for scene in timeline["scenes"]] == ["LEGACY"]
+        response = json.loads(archive.read("response-relevance.json").decode("utf-8"))
+        manifest = json.loads(archive.read("beatscope-package.json").decode("utf-8"))
+        assert response["schema"] == "beatscope-response-relevance-1"
+        assert [row["onset_id"] for row in response["events"]] == [
+            onset["id"] for onset in rhythm["onsets"]
+        ]
+        assert manifest["capabilities"]["response_relevance"] is True
+        assert manifest["functions"]["response_events"] == "getResponseEvents"
+        assert manifest["files"]["response_relevance"] == "response-relevance.json"
         # The data modules embed the same canonical documents.
         from beatscope.visual_recipe import canonical_visual_bytes
         for constant, document, name in (
@@ -333,9 +343,10 @@ def test_codex_export_visual_shim_imports_in_node(tmp_path):
             target.write_bytes(archive.read(name))
     driver = tmp_path / "driver.mjs"
     driver.write_text("""\
-import { getVisualState, getSceneState, getBeatScopeFrame } from './visual-state.js';
+import { getVisualState, getSceneState, getBeatScopeFrame, getResponseEvents } from './visual-state.js';
 const frame = getBeatScopeFrame(1.0);
 const direct = getSceneState(1.0);
+const selected = getResponseEvents(0, 2, 2);
 console.log(JSON.stringify({
   bar: getVisualState(1.0).bar,
   family: direct.scene.family,
@@ -343,6 +354,8 @@ console.log(JSON.stringify({
   stage: direct.transition.stage,
   sameFrame: frame.timing.bar === getVisualState(1.0).bar,
   hasScene: frame.scene !== undefined,
+  rankingAvailable: selected.available,
+  selected: selected.events.length,
 }));
 """, encoding="utf-8")
     completed = subprocess.run(
@@ -356,6 +369,8 @@ console.log(JSON.stringify({
         "stage": "idle",
         "sameFrame": True,
         "hasScene": True,
+        "rankingAvailable": True,
+        "selected": 2,
     }
 
 

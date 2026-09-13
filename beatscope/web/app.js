@@ -1,5 +1,5 @@
 import { state, subscribe, setProject, setSubdivision, setStartBar, setSelectedOnset, toggleLoop, clearAgentFocus, setAgentFocusActive } from './state.js';
-import { fetchProject, fetchVisualArtifacts, getAudioUrl, getMidiExportUrl, getCsvExportUrl, getCodexExportUrl } from './api.js';
+import { fetchLegacyProject, fetchProject, fetchVisualArtifacts, getAudioUrl, getMidiExportUrl, getCsvExportUrl, getCodexExportUrl } from './api.js';
 import { initAudio, setAudioSource, togglePlay, seek, previewTransient, play, pause } from './audio.js';
 import { renderStaticMap, renderOverlay, renderOverview, exportStaticPng, structuralSegmentAt, structureSummary } from './renderer.js';
 import { createVisualStage, installVisualDebug } from './visual-stage.js';
@@ -711,10 +711,11 @@ if (!staticDemoMode) {
     // demo project, recipe and timeline; never call /api/project. Relative
     // URLs keep the page working under any static hosting base path.
     try {
-      const [projectResponse, recipeResponse, timelineResponse] = await Promise.all([
+      const [projectResponse, recipeResponse, timelineResponse, relevanceResponse] = await Promise.all([
         fetch('demo/project.json'),
         fetch('demo/visual-recipe.json'),
         fetch('demo/visual-timeline.json'),
+        fetch('demo/response-relevance.json'),
       ]);
       if (!projectResponse.ok) throw new Error(`demo project ${projectResponse.status}`);
       const project = await projectResponse.json();
@@ -723,6 +724,10 @@ if (!staticDemoMode) {
       demoArtifacts = recipeResponse.ok && timelineResponse.ok
         ? { recipe: await recipeResponse.json(), timeline: await timelineResponse.json() }
         : null;
+      if (relevanceResponse.ok) {
+        const sidecar = await relevanceResponse.json();
+        if (sidecar?.project_id === project.project_id) project.response_relevance = sidecar;
+      }
       setProject(project, 'webmcp-demo');
       setAudioSource('demo/audio.mp3');
     } catch (_) {
@@ -734,9 +739,8 @@ if (!staticDemoMode) {
     return;
   }
   try {
-    const response = await fetch('/api/project');
-    if (response.ok) {
-      const project = await response.json();
+    const project = await fetchLegacyProject();
+    if (project) {
       setProject(project, project.project_id || null);
       setAudioSource('/api/project/audio');
     } else {

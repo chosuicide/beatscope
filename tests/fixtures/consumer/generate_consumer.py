@@ -361,7 +361,9 @@ def build_fixture(output_dir: Path) -> dict[str, Any]:
         write_wav(wav_path, render_audio())
 
         project = analyze_project(wav_path)
-        zip_bytes = generate_codex_export(project)
+        # This generator reproduces the frozen v0.9 interoperability fixture.
+        # New additive package capabilities are exercised by fresh-export tests.
+        zip_bytes = generate_codex_export(project, include_response_relevance=False)
         fixture_dir = output_dir / "fixture.beatscope"
         members: dict[str, bytes] = {}
         with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:

@@ -1,0 +1,289 @@
+{
+  "schema": "beatscope-response-ranking-evaluation-3",
+  "method": "strength-anchored-pairwise-boosted-chart-consensus-v4",
+  "attempt_id": "aa878fa37fe10cfc11a822d9736cb87a288702cb706a8cc407890d356e788c91",
+  "locks": {
+    "candidate_sha256": "888f54051f4aafd685cc2d5ce17b63259f3b5eab9f35944d24aaf66d15ad4a7a",
+    "non_metric_candidate_sha256": "1324ee4dbe3a3a305cb7813ca8a87952464f0d759aeec9ffbae3c28d8884a6fb",
+    "selection_report_sha256": "df39860853b1f9bc651b22340bb4ad4b7e4db427fa919526ea2282f191ab94e8",
+    "development_manifest_sha256": "a5857bfd3aa11e4d3396f912fc73976fd8c90b9c9876516deb3e7371a04263c3",
+    "evaluation_dataset_sha256": "2a51082574846af9bf3649736baeba094fa55a82cd522b1232daadb6e428b780",
+    "evaluation_manifest_sha256": "851a7b87da6a9d355df3dac4d3b2984dc1c89cc1a11598fecc43458cbc4520e5"
+  },
+  "corpus": {
+    "test_song_count": 23,
+    "test_chart_count": 144,
+    "min_test_charts_per_song": 3,
+    "fresh_source_count": 1,
+    "test_source_ids": [
+      "stepmix2-bracket1-sealed"
+    ],
+    "leakage_error_count": 0,
+    "unknown_license_count": 0,
+    "max_alignment_p95_seconds": 0.023725
+  },
+  "ranking": {
+    "model": {
+      "pairwise_accuracy": 0.934778,
+      "ndcg_at_10": 0.649817,
+      "recall_at_k": 0.379248,
+      "top_support_precision_at_k": 0.666682
+    },
+    "strength_baseline": {
+      "pairwise_accuracy": 0.911009,
+      "ndcg_at_10": 0.351558,
+      "recall_at_k": 0.294557,
+      "top_support_precision_at_k": 0.583275
+    },
+    "deltas_vs_strength": {
+      "pairwise_accuracy": 0.023768,
+      "ndcg_at_10": 0.298259,
+      "recall_at_k": 0.084691,
+      "top_support_precision_at_k": 0.083407
+    },
+    "non_metric_delta_vs_strength": 0.017051,
+    "bootstrap_pairwise": {
+      "lower_95": 0.014569,
+      "upper_95": 0.033604,
+      "indices_sha256": "14be5f36e7f2e1610c60e16247fd6117ecd50e4c9486fd37c1f97723f41372c9",
+      "replicates": 10000,
+      "seed": 20260908
+    },
+    "slices": {
+      "sources": {
+        "stepmix2-bracket1-sealed": {
+          "song_count": 23,
+          "pairwise_accuracy": 0.934778,
+          "pairwise_delta_vs_strength": 0.023768
+        }
+      },
+      "formats": {
+        "stepmania": {
+          "song_count": 23,
+          "pairwise_accuracy": 0.934778,
+          "pairwise_delta_vs_strength": 0.023768
+        }
+      },
+      "lowest_density_tertile": {
+        "song_count": 7,
+        "pairwise_accuracy": 0.926782,
+        "pairwise_delta_vs_strength": 0.020634
+      },
+      "highest_density_tertile": {
+        "song_count": 7,
+        "pairwise_accuracy": 0.927084,
+        "pairwise_delta_vs_strength": 0.030384
+      },
+      "beat_context": {
+        "available": {
+          "pair_count": 61529,
+          "song_count": 23,
+          "pairwise_accuracy": 0.934778,
+          "pairwise_delta_vs_strength": 0.023768
+        },
+        "unavailable": {
+          "pair_count": 0,
+          "song_count": 0,
+          "pairwise_accuracy": null,
+          "pairwise_delta_vs_strength": null
+        }
+      },
+      "offgrid_events": {
+        "pair_count": 29434,
+        "song_count": 23,
+        "pairwise_accuracy": 0.89773,
+        "pairwise_delta_vs_strength": 0.021233
+      },
+      "grouped_events": {
+        "pair_count": 59689,
+        "song_count": 23,
+        "pairwise_accuracy": 0.934442,
+        "pairwise_delta_vs_strength": 0.023347
+      },
+      "ungrouped_events": {
+        "pair_count": 229,
+        "song_count": 16,
+        "pairwise_accuracy": 0.924122,
+        "pairwise_delta_vs_strength": -0.009175
+      },
+      "spectral_band": {
+        "low": {
+          "pair_count": 7185,
+          "song_count": 23,
+          "pairwise_accuracy": 0.876611,
+          "pairwise_delta_vs_strength": 0.022369
+        },
+        "mid": {
+          "pair_count": 1803,
+          "song_count": 21,
+          "pairwise_accuracy": 0.915764,
+          "pairwise_delta_vs_strength": 0.011238
+        },
+        "high": {
+          "pair_count": 1952,
+          "song_count": 23,
+          "pairwise_accuracy": 0.875514,
+          "pairwise_delta_vs_strength": 0.008443
+        },
+        "mixed": {
+          "pair_count": 2935,
+          "song_count": 23,
+          "pairwise_accuracy": 0.909374,
+          "pairwise_delta_vs_strength": 0.035736
+        }
+      },
+      "short_groups_or_fills": {
+        "pair_count": 3523,
+        "song_count": 19,
+        "pairwise_accuracy": 0.942783,
+        "pairwise_delta_vs_strength": 0.015412
+      },
+      "isolated_events": {
+        "pair_count": 229,
+        "song_count": 16,
+        "pairwise_accuracy": 0.924122,
+        "pairwise_delta_vs_strength": -0.009175
+      }
+    },
+    "all_required_metrics_finite": true
+  },
+  "performance": {
+    "inference_10k_ms": 88.6653,
+    "inference_10k_peak_mib": 18.16378,
+    "model_bytes": 23395,
+    "repeated_call_deterministic": true,
+    "cross_process_deterministic_output": true,
+    "output_sha256": "f5aa867ba9af06ac63e4209e3d442f0c104df2eec3ef6e6b751871734b450628",
+    "input_immutable": true,
+    "runtime_purity": true
+  },
+  "limitations": [
+    "Chart consensus is gameplay-oriented weak supervision, not musical truth.",
+    "response_relevance is an ordering value, not confidence."
+  ],
+  "promotion": {
+    "status": "passed",
+    "gates": [
+      {
+        "gate": "holdout_min_songs",
+        "passed": true,
+        "detail": "test_songs=23"
+      },
+      {
+        "gate": "holdout_min_charts",
+        "passed": true,
+        "detail": "test_charts=144"
+      },
+      {
+        "gate": "holdout_min_charts_per_song",
+        "passed": true,
+        "detail": "minimum=3"
+      },
+      {
+        "gate": "holdout_fresh_source",
+        "passed": true,
+        "detail": "fresh_sources=1"
+      },
+      {
+        "gate": "holdout_zero_leakage",
+        "passed": true,
+        "detail": "errors=0"
+      },
+      {
+        "gate": "holdout_licenses_known",
+        "passed": true,
+        "detail": "unknown=0"
+      },
+      {
+        "gate": "holdout_alignment_residuals",
+        "passed": true,
+        "detail": "max_p95=0.023725"
+      },
+      {
+        "gate": "pairwise_safety_improvement",
+        "passed": true,
+        "detail": "delta=0.023768"
+      },
+      {
+        "gate": "bootstrap_lower_bound_positive",
+        "passed": true,
+        "detail": "lower_95=0.014569"
+      },
+      {
+        "gate": "ndcg_improvement",
+        "passed": true,
+        "detail": "delta=0.298259"
+      },
+      {
+        "gate": "sparse_recall_improvement",
+        "passed": true,
+        "detail": "delta=0.084691"
+      },
+      {
+        "gate": "top_support_precision_improvement",
+        "passed": true,
+        "detail": "delta=0.083407"
+      },
+      {
+        "gate": "dense_tertile_improvement",
+        "passed": true,
+        "detail": "delta=0.030384"
+      },
+      {
+        "gate": "non_metric_improvement",
+        "passed": true,
+        "detail": "delta=0.017051"
+      },
+      {
+        "gate": "source_slices_not_lost",
+        "passed": true,
+        "detail": "sources={'stepmix2-bracket1-sealed': 0.023768}"
+      },
+      {
+        "gate": "format_slices_not_lost",
+        "passed": true,
+        "detail": "formats={'stepmania': 0.023768}"
+      },
+      {
+        "gate": "metrics_finite",
+        "passed": true,
+        "detail": "finite=True"
+      },
+      {
+        "gate": "inference_budget",
+        "passed": true,
+        "detail": "milliseconds=88.6653"
+      },
+      {
+        "gate": "inference_memory_budget",
+        "passed": true,
+        "detail": "peak_mib=18.16378"
+      },
+      {
+        "gate": "model_size_budget",
+        "passed": true,
+        "detail": "bytes=23395"
+      },
+      {
+        "gate": "cross_process_deterministic_output",
+        "passed": true,
+        "detail": "sha256=f5aa867ba9af06ac63e4209e3d442f0c104df2eec3ef6e6b751871734b450628"
+      },
+      {
+        "gate": "repeated_call_deterministic",
+        "passed": true,
+        "detail": "sha256=f5aa867ba9af06ac63e4209e3d442f0c104df2eec3ef6e6b751871734b450628"
+      },
+      {
+        "gate": "input_immutable",
+        "passed": true,
+        "detail": "evidence bytes unchanged"
+      },
+      {
+        "gate": "runtime_purity",
+        "passed": true,
+        "detail": "scoring completed with filesystem, network, RNG, and clock blocked"
+      }
+    ]
+  }
+}

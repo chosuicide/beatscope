@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlparse
 from .exports import generate_rhythm_midi, generate_rhythm_csv, generate_codex_export
 from .jobs import JobManager
 from .project import ProjectManager
+from .response_relevance import build_response_relevance, canonical_response_relevance_bytes
 from .visual_recipe import canonical_visual_bytes
 
 
@@ -108,6 +109,15 @@ class WebApi:
         ):
             return self._serve_visual_artifact(parts[2], "recipe" if parts[3] == "visual-recipe" else "timeline", headers)
 
+        # 10. GET /api/projects/<id>/response-relevance
+        if (
+            len(parts) == 4
+            and parts[0] == "api"
+            and parts[1] == "projects"
+            and parts[3] == "response-relevance"
+        ):
+            return self._serve_response_relevance(parts[2], headers)
+
         return 404, {"Content-Type": "text/plain"}, b"Not found"
 
     def handle_delete(self, path: str) -> tuple[int, dict[str, str], bytes]:
@@ -152,6 +162,32 @@ class WebApi:
         if artifacts is None:
             return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Project not found"}).encode()
         body = canonical_visual_bytes(artifacts[kind])
+        etag = f'"{hashlib.sha256(body).hexdigest()}"'
+        response_headers = {
+            "Content-Type": "application/json; charset=utf-8",
+            "ETag": etag,
+        }
+        if_none_match = headers.get("If-None-Match") or headers.get("if-none-match")
+        if if_none_match:
+            candidates = {candidate.strip() for candidate in if_none_match.split(",")}
+            if etag in candidates or "*" in candidates:
+                return 304, response_headers, b""
+        return 200, response_headers, body
+
+    def _serve_response_relevance(
+        self, project_id: str, headers: dict[str, str]
+    ) -> tuple[int, dict[str, str], bytes]:
+        """Serve optional ranking evidence without modifying Rhythm IR."""
+        rhythm = self.project_manager.get_project_rhythm(project_id)
+        if rhythm is None:
+            return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Project not found"}).encode()
+        try:
+            document = build_response_relevance(rhythm)
+            body = canonical_response_relevance_bytes(document)
+        except (KeyError, TypeError, ValueError):
+            return 422, {"Content-Type": "application/json"}, json.dumps({
+                "error": "Response relevance is unavailable for this project"
+            }).encode()
         etag = f'"{hashlib.sha256(body).hexdigest()}"'
         response_headers = {
             "Content-Type": "application/json; charset=utf-8",

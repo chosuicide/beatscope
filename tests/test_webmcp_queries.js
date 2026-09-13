@@ -58,6 +58,19 @@ function pageFor(project, overrides = {}) {
   };
 }
 
+function withResponseRelevance(project) {
+  project.response_relevance = {
+    schema: 'beatscope-response-relevance-1',
+    semantics: 'bounded-ranking-value-not-probability-or-confidence',
+    project_id: project.project_id,
+    events: project.onsets.map((onset) => ({
+      onset_id: onset.id,
+      response_relevance: onset.id % 17 === 0 ? 0.99 : Number((0.1 + (onset.id % 11) * 0.01).toFixed(4)),
+    })),
+  };
+  return project;
+}
+
 async function assertCode(callable, code) {
   try {
     await callable();
@@ -313,6 +326,69 @@ function assertNoLeaks(value, path = '$') {
   }
   assert.ok(result.events.some((event) => event.kind === 'segment'));
   assert.ok(result.events.some((event) => event.kind === 'boundary'));
+}
+
+// --- response budgets select existing onsets, then restore chronology -------
+{
+  const page = pageFor(withResponseRelevance(makeStructuredProject()));
+  const result = eventsWindow(page, {
+    startBar: 1,
+    endBar: 8,
+    include: ['onsets'],
+    responseBudget: 5,
+    limit: 200,
+  });
+  assert.equal(result.events.length, 5);
+  assert.deepEqual(result.responseSelection, {
+    available: true,
+    semantics: 'bounded-ranking-value-not-probability-or-confidence',
+    strategy: 'top-response-relevance-then-time-order',
+    candidates: 64,
+    selected: 5,
+  });
+  assert.ok(result.events.every((event) => event.kind === 'onset'));
+  assert.ok(result.events.every((event) => Number.isFinite(event.responseRelevance)));
+  assert.deepEqual(
+    result.events.map((event) => event.time),
+    result.events.map((event) => event.time).slice().sort((a, b) => a - b),
+  );
+  const sourceTimes = new Set(page.project.onsets.map((onset) => onset.time));
+  assert.ok(result.events.every((event) => sourceTimes.has(event.time)), 'ranking must not move timestamps');
+}
+
+// --- response budgets degrade explicitly when no sidecar is loaded ----------
+{
+  const page = pageFor(makeStructuredProject());
+  const result = eventsWindow(page, {
+    startBar: 1,
+    endBar: 2,
+    include: ['onsets'],
+    responseBudget: 3,
+  });
+  assert.equal(result.events.length, 3);
+  assert.deepEqual(result.responseSelection, {
+    available: false,
+    semantics: null,
+    strategy: 'chronological-fallback',
+    candidates: 16,
+    selected: 3,
+  });
+  assert.ok(result.events.every((event) => !('responseRelevance' in event)));
+}
+
+// --- relational and numeric budget validation is enforced by the handler ----
+{
+  const page = pageFor(makeStructuredProject());
+  await assertCode(
+    () => eventsWindow(page, { startBar: 1, endBar: 2, include: ['beats'], responseBudget: 2 }),
+    'INVALID_RANGE',
+  );
+  for (const responseBudget of [0, 1.5, 201, '4', NaN]) {
+    await assertCode(
+      () => eventsWindow(page, { startBar: 1, endBar: 2, include: ['onsets'], responseBudget }),
+      'INVALID_RANGE',
+    );
+  }
 }
 
 // --- 15. every result JSON-serializes and round-trips -----------------------

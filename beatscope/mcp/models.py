@@ -75,6 +75,7 @@ class EventsInput(StrictModel):
     )
     limit: int = Field(default=100, ge=1, le=500)
     offset: int = Field(default=0, ge=0)
+    response_budget: int | None = Field(default=None, ge=1, le=500)
 
     @model_validator(mode="after")
     def _window_checks(self) -> "EventsInput":
@@ -88,6 +89,8 @@ class EventsInput(StrictModel):
                 f"Time window spans {self.end - self.start:.0f} s; the limit is 600 s. "
                 "Split the range into smaller queries."
             )
+        if self.response_budget is not None and "onsets" not in self.include:
+            raise ValueError("response_budget requires include to contain 'onsets'.")
         return self
 
 

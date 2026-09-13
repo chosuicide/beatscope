@@ -34,6 +34,7 @@ EXPECTED_FILES = (
     "demo/project.json",
     "demo/visual-recipe.json",
     "demo/visual-timeline.json",
+    "demo/response-relevance.json",
     "demo/audio.mp3",
     "demo/fixture-lock.json",
     "build-info.json",
@@ -74,7 +75,10 @@ def test_demo_fixture_lock_matches_files() -> None:
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         assert digest == entry["sha256"], f"fixture drift for {entry['file']}"
         locked_names.add(entry["file"])
-    assert locked_names == {"project.json", "visual-recipe.json", "visual-timeline.json", "audio.mp3"}
+    assert locked_names == {
+        "project.json", "visual-recipe.json", "visual-timeline.json",
+        "response-relevance.json", "audio.mp3",
+    }
 
 
 def test_demo_project_passes_rhythm_v4_validation() -> None:
@@ -87,6 +91,14 @@ def test_demo_project_passes_rhythm_v4_validation() -> None:
     assert len(project["patterns"]["boundaries"]) >= 2, "demo needs two structural boundaries"
     families = [segment["family"] for segment in segments]
     assert len(set(families)) < len(families), "demo needs a repeated structure family"
+
+
+def test_demo_response_relevance_matches_project() -> None:
+    from beatscope.response_relevance import validate_response_relevance
+
+    project = json.loads((DEMO_ROOT / "project.json").read_text(encoding="utf-8"))
+    sidecar = json.loads((DEMO_ROOT / "response-relevance.json").read_text(encoding="utf-8"))
+    assert validate_response_relevance(sidecar, project) == []
 
 
 def test_demo_audio_exists_and_size_is_controlled() -> None:

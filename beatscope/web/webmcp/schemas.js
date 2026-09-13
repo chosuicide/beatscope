@@ -71,7 +71,10 @@ const get_events = Object.freeze({
     '(startTime and endTime) or a bar range (startBar and endBar), never ' +
     'both. Bars are 1-based and inclusive; time windows follow the runtime ' +
     'event slicing where beats and onsets use (startTime, endTime]. Windows ' +
-    'are capped at 64 bars or 180 seconds. Read-only.',
+    'are capped at 64 bars or 180 seconds. Set responseBudget to keep only ' +
+    'that many existing onsets using the optional response-relevance ordering; ' +
+    'their timestamps never move, and the ordering value is not probability ' +
+    'or confidence. Read-only.',
   inputSchema: Object.freeze({
     type: 'object',
     properties: {
@@ -91,6 +94,13 @@ const get_events = Object.freeze({
         default: ['beats', 'onsets', 'boundaries'],
       },
       limit: { type: 'integer', minimum: 1, maximum: 200, default: 100 },
+      responseBudget: {
+        type: 'integer',
+        minimum: 1,
+        maximum: 200,
+        description:
+          'Maximum existing onsets to return by response relevance. Requires include to contain onsets.',
+      },
     },
     required: ['include'],
     additionalProperties: false,

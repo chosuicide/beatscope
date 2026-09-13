@@ -112,7 +112,8 @@ are loaded. `time` is clamped to the track; when omitted, the response adds
 `startTime` + `endTime` (seconds) or `startBar` + `endBar` (1-based,
 inclusive) - never both. `include`: 1-5 unique kinds from `beats`, `onsets`,
 `segments`, `boundaries`, `cues` (default `[beats, onsets, boundaries]`);
-`limit`: 1-200, default 100.
+`limit`: 1-200, default 100. Optional `responseBudget`: 1-200; it requires
+`include` to contain `onsets`.
 
 Windows are capped at 64 bars or 180 seconds. Beats, onsets, boundaries, and
 cues use the half-open `(start, end]` slice; segments appear on any overlap.
@@ -121,6 +122,15 @@ equal times, segments come before boundaries, boundaries before beats,
 beats before onsets, onsets before cues. The response carries `range
 {startTime, endTime, startBar, endBar}`, the capped `events`, `total`, and
 `truncated`.
+
+With `responseBudget`, only that many existing onsets are chosen by the
+optional promoted `response_relevance` ordering, then restored to time order.
+No timestamp or event identity moves. Ranked onset facts add
+`responseRelevance`; the response adds `responseSelection {available,
+semantics, strategy, candidates, selected}`. The semantics value is
+`bounded-ranking-value-not-probability-or-confidence`. If the sidecar is not
+available, the same budget uses an explicit `chronological-fallback` and
+returns no invented ordering values.
 
 ### find_visual_moments
 
@@ -261,6 +271,11 @@ Against the loaded Studio page in a WebMCP-capable browser chat:
 
 `compare_ranges` over the two candidate windows, reading the high-band mean
 difference.
+
+> Give me the 12 onsets most worth spending animation on in bars 17-24.
+
+`get_events` with `include: ["onsets"]` and `responseBudget: 12`. The returned
+events keep their measured timestamps and arrive in scheduling order.
 
 > Focus the second one, start two beats early, and loop it.
 

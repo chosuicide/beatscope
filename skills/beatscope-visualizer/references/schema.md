@@ -12,6 +12,10 @@
 
 `visual-state.js` exports `getVisualState(time)` and `RHYTHM_MAP`; it builds on the shared runtime shipped as `beatscope-runtime.js` (`createTrack`). `getVisualState(time)` returns the runtime track state at that audio time: `time`, `bar`, `beat`, `beatIndex`, `beatPhase`, `barPhase`, raw band energy in `low`/`mid`/`high`/`all`, `onset` and `accent` as decaying impulses `{item, age, value}` over the previous onset (`accent` is `null` unless the onset is cued as an accent), and `section`. When the map carries segments, a `structure` block adds the current segment's `id`, `family`, `variant`, `label`, `index`, `startTime`, `endTime`, `phase`, `nextBoundaryTime`, and `secondsToBoundary`; it is `null` on older maps. Direct JavaScript uses `Infinity` for onset age before the first onset; canonical JSON/probe and MCP transports encode that compatibility sentinel as `null`. A `null` accent means no previous accent exists at that time.
 
+## Response relevance (v0.11)
+
+When `beatscope-package.json` declares `capabilities.response_relevance: true`, the package also carries `response-relevance.json` (`schema: beatscope-response-relevance-1`) and `visual-state.js` exports `getResponseEvents(start, end, budget)`. The sidecar maps every existing `onset_id` to `response_relevance` in 0-1; it contains no timestamps. The helper selects at most `budget` events by that ordering and then restores chronological order. Its result includes `available`, `semantics`, `strategy`, `total`, `selected`, and `events`. `response_relevance` is not probability or confidence. With no valid sidecar the helper reports `available: false`, `strategy: chronological-fallback`, and returns the first events in time order.
+
 ## Visual artifacts (v0.8)
 
 When the package carries visual artifacts, `visual-state.js` additionally exports `getSceneState(time, options)` and `getBeatScopeFrame(time, options)`; `getVisualState`'s own output is unchanged.

@@ -23,7 +23,7 @@ function timeOf(item) {
  * stored projects (v4/v3: tempo.global_bpm, grid.origin, patterns.bars)
  * and the agent rhythm map (top-level bpm, origin, subdivision, sections).
  */
-export function normalizeMap(rhythmMap) {
+export function normalizeMap(rhythmMap, responseRelevance = null) {
   const map = rhythmMap || {};
   const tempo = map.tempo || {};
   const grid = map.grid || {};
@@ -32,6 +32,11 @@ export function normalizeMap(rhythmMap) {
   // must never stand in for the bar sections (v0.7 structure is queried
   // through the structural* methods instead).
   const sections = patterns.bars || map.overview || map.sections || [];
+  const responseDocument = responseRelevance || map.response_relevance || null;
+  const responseRows = responseDocument?.schema === 'beatscope-response-relevance-1'
+    && Array.isArray(responseDocument.events)
+    ? responseDocument.events
+    : [];
   return {
     source: map,
     bpm: Number(tempo.global_bpm || tempo.bpm || map.bpm) || 120,
@@ -46,6 +51,7 @@ export function normalizeMap(rhythmMap) {
     structureSegments: Array.isArray(patterns.segments) ? patterns.segments : [],
     structureBoundaries: Array.isArray(patterns.boundaries) ? patterns.boundaries : [],
     cues: map.cues || {},
+    responseRelevance: responseRows,
   };
 }
 
@@ -58,6 +64,9 @@ export function buildIndexes(map) {
     beatTimes: map.beats.map(timeOf),
     onsetTimes: map.onsets.map(timeOf),
     onsetIds: map.onsets.map((onset) => onset.id),
+    responseByOnsetId: new Map(
+      map.responseRelevance.map((row) => [row.onset_id, Number(row.response_relevance)]),
+    ),
     accentIds: new Set(Array.isArray(map.cues?.accent) ? map.cues.accent.map((cue) => cue.onset) : []),
     barSpans: buildBarSpans(map),
     segmentStartTimes: map.structureSegments.map((segment) => Number(segment.start_time) || 0),
@@ -547,6 +556,49 @@ export function eventsBetween(map, indexes, start, end) {
   return map.onsets.slice(from, Math.max(from, to + 1));
 }
 
+/**
+ * Select a caller-sized set of existing onsets by response relevance.
+ * Selection never changes event time or identity. Results return in time
+ * order after ranking so consumers can schedule them directly. Without a
+ * sidecar the same budget becomes an explicit chronological fallback.
+ */
+export function responseEventsBetween(map, indexes, start, end, budget = null) {
+  const candidates = eventsBetween(map, indexes, start, end);
+  const parsed = budget === null || budget === undefined
+    ? candidates.length
+    : Math.max(0, Math.floor(Number(budget) || 0));
+  const limit = Math.min(parsed, candidates.length);
+  if (!indexes.responseByOnsetId.size) {
+    return {
+      available: false,
+      semantics: null,
+      strategy: 'chronological-fallback',
+      total: candidates.length,
+      selected: limit,
+      events: candidates.slice(0, limit),
+    };
+  }
+  const ranked = candidates
+    .map((onset) => ({
+      ...onset,
+      response_relevance: indexes.responseByOnsetId.get(onset.id) ?? null,
+    }))
+    .sort((left, right) => (
+      (Number(right.response_relevance) || 0) - (Number(left.response_relevance) || 0)
+      || (Number(left.id) || 0) - (Number(right.id) || 0)
+    ))
+    .slice(0, limit)
+    .sort((left, right) => timeOf(left) - timeOf(right) || (Number(left.id) || 0) - (Number(right.id) || 0));
+  return {
+    available: true,
+    semantics: 'bounded-ranking-value-not-probability-or-confidence',
+    strategy: 'top-response-relevance-then-time-order',
+    total: candidates.length,
+    selected: ranked.length,
+    events: ranked,
+  };
+}
+
 export function nextCue(map, indexes, time, type = 'accent') {
   const times = indexes.cueTimes[type] || [];
   const items = map.cues?.[type] || [];
@@ -559,7 +611,7 @@ export function nextCue(map, indexes, time, type = 'accent') {
  * (``bpm``/``origin``) that force the synthetic grid for quantize queries.
  */
 export function createTrack(rhythmMap, options = {}) {
-  const map = normalizeMap(rhythmMap);
+  const map = normalizeMap(rhythmMap, options.responseRelevance);
   const indexes = buildIndexes(map);
 
   return Object.freeze({
@@ -578,6 +630,8 @@ export function createTrack(rhythmMap, options = {}) {
     structureLead: (time) => structureLead(map, indexes, time),
     boundaryImpulse: (time, decay, maxAge) => boundaryImpulse(map, indexes, time, decay, maxAge),
     between: (start, end) => eventsBetween(map, indexes, start, end),
+    responseBetween: (start, end, budget = null) =>
+      responseEventsBetween(map, indexes, start, end, budget),
     nextCue: (time, type = 'accent') => nextCue(map, indexes, time, type),
     previousOnset: (time) => previousOnset(map, indexes, time),
     nearestOnset: (time) => nearestOnset(map, indexes, time),

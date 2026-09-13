@@ -1,0 +1,44 @@
+{
+  "schema": "beatscope-response-ranker-promotion-1",
+  "method": "strength-anchored-pairwise-boosted-chart-consensus-v4",
+  "evaluation_contract": "beatscope-sealed-ranking-evaluation-v5",
+  "attempt_id": "aa878fa37fe10cfc11a822d9736cb87a288702cb706a8cc407890d356e788c91",
+  "source": {
+    "id": "stepmix2-bracket1-sealed",
+    "revision": "zip-sha256:62e5e291e3e11d4ab923063a0fed94a77bacdb27ab1003551f1653ea56e8e2b5",
+    "license": "contest-distribution-authorized-media-local-only",
+    "retained_song_count": 23,
+    "retained_chart_count": 144,
+    "event_count": 26706,
+    "preference_pair_count": 61529,
+    "excluded_development_overlap_count": 1
+  },
+  "artifacts": {
+    "candidate_sha256": "888f54051f4aafd685cc2d5ce17b63259f3b5eab9f35944d24aaf66d15ad4a7a",
+    "development_dataset_sha256": "b1c0c743f0c89aec1989f02c686ef3e407ec285edf623a5f9e8e62fdbcfb4f37",
+    "development_manifest_sha256": "a5857bfd3aa11e4d3396f912fc73976fd8c90b9c9876516deb3e7371a04263c3",
+    "evaluation_dataset_sha256": "2a51082574846af9bf3649736baeba094fa55a82cd522b1232daadb6e428b780",
+    "evaluation_manifest_sha256": "851a7b87da6a9d355df3dac4d3b2984dc1c89cc1a11598fecc43458cbc4520e5",
+    "evaluation_receipt_sha256": "e963108eee7cbf4aa15974ae6d6dff3331cf295385d61999d5f0e12739b21273",
+    "evaluation_report_sha256": "42ad90c404c750f4c79924dca58a502354b238c198192761f2282a198ce1ea9a",
+    "promoted_model_sha256": "176e724800e90c4a748e7a1f8b6e8055fbd6ce51f9ead41f235f32c92398c671"
+  },
+  "deltas_vs_strength": {
+    "pairwise_accuracy": 0.023768,
+    "ndcg_at_10": 0.298259,
+    "recall_at_k": 0.084691,
+    "top_support_precision_at_k": 0.083407,
+    "highest_density_tertile_pairwise": 0.030384,
+    "non_metric_pairwise": 0.017051
+  },
+  "bootstrap_pairwise": {
+    "lower_95": 0.014569,
+    "upper_95": 0.033604,
+    "replicates": 10000,
+    "seed": 20260908,
+    "indices_sha256": "14be5f36e7f2e1610c60e16247fd6117ecd50e4c9486fd37c1f97723f41372c9"
+  },
+  "promotion_status": "passed",
+  "passed_gate_count": 24,
+  "failed_gate_count": 0
+}

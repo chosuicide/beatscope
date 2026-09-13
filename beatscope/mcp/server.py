@@ -235,6 +235,9 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
             "start < time <= end), carrying identity/timing only. Windows are "
             "capped at 600 s - split longer ranges into separate queries. "
             "Results are sorted by time and kind, then paginated."
+            " Set response_budget to select that many existing onsets by the "
+            "optional response_relevance ordering value; timestamps never move, "
+            "and the value is not probability or confidence."
         ),
         annotations=_read_only("Read BeatScope events"),
     )
@@ -247,6 +250,7 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
         cue_types: list[str] | None = None,
         limit: int = 100,
         offset: int = 0,
+        response_budget: int | None = None,
     ) -> dict:
         kwargs: dict = {
             "project_id": project_id,
@@ -254,6 +258,7 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
             "end": end,
             "limit": limit,
             "offset": offset,
+            "response_budget": response_budget,
         }
         if include is not None:
             kwargs["include"] = set(include)

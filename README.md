@@ -3,10 +3,10 @@
 English | [简体中文](README.zh-CN.md)
 
 [![CI](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml/badge.svg)](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.10.1-c65032)](https://github.com/chosuicide/beatscope/releases)
+[![Version](https://img.shields.io/badge/version-0.11.0-c65032)](https://github.com/chosuicide/beatscope/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
-**Turn a local song into a playable rhythm map — then hand the same deterministic timing to Canvas, Three.js, Remotion, or a coding agent.**
+**Give a coding agent measured music timing — exact beats, raw events, structure, and a caller-sized set of moments worth responding to.**
 
 [![BeatScope player in motion; click for the video with sound](docs/demo/beatscope-preview.gif)](docs/demo/beatscope-demo.mp4)
 
@@ -14,9 +14,23 @@ BeatScope brings three parts together:
 
 - **Studio** — upload audio, inspect beats and structure, loop an eight-bar window, and watch a seek-safe visual instrument.
 - **Timing package** — export the song as a portable, self-checking `.beatscope` handoff with no source audio inside.
-- **Runtime + MCP** — let a visual project or coding agent query the same frame at the same playback time without re-analysing the music.
+- **Runtime + MCP** — let a visual project or coding agent query the same frame, or spend a fixed response budget, without re-analysing the music.
 
 It reports timing, transient strength, frequency distribution, and neutral structural repetition. It does **not** pretend uncertain events are kicks, snares, or 808s.
+
+## Spend a budget, not every onset
+
+Dense music can contain many valid transients. Making an animation or edit react to all of them produces jitter, even when every timestamp is correct. BeatScope v0.11 keeps the raw event layer intact and adds an optional `response_relevance` ordering trained from licensed human-authored chart consensus.
+
+The consumer still owns the decision. It asks for a count, not a magic threshold:
+
+```js
+const selection = track.responseBetween(startTime, endTime, 12);
+// selection.events: 12 existing onsets, restored to chronological order
+// response_relevance: ordering only — not probability or confidence
+```
+
+No onset is created, deleted, quantised, or moved. Without the sidecar, the same call returns an explicit chronological fallback instead of pretending a model was used.
 
 ## Try it in three minutes
 
@@ -105,6 +119,7 @@ local audio
    │
    ├─ beat times + tempo changes
    ├─ transients + LOW / MID / HIGH energy
+   ├─ optional response relevance over those same transients
    └─ neutral structure: A / B / A′ + boundaries
                 │
                 ├─ Studio player and eight-bar cue map
@@ -132,6 +147,7 @@ project.beatscope/
 ├── beatscope-package.json
 ├── AGENT.md
 ├── rhythm-map.json
+├── response-relevance.json
 ├── visual-state.js
 ├── visual-recipe.json
 ├── visual-timeline.json
@@ -143,7 +159,7 @@ project.beatscope/
 └── references/schema.md
 ```
 
-Source audio is never bundled. A consumer can verify paths, manifest shape, hashes, executable templates, checkpoints, and clock semantics before it runs package JavaScript.
+Source audio is never bundled. `response-relevance.json` contains onset ids and bounded ordering values, never replacement timestamps. A consumer can verify paths, manifest shape, hashes, executable templates, checkpoints, and clock semantics before it runs package JavaScript.
 
 ```powershell
 beatscope validate-handoff path\to\project.beatscope --checkpoints checkpoints.json
@@ -166,7 +182,7 @@ The local stdio server exposes six tools:
 | `beatscope_get_project` | Read timing, provenance, and structure summaries |
 | `beatscope_analyze_audio` | Analyse local audio with progress and cancellation |
 | `beatscope_get_visual_state` | Resolve the exact visual state at one time |
-| `beatscope_get_events` | Query beats, onsets, cues, boundaries, or scenes in a window |
+| `beatscope_get_events` | Query facts in a window; optionally spend `response_budget` on ranked, unshifted onsets |
 | `beatscope_export_package` | Write a portable handoff atomically |
 
 Paths are restricted by `BEATSCOPE_ALLOWED_ROOTS`; analysis and queries stay local. See the complete [MCP contract and client configuration](docs/mcp.md).
@@ -188,7 +204,9 @@ The built-in WebGL2 instrument is one demonstration, not the product boundary. I
 
 The audio benchmark contains 11 synthetic cases with frozen ground truth: fixed, dense, sparse, off-grid, bass-heavy, silence, abrupt tempo change, gradual drift, micro-drift, and an octave trap. All current gates pass. The tempo-change case improved from beat F1 `0.16` to `1.00`; its two tempo segments land within `0.185 / 0.325 BPM`, with a `0.01 s` change-point error and no missing or extra seam beat.
 
-These deterministic synthetic fixtures are regression evidence with exact ground truth, not a claim of real-world music-information-retrieval accuracy. Public-dataset evaluation is the next validation milestone.
+These deterministic synthetic fixtures are regression evidence with exact ground truth, not a blanket claim of real-world music-information-retrieval accuracy.
+
+The v0.11 response ranker has a separate sealed holdout: 23 songs and 144 licensed StepMania charts from a source excluded from development. Against raw onset strength, it improves pairwise agreement by `0.0238`, NDCG@10 by `0.2983`, and recall-at-budget by `0.0847`; the 95% bootstrap interval for pairwise gain is `[0.0146, 0.0336]`. This measures agreement with gameplay-oriented human chart consensus, not universal musical importance.
 
 Structure has a separate ten-arrangement benchmark. Visual orchestration has 28 blocking gates covering seek/order determinism, family identity, boundary continuity, reduced-motion scaling, draw-call count, and runtime budgets. CI runs on Windows and Ubuntu with Python 3.10 and 3.12, plus pinned browser-consumer and Remotion offline evidence jobs.
 
@@ -236,10 +254,11 @@ The repository includes Python, JavaScript, browser, package-integrity, MCP, ben
 - BeatScope supplies deterministic musical timing, not finished art direction.
 - Structural families describe repetition, not emotion, lyrics, or Verse/Chorus roles.
 - The built-in analyser reports transient and band evidence, not instrument identity.
+- `response_relevance` is a budget-ordering value learned from chart consensus, not probability, confidence, or musical truth.
 - Source audio is not included in exports or examples.
 - MP3 support requires local libsndfile support or FFmpeg.
 - Very long, gradual, or ambiguous arrangements may honestly resolve to one structural segment.
-- Current accuracy figures come from deterministic synthetic fixtures; real-world public-dataset results are not published yet.
+- Beat/tempo/structure accuracy still relies primarily on deterministic synthetic fixtures. The response ranker has one licensed StepMania holdout source; broader genres, formats, and public MIR datasets remain future work.
 
 ## License
 

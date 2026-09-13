@@ -213,3 +213,38 @@ def test_visual_artifact_routes_unknown_project_is_404(tmp_path):
         status, headers, body = api.handle_get(f'/api/projects/zz9x/{route}', {}, {})
         assert status == 404
         assert 'error' in json.loads(body.decode('utf-8'))
+
+
+def test_response_relevance_route_is_canonical_and_cacheable(tmp_path):
+    from beatscope.project import ProjectManager
+    from beatscope.response_relevance import canonical_response_relevance_bytes
+    from beatscope.web_api import WebApi
+
+    rhythm = _seed_visual_project(tmp_path / 'projects')
+    api = WebApi(ProjectManager(tmp_path))
+    route = '/api/projects/0a1b2c3d4e5f/response-relevance'
+
+    status, headers, body = api.handle_get(route, {}, {})
+    assert status == 200
+    document = json.loads(body.decode('utf-8'))
+    assert document['project_id'] == rhythm['project_id']
+    assert document['semantics'] == 'bounded-ranking-value-not-probability-or-confidence'
+    assert body == canonical_response_relevance_bytes(document)
+    assert len(document['events']) == len(rhythm['onsets'])
+    assert all(set(row) == {'onset_id', 'response_relevance'} for row in document['events'])
+
+    etag = headers['ETag']
+    status, cached_headers, cached_body = api.handle_get(route, {}, {'If-None-Match': etag})
+    assert status == 304
+    assert cached_body == b''
+    assert cached_headers['ETag'] == etag
+
+
+def test_response_relevance_route_unknown_project_is_404(tmp_path):
+    from beatscope.project import ProjectManager
+    from beatscope.web_api import WebApi
+
+    api = WebApi(ProjectManager(tmp_path))
+    status, _, body = api.handle_get('/api/projects/missing/response-relevance', {}, {})
+    assert status == 404
+    assert json.loads(body.decode('utf-8')) == {'error': 'Project not found'}

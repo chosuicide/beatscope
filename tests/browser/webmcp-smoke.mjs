@@ -94,6 +94,30 @@ try {
   if (!moments.ok || !moments.candidates?.length) fail('find_visual_moments returned no candidates');
   const candidate = moments.candidates[0];
 
+  // The browser loaded the optional ranking sidecar. A caller-sized budget
+  // selects existing timestamps and returns them in scheduling order.
+  const rankedEvents = await execute('get_events', {
+    startBar: candidate.startBar,
+    endBar: candidate.endBar,
+    include: ['onsets'],
+    responseBudget: 6,
+    limit: 200,
+  });
+  if (!rankedEvents.ok || rankedEvents.events?.length !== 6) {
+    fail(`budgeted get_events failed: ${JSON.stringify(rankedEvents)}`);
+  }
+  if (!rankedEvents.responseSelection?.available) fail('static demo did not load response relevance');
+  if (rankedEvents.responseSelection.semantics !== 'bounded-ranking-value-not-probability-or-confidence') {
+    fail('budgeted get_events mislabeled response relevance');
+  }
+  for (let index = 0; index < rankedEvents.events.length; index += 1) {
+    const event = rankedEvents.events[index];
+    if (!Number.isFinite(event.responseRelevance)) fail('ranked onset is missing its ordering value');
+    if (index > 0 && rankedEvents.events[index - 1].time > event.time) {
+      fail('ranked onsets are not restored to chronological order');
+    }
+  }
+
   // 5-7. Focus the candidate, loop it, and start playback two beats early.
   const focus = await execute('focus_range', {
     startBar: candidate.startBar, endBar: candidate.endBar, reason: 'Smoke test transition',
@@ -152,7 +176,7 @@ try {
   if (pageErrors.length) {
     fail(`page raised ${pageErrors.length} uncaught error(s): ${pageErrors[0]}`);
   }
-  console.log('webmcp-smoke ok: 8 tools registered, focus/loop/playback round trip verified');
+  console.log('webmcp-smoke ok: 8 tools registered, ranked events and focus/loop/playback verified');
 } catch (error) {
   fail(error.stack || String(error));
 } finally {

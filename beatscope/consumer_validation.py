@@ -109,8 +109,16 @@ _RUNTIME_FINGERPRINT_FILES = frozenset(
         "consumer-probe.js",
         "visual-recipe-data.js",
         "visual-timeline-data.js",
+        "response-relevance-data.js",
     }
 )
+
+# The public v0.9 fixture remains a trust root for older handoffs. R3 adds
+# one pure query to the runtime; accepting this exact historical digest keeps
+# frozen packages verifiable without accepting arbitrary executable bytes.
+_TRUSTED_LEGACY_RUNTIME_SHA256 = frozenset({
+    "2be4b7c3d8009922342ff6cc3e8ffda262b0390821581b8c326ba323121e5751",
+})
 
 # The packaged worker targets browser module Workers (`self.onmessage` /
 # `self.postMessage`). Under Node's worker_threads a tiny bootstrap maps
@@ -463,7 +471,9 @@ def _executable_trust_check(
 
     capabilities = manifest.get("capabilities")
     scenes = bool(isinstance(capabilities, dict) and capabilities.get("scenes"))
+    has_response = bool(isinstance(capabilities, dict) and capabilities.get("response_relevance"))
     visual_artifacts: tuple[dict[str, Any], dict[str, Any]] | None = None
+    response_relevance: dict[str, Any] | None = None
     if scenes:
         try:
             recipe = json.loads(members[RECIPE_MEMBER].decode("utf-8"))
@@ -471,12 +481,19 @@ def _executable_trust_check(
             visual_artifacts = (recipe, timeline)
         except (KeyError, UnicodeDecodeError, json.JSONDecodeError) as error:
             return _failed_check("executable-trust", [f"executable:visual-unreadable:{error}"])
+    if has_response:
+        try:
+            response_relevance = json.loads(members["response-relevance.json"].decode("utf-8"))
+        except (KeyError, UnicodeDecodeError, json.JSONDecodeError) as error:
+            return _failed_check("executable-trust", [f"executable:response-unreadable:{error}"])
 
     expected: dict[str, bytes] = {
         "beatscope-runtime.js": _runtime_source().encode("utf-8"),
         PROBE_MEMBER: _probe_source().encode("utf-8"),
         WORKER_MEMBER: _worker_example_source().encode("utf-8"),
-        ENTRY_MEMBER: _visual_state_source(rhythm, visual_artifacts).encode("utf-8"),
+        ENTRY_MEMBER: _visual_state_source(
+            rhythm, visual_artifacts, response_relevance
+        ).encode("utf-8"),
     }
     if visual_artifacts is not None:
         recipe, timeline = visual_artifacts
@@ -487,11 +504,18 @@ def _executable_trust_check(
                 "visual-timeline-data.js": _visual_data_module("VISUAL_TIMELINE", timeline).encode("utf-8"),
             }
         )
+    if response_relevance is not None:
+        expected["response-relevance-data.js"] = _visual_data_module(
+            "RESPONSE_RELEVANCE", response_relevance
+        ).encode("utf-8")
     for name, trusted in expected.items():
         actual = members.get(name)
         if actual is None:
             errors.append(f"executable:missing:{name}")
-        elif actual != trusted:
+        elif actual != trusted and not (
+            name == "beatscope-runtime.js"
+            and sha256_hex(actual) in _TRUSTED_LEGACY_RUNTIME_SHA256
+        ):
             errors.append(f"executable:untrusted-bytes:{name}")
     return _check(
         "executable-trust",

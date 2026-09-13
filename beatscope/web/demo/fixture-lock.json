@@ -1,6 +1,6 @@
 {
   "schema": "beatscope-webmcp-demo-fixture-lock-1",
-  "generated_from": "scripts/make_webmcp_demo_audio.py + beatscope analyze + beatscope visual-build",
+  "generated_from": "scripts/make_webmcp_demo_audio.py + beatscope analyze + beatscope visual-build + response relevance",
   "audio_rights": "Original music synthesized by scripts/make_webmcp_demo_audio.py; published with this repository under its license.",
   "files": {
     "project": {
@@ -14,6 +14,10 @@
     "timeline": {
       "file": "visual-timeline.json",
       "sha256": "9e86e556a36cbd0f6b1fce77afd03164a6e0bf532ae06dbaa50a54897e7d3e66"
+    },
+    "response_relevance": {
+      "file": "response-relevance.json",
+      "sha256": "63bdf46529f3313409fe8203ccf981ea74ff63e4543f374c8440e44a857f9012"
     },
     "audio": {
       "file": "audio.mp3",

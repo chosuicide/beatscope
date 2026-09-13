@@ -127,7 +127,7 @@ structure means the project carries no segments.
 
 ### beatscope_get_events
 
-`project_id, start, end, include?: list, cue_types?: list, limit?: 1-500 = 100, offset? = 0`
+`project_id, start, end, include?: list, cue_types?: list, response_budget?: 1-500, limit?: 1-500 = 100, offset? = 0`
 
 Events in the half-open window **(start, end]**: `onsets` come from the
 runtime's `between` op; `beats`, `cues` (accent/impact/scale/flow/flash/bloom),
@@ -139,11 +139,20 @@ and `pattern` bars are binary-sliced facts. `include` selects among `beats`,
 Results are sorted by `(time, kind)` and paginated with `{total, count,
 offset, has_more, next_offset}`.
 
+When `response_budget` is set, `include` must contain `onsets`. BeatScope
+selects at most that many existing onsets by the optional promoted
+`response_relevance` ordering, then restores time order before pagination.
+Timestamps and onset ids never move. The response names whether ranking was
+available and which strategy ran; `response_relevance` is an ordering value,
+not probability or confidence. Older projects degrade to an explicit
+chronological fallback.
+
 ### beatscope_export_package
 
 `project_id, destination (must end in .zip), overwrite? = false`
 
-Writes the portable agent handoff ZIP: `rhythm-map.json`,
+Writes the portable agent handoff ZIP: `rhythm-map.json`, optional
+`response-relevance.json`,
 `beatscope-runtime.js`, `visual-state.js`, `worker-example.js`, `BEATSCOPE.md`, `SKILL.md`,
 `references/schema.md`, `README.md`. The destination parent must exist and
 live under an allowed root. The ZIP is written to a sibling temp file and

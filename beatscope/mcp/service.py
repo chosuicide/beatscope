@@ -27,6 +27,7 @@ from ..models import AnalysisConfig
 from ..pipeline import AnalysisCancelled as PipelineAnalysisCancelled
 from ..pipeline import analyze_track
 from ..project import ProjectManager, compute_cache_key, content_hash
+from ..response_relevance import build_response_relevance, select_response_onsets
 from ..schema import validate_rhythm_v4
 from .errors import (
     AnalysisCancelledError,
@@ -415,6 +416,7 @@ class BeatScopeService:
         are binary-sliced facts in the same half-open window (plan section 16).
         """
         events: list[dict[str, Any]] = []
+        response_selection: dict[str, Any] | None = None
         rhythm = self.load_validated_rhythm(request.project_id)
         if "onsets" in request.include:
             runtime = self._require_runtime()
@@ -427,6 +429,11 @@ class BeatScopeService:
                 start=request.start,
                 end=request.end,
             )
+            if request.response_budget is not None:
+                response_selection = select_response_onsets(
+                    onsets, build_response_relevance(rhythm), request.response_budget,
+                )
+                onsets = response_selection.pop("events")
             events += [{"kind": "onset", **onset} for onset in onsets]
 
         if "beats" in request.include:
@@ -467,7 +474,7 @@ class BeatScopeService:
 
         events.sort(key=lambda event: (float(event.get("time") or 0), event["kind"]))
         page, meta = paginate(events, request.limit, request.offset)
-        return {
+        result = {
             "ok": True,
             "project_id": request.project_id,
             "summary": (
@@ -479,6 +486,9 @@ class BeatScopeService:
             **meta,
             "events": page,
         }
+        if response_selection is not None:
+            result["response_selection"] = response_selection
+        return result
 
 
 def _analyze_summary(project_id: str, rhythm: dict[str, Any], *, cache_hit: bool) -> dict[str, Any]:

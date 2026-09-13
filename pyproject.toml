@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "beatscope"
-version = "0.10.1"
+version = "0.11.0"
 description = "Local, editable rhythm maps from audio"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -38,6 +38,7 @@ beatscope = [
   "runtime/*.js", "runtime/*.mjs",
   "agent_skill/*.md", "agent_skill/references/*.md",
   "mcp/*.mjs", "mcp/data/*.json",
+  "data/*.json",
 ]
 
 # Release policy: the WebMCP Director modules ship in the wheel so

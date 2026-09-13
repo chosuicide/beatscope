@@ -13,6 +13,7 @@ import {
   createTrack,
   normalizeMap,
   previousIndex,
+  responseEventsBetween,
   trackForProject,
 } from '../beatscope/runtime/runtime.js';
 
@@ -470,4 +471,32 @@ console.log('Runtime OK: createTrack contract, immutability, quantize parity, pu
   structureTrack.structuralSegmentAt(4);
   structureTrack.repeatedSegments('B');
   assert.equal(JSON.stringify(structureProject), untouched);
+}
+
+// --- response relevance: budgeted selection never moves raw events --------
+{
+  const sidecar = {
+    schema: 'beatscope-response-relevance-1',
+    events: project.onsets.map((onset, index) => ({
+      onset_id: onset.id,
+      response_relevance: index === 2 ? 0.99 : 0.1 + index * 0.01,
+    })),
+  };
+  const ranked = createTrack(project, { responseRelevance: sidecar }).responseBetween(0, 2, 2);
+  assert.equal(ranked.available, true);
+  assert.equal(ranked.selected, 2);
+  assert.deepEqual(ranked.events.map((event) => event.id), [3, 5]);
+  assert.deepEqual(ranked.events.map((event) => event.time), [1, 2]);
+  assert.equal(ranked.events.find((event) => event.id === 3).response_relevance, 0.99);
+
+  const rawMap = normalizeMap(project);
+  const fallback = responseEventsBetween(rawMap, buildIndexes(rawMap), 0, 2, 2);
+  assert.deepEqual(fallback, {
+    available: false,
+    semantics: null,
+    strategy: 'chronological-fallback',
+    total: 4,
+    selected: 2,
+    events: project.onsets.slice(1, 3),
+  });
 }

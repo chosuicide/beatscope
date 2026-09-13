@@ -44,9 +44,12 @@ RHYTHM_MEMBER = "rhythm-map.json"
 RECIPE_MEMBER = "visual-recipe.json"
 TIMELINE_MEMBER = "visual-timeline.json"
 
-KNOWN_CAPABILITIES = ("timing", "bands", "structure", "scenes", "module_worker")
-KNOWN_FUNCTIONS = ("frame", "timing", "scene")
-KNOWN_FILES = ("rhythm", "recipe", "timeline")
+KNOWN_CAPABILITIES = (
+    "timing", "bands", "structure", "scenes", "module_worker", "response_relevance",
+)
+REQUIRED_CAPABILITIES = ("timing", "bands", "structure", "scenes", "module_worker")
+KNOWN_FUNCTIONS = ("frame", "timing", "scene", "response_events")
+KNOWN_FILES = ("rhythm", "recipe", "timeline", "response_relevance")
 
 DURATION_TOLERANCE = 1e-6
 
@@ -201,10 +204,11 @@ def validate_manifest(
     for name, flag in capabilities.items():
         if not isinstance(flag, bool):
             errors.append(f"capabilities.{name}:not-boolean")
-    for name in KNOWN_CAPABILITIES:
+    for name in REQUIRED_CAPABILITIES:
         if name not in capabilities:
             errors.append(f"capabilities.{name}:missing")
     scenes = capabilities.get("scenes") is True
+    response_relevance = capabilities.get("response_relevance") is True
 
     functions = manifest.get("functions")
     if not isinstance(functions, dict):
@@ -225,6 +229,10 @@ def validate_manifest(
         for name in ("frame", "scene"):
             if name in functions:
                 errors.append(f"functions.{name}:requires-scenes")
+    if response_relevance and "response_events" not in functions:
+        errors.append("functions.response_events:required-with-response-relevance")
+    if not response_relevance and "response_events" in functions:
+        errors.append("functions.response_events:requires-response-relevance")
 
     files = manifest.get("files")
     if not isinstance(files, dict):
@@ -241,6 +249,10 @@ def validate_manifest(
         errors.append("files.recipe-timeline:required-with-scenes")
     if not scenes and ("recipe" in files or "timeline" in files):
         errors.append("files.recipe-timeline:requires-scenes")
+    if response_relevance and "response_relevance" not in files:
+        errors.append("files.response_relevance:required-with-capability")
+    if not response_relevance and "response_relevance" in files:
+        errors.append("files.response_relevance:requires-capability")
     timing_on = capabilities.get("timing") is True
     if timing_on and "rhythm" not in files:
         errors.append("files.rhythm:required-with-timing")

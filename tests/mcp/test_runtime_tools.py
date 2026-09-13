@@ -93,6 +93,48 @@ async def test_events_half_open_boundary_matches_runtime(server):
     assert [event["id"] for event in payload["events"]] == [3]  # onset at 1.0 only
 
 
+async def test_events_response_budget_selects_existing_onsets_without_moving_them(server):
+    async with Client(server, raise_exceptions=True) as client:
+        result = await client.call_tool(
+            "beatscope_get_events",
+            {
+                "project_id": PROJECT_A,
+                "start": 0.0,
+                "end": 3.5,
+                "include": ["onsets"],
+                "response_budget": 3,
+            },
+        )
+    payload = _payload(result)
+    assert payload["response_selection"]["available"] is True
+    assert payload["response_selection"]["selected"] == 3
+    assert payload["response_selection"]["semantics"] == (
+        "bounded-ranking-value-not-probability-or-confidence"
+    )
+    onsets = payload["events"]
+    assert len(onsets) == 3
+    assert [event["time"] for event in onsets] == sorted(event["time"] for event in onsets)
+    assert all(event["kind"] == "onset" and "response_relevance" in event for event in onsets)
+    source_times = {0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5}
+    assert {event["time"] for event in onsets} <= source_times
+
+
+async def test_events_response_budget_requires_onsets(server):
+    async with Client(server, raise_exceptions=False) as client:
+        result = await client.call_tool(
+            "beatscope_get_events",
+            {
+                "project_id": PROJECT_A,
+                "start": 0.0,
+                "end": 2.0,
+                "include": ["beats"],
+                "response_budget": 2,
+            },
+        )
+    assert result.is_error is True
+    assert "response_budget" in result.content[0].text
+
+
 async def test_events_include_filter(server):
     async with Client(server, raise_exceptions=True) as client:
         result = await client.call_tool(

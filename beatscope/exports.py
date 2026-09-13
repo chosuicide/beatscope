@@ -20,13 +20,19 @@ from .consumer_contract import (
     validate_manifest,
 )
 from .midi import TPQ, _meta_track, _meta_track_tempo_map, _tempo_map_tick, _track
+from .event_evidence import InvalidEventEvidenceSource
+from .response_relevance import (
+    ResponseRelevanceError,
+    build_response_relevance,
+    canonical_response_relevance_bytes,
+)
 from .visual_recipe import canonical_visual_bytes, compile_visual_artifacts
 from .visual_recipe_schema import InvalidVisualRecipe
 
 # The handoff package format version (plan section 4.3). This tracks the
 # package contract only: the audio analyser stays at schema.ANALYZER_VERSION
 # (0.7.0) and the visual recipe contract at 0.8.0.
-PACKAGE_VERSION = "0.10.1"
+PACKAGE_VERSION = "0.11.0"
 
 
 def _agent_skill_file(relative_path: str) -> str:
@@ -107,6 +113,12 @@ def _agent_document(display_name: str, duration: float, has_scenes: bool) -> str
         "deterministic visual orchestration. You may ignore `frame.scene` and author your "
         "own mapping, which is encouraged, but you must not alter, re-derive, or "
         "second-guess the factual timing contract.\n",
+        "\nWhen `capabilities.response_relevance` is true, call "
+        "`getResponseEvents(start, end, budget)` to spend a caller-chosen event budget. "
+        "It returns existing onsets at their original event times, selected by a bounded "
+        "ordering value learned from human-authored rhythm charts. The value is not a "
+        "probability, confidence score, instrument label, or instruction to animate every "
+        "selected event.\n",
         _SCENE_NOTE_PRESENT if has_scenes else _SCENE_NOTE_ABSENT,
         "\n## Ground rules\n",
         "\n- Never re-analyse audio, and never scan arrays every frame to re-derive facts "
@@ -141,6 +153,7 @@ def _agent_document(display_name: str, duration: float, has_scenes: bool) -> str
 def _package_manifest(
     rhythm_map: dict[str, Any],
     visual_artifacts: tuple[dict[str, Any], dict[str, Any]] | None,
+    response_relevance: dict[str, Any] | None,
     member_bytes: dict[str, bytes],
 ) -> bytes:
     """Build the self-describing routing document (plan section 4.2).
@@ -160,6 +173,9 @@ def _package_manifest(
         functions["scene"] = "getSceneState"
         files["recipe"] = "visual-recipe.json"
         files["timeline"] = "visual-timeline.json"
+    if response_relevance is not None:
+        functions["response_events"] = "getResponseEvents"
+        files["response_relevance"] = "response-relevance.json"
     project_id = rhythm_map.get("project_id")
     if not isinstance(project_id, str) or not project_id:
         # Hand-built minimal maps carry no project id; derive a stable
@@ -184,6 +200,7 @@ def _package_manifest(
             "structure": has_structure,
             "scenes": has_scenes,
             "module_worker": True,
+            "response_relevance": response_relevance is not None,
         },
         "functions": functions,
         "files": files,
@@ -397,6 +414,7 @@ def _visual_data_module(constant: str, document: dict[str, Any]) -> str:
 def _visual_state_source(
     rhythm_map: dict[str, Any],
     visual_artifacts: tuple[dict[str, Any], dict[str, Any]] | None = None,
+    response_relevance: dict[str, Any] | None = None,
 ) -> str:
     """Build the visual-state.js module: data plus the shared runtime contract.
 
@@ -409,18 +427,30 @@ def _visual_state_source(
     Without artifacts the legacy single-function shim is emitted unchanged.
     """
     data = json.dumps(rhythm_map, ensure_ascii=False, separators=(",", ":"))
+    response_import = (
+        "import { RESPONSE_RELEVANCE } from './response-relevance-data.js';\n"
+        if response_relevance is not None else ""
+    )
+    response_option = ", { responseRelevance: RESPONSE_RELEVANCE }" if response_relevance is not None else ""
+    response_export = '''
+
+export function getResponseEvents(start, end, budget) {
+  return track.responseBetween(start, end, budget);
+}
+''' if response_relevance is not None else ""
     if visual_artifacts is None:
         head = "// BeatScope visual state contract — deterministic and seek-safe.\n"
-        head += "import { createTrack } from './beatscope-runtime.js';\n\n"
+        head += "import { createTrack } from './beatscope-runtime.js';\n"
+        head += response_import + "\n"
         head += "export const RHYTHM_MAP = "
         tail = ''';
 
-const track = createTrack(RHYTHM_MAP);
+const track = createTrack(RHYTHM_MAP%s);
 
 export function getVisualState(time) {
   return track.at(time);
 }
-'''
+%s''' % (response_option, response_export)
         return head + data + tail
     head = (
         "// BeatScope visual state contract — deterministic and seek-safe.\n"
@@ -430,12 +460,13 @@ export function getVisualState(time) {
         "import { createTrack } from './beatscope-runtime.js';\n"
         "import { createSceneDirector } from './scene-director.js';\n"
         "import { VISUAL_RECIPE } from './visual-recipe-data.js';\n"
-        "import { VISUAL_TIMELINE } from './visual-timeline-data.js';\n\n"
+        "import { VISUAL_TIMELINE } from './visual-timeline-data.js';\n"
+        + response_import + "\n"
         "export const RHYTHM_MAP = "
     )
     tail = ''';
 
-const track = createTrack(RHYTHM_MAP);
+const track = createTrack(RHYTHM_MAP%s);
 const sceneDirector = createSceneDirector(VISUAL_RECIPE, VISUAL_TIMELINE);
 
 export function getVisualState(time) {
@@ -452,7 +483,7 @@ export function getBeatScopeFrame(time, options) {
     scene: getSceneState(time, options),
   };
 }
-'''
+%s''' % (response_option, response_export)
     return head + data + tail
 
 
@@ -484,6 +515,7 @@ def generate_codex_export(
     rhythm_data: dict[str, Any],
     include_preview: bool = False,
     visual_artifacts: tuple[dict[str, Any], dict[str, Any]] | None = None,
+    include_response_relevance: bool = True,
 ) -> bytes:
     """Package a portable BeatScope handoff for Codex/other coding agents.
 
@@ -509,10 +541,16 @@ def generate_codex_export(
             visual_artifacts = compile_visual_artifacts(rhythm_data)
         except InvalidVisualRecipe:
             visual_artifacts = None
+    response_relevance = None
+    if include_response_relevance:
+        try:
+            response_relevance = build_response_relevance(rhythm_data)
+        except (InvalidEventEvidenceSource, ResponseRelevanceError, KeyError, TypeError, ValueError):
+            response_relevance = None
     rhythm_map = _codex_rhythm_map(rhythm_data)
     display_name = rhythm_map["source"]["display_name"]
     handoff = f'''# BeatScope handoff: {display_name}\n\nThis package is the inspected timing data for one audio file. It is intended to be handed to an agent making an audio-reactive web, video, or motion visual.\n\n## Rules\n\n- Do not re-analyse the audio. Use `rhythm-map.json` as the source of analysed timing facts.\n- Use `audio.currentTime` as the only clock. When the package carries visual artifacts, call `getBeatScopeFrame(audio.currentTime)` from `visual-state.js` — one call returning `{{ timing, scene }}` — and treat timing state and scene state as separate surfaces. Otherwise call `getVisualState(time)`.\n- Every animation must remain correct after pause, seek, replay, and rendering a single frame. Do not use wall-clock timers or non-reproducible random motion.\n- Keep playback controls and the visual clock separate: audio controls own transport; the visual samples the current time.\n- Heavy state queries may run in a module Worker via `worker-example.js`; the main thread still owns the audio element and sends its current time.\n- When `visual-recipe.json` is present, respect its tokens (palette, transition timing, motion limits) before inventing new ones, keep family identity stable across repetitions, and keep any extra motion seek-safe.\n\n## Suggested mapping\n\n`low`, `mid`, and `high` can drive separate scale, density, or line-weight layers. `onset` and `accent` are short impulses; `beatPhase` and `barPhase` provide repeatable breathing; `section` can change composition density or palette. These are starting points, not instrument labels. The data does not identify kick, snare, or 808. When `rhythm-map.json` carries `patterns.segments`, treat segment boundaries as scene-level changes, treat `family` and `variant` as recurrence rather than musical role, and never rename the neutral `A`/`B` families without instruction. When `visual-timeline.json` is present, `getSceneState(time).scene` reports the compiled scene (`family`, `variant`, `motif`, `phase`) and `.transition` reports the boundary envelope (`stage`, `approach`, `cross`, `settle`) — do not animate every property at every boundary.\n\nThe original file name, duration, BPM, origin, beats, raw onsets, energy arrays, section annotations, and (when present) whole-song structure segments are recorded in `rhythm-map.json`.\n'''
-    readme = f'''# BeatScope export\n\nFiles in this handoff:\n\n- `rhythm-map.json` — versioned timing data: duration, BPM, origin, bars/beats, raw onsets, accents, low/mid/high energy, and sections.\n- `beatscope-package.json` — machine-readable routing manifest: entry, probe, honest capabilities, exported function names, and sha256 integrity over every member.\n- `AGENT.md` — the short Agent routing document; start there.\n- `consumer-probe.js` — self-verification probe: `node consumer-probe.js .` checks every declared function and replays checkpoints when a checkpoint file is supplied.\n- `visual-state.js` — pure `getVisualState(time)` plus, when visual artifacts are present, `getSceneState(time)` and `getBeatScopeFrame(time)`. No random state; safe to call after seek.\n- `beatscope-runtime.js` — the shared runtime module `visual-state.js` builds on (`createTrack`).\n- `worker-example.js` — ready-to-use module Worker adapter. The main thread sends audio time; the Worker returns deterministic timing and scene state.\n- `scene-director.js` — the shared scene orchestrator behind `getSceneState` (seek-safe, deterministic).\n- `visual-recipe.json` — compiled family identities: motif, palette slot, and composition channels per structural family.\n- `visual-timeline.json` — those identities instantiated on the real song: scenes and boundary transitions in seconds.\n- `visual-recipe-data.js` / `visual-timeline-data.js` — generated importable copies of the two JSON documents.\n- `BEATSCOPE.md` — implementation handoff and timing invariants.\n- `SKILL.md` — portable Codex skill for building a visual from this package.\n- `references/schema.md` — exact field semantics for the skill.\n\nThe source audio is not copied into this package. Pair it with the original local file named `{display_name}`.\n'''
+    readme = f'''# BeatScope export\n\nFiles in this handoff:\n\n- `rhythm-map.json` — versioned timing data: duration, BPM, origin, bars/beats, raw onsets, accents, low/mid/high energy, and sections.\n- `response-relevance.json` — optional ordering-only sidecar for spending a consumer-chosen onset budget; it carries event ids rather than event times, and values are not probability or confidence.\n- `beatscope-package.json` — machine-readable routing manifest: entry, probe, honest capabilities, exported function names, and sha256 integrity over every member.\n- `AGENT.md` — the short Agent routing document; start there.\n- `consumer-probe.js` — self-verification probe: `node consumer-probe.js .` checks every declared function and replays checkpoints when a checkpoint file is supplied.\n- `visual-state.js` — pure `getVisualState(time)` plus, when declared, `getResponseEvents(start, end, budget)`, `getSceneState(time)`, and `getBeatScopeFrame(time)`. No random state; safe to call after seek.\n- `beatscope-runtime.js` — the shared runtime module `visual-state.js` builds on (`createTrack`).\n- `worker-example.js` — ready-to-use module Worker adapter. The main thread sends audio time; the Worker returns deterministic timing and scene state.\n- `scene-director.js` — the shared scene orchestrator behind `getSceneState` (seek-safe, deterministic).\n- `visual-recipe.json` — compiled family identities: motif, palette slot, and composition channels per structural family.\n- `visual-timeline.json` — those identities instantiated on the real song: scenes and boundary transitions in seconds.\n- `visual-recipe-data.js` / `visual-timeline-data.js` — generated importable copies of the two JSON documents.\n- `BEATSCOPE.md` — implementation handoff and timing invariants.\n- `SKILL.md` — portable Codex skill for building a visual from this package.\n- `references/schema.md` — exact field semantics for the skill.\n\nThe source audio is not copied into this package. Pair it with the original local file named `{display_name}`.\n'''
     output = io.BytesIO()
     # Members are assembled first so the manifest can hash every other
     # member, then written in the fixed layout order (plan section 4.1).
@@ -521,8 +559,15 @@ def generate_codex_export(
         "beatscope-runtime.js": _runtime_source().encode("utf-8"),
         "worker-example.js": _worker_example_source().encode("utf-8"),
     }
+    if response_relevance is not None:
+        members["response-relevance.json"] = canonical_response_relevance_bytes(response_relevance)
+        members["response-relevance-data.js"] = _visual_data_module(
+            "RESPONSE_RELEVANCE", response_relevance
+        ).encode("utf-8")
     if visual_artifacts is None:
-        members["visual-state.js"] = _visual_state_source(rhythm_map).encode("utf-8")
+        members["visual-state.js"] = _visual_state_source(
+            rhythm_map, response_relevance=response_relevance
+        ).encode("utf-8")
         members["BEATSCOPE.md"] = _LEGACY_HANDOFF.format(display_name=display_name).encode("utf-8")
         members["README.md"] = _LEGACY_README.format(display_name=display_name).encode("utf-8")
     else:
@@ -532,7 +577,9 @@ def generate_codex_export(
         members["visual-timeline.json"] = canonical_visual_bytes(timeline)
         members["visual-recipe-data.js"] = _visual_data_module("VISUAL_RECIPE", recipe).encode("utf-8")
         members["visual-timeline-data.js"] = _visual_data_module("VISUAL_TIMELINE", timeline).encode("utf-8")
-        members["visual-state.js"] = _visual_state_source(rhythm_map, visual_artifacts).encode("utf-8")
+        members["visual-state.js"] = _visual_state_source(
+            rhythm_map, visual_artifacts, response_relevance
+        ).encode("utf-8")
         members["BEATSCOPE.md"] = handoff.encode("utf-8")
         members["README.md"] = readme.encode("utf-8")
     members["SKILL.md"] = _agent_skill_file("SKILL.md").encode("utf-8")
@@ -541,11 +588,15 @@ def generate_codex_export(
     members["AGENT.md"] = _agent_document(
         display_name, float(rhythm_map["duration"]), has_scenes=visual_artifacts is not None
     ).encode("utf-8")
-    members[MANIFEST_MEMBER] = _package_manifest(rhythm_map, visual_artifacts, members)
+    members[MANIFEST_MEMBER] = _package_manifest(
+        rhythm_map, visual_artifacts, response_relevance, members
+    )
 
     order = [
         MANIFEST_MEMBER,
         "rhythm-map.json",
+        "response-relevance.json",
+        "response-relevance-data.js",
         "visual-recipe.json",
         "visual-timeline.json",
         "visual-recipe-data.js",
