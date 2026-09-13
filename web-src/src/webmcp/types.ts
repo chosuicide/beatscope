@@ -89,6 +89,8 @@ export interface StudioDirectorSnapshot {
   responseRelevance: ResponseRelevanceSidecar | null;
   seed: number | null;
   movieJob: StudioRenderJob | null;
+  /** The studio's own failure text; classified at the boundary, never returned. */
+  movieFailureText: string | null;
   currentTime: number;
   duration: number;
   playing: boolean;

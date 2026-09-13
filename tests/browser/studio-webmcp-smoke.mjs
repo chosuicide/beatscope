@@ -166,6 +166,29 @@ try {
   assert.equal(new URL(file.url()).pathname, `/api/projects/${PROJECT_ID}/export/codex.zip`);
   assert.ok(!JSON.stringify(exported.result).includes('PK'), 'no archive bytes in the result');
 
+  // 10b. the real render path, opt-in with --render: one short film, then the
+  // state tool reports the finished job and its MP4 answers on the same origin.
+  if (process.argv.includes('--render')) {
+    assert.equal(state.data.capabilities.rendering, true, 'the renderer must be available for --render');
+    const started = await callTool('beatscope_render_movie', { action: 'start' });
+    assert.equal(started.result.ok, true, JSON.stringify(started.result));
+    assert.ok(Number.isInteger(started.result.data.seed), 'a 24-bit seed is reported');
+    let final;
+    for (let attempt = 0; attempt < 240; attempt += 1) {
+      final = (await callTool('beatscope_get_studio_state')).result;
+      const job = final.data.movie.job;
+      if (job?.state === 'complete') break;
+      if (job?.state === 'failed') throw new Error(`render failed: ${JSON.stringify(job)}`);
+      await page.waitForTimeout(500);
+    }
+    const job = final.data.movie.job;
+    assert.equal(job?.state, 'complete', `render did not finish: ${JSON.stringify(job)}`);
+    assert.equal(job.video_ready, true);
+    const video = await page.request.get(`${base}/api/movies/${job.id}/video`, { headers: { Range: 'bytes=0-2047' } });
+    assert.ok([200, 206].includes(video.status()), `the film route answered ${video.status()}`);
+    console.log(`  render: seed ${started.result.data.seed} -> ${job.state}, film readable (${(await video.body()).length} bytes)`);
+  }
+
   // 12. budgets: latency and serialized size (plan §12)
   const samples = { state: [], timing: [], response: [], movie: [] };
   for (let round = 0; round < 5; round += 1) {

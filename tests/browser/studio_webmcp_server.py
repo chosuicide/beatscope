@@ -10,6 +10,7 @@ never runs the analyzer.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -35,7 +36,6 @@ def main() -> int:
 
     rhythm = json.loads(FIXTURE.read_text(encoding="utf-8"))
     rhythm["project_id"] = PROJECT_ID
-    (project / "rhythm.json").write_text(json.dumps(rhythm, ensure_ascii=False), encoding="utf-8")
 
     audio = project / "source.audio"
     with wave.open(str(audio), "wb") as out:
@@ -43,6 +43,10 @@ def main() -> int:
         out.setsampwidth(2)
         out.setframerate(8000)
         out.writeframes(b"\x00\x00" * int(8000 * float(rhythm["source"]["duration"])))
+    # The renderer verifies the audio against the digest recorded in the
+    # rhythm, so the synthetic take gets its own honest hash.
+    rhythm["source"]["sha256"] = hashlib.sha256(audio.read_bytes()).hexdigest()
+    (project / "rhythm.json").write_text(json.dumps(rhythm, ensure_ascii=False), encoding="utf-8")
     (project / "project.json").write_text(
         json.dumps({
             "project_id": PROJECT_ID,
@@ -54,11 +58,22 @@ def main() -> int:
         encoding="utf-8",
     )
 
+    # The renderer looks for Playwright beside web-src; this harness installs it
+    # under tests/browser, so point the server at that copy for --render runs.
+    module = REPO / "tests" / "browser" / "node_modules" / "playwright" / "index.mjs"
+    if module.is_file():
+        os.environ.setdefault("BEATSCOPE_PLAYWRIGHT_MODULE", str(module))
+
     sys.path.insert(0, str(REPO))
+    from beatscope.mv_jobs import renderer_tools  # noqa: E402
     from beatscope.server import Handler  # noqa: E402  (born after the cwd change)
 
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
-    print(json.dumps({"port": server.server_address[1], "project_id": PROJECT_ID}), flush=True)
+    print(json.dumps({
+        "port": server.server_address[1],
+        "project_id": PROJECT_ID,
+        "renderer": renderer_tools()["available"],
+    }), flush=True)
     server.serve_forever()
     return 0
 

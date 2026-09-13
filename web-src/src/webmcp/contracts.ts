@@ -263,6 +263,40 @@ export const ERROR_CODE_SET: readonly ErrorCode[] = Object.freeze([
   'internal_error',
 ]);
 
+/** Bounded reasons a render can fail, plus one frozen next action each. */
+export const MOVIE_FAILURE_CODES = Object.freeze([
+  'audio_digest_mismatch',
+  'renderer_unavailable',
+  'mux_failed',
+  'render_failed',
+] as const);
+
+export type MovieFailureCode = (typeof MOVIE_FAILURE_CODES)[number];
+
+const FAILURE_MATCHERS: readonly (readonly [RegExp, MovieFailureCode])[] = Object.freeze([
+  [/hash mismatch|digest|sha-?256/i, 'audio_digest_mismatch'],
+  [/ffmpeg|mux/i, 'mux_failed'],
+  [/playwright|chromium|renderer|not configured/i, 'renderer_unavailable'],
+]);
+
+/**
+ * Classify the studio's own failure text into the frozen vocabulary. The text
+ * itself never travels: only the code and its fixed next action leave the page.
+ */
+export function classifyMovieFailure(text: string | null | undefined): MovieFailureCode {
+  if (typeof text === 'string') {
+    for (const [pattern, code] of FAILURE_MATCHERS) if (pattern.test(text)) return code;
+  }
+  return 'render_failed';
+}
+
+export const MOVIE_FAILURE_ACTIONS: Readonly<Record<MovieFailureCode, string>> = Object.freeze({
+  audio_digest_mismatch: 'Re-analyse the song so the analysis matches the audio on disk, then render again.',
+  renderer_unavailable: 'Check the local renderer setup (Node, FFmpeg, Playwright), then render again.',
+  mux_failed: 'Retry the render; if it repeats, read the studio log.',
+  render_failed: 'Read the studio log, then retry the render.',
+});
+
 /** Retired vocabulary that must never reappear in a definition. */
 export const RETIRED_TOKENS: readonly string[] = Object.freeze([
   'visual_recipe',

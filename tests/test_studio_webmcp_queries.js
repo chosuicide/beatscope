@@ -16,7 +16,7 @@ import { FIXTURES, downbeatsOf, loadRhythmFixture, makeSnapshot, syntheticReleva
 
 const { inspectTiming, responseEvents, resolveRange, studioState } = await loadStudioWebmcpModule('timing');
 const { explainMovie } = await loadStudioWebmcpModule('movie');
-const { canonicalJson } = await loadStudioWebmcpModule('responses');
+const { canonicalJson, resultCodeUnits } = await loadStudioWebmcpModule('responses');
 
 const structured = loadRhythmFixture(FIXTURES.structured);
 const plain = loadRhythmFixture(FIXTURES.plain);
@@ -338,4 +338,113 @@ test('every committed query snapshot is the current output, byte for byte', asyn
     const committed = readFileSync(new URL(`./snapshots/studio-webmcp/${name}.json`, import.meta.url), 'utf8');
     assert.equal(canonicalJson(payload), committed, `${name} diverged; re-record with node tests/record_studio_webmcp_snapshots.mjs`);
   }
+});
+
+// --- failed renders explain themselves, without leaking the studio's text ----
+
+test('a failed render reports a frozen code instead of the studio text', () => {
+  const failed = makeSnapshot(structured, {
+    stage: 'failed',
+    movieJob: { id: 'job-2', state: 'failed', progress: 0, video_ready: false },
+    movieFailureText: 'Error: Audio hash mismatch',
+  });
+  const state = studioState(failed);
+  assert.equal(state.ok, true);
+  assert.equal(state.data.movie.job.failure_code, 'audio_digest_mismatch');
+  assert.match(state.data.movie.job.failure_action, /Re-analyse/);
+  const serialized = JSON.stringify(state);
+  assert.ok(!serialized.includes('hash mismatch'), 'the studio text never travels');
+  assert.ok(!serialized.includes('Error:'), 'no server text travels either');
+});
+
+test('only a failure explains itself, and an unknown one stays render_failed', () => {
+  const unknown = studioState(makeSnapshot(structured, {
+    movieJob: { id: 'job-3', state: 'failed', progress: 0.5, video_ready: false },
+    movieFailureText: 'something unusual happened here',
+  }));
+  assert.equal(unknown.data.movie.job.failure_code, 'render_failed');
+  assert.ok(!JSON.stringify(unknown).includes('unusual'));
+
+  const running = studioState(makeSnapshot(structured, {
+    movieJob: { id: 'job-4', state: 'running', progress: 0.5, video_ready: false },
+    movieFailureText: 'transient note',
+  }));
+  assert.equal('failure_code' in running.data.movie.job, false, 'a running job carries no reason');
+});
+
+test('every renderer-side failure lands in the frozen vocabulary', () => {
+  const codes = [
+    'Audio hash mismatch',
+    'ffmpeg mux failed',
+    'Playwright renderer not configured',
+    'who knows',
+  ].map((text) => studioState(makeSnapshot(structured, {
+    movieJob: { id: 'job-5', state: 'failed', progress: 0, video_ready: false },
+    movieFailureText: text,
+  })).data.movie.job.failure_code);
+  assert.deepEqual([...new Set(codes)].sort(), [
+    'audio_digest_mismatch', 'mux_failed', 'render_failed', 'renderer_unavailable',
+  ]);
+  for (const code of codes) assert.ok(code.length > 0 && !code.includes(' '), 'codes are stable identifiers');
+});
+
+// --- the three branches the plan names explicitly ---------------------------
+
+test('an oversized timing page shrinks to the budget instead of truncating events', () => {
+  const snapshot = makeSnapshot(structured);
+  const full = inspectTiming(snapshot, { start_time: 0, end_time: 48, include: ['beats', 'onsets', 'cues'], limit: 200 });
+  assert.equal(full.ok, true);
+  assert.ok(resultCodeUnits(full) <= 16000, `result was ${resultCodeUnits(full)} code units`);
+  assert.ok(full.data.total > 200, 'the window really holds more than one page');
+  assert.ok(full.data.count < full.data.total, 'the page shrank');
+  assert.equal(full.data.has_more, true);
+  assert.equal(full.data.next_offset, full.data.count, 'the next page starts where this one stopped');
+
+  const next = inspectTiming(snapshot, {
+    start_time: 0, end_time: 48, include: ['beats', 'onsets', 'cues'],
+    limit: 200, offset: full.data.next_offset,
+  });
+  const key = (event) => `${event.kind}:${event.id ?? event.time}`;
+  const seen = [...full.data.events, ...next.data.events].map(key);
+  assert.equal(new Set(seen).size, seen.length, 'pages never overlap or lose an event');
+
+  const small = inspectTiming(snapshot, { start_time: 0, end_time: 4, include: ['onsets'], limit: 20 });
+  assert.equal(small.data.count, Math.min(20, small.data.total), 'a page that fits is untouched');
+});
+
+test('equal evidence falls back to time then id, and the order is frozen', () => {
+  const onsets = structured.onsets.map((onset) => ({ ...onset, bands: { ...onset.bands, low: 0.5 } }));
+  const rhythm = { ...structured, onsets };
+  const relevance = {
+    schema: 'beatscope-response-relevance-1',
+    method: 'tie-fixture',
+    evidence_schema: 'beatscope-event-evidence-1',
+    semantics: 'bounded-ranking-value-not-probability-or-confidence',
+    project_id: 'tie-fixture',
+    model_sha256: '0'.repeat(64),
+    events: onsets.map((onset) => ({ onset_id: Number(onset.id), response_relevance: 0.5 })),
+  };
+  const snapshot = makeSnapshot(rhythm, { responseRelevance: relevance });
+  const first = responseEvents(snapshot, { start_time: 0, end_time: 48, budget: 4, band: 'low' });
+  assert.equal(first.ok, true, JSON.stringify(first));
+  assert.deepEqual(first.data.events.map((event) => event.id), onsets.slice(0, 4).map((onset) => onset.id));
+  const times = first.data.events.map((event) => event.time);
+  assert.deepEqual(times, [...times].sort((left, right) => left - right), 'ties resolve to chronological order');
+  const second = responseEvents(snapshot, { start_time: 0, end_time: 48, budget: 4, band: 'low' });
+  assert.equal(canonicalJson(first), canonicalJson(second));
+});
+
+test('cue families are filtered by cue_types, never by guessing names', () => {
+  const snapshot = makeSnapshot(structured);
+  const accents = inspectTiming(snapshot, { start_time: 0, end_time: 48, include: ['cues'], cue_types: ['accent'], limit: 200 });
+  assert.equal(accents.ok, true);
+  assert.ok(accents.data.total > 0);
+  for (const event of accents.data.events) assert.equal(event.type, 'accent');
+
+  const empty = inspectTiming(snapshot, { start_time: 0, end_time: 48, include: ['cues'], cue_types: ['flash', 'bloom'] });
+  assert.equal(empty.ok, true);
+  assert.equal(empty.data.total, 0, 'families this song has none of return nothing');
+
+  const unfiltered = inspectTiming(snapshot, { start_time: 0, end_time: 48, include: ['cues'], limit: 200 });
+  assert.equal(unfiltered.data.total, accents.data.total, 'accent is the only family this fixture carries');
 });

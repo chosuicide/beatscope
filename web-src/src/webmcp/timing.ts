@@ -15,7 +15,7 @@
  *   cleanly. Bars are inclusive; the final bar ends at the source duration.
  */
 import { createTrack, type RuntimeTrack } from '../../../beatscope/runtime/runtime.js';
-import { LIMITS } from './contracts.js';
+import { LIMITS, MOVIE_FAILURE_ACTIONS, classifyMovieFailure } from './contracts.js';
 import { ToolError, failure, fitPageToBudget, sanitizeLabel, sanitizeNumber, success } from './responses.js';
 import type { MovieRhythm } from '../movie/types.js';
 import type { ResponseRelevanceSidecar, StudioDirectorSnapshot, ToolResult } from './types.js';
@@ -426,7 +426,15 @@ export function studioState(snapshot: StudioDirectorSnapshot): ToolResult {
       plan_version: 'voxel-phrase-2',
       seed: snapshot.seed,
       renderer_available: snapshot.rendererAvailable,
-      job: snapshot.movieJob,
+      job: snapshot.movieJob && snapshot.movieJob.state === 'failed'
+        ? {
+          ...snapshot.movieJob,
+          // A bounded reason and one fixed next action; the studio's own text
+          // stays in the page (plan section 9.3).
+          failure_code: classifyMovieFailure(snapshot.movieFailureText),
+          failure_action: MOVIE_FAILURE_ACTIONS[classifyMovieFailure(snapshot.movieFailureText)],
+        }
+        : snapshot.movieJob,
     },
     capabilities: {
       timing_queries: rhythm !== null,

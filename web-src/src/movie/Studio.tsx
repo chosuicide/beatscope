@@ -370,6 +370,7 @@ export default function MovieStudio() {
         responseRelevance: relevanceRef.current,
         seed: sessionRef.current.seed ?? null,
         movieJob: job ? { id: job.id, state: job.state, progress: Number(job.progress ?? 0), video_ready: Boolean(job.video_url) } : null,
+        movieFailureText: job?.error || job?.message || null,
         currentTime: element ? element.currentTime : time,
         duration,
         playing: element ? !element.paused : playing,

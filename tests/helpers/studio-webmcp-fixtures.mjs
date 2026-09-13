@@ -42,6 +42,7 @@ export function makeSnapshot(rhythm, overrides = {}) {
     responseRelevance: rhythm === null ? null : syntheticRelevance(rhythm),
     seed: 7,
     movieJob: null,
+    movieFailureText: null,
     currentTime: 0,
     duration: rhythm === null ? 0 : Number(rhythm.source?.duration ?? 0),
     playing: false,
