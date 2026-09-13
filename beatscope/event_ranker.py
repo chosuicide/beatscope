@@ -1,4 +1,6 @@
-"""Deterministic pairwise chart-consensus response ranker (v0.11 Round 2).
+"""The shipping ranker: the promoted model is data/response-ranker-v3.json.
+Later generations under scripts/ are research history.
+Deterministic pairwise chart-consensus response ranker (v0.11 Round 2).
 
 A dormant module: it learns one narrow ordering - which of two detected
 onsets from the same song is more consistently retained by human-authored
