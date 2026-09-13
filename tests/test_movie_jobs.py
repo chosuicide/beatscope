@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from beatscope.mv_jobs import MovieJobs
+from beatscope.mv_jobs import MovieJobs, renderer_tools
 
 
 @pytest.fixture
@@ -68,6 +68,30 @@ def test_renderer_modules_exist():
     assert (RUNTIME / 'runtime.js').is_file()
     for name in ['mv-worker.mjs', 'mv-plan.mjs', 'mv-render.html', 'mv-visual.js', 'mv-frame.mjs']:
         assert (WEB / name).is_file()
+
+
+def test_portable_build_discovers_its_bundled_renderer(tmp_path, monkeypatch):
+    app = tmp_path / 'Beathi Studio.exe'
+    tools = tmp_path / 'tools'
+    module = tools / 'node_modules' / 'playwright' / 'index.mjs'
+    module.parent.mkdir(parents=True)
+    for path in (app, tools / 'node.exe', tools / 'ffmpeg.exe', module):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b'fixture')
+    monkeypatch.setattr('beatscope.mv_jobs.sys.executable', str(app))
+    monkeypatch.setattr('beatscope.mv_jobs.sys.frozen', True, raising=False)
+    monkeypatch.setattr('beatscope.mv_jobs.shutil.which', lambda _: None)
+    monkeypatch.delenv('BEATSCOPE_PLAYWRIGHT_MODULE', raising=False)
+    monkeypatch.delenv('BEATSCOPE_FFMPEG', raising=False)
+
+    found = renderer_tools()
+    assert found == {
+        'available': True,
+        'node': str(tools / 'node.exe'),
+        'ffmpeg': str(tools / 'ffmpeg.exe'),
+        'module': str(module),
+        'message': '',
+    }
 
 
 def test_movie_seed_matches_preview_including_zero(manager):

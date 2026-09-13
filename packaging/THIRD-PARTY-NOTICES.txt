@@ -1,0 +1,12 @@
+BeatScope and Beathi Studio are distributed under the MIT License. See LICENSE.
+
+This portable bundle also contains unmodified redistributable tools:
+
+- Node.js, MIT License: https://github.com/nodejs/node/blob/main/LICENSE
+- Playwright, Apache License 2.0: https://github.com/microsoft/playwright/blob/main/LICENSE
+- FFmpeg, LGPL/GPL according to the selected upstream build:
+  https://ffmpeg.org/legal.html
+
+Python dependency licenses and metadata are retained inside the PyInstaller
+distribution. The Studio frontend keeps third-party license notices next to
+the corresponding bundled assets.

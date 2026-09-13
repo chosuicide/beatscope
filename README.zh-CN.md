@@ -14,7 +14,18 @@ BeatScope 测量拍点、原始瞬态、多频段能量、变速段和重复结�
 
 ![Beathi Studio 播放确定性成片，时序图与画面共用同一个媒体时钟](docs/demo/beathi-studio.gif)
 
-## 三分钟开始
+## 下载即用
+
+**Windows：**在 [v0.12.0 Release](https://github.com/chosuicide/beatscope/releases/tag/v0.12.0) 下载 `Beathi-Studio-v0.12.0-windows-x64.zip`，解压后双击 **Beathi Studio.exe**。便携包已带分析器和视频工具链，会在浏览器打开本地工作台；音频不会上传到服务器。
+
+**Python 3.10+：**也可以从 PyPI 或源码安装：
+
+```powershell
+pip install beatscope
+beatscope serve --open
+```
+
+参与开发：
 
 ```powershell
 git clone https://github.com/chosuicide/beatscope.git
@@ -22,7 +33,7 @@ cd beatscope
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
-beatscope serve
+beatscope serve --open
 ```
 
 打开 `http://127.0.0.1:8765`，选择 WAV、FLAC、MP3、OGG 或 M4A。待本地分析完成后，你可以：
@@ -32,7 +43,13 @@ beatscope serve
 3. 在本机浏览器和 FFmpeg 可用时渲染 MP4；
 4. 为 DAW 或 Coding Agent 导出时序数据。
 
-需要 Python 3.10+。分析、预览和渲染都留在本机，请求产生的临时文件会在处理后删除。
+分析、预览和渲染都留在本机，请求产生的临时文件会在处理后删除。Windows 便携包已包含浏览器渲染 Worker 与 FFmpeg；源码安装可用 `beatscope doctor` 检查环境。
+
+## 同一份时序，另一种视觉语言
+
+![Coding Agent 根据 BeatScope 时序事实与视觉参考生成 Dirt / Cold / Rings](docs/demo/agent-to-film.webp)
+
+内置模板是开箱即看的预览，不是作品上限。把导出的时序包交给 Coding Agent，说明你想做什么，再提供现有的视频、图片或视觉参考。包内 Skill 会要求 Agent 先校验测量结果，并主动询问缺少的创作输入，而不是擅自编造。**Dirt / Cold / Rings** 就是这样的成品：剪切与响应沿用 BeatScope 的真实时间戳，视觉系统则属于新作品。带声音的完整宣传片已附在 v0.12.0 Release。
 
 ## Studio 里有什么
 
@@ -49,8 +66,6 @@ Studio 刻意做成一个页面，而不是另一条剪辑时间线：
 ![同一首已分析歌曲的全曲结构与八小节节奏细节](docs/demo/beathi-analysis-map.png)
 
 媒体元素是唯一播放时钟。预览、播放头、结构列表和两张节奏图都读取它；Seek 不会重启分析，也不会偷偷产生第二套时间线。
-
-在支持 WebMCP 的浏览器中，同一个 Studio 也会成为 Agent 可调用、边界明确的 Director。七个工具可以检查当前歌曲、解释画面为何响应、控制试听、开始或取消渲染，并准备时序包下载。会改变状态的调用会在界面中留下可见反馈，试听状态也可恢复；不支持 WebMCP 的浏览器仍保持普通 Studio 体验。
 
 ## 密集歌曲为什么不会让每一帧都动
 

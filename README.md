@@ -14,7 +14,18 @@ It does not guess kick, snare or 808 labels, and it never moves a real event ont
 
 ![Beathi Studio playing a deterministic film while the timing maps follow the same media clock](docs/demo/beathi-studio.gif)
 
-## The short path
+## Download and run
+
+**Windows:** download `Beathi-Studio-v0.12.0-windows-x64.zip` from the [v0.12.0 release](https://github.com/chosuicide/beatscope/releases/tag/v0.12.0), extract it, then double-click **Beathi Studio.exe**. The portable build includes the analyser and movie toolchain; it opens a local Studio in your browser and keeps audio on the machine.
+
+**Python 3.10+:** install from PyPI or source, then open the Studio:
+
+```powershell
+pip install beatscope
+beatscope serve --open
+```
+
+For contributors:
 
 ```powershell
 git clone https://github.com/chosuicide/beatscope.git
@@ -22,7 +33,7 @@ cd beatscope
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
-beatscope serve
+beatscope serve --open
 ```
 
 Open `http://127.0.0.1:8765`, choose a WAV, FLAC, MP3, OGG or M4A file, and let the local analyser finish. You can then:
@@ -32,7 +43,13 @@ Open `http://127.0.0.1:8765`, choose a WAV, FLAC, MP3, OGG or M4A file, and let 
 3. render an MP4 when the local browser and FFmpeg support it; or
 4. export timing data for a DAW or coding agent.
 
-Python 3.10+ is required. Analysis, preview and rendering stay on the machine; request-scoped temporary files are removed after processing.
+Analysis, preview and rendering stay on the machine; request-scoped temporary files are removed after processing. MP4 rendering uses the bundled browser worker and FFmpeg in the Windows build; source installs can check their setup with `beatscope doctor`.
+
+## One timing package, another visual language
+
+![A coding Agent turns BeatScope timing facts and a visual reference into Dirt / Cold / Rings](docs/demo/agent-to-film.webp)
+
+The built-in template is an immediate preview, not a ceiling. Give a coding Agent the exported timing package, describe the piece you want, and share whatever footage, images or visual references you have. The package teaches the Agent to verify the measurements first and ask for missing creative inputs instead of inventing them. **Dirt / Cold / Rings** is one such result: the cuts and reactions use BeatScope timestamps, while the visual system belongs to the new work. The full showcase MP4 is attached to the v0.12.0 release.
 
 ## What the Studio shows
 
@@ -49,8 +66,6 @@ The Studio is deliberately one screen rather than an editing timeline:
 ![Full-song structure and eight-bar rhythm detail from the same analysed track](docs/demo/beathi-analysis-map.png)
 
 The media element is the only playback clock. The film preview, playhead, structure list and both maps read that clock; seeking does not restart analysis or invent a second timeline.
-
-In a WebMCP-capable browser, the same Studio also becomes a bounded Director for an Agent. Seven tools can inspect the visible song, explain why the film reacts, control audition playback, start or cancel a render, and prepare the timing-package download. State-changing calls are visible in the interface and audition state can be restored; browsers without WebMCP keep the ordinary Studio experience.
 
 ## Why dense songs do not drive every frame
 

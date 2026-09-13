@@ -87,9 +87,10 @@ try {
   /* The sidecar load is best-effort and lands just after the rhythm, so wait
      for it: a state read that races it would report ranking as unavailable. */
   let state;
+  const requireRenderer = process.argv.includes('--render');
   for (let attempt = 0; attempt < 60; attempt += 1) {
     state = (await callTool('beatscope_get_studio_state')).result;
-    if (state.data?.track?.response_relevance_available) break;
+    if (state.data?.track?.response_relevance_available && (!requireRenderer || state.data?.capabilities?.rendering)) break;
     await page.waitForTimeout(250);
   }
   assert.equal(state.ok, true, JSON.stringify(state));
@@ -149,14 +150,11 @@ try {
   assert.ok(Math.abs(restore.result.data.time - 12.5) < 0.05);
   assert.ok(Math.abs(await page.evaluate(() => document.querySelector('audio').currentTime) - 12.5) < 0.05);
 
-  // 10. render: validation only, no heavy launch in this smoke. Which honest
-  // refusal comes first depends on whether this session has a local renderer.
+  // 10. Invalid input is rejected before environment capability checks. The
+  // result must therefore be stable on machines with and without a renderer.
   const rejected = await callTool('beatscope_render_movie', { action: 'start', seed: 16777216 });
   assert.equal(rejected.result.ok, false, JSON.stringify(rejected.result));
-  assert.equal(
-    rejected.result.error.code,
-    state.data.capabilities.rendering ? 'invalid_input' : 'render_unavailable',
-  );
+  assert.equal(rejected.result.error.code, 'invalid_input');
 
   // 11. the timing export asks for the same-origin archive, never its bytes
   const download = page.waitForEvent('download', { timeout: 10000 });
@@ -185,8 +183,15 @@ try {
     assert.equal(job?.state, 'complete', `render did not finish: ${JSON.stringify(job)}`);
     assert.equal(job.video_ready, true);
     const video = await page.request.get(`${base}/api/movies/${job.id}/video`, { headers: { Range: 'bytes=0-2047' } });
-    assert.ok([200, 206].includes(video.status()), `the film route answered ${video.status()}`);
-    console.log(`  render: seed ${started.result.data.seed} -> ${job.state}, film readable (${(await video.body()).length} bytes)`);
+    assert.equal(video.status(), 206, `the film route answered ${video.status()}`);
+    const filmHead = await video.body();
+    const contentRange = video.headers()['content-range'] || '';
+    const rangeMatch = /^bytes 0-2047\/(\d+)$/.exec(contentRange);
+    assert.ok(rangeMatch, `rendered film must report its complete byte length, got ${contentRange}`);
+    const filmBytes = Number(rangeMatch[1]);
+    assert.ok(filmBytes > 10_000, `rendered film is implausibly small (${filmBytes} bytes)`);
+    assert.ok(filmHead.subarray(0, 64).includes(Buffer.from('ftyp')), 'rendered film must carry an MP4 ftyp box');
+    console.log(`  render: seed ${started.result.data.seed} -> ${job.state}, MP4 verified (${filmBytes} bytes)`);
   }
 
   // 12. budgets: latency and serialized size (plan §12)

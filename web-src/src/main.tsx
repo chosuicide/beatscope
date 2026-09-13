@@ -5,10 +5,8 @@ import './styles/shell.css';
 import './styles/paper.css';
 import MovieStudio from './movie/Studio';
 
-/* One screen: the movie studio. The canvas workspace and the composition
-   workspace were removed with their views; the runtime, motion, direction and
-   document-model modules they were built on stay, because the renderer, the
-   agent export and the test suite still use them. */
+/* One screen: the movie studio. Direction and composition remain headless
+   contracts for Agent-authored work; they are deliberately not another UI. */
 const rootEl = document.getElementById('root');
 if (rootEl) {
   createRoot(rootEl).render(

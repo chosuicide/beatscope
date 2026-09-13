@@ -1,0 +1,122 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  python-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install build
+      - run: python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-package
+          path: dist/*
+
+  windows-portable:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install build and renderer dependencies
+        shell: pwsh
+        run: |
+          python -m pip install . pyinstaller
+          npm ci --prefix tests/browser --no-audit --no-fund
+          choco install ffmpeg --no-progress -y
+      - name: Build portable Studio
+        shell: pwsh
+        run: |
+          python -m PyInstaller --noconfirm --clean packaging/beatscope-studio.spec
+          $app = "dist/Beathi Studio"
+          $tools = "$app/tools"
+          New-Item -ItemType Directory -Force "$tools/node_modules" | Out-Null
+          Copy-Item (Get-Command node).Source "$tools/node.exe"
+          Copy-Item -Recurse tests/browser/node_modules/playwright "$tools/node_modules/playwright"
+          Copy-Item -Recurse tests/browser/node_modules/playwright-core "$tools/node_modules/playwright-core"
+          $ffmpeg = Get-ChildItem C:\tools -Recurse -Filter ffmpeg.exe | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $ffmpeg) { throw "Chocolatey FFmpeg binary not found" }
+          Copy-Item $ffmpeg "$tools/ffmpeg.exe"
+          Copy-Item packaging/PORTABLE-README.txt "$app/README.txt"
+          Copy-Item packaging/THIRD-PARTY-NOTICES.txt "$app/THIRD-PARTY-NOTICES.txt"
+          Copy-Item LICENSE "$app/LICENSE"
+      - name: Smoke the installed application
+        shell: pwsh
+        run: |
+          $env:BEATSCOPE_STUDIO_PORT = "18765"
+          $env:BEATSCOPE_NO_BROWSER = "1"
+          $process = Start-Process -FilePath "dist/Beathi Studio/Beathi Studio.exe" -PassThru -WindowStyle Hidden
+          try {
+            $ready = $false
+            1..60 | ForEach-Object {
+              try {
+                $page = Invoke-WebRequest http://127.0.0.1:18765/app/ -UseBasicParsing
+                if ($page.StatusCode -eq 200 -and $page.Content -match "id=.root.") { $ready = $true; return }
+              } catch { Start-Sleep -Milliseconds 500 }
+            }
+            if (-not $ready) { throw "portable Studio did not become ready" }
+            $caps = Invoke-RestMethod http://127.0.0.1:18765/api/movies/capabilities
+            if (-not $caps.available) { throw "bundled movie renderer was not detected: $($caps.message)" }
+
+            $probeAudio = Join-Path $env:RUNNER_TEMP "portable-smoke.wav"
+            & "dist/Beathi Studio/tools/ffmpeg.exe" -hide_banner -loglevel error -y -f lavfi -i "sine=frequency=440:duration=2" $probeAudio
+            $analysis = Invoke-RestMethod -Method Post -Uri http://127.0.0.1:18765/api/jobs/analyze -ContentType "application/octet-stream" -Headers @{ "X-Filename" = "portable-smoke.wav" } -InFile $probeAudio
+            $analysisState = $null
+            for ($attempt = 0; $attempt -lt 120; $attempt++) {
+              $analysisState = Invoke-RestMethod "http://127.0.0.1:18765/api/jobs/$($analysis.job_id)"
+              if ($analysisState.state -in @("complete", "failed", "cancelled")) { break }
+              Start-Sleep -Milliseconds 500
+            }
+            if ($analysisState.state -ne "complete") { throw "portable analysis failed: $($analysisState | ConvertTo-Json -Compress)" }
+
+            $movie = Invoke-RestMethod -Method Post -Uri http://127.0.0.1:18765/api/movies -ContentType "application/json" -Body (@{ project_id = $analysisState.project_id; seed = 7 } | ConvertTo-Json -Compress)
+            $movieState = $null
+            for ($attempt = 0; $attempt -lt 120; $attempt++) {
+              $movieState = Invoke-RestMethod "http://127.0.0.1:18765/api/movies/$($movie.id)"
+              if ($movieState.state -in @("complete", "failed", "cancelled")) { break }
+              Start-Sleep -Milliseconds 500
+            }
+            if ($movieState.state -ne "complete") { throw "portable render failed: $($movieState | ConvertTo-Json -Compress)" }
+            $film = Invoke-WebRequest "http://127.0.0.1:18765/api/movies/$($movie.id)/video" -UseBasicParsing
+            if ($film.StatusCode -ne 200 -or $film.RawContentLength -lt 10000) { throw "portable render did not produce a readable MP4" }
+          } finally {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          }
+      - name: Archive and checksum
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "dist/Beathi Studio/*" -DestinationPath "dist/Beathi-Studio-v0.12.0-windows-x64.zip"
+          (Get-FileHash "dist/Beathi-Studio-v0.12.0-windows-x64.zip" -Algorithm SHA256).Hash.ToLower() + "  Beathi-Studio-v0.12.0-windows-x64.zip" | Set-Content "dist/Beathi-Studio-v0.12.0-windows-x64.zip.sha256" -NoNewline
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-portable
+          path: |
+            dist/Beathi-Studio-v0.12.0-windows-x64.zip
+            dist/Beathi-Studio-v0.12.0-windows-x64.zip.sha256
+
+  publish:
+    needs: [python-package, windows-portable]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: release-assets/*

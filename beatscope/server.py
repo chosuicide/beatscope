@@ -5,7 +5,9 @@ import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import tempfile
+import threading
 from urllib.parse import parse_qs, urlparse
+import webbrowser
 
 from .midi import build_midi
 from .pipeline import analyze_track
@@ -67,7 +69,7 @@ class Handler(BaseHTTPRequestHandler):
                         break
                     self.wfile.write(chunk)
                     length -= len(chunk)
-        except (BrokenPipeError, ConnectionResetError):
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             pass  # A media seek or closed tab may abandon the previous request.
 
     def do_HEAD(self):
@@ -482,13 +484,25 @@ class Handler(BaseHTTPRequestHandler):
         return
 
 
-def serve(host: str = "127.0.0.1", port: int = 8765, project: str | Path | None = None) -> None:
+def serve(
+    host: str = "127.0.0.1",
+    port: int = 8765,
+    project: str | Path | None = None,
+    *,
+    open_browser: bool = False,
+) -> None:
     global PROJECT_FILE, PROJECT_MAP
     if project:
         PROJECT_FILE = Path(project).resolve()
         PROJECT_MAP = load_rhythm_project(PROJECT_FILE)
     server = ThreadingHTTPServer((host, port), Handler)
-    print(f"BeatScope running at http://{host}:{port}")
+    actual_port = server.server_address[1]
+    url = f"http://{host}:{actual_port}"
+    print(f"BeatScope running at {url}")
+    if open_browser:
+        opener = threading.Timer(0.35, webbrowser.open, args=(url,))
+        opener.daemon = True
+        opener.start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:

@@ -184,6 +184,7 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--host", default="127.0.0.1")
     run.add_argument("--port", type=int, default=8765)
     run.add_argument("--project", type=Path)
+    run.add_argument("--open", action="store_true", help="open the Studio in the default browser")
 
     # separate
     separate = sub.add_parser("separate", help="run optional GPU Demucs separation")
@@ -369,7 +370,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"exported": exported}, ensure_ascii=False))
         return 0
 
-    serve(args.host, args.port, args.project)
+    serve(args.host, args.port, args.project, open_browser=args.open)
     return 0
 
 

@@ -1,6 +1,5 @@
-/* Beathi Canvas shell chrome — mirrors the frozen reference component styles
-   (docs/design/beathi-canvas/beathi.css). Class names are contract; boards
-   and canvas artwork are rendered by Pixi, not this sheet. */
+/* Retained shell primitives shared by the Studio and headless composition UI.
+   Class names are a compatibility contract. */
 
 .app-shell {
   position: relative;

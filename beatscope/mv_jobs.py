@@ -8,6 +8,7 @@ import re
 import secrets
 import shutil
 import subprocess
+import sys
 import threading
 
 from .project import _atomic_write_bytes
@@ -18,13 +19,22 @@ RUNTIME = Path(__file__).parent / "runtime"
 
 
 def renderer_tools() -> dict:
+    portable_root = Path(sys.executable).resolve().parent / "tools" if getattr(sys, "frozen", False) else None
     module = os.environ.get("BEATSCOPE_PLAYWRIGHT_MODULE", "")
     if not module:
         candidate = Path(__file__).parent.parent / "web-src/node_modules/playwright/index.mjs"
         if candidate.is_file():
             module = str(candidate)
+        elif portable_root:
+            candidate = portable_root / "node_modules" / "playwright" / "index.mjs"
+            if candidate.is_file():
+                module = str(candidate)
     node = shutil.which("node")
+    if not node and portable_root and (portable_root / "node.exe").is_file():
+        node = str(portable_root / "node.exe")
     ffmpeg = shutil.which(os.environ.get("BEATSCOPE_FFMPEG", "ffmpeg"))
+    if not ffmpeg and portable_root and (portable_root / "ffmpeg.exe").is_file():
+        ffmpeg = str(portable_root / "ffmpeg.exe")
     available = bool(node and ffmpeg and module and Path(module).is_file())
     return {"available": available, "node": node, "ffmpeg": ffmpeg, "module": module,
             "message": "" if available else "本地渲染器未配置：需要 Node、FFmpeg 和 Playwright。请按 docs/local-movie.md 配置。"}

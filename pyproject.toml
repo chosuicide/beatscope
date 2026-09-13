@@ -35,7 +35,7 @@ include = ["beatscope*"]
 [tool.setuptools.package-data]
 beatscope = [
   "web/*.html", "web/*.mjs",
-  "web/app/*.html", "web/app/*.webp", "web/app/assets/*", "web/app/demo-media/*", "web/app/fonts/*",
+  "web/app/*.html", "web/app/*.webp", "web/app/assets/*", "web/app/fonts/*",
   "runtime/*.js", "runtime/*.mjs",
   "agent_skill/*.md", "agent_skill/references/*.md",
   "mcp/*.mjs", "mcp/data/*.json",
