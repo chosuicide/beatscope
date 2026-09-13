@@ -150,6 +150,11 @@ def test_wheel_ships_mcp_package_data(tmp_path: Path):
     with zipfile.ZipFile(wheel) as archive:
         names = set(archive.namelist())
     required = {
+        "beatscope/web/app/index.html",
+        "beatscope/web/movie-preview.html",
+        "beatscope/web/mv-render.html",
+        "beatscope/web/mv-plan.mjs",
+        "beatscope/web/mv-worker.mjs",
         "beatscope/mcp/runtime_worker.mjs",
         "beatscope/mcp/data/schema_v4.json",
         "beatscope/runtime/runtime.js",
@@ -157,3 +162,5 @@ def test_wheel_ships_mcp_package_data(tmp_path: Path):
         "beatscope/agent_skill/references/schema.md",
     }
     assert required <= names, sorted(required - names)
+    assert any(name.startswith("beatscope/web/app/assets/index-") and name.endswith(".js") for name in names)
+    assert any(name.startswith("beatscope/web/app/assets/index-") and name.endswith(".css") for name in names)

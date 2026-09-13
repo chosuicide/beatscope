@@ -399,7 +399,7 @@ export function responseEvents(snapshot: StudioDirectorSnapshot, input: Response
  */
 export function studioState(snapshot: StudioDirectorSnapshot): ToolResult {
   const tool = 'beatscope_get_studio_state' as const;
-  const rhythm = snapshot.rhythm;
+  const rhythm = snapshot.rhythm ?? null;
   const duration = durationOf(snapshot);
   const downbeats = downbeatsOf(rhythm);
   const relevanceAvailable = Boolean(snapshot.responseRelevance);

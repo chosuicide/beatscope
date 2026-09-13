@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "beatscope"
 version = "0.12.0"
-description = "Local, editable rhythm maps from audio"
+description = "Local music timing analysis, deterministic video preview, and portable Agent handoffs"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"

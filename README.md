@@ -6,33 +6,15 @@ English | [简体中文](README.zh-CN.md)
 [![Version](https://img.shields.io/badge/version-0.12.0-c65032)](https://github.com/chosuicide/beatscope/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
-**Give a coding agent measured music timing — exact beats, raw events, structure, and a caller-sized set of moments worth responding to.**
+**Turn one song into a beat-synchronised film and a timing package a coding agent can verify.**
 
-BeatScope brings three parts together:
+BeatScope measures beats, raw transients, multiband energy, tempo changes and recurring structure. Beathi Studio uses those measurements to preview and render a deterministic music video. The same facts can leave the Studio as a self-checking `.beatscope` package or be queried over MCP.
 
-- **Studio** — upload a song and get a music video: BeatScope measures the track, the studio cuts a deterministic film on those measurements, and the film plays back in the page.
-- **Timing package** — export the same measurements as a portable, self-checking `.beatscope` handoff with no source audio inside.
-- **Runtime + MCP** — let a visual project or coding agent query the same facts, or spend a fixed response budget, without re-analysing the music.
+It does not guess kick, snare or 808 labels, and it never moves a real event onto a cleaner-looking grid.
 
-It reports timing, transient strength, frequency distribution, and neutral structural repetition. It does **not** pretend uncertain events are kicks, snares, or 808s.
+![Beathi Studio playing a deterministic film while the timing maps follow the same media clock](docs/demo/beathi-studio.gif)
 
-## Spend a budget, not every onset
-
-Dense music can contain many valid transients. Making an animation or edit react to all of them produces jitter, even when every timestamp is correct. BeatScope v0.11 keeps the raw event layer intact and adds an optional `response_relevance` ordering trained from licensed human-authored chart consensus.
-
-The consumer still owns the decision. It asks for a count, not a magic threshold:
-
-```js
-const selection = track.responseBetween(startTime, endTime, 12);
-// selection.events: 12 existing onsets, restored to chronological order
-// response_relevance: ordering only — not probability or confidence
-```
-
-No onset is created, deleted, quantised, or moved. Without the sidecar, the same call returns an explicit chronological fallback instead of pretending a model was used.
-
-## Try it in three minutes
-
-Python 3.10+ is required.
+## The short path
 
 ```powershell
 git clone https://github.com/chosuicide/beatscope.git
@@ -43,87 +25,63 @@ pip install -e ".[dev]"
 beatscope serve
 ```
 
-Open `http://127.0.0.1:8765` and choose a WAV, FLAC, MP3, OGG, or M4A file: the studio measures it, cuts the film, and plays it back. Analysis and rendering are local; request-scoped temporary files are removed after processing.
+Open `http://127.0.0.1:8765`, choose a WAV, FLAC, MP3, OGG or M4A file, and let the local analyser finish. You can then:
 
-## One package, different visual languages
+1. play the built-in film preview;
+2. inspect the whole-song structure and eight-bar cue map;
+3. render an MP4 when the local browser and FFmpeg support it; or
+4. export timing data for a DAW or coding agent.
 
-The three reference works below consume the same frozen handoff. They share timing facts — not components, renderers, or visual metaphors.
+Python 3.10+ is required. Analysis, preview and rendering stay on the machine; request-scoped temporary files are removed after processing.
 
-[![Three visual stacks driven by one BeatScope package](docs/demo/consumer-showcase.gif)](docs/demo/consumer-showcase.mp4)
+## What the Studio shows
 
-| Canvas 2D | Three.js | Remotion |
-| --- | --- | --- |
-| ![Warm monochrome signal print](docs/demo/consumer-canvas.png) | ![Suspended braided geometry](docs/demo/consumer-threejs.png) | ![Black, white, and red editorial frame](docs/demo/consumer-remotion.png) |
-| Zero-build interactive study | Pinned `three@0.169.0` sculpture | Deterministic offline composition |
-| [Open example](examples/canvas-particles) | [Open example](examples/threejs-geometry) | [Open example](examples/remotion-composition) |
+![The current Beathi Studio with structure, live preview, exports and the cue map](docs/demo/beathi-studio.png)
 
-All three read one function:
+The Studio is deliberately one screen rather than an editing timeline:
+
+- **Structure** — neutral A / B / A′ recurrence families. They are navigation, not invented Verse/Chorus labels.
+- **Live preview** — the current `VOXEL INTERFERENCE` template, driven by measured timestamps and one deterministic seed.
+- **Film** — an on-demand 1080×1080, 30 fps render of the same plan used by the preview.
+- **Data export** — the timing package, MIDI and CSV. Source audio is not bundled.
+- **Analysis dock** — a full-song overview and an eight-bar map for impact, scale, flow, flash/bloom and motion cues.
+
+![Full-song structure and eight-bar rhythm detail from the same analysed track](docs/demo/beathi-analysis-map.png)
+
+The media element is the only playback clock. The film preview, playhead, structure list and both maps read that clock; seeking does not restart analysis or invent a second timeline.
+
+## Why dense songs do not drive every frame
+
+A dense mix can contain many valid onsets. Reacting to all of them produces jitter even when every timestamp is correct. BeatScope keeps every raw event and adds an optional `response_relevance` ordering learned from licensed human-authored chart consensus.
+
+The consumer spends a count, not a magic threshold:
 
 ```js
-import { getVisualState } from "./fixture.beatscope/visual-state.js";
-
-function render(time) {
-  const facts = getVisualState(time);
-  // facts: bar, beat, beatPhase/barPhase, LOW/MID/HIGH, onset, accent, structure
-  // The direction — spread, flow, boundary envelopes, palette — is authored by
-  // each consumer, because the package ships measurements and no scene.
-}
+const selection = track.responseBetween(startTime, endTime, 12);
+// 12 existing onsets, returned in chronological order.
+// response_relevance is ordering only: not probability or confidence.
 ```
 
-Use `audio.currentTime` in an interactive player or `frame / fps` in an offline renderer. Pause, seek, replay, and repeated renders resolve the same instant to the same state.
+No onset is created, deleted, quantised or moved. If the sidecar is absent, the runtime says it used chronological fallback instead of pretending a model was available.
 
-## A fresh-context Codex result
+## The Agent handoff
 
-This fourth work was not designed inside the BeatScope repository. A fresh Codex task received only the frozen brief, checkpoints, and exported handoff, then built **Orbital Notation**, a dependency-free Canvas consumer.
-
-![Orbital Notation running against the frozen BeatScope fixture](docs/demo/codex-orbital-notation.gif)
-
-The capture above was taken while its synthetic fixture audio was actually playing. The run passed all 5 required validation layers, including browser play, seek, replay, deterministic state, and reduced-motion timing. Generated source required no human repair; the operator only supplied the pinned browser-test path. [Read the run record](evaluations/agent-interoperability/runs/codex-canvas-2026-09-02.json) or [see the generated conformance table](evaluations/agent-interoperability/conformance.md).
-
-**Evidence status:** 1 fresh-context Coding Agent product recorded. The broader “validated across Coding Agents” claim remains pending until a second independent product passes the same frozen task.
-
-## What happens after upload
-
-```text
-local audio
-   │
-   ├─ beat times + tempo changes
-   ├─ transients + LOW / MID / HIGH energy
-   ├─ optional response relevance over those same transients
-   └─ neutral structure: A / B / A′ + boundaries
-                │
-                ├─ Studio player and eight-bar cue map
-                ├─ optional response ordering for a bounded animation budget
-                ├─ MCP queries
-                └─ self-describing handoff package
-```
-
-### Studio
-
-Open `http://127.0.0.1:8765`, drop in a song, and the studio measures it, cuts a film from those measurements, and plays it back — one page and no editing timeline. The same page exports the timing package below. Details: [docs/local-movie.md](docs/local-movie.md).
-
-### Handoff package
-
-Every export carries measured timing facts, a deterministic runtime, Agent routing instructions, a Skill, integrity hashes, and a dependency-free probe — and deliberately **no visual layer**: no recipe, no scene timeline, no style, no task statement, because the visual is the consumer's decision and a package that pre-decides it stops the agent from asking the user what they want.
+The exported package carries measurements and their executable timing contract. It deliberately carries no style, scene timeline, template, source audio or pre-written task: the receiving agent should still ask what the user wants to make and what media is available.
 
 ```text
 project.beatscope/
-├── beatscope-package.json     routing manifest: entry, probe, capabilities, summary, per-member sha256
-├── README.md                  the inventory, what is deliberately absent, what is authoritative
-├── AGENT.md                   the contract: clock, purity, ground rules, what to settle with the user
-├── rhythm-map.json            the measured facts (authoritative)
-├── rhythm.mid / rhythm.csv    the same facts for a DAW or a spreadsheet
-├── response-relevance.json    ordering-only sidecar for spending a response budget (+ -data.js copy)
-├── visual-state.js            getVisualState(time), getResponseEvents(start, end, budget)
-├── beatscope-runtime.js       the shared runtime the accessor builds on
+├── beatscope-package.json     entry points, capabilities and member hashes
+├── rhythm-map.json            authoritative measured facts
+├── response-relevance.json    ordering over existing onset ids
+├── rhythm.mid / rhythm.csv    DAW and tabular views of the same facts
+├── visual-state.js            getVisualState() + getResponseEvents()
+├── beatscope-runtime.js       deterministic, DOM-free timing runtime
+├── consumer-probe.js          dependency-free self-check
 ├── worker-example.js          module Worker adapter
-├── consumer-probe.js          self-check: node consumer-probe.js .
-├── BEATSCOPE.md               timing invariants
-├── SKILL.md, references/schema.md
+├── AGENT.md / BEATSCOPE.md    reading order and timing invariants
+├── SKILL.md / references/     instructions and schema
 └── LICENSE
 ```
-
-Source audio is never bundled. `response-relevance.json` contains onset ids and bounded ordering values, never replacement timestamps. A consumer can verify paths, manifest shape, hashes, executable templates, checkpoints, and clock semantics before it runs package JavaScript.
 
 ```powershell
 beatscope validate-handoff path\to\project.beatscope --checkpoints checkpoints.json
@@ -131,96 +89,100 @@ beatscope validate-consumer examples\canvas-particles --browser
 beatscope validate-consumer examples\remotion-composition --offline
 ```
 
-## MCP: query music without opening the Studio
+One frozen handoff already drives three independent reference consumers:
+
+| Canvas 2D | Three.js | Remotion |
+| --- | --- | --- |
+| ![Warm monochrome signal print](docs/demo/consumer-canvas.png) | ![Suspended braided geometry](docs/demo/consumer-threejs.png) | ![Black, white and red editorial frame](docs/demo/consumer-remotion.png) |
+| Zero-build browser study | Pinned `three@0.169.0` sculpture | Deterministic offline composition |
+| [Open example](examples/canvas-particles) | [Open example](examples/threejs-geometry) | [Open example](examples/remotion-composition) |
+
+A separate fresh-context Codex run received only the frozen task and handoff, then produced the dependency-free Canvas work **Orbital Notation**. It passed browser play, seek, replay, deterministic-state and reduced-motion checks without source repair. [Run record](evaluations/agent-interoperability/runs/codex-canvas-2026-09-02.json) · [conformance table](evaluations/agent-interoperability/conformance.md)
+
+## MCP
 
 ```powershell
 pip install -e ".[mcp]"
 beatscope-mcp
 ```
 
-The local stdio server exposes six tools:
+The local stdio server exposes six stable tools:
 
-| Tool | Use it for |
+| Tool | Purpose |
 | --- | --- |
-| `beatscope_list_projects` | Find locally cached analyses |
-| `beatscope_get_project` | Read timing, provenance, and structure summaries |
+| `beatscope_list_projects` | List cached analyses |
+| `beatscope_get_project` | Read timing, provenance and structure summaries |
 | `beatscope_analyze_audio` | Analyse local audio with progress and cancellation |
-| `beatscope_get_visual_state` | Resolve the measured facts at one instant — the package's `getVisualState(time)`, over MCP |
-| `beatscope_get_events` | Query facts in a window; optionally spend `response_budget` on ranked, unshifted onsets |
-| `beatscope_export_package` | Write a portable handoff atomically |
+| `beatscope_get_visual_state` | Resolve measured facts at one instant |
+| `beatscope_get_events` | Query a bounded window and optionally spend a response budget |
+| `beatscope_export_package` | Write a handoff package atomically |
 
-Paths are restricted by `BEATSCOPE_ALLOWED_ROOTS`; analysis and queries stay local. See the complete [MCP contract and client configuration](docs/mcp.md).
+Allowed paths are restricted by `BEATSCOPE_ALLOWED_ROOTS`. See [docs/mcp.md](docs/mcp.md) for the full contract and client configuration.
 
-## Why it stays in sync
+## Data path
 
-BeatScope separates three layers, and only the first two travel:
+```text
+local audio
+   └─ measurement
+      ├─ exact beats + tempo segments
+      ├─ raw onsets + LOW / MID / HIGH energy
+      ├─ optional ordering over those same onsets
+      └─ neutral structure + boundaries
+          ├─ Beathi preview and MP4 render
+          ├─ full-song and eight-bar maps
+          ├─ MIDI / CSV / .beatscope export
+          └─ runtime and MCP queries
+```
 
-1. **Facts** — beat timestamps, transients, and multiband energy.
-2. **Semantics** — tempo segments, bars, quantised cues, boundaries, and repeat families.
-3. **Presentation** — motion budgets, structural scenes, and transition envelopes.
-   This one is the consumer's decision: it is not shipped, not served over MCP,
-   and not stated as a task, so whoever receives the measurements can still ask
-   the user what they want.
-
-The dependency-free JavaScript runtime has no DOM, Audio, Canvas, or wall-clock dependency. The player, MCP bridge, exported package, and reference consumers query that same model instead of carrying slightly different copies of the song.
+The analyser produces facts. Consumers choose presentation. That separation is why an interactive player, an offline renderer and a coding agent can resolve the same musical instant without sharing a renderer.
 
 <details>
-<summary><strong>Accuracy, determinism, and benchmark gates</strong></summary>
+<summary><strong>Evidence and benchmark boundaries</strong></summary>
 
-The audio benchmark contains 11 synthetic cases with frozen ground truth: fixed, dense, sparse, off-grid, bass-heavy, silence, abrupt tempo change, gradual drift, micro-drift, and an octave trap. All current gates pass. The tempo-change case improved from beat F1 `0.16` to `1.00`; its two tempo segments land within `0.185 / 0.325 BPM`, with a `0.01 s` change-point error and no missing or extra seam beat.
+The audio regression suite contains 11 synthetic cases with frozen ground truth, including dense, sparse, off-grid, abrupt and gradual tempo changes, silence and an octave trap. The abrupt-change case currently reaches beat F1 `1.00`, with `0.185 / 0.325 BPM` segment errors and a `0.01 s` change-point error. These fixtures prevent regressions; they are not a blanket real-world MIR accuracy claim.
 
-These deterministic synthetic fixtures are regression evidence with exact ground truth, not a blanket claim of real-world music-information-retrieval accuracy.
+The response ranker has a sealed holdout of 23 songs and 144 licensed StepMania charts from a source excluded from development. Against raw onset strength it improves pairwise agreement by `0.0238`, NDCG@10 by `0.2983` and recall-at-budget by `0.0847`; the pairwise-gain 95% bootstrap interval is `[0.0146, 0.0336]`. This measures agreement with gameplay-oriented chart consensus, not universal musical importance.
 
-The v0.11 response ranker has a separate sealed holdout: 23 songs and 144 licensed StepMania charts from a source excluded from development. Against raw onset strength, it improves pairwise agreement by `0.0238`, NDCG@10 by `0.2983`, and recall-at-budget by `0.0847`; the 95% bootstrap interval for pairwise gain is `[0.0146, 0.0336]`. This measures agreement with gameplay-oriented human chart consensus, not universal musical importance.
+Structure has a separate ten-arrangement benchmark. CI runs on Windows and Ubuntu with Python 3.10 and 3.12, and replays pinned browser-consumer and Remotion evidence without contacting remote agents.
 
-Structure has a separate ten-arrangement benchmark. The current Studio has deterministic timing, cut-plan, encoder-safety, TypeScript, and production-build gates. CI runs on Windows and Ubuntu with Python 3.10 and 3.12, plus pinned browser-consumer and Remotion offline evidence jobs.
+</details>
+
+## Commands and documentation
 
 ```powershell
+beatscope serve
+beatscope analyze song.wav
+beatscope doctor
 beatscope benchmark
 beatscope benchmark-structure
 ```
 
-</details>
-
-## Useful commands
-
-```powershell
-beatscope serve
-beatscope rhythm song.wav --output rhythm.json
-beatscope doctor
-beatscope benchmark
-```
-
-For dense mixes, optional Beat This and Demucs inputs are available through `.[high-quality]`; selecting CUDA never silently falls back to CPU.
-
-## Documentation
-
-- [MCP server and client setup](docs/mcp.md)
-- [Consumer conformance](evaluations/agent-interoperability/conformance.md)
+- [Local Studio and movie renderer](docs/local-movie.md)
+- [Studio design and failure contracts](docs/design/movie-studio.md)
+- [MCP server](docs/mcp.md)
 - [Frozen cross-Agent task](evaluations/agent-interoperability/TASK.md)
 - [Repository Skill](skills/beatscope-visualizer/SKILL.md)
-- [Releases](https://github.com/chosuicide/beatscope/releases)
 
-## Development
+Development gates:
 
 ```powershell
 pytest -q
 npm run test:js
-beatscope validate-handoff examples\shared\fixture.beatscope --checkpoints examples\shared\checkpoints.json
+npm run check:web-deps
+npm run typecheck --prefix web-src
+npm run build --prefix web-src
 ```
-
-The repository includes Python, JavaScript, browser, package-integrity, MCP, benchmark, and cross-platform regression coverage. Generated evidence is replayed in CI; CI never contacts remote Agents.
 
 ## Limits
 
-- BeatScope supplies deterministic musical timing, not finished art direction.
-- Structural families describe repetition, not emotion, lyrics, or Verse/Chorus roles.
-- The built-in analyser reports transient and band evidence, not instrument identity.
-- `response_relevance` is a budget-ordering value learned from chart consensus, not probability, confidence, or musical truth.
-- Source audio is not included in exports or examples.
+- BeatScope supplies deterministic timing, not finished art direction.
+- Structure families describe recurrence, not emotion, lyrics or song-section names.
+- The analyser reports transient and band evidence, not instrument identity.
+- `response_relevance` is an ordering value, not probability, confidence or musical truth.
 - MP3 support requires local libsndfile support or FFmpeg.
-- Very long, gradual, or ambiguous arrangements may honestly resolve to one structural segment.
-- Beat/tempo/structure accuracy still relies primarily on deterministic synthetic fixtures. The response ranker has one licensed StepMania holdout source; broader genres, formats, and public MIR datasets remain future work.
+- Long, gradual or ambiguous arrangements may honestly resolve to one segment.
+- The built-in Studio currently ships one film template; the timing package is intentionally renderer-independent.
+- Beat/tempo/structure accuracy is still guarded mainly by synthetic fixtures. Broader public real-music evaluation remains future work.
 
 ## License
 

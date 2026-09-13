@@ -15,9 +15,9 @@
  * Baked from the supplied PNG (1672x941) to 2048x1153 by
  * build/bake-paper-wall.py; the source is build/paper-wall-src.png.
  *
- * Scope: the Beathi Canvas workspace (`?canvas`) and the new workspace
- * (`?composition=1`) keep their own surfaces — this sheet is the movie
- * studio's alone. To move it, edit the two rule sets below.
+ * Scope: the retired canvas and composition workspaces are no longer routed;
+ * this sheet belongs to the movie studio alone. To move it, edit the two rule
+ * sets below.
  */
 body .mv-shell {
   background-image: url('./paper-wall.webp');

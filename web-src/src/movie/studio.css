@@ -649,3 +649,45 @@
   border-color: var(--line-strong);
   background: rgba(255, 255, 255, 0.55);
 }
+
+/* Agent presence: a quiet chip, and one transient strip for page-changing
+   calls only. Ordinary browsers never render either. */
+.mv-agent {
+  font: 500 10px/1 var(--mono, monospace);
+  letter-spacing: .06em;
+  padding: 5px 8px;
+  border: 1px solid var(--line, rgba(0, 0, 0, .18));
+  border-radius: 999px;
+  color: var(--ink-1, #3b3b36);
+  background: rgba(255, 255, 255, .5);
+}
+.mv-agent.error { color: #8a2a1f; border-color: rgba(138, 42, 31, .4); }
+.mv-agent-sr {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.mv-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--line, rgba(0, 0, 0, .16));
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .62);
+  font: 500 11px/1.2 var(--mono, monospace);
+  color: var(--ink-1, #3b3b36);
+}
+.mv-strip .sp { flex: 1; }
+.mv-strip button {
+  font: inherit;
+  padding: 4px 8px;
+  border: 1px solid var(--line, rgba(0, 0, 0, .18));
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .7);
+  cursor: pointer;
+}

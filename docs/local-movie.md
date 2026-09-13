@@ -1,4 +1,4 @@
-# Local automatic music video (work in progress)
+# Local music-video Studio
 
 The studio's layout skeleton, surface treatment and motion contract are frozen in
 [`design/movie-studio.md`](design/movie-studio.md) — read that before changing the screen.

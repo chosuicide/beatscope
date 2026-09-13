@@ -15,6 +15,7 @@ import { CueMap } from './CueMap';
 import type { MovieRhythm } from './types';
 import { createMusicGrid } from '../../../beatscope/web/music-grid.mjs';
 import type { AgentActivity, ExportResult, MovieActionResult, ResponseRelevanceSidecar, StudioDirectorPort, StudioDirectorSnapshot, StudioStage } from '../webmcp/types.js';
+import { installStudioWebMCP, type DirectorStatus } from '../webmcp/register.js';
 import { LANGS, setLang, t, useCopy, useLang } from './copy';
 import './studio.css';
 
@@ -55,6 +56,9 @@ export default function MovieStudio() {
   const auditionRef = useRef<{ time: number; playing: boolean } | null>(null);
   const auditionCleanup = useRef<(() => void) | null>(null);
   const dataExport = useRef<HTMLAnchorElement>(null);
+  /* WebMCP presence: 'unsupported' renders nothing at all. */
+  const [agent, setAgent] = useState<{ status: DirectorStatus; count: number; detail?: string }>({ status: 'unsupported', count: 0 });
+  const [stripHidden, setStripHidden] = useState(false);
   const [time, setTime] = useState(0), [playing, setPlaying] = useState(false);
   const [startBar, setStartBar] = useState(1), [follow, setFollow] = useState(true);
   const [elapsed, setElapsed] = useState(0);
@@ -384,10 +388,21 @@ export default function MovieStudio() {
       return { action: 'cancel', job: current.movieJob, seed: current.seed };
     },
     exportTimingPackage: () => downloadTimingPackage(),
-    recordAgentAction: (entry: AgentActivity) => setActivity((list) => [...list.slice(-4), entry]),
+    recordAgentAction: (entry: AgentActivity) => { setStripHidden(false); setActivity((list) => [...list.slice(-4), entry]); },
   };
   const portRef = useRef<StudioDirectorPort>(port);
   portRef.current = port;
+
+  /* Register once per mounted document; every callback reads portRef, so a
+     song change never needs a re-registration. */
+  useEffect(() => {
+    const session = installStudioWebMCP(
+      () => portRef.current,
+      (status, count, detail) => setAgent({ status, count, detail }),
+    );
+    return () => session.dispose();
+  }, []);
+  const latest = activity[activity.length - 1];
   const currentBar = grid.barAtTime(time) ?? 1;
 
   return (
@@ -410,6 +425,16 @@ export default function MovieStudio() {
         )}
         <span className="tb-sp" />
         <span className={`mv-chip ${statusTone}`}>{status}{busy && stage !== 'uploading' ? ` ${percent}%` : ''}</span>
+        {agent.status !== 'unsupported' && (
+          <span className={`mv-agent${agent.status === 'error' ? ' error' : ''}`} title={agent.detail}>
+            {agent.status === 'registering' ? copy.agent.connecting
+              : agent.status === 'error' ? copy.agent.error
+                : copy.agent.tools(agent.count)}
+          </span>
+        )}
+        <span className="mv-agent-sr" role="status" aria-live="polite">
+          {agent.status === 'unsupported' ? '' : `${copy.agent.label}: ${agent.status}`}
+        </span>
         <span className="mv-lang" role="group" aria-label="Language">
           {LANGS.map((entry) => (
             <button
@@ -514,6 +539,16 @@ export default function MovieStudio() {
             )}
             {busy && stage !== 'uploading' && <span className="mv-bar" style={{ width: `${percent}%` }} aria-hidden="true" />}
           </div>
+          {latest && !stripHidden && (
+            <div className="mv-strip" role="status">
+              <span>{latest.label}</span>
+              <span className="sp" />
+              {latest.restorable && (
+                <button type="button" onClick={() => { void restoreAudition(); }}>{copy.agent.restore}</button>
+              )}
+              <button type="button" aria-label={copy.agent.dismiss} onClick={() => setStripHidden(true)}>×</button>
+            </div>
+          )}
           <MovieTransport
             time={time}
             duration={duration}

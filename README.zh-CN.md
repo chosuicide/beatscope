@@ -6,33 +6,15 @@
 [![Version](https://img.shields.io/badge/version-0.12.0-c65032)](https://github.com/chosuicide/beatscope/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
-**把可测量的音乐时序交给 Coding Agent：精确拍点、原始事件、结构，以及由调用方限定数量的响应时刻。**
+**上传一首歌，得到一支对拍成片，以及一份 Coding Agent 能自行校验的时序包。**
 
-BeatScope 同时提供三个部分：
+BeatScope 测量拍点、原始瞬态、多频段能量、变速段和重复结构；Beathi Studio 根据这些测量实时预览并确定性地渲染音乐视频。同一份事实也可以导出为自检式 `.beatscope` 包，或通过 MCP 查询。
 
-- **Studio**：上传一首歌，直接得到一支音乐视频：BeatScope 测量音乐，工作室依据这些测量剪出一支确定性的片子，并在页面里播放。
-- **时序包**：把同一份测量导出为不含原始音频、可移植且能自检的 `.beatscope` 交接包。
-- **Runtime + MCP**：让视觉项目或 Coding Agent 读取同一份事实，或按固定预算选择响应点，无需重新分析音乐。
+它不会猜 kick、snare、808，也不会为了网格好看而把真实事件挪到另一个时刻。
 
-它报告时间、瞬态强度、频段分布和中性的重复结构，但**不会**把不确定事件硬说成 kick、snare 或 808。
-
-## 给响应数量设预算，而不是追着每个 onset 动
-
-密集歌曲里可能同时存在很多有效瞬态。即使时间戳都对，让动画或剪辑响应全部事件仍会显得抽搐。BeatScope v0.11 保留完整原始事件层，并新增可选的 `response_relevance` 排序；它来自有授权的人类谱面共识。
-
-最终选择仍由消费者决定。调用方给出数量，而不是相信一个神奇阈值：
-
-```js
-const selection = track.responseBetween(startTime, endTime, 12);
-// selection.events：12 个原有 onset，返回前恢复为时间顺序
-// response_relevance：只用于排序，不是概率或置信度
-```
-
-它不会创建、删除、量化或移动 onset。缺少 sidecar 时，同一个调用会明确返回按时间顺序回退，而不会伪装成用了模型。
+![Beathi Studio 播放确定性成片，时序图与画面共用同一个媒体时钟](docs/demo/beathi-studio.gif)
 
 ## 三分钟开始
-
-需要 Python 3.10 或更高版本。
 
 ```powershell
 git clone https://github.com/chosuicide/beatscope.git
@@ -43,86 +25,63 @@ pip install -e ".[dev]"
 beatscope serve
 ```
 
-打开 `http://127.0.0.1:8765`，选择 WAV、FLAC、MP3、OGG 或 M4A 文件：工作室会测量它、剪出片子并直接播放。分析和渲染都在本地完成，请求产生的临时文件会在处理后清理。
+打开 `http://127.0.0.1:8765`，选择 WAV、FLAC、MP3、OGG 或 M4A。待本地分析完成后，你可以：
 
-## 一份时序包，不同的视觉语言
+1. 播放内置模板的实时预览；
+2. 查看全曲结构与八小节 cue map；
+3. 在本机浏览器和 FFmpeg 可用时渲染 MP4；
+4. 为 DAW 或 Coding Agent 导出时序数据。
 
-下面三个参考作品读取同一份冻结交接包。它们只共享时序事实，不共享组件、渲染器或视觉隐喻。
+需要 Python 3.10+。分析、预览和渲染都留在本机，请求产生的临时文件会在处理后删除。
 
-[![同一 BeatScope 时序包驱动三个视觉栈](docs/demo/consumer-showcase.gif)](docs/demo/consumer-showcase.mp4)
+## Studio 里有什么
 
-| Canvas 2D | Three.js | Remotion |
-| --- | --- | --- |
-| ![暖色单色信号印刷](docs/demo/consumer-canvas.png) | ![悬浮编织几何体](docs/demo/consumer-threejs.png) | ![黑白红编辑式画面](docs/demo/consumer-remotion.png) |
-| 零构建交互作品 | 固定 `three@0.169.0` 的雕塑 | 确定性离线合成 |
-| [打开示例](examples/canvas-particles) | [打开示例](examples/threejs-geometry) | [打开示例](examples/remotion-composition) |
+![当前 Beathi Studio：结构、实时预览、导出与 cue map](docs/demo/beathi-studio.png)
 
-三者都只读取一个函数：
+Studio 刻意做成一个页面，而不是另一条剪辑时间线：
+
+- **结构栏**：中性的 A / B / A′ 重复家族。它用于导航，不冒充主歌/副歌判断。
+- **实时预览**：当前内置的 `VOXEL INTERFERENCE` 模板，由实测时间戳和一个确定性 seed 驱动。
+- **成片**：按需输出 1080×1080、30 fps 的 MP4，预览与渲染共用同一份剪辑计划。
+- **数据导出**：时序包、MIDI 和 CSV；不会把原始音频塞进包里。
+- **分析区**：全曲导航，以及 impact、scale、flow、flash/bloom、motion 的八小节细节。
+
+![同一首已分析歌曲的全曲结构与八小节节奏细节](docs/demo/beathi-analysis-map.png)
+
+媒体元素是唯一播放时钟。预览、播放头、结构列表和两张节奏图都读取它；Seek 不会重启分析，也不会偷偷产生第二套时间线。
+
+## 密集歌曲为什么不会让每一帧都动
+
+密集混音里可能有很多有效 onset。即使每个时间戳都正确，让动画或剪辑响应全部事件仍会显得抽搐。BeatScope 保留所有原始事件，并增加可选的 `response_relevance` 排序；它来自有授权的人类谱面共识。
+
+消费者给的是数量预算，而不是相信一个神奇阈值：
 
 ```js
-import { getVisualState } from "./fixture.beatscope/visual-state.js";
-
-function render(time) {
-  const facts = getVisualState(time);
-  // facts：小节、拍、相位、LOW/MID/HIGH、onset、accent、结构分段
-  // 视觉方向（疏密、流动、边界包络、配色）由每个消费者自己编写——包里只有测量结果，没有场景。
-}
+const selection = track.responseBetween(startTime, endTime, 12);
+// 12 个既有 onset，返回时恢复为时间顺序。
+// response_relevance 只用于排序，不是概率或置信度。
 ```
 
-交互播放器使用 `audio.currentTime`，离线渲染器使用 `frame / fps`。暂停、Seek、重放和重复渲染都会把同一时刻解析为同一状态。
+它不会创建、删除、量化或移动 onset。缺少 sidecar 时，runtime 会明确说明用了时间顺序回退，不会假装模型存在。
 
-## 一次全新上下文的 Codex 实测
+## Agent 交接包
 
-第四个作品并非在 BeatScope 仓库上下文中设计。一个全新的 Codex 任务只拿到了冻结需求、检查点和导出的交接包，随后独立生成了零依赖 Canvas 作品 **Orbital Notation**。
-
-![Orbital Notation 使用冻结 BeatScope fixture 运行](docs/demo/codex-orbital-notation.gif)
-
-上面的动图是在合成 fixture 音频真实播放时录制的。该次运行通过全部 5 个必需验证层，包括浏览器播放、Seek、重放、确定性状态和 reduced-motion 时序。生成代码没有经过人工修复；操作者只向验证器提供了仓库固定的浏览器测试路径。[查看运行记录](evaluations/agent-interoperability/runs/codex-canvas-2026-09-02.json)，或[查看自动生成的符合性表格](evaluations/agent-interoperability/conformance.md)。
-
-**证据状态：** 已记录 1 个全新上下文 Coding Agent 产品。只有第二个独立产品通过同一冻结任务后，项目才会声明 “validated across Coding Agents”。
-
-## 上传后发生了什么
-
-```text
-本地音频
-   │
-   ├─ 拍点 + 变速段
-   ├─ 瞬态 + LOW / MID / HIGH 能量
-   ├─ 基于同一批瞬态的可选响应排序
-   └─ 中性结构：A / B / A′ + 边界
-                │
-                ├─ Studio 播放器与八小节 cue map
-                ├─ 确定性视觉配方 + 场景时间线
-                ├─ MCP 查询
-                └─ 自描述交接包
-```
-
-### Studio
-
-打开 `http://127.0.0.1:8765`，丢进一首歌，工作室会测量它、依据测量剪出一支片子并直接播放——一个页面，没有剪辑时间线。同一个页面负责导出下面的时序包。细节见 [docs/local-movie.md](docs/local-movie.md)。
-
-### 交接包
-
-每次导出都会带上节奏地图、确定性 runtime、Agent 路由说明、Skill、完整性哈希和零依赖探针；并且刻意**不含任何视觉层**：没有配方、没有场景时间线、没有风格、没有任务陈述，因为视觉是消费者自己的决定，而一个预先定好视觉的包会让 agent 不再去问用户想要什么。
+导出包携带测量结果和可执行的时序契约。它刻意不带风格、场景时间线、模板、原始音频或预写任务：拿到包的 Agent 仍应询问用户要做什么，以及有哪些素材可用。
 
 ```text
 project.beatscope/
-├── beatscope-package.json     路由清单：入口、探针、能力、摘要、逐成员 sha256
-├── README.md                  文件清单、刻意不含的东西、谁是权威
-├── AGENT.md                   契约：时钟、纯度、禁令、需要与用户确认的问题
-├── rhythm-map.json            实测事实（权威）
-├── rhythm.mid / rhythm.csv    同一份事实，给 DAW 或表格
-├── response-relevance.json    只用于排预算的排序侧车（另有 -data.js 副本）
-├── visual-state.js            getVisualState(time)、getResponseEvents(start, end, budget)
-├── beatscope-runtime.js       访问器所依赖的共享运行时
+├── beatscope-package.json     入口、能力与逐文件哈希
+├── rhythm-map.json            权威实测事实
+├── response-relevance.json    对既有 onset id 的排序
+├── rhythm.mid / rhythm.csv    同一事实的 DAW 与表格视图
+├── visual-state.js            getVisualState() + getResponseEvents()
+├── beatscope-runtime.js       确定性、无 DOM 的时序 runtime
+├── consumer-probe.js          零依赖自检
 ├── worker-example.js          module Worker 适配器
-├── consumer-probe.js          自检：node consumer-probe.js .
-├── BEATSCOPE.md               时间不变量
-├── SKILL.md、references/schema.md
+├── AGENT.md / BEATSCOPE.md    阅读顺序与时序不变量
+├── SKILL.md / references/     使用说明与 schema
 └── LICENSE
 ```
-
-交接包绝不携带原始音频。`response-relevance.json` 只包含 onset id 和有界排序值，不会提供替代时间戳。消费者可以先验证路径、manifest、哈希、可执行模板、检查点和时钟语义，再运行包内 JavaScript。
 
 ```powershell
 beatscope validate-handoff path\to\project.beatscope --checkpoints checkpoints.json
@@ -130,93 +89,100 @@ beatscope validate-consumer examples\canvas-particles --browser
 beatscope validate-consumer examples\remotion-composition --offline
 ```
 
-## MCP：不打开 Studio 也能查询音乐
+同一份冻结交接包已经驱动三个互不共享渲染器的参考消费者：
+
+| Canvas 2D | Three.js | Remotion |
+| --- | --- | --- |
+| ![暖色单色信号印刷](docs/demo/consumer-canvas.png) | ![悬浮编织几何体](docs/demo/consumer-threejs.png) | ![黑白红编辑式画面](docs/demo/consumer-remotion.png) |
+| 零构建浏览器作品 | 固定 `three@0.169.0` 的雕塑 | 确定性离线合成 |
+| [打开示例](examples/canvas-particles) | [打开示例](examples/threejs-geometry) | [打开示例](examples/remotion-composition) |
+
+另一次全新上下文 Codex 实测只拿到了冻结任务与交接包，随后独立生成零依赖 Canvas 作品 **Orbital Notation**。它通过了浏览器播放、Seek、重放、确定性状态和 reduced-motion 检查，源代码无需人工返修。[运行记录](evaluations/agent-interoperability/runs/codex-canvas-2026-09-02.json) · [符合性表格](evaluations/agent-interoperability/conformance.md)
+
+## MCP
 
 ```powershell
 pip install -e ".[mcp]"
 beatscope-mcp
 ```
 
-本地 stdio 服务提供六个工具：
+本地 stdio 服务提供六个稳定工具：
 
 | 工具 | 用途 |
 | --- | --- |
-| `beatscope_list_projects` | 查找本地缓存的分析项目 |
+| `beatscope_list_projects` | 列出本地缓存分析 |
 | `beatscope_get_project` | 读取时序、来源和结构摘要 |
 | `beatscope_analyze_audio` | 带进度与取消能力地分析本地音频 |
-| `beatscope_get_visual_state` | 查询某一时刻的测量事实——即包里的 `getVisualState(time)`，改由 MCP 提供 |
-| `beatscope_get_events` | 查询时间窗内的事实；也可用 `response_budget` 选择排序后的原时刻 onset |
-| `beatscope_export_package` | 原子写入可移植交接包 |
+| `beatscope_get_visual_state` | 查询某一时刻的实测事实 |
+| `beatscope_get_events` | 查询有界时间窗，并可按预算选择响应事件 |
+| `beatscope_export_package` | 原子写入交接包 |
 
-路径受 `BEATSCOPE_ALLOWED_ROOTS` 限制，分析和查询都留在本机。完整配置见 [MCP 契约与客户端设置](docs/mcp.md)。
+允许访问的路径受 `BEATSCOPE_ALLOWED_ROOTS` 限制。完整契约与客户端设置见 [docs/mcp.md](docs/mcp.md)。
 
-## 为什么它不会越播越偏
+## 数据怎样流动
 
-BeatScope 把信息分为三层，但只有前两层会被交付：
+```text
+本地音频
+   └─ 测量
+      ├─ 精确拍点 + 变速段
+      ├─ 原始 onset + LOW / MID / HIGH 能量
+      ├─ 对同一批 onset 的可选排序
+      └─ 中性结构 + 边界
+          ├─ Beathi 预览与 MP4 渲染
+          ├─ 全曲图与八小节图
+          ├─ MIDI / CSV / .beatscope 导出
+          └─ runtime 与 MCP 查询
+```
 
-1. **事实**：拍点时间、瞬态和多频段能量。
-2. **语义**：变速段、小节、量化 cue、结构边界和重复家族。
-3. **表现**：动效预算、结构场景和过渡包络。这一层是消费者自己的决定：它不出现在包里，不经 MCP 提供，也不作为任务被写死，所以拿到测量结果的一方仍然可以去问用户想要什么。
-
-零依赖 JavaScript runtime 不接触 DOM、Audio、Canvas 或墙上时钟。播放器、MCP bridge、导出包和参考消费者查询的是同一套模型，而不是各自保存一份略有差异的歌曲解释。
+分析器负责事实，消费者负责表现。正因为这样，交互播放器、离线渲染器和 Coding Agent 才能在不共享视觉代码的前提下解析同一个音乐时刻。
 
 <details>
-<summary><strong>准确度、确定性与 benchmark 门槛</strong></summary>
+<summary><strong>证据与 benchmark 边界</strong></summary>
 
-音频 benchmark 含 11 个带冻结真值的合成场景：固定、密集、稀疏、离网格、重低音、静音、突然变速、渐变速度、微漂移和八度陷阱。当前全部门槛通过。tempo-change 的拍点 F1 从 `0.16` 提升到 `1.00`；两个速度段误差为 `0.185 / 0.325 BPM`，变速点误差 `0.01 s`，接缝没有漏拍或多拍。
+音频回归套件含 11 个有冻结真值的合成场景，包括密集、稀疏、离网格、突然/渐进变速、静音和八度陷阱。突然变速场景目前达到 beat F1 `1.00`，两段速度误差为 `0.185 / 0.325 BPM`，变速点误差 `0.01 s`。这些 fixture 用来防回归，不是“真实世界 MIR 已全面准确”的宣传。
 
-这些确定性合成 fixture 用精确真值守住回归，不代表项目已经全面证明真实音乐上的 MIR 准确率。
+响应排序器另有封存测试集：23 首歌曲、144 张有授权的 StepMania 谱面，来源在开发阶段完全隔离。相对只看 onset strength 的基线，成对一致率提升 `0.0238`、NDCG@10 提升 `0.2983`、预算内召回提升 `0.0847`；成对提升的 95% bootstrap 区间为 `[0.0146, 0.0336]`。它衡量的是与游戏谱面式人类共识的一致程度，不是普适“音乐重要性”。
 
-v0.11 的响应排序器另有封存测试集：23 首歌曲、144 张有授权的 StepMania 谱面，来源在开发阶段完全隔离。相对只看 onset strength 的基线，成对一致率提升 `0.0238`、NDCG@10 提升 `0.2983`、预算内召回提升 `0.0847`；成对提升的 95% bootstrap 区间为 `[0.0146, 0.0336]`。这些数字衡量的是与游戏谱面式人类共识的一致程度，不是普适的“音乐重要性”。
+结构另有十种编排 benchmark。CI 在 Windows、Ubuntu、Python 3.10 与 3.12 上运行，并会重放固定浏览器消费者和 Remotion 证据，但不会联系远程 Agent。
 
-结构另有十种编排 benchmark。当前 Studio 另有确定性时序、剪辑计划、编码失败安全、TypeScript 与生产构建门禁。CI 在 Windows、Ubuntu、Python 3.10 与 3.12 上运行，并包含固定浏览器消费者和 Remotion 离线证据任务。
+</details>
+
+## 命令与文档
 
 ```powershell
+beatscope serve
+beatscope analyze song.wav
+beatscope doctor
 beatscope benchmark
 beatscope benchmark-structure
 ```
 
-</details>
-
-## 常用命令
-
-```powershell
-beatscope serve
-beatscope rhythm song.wav --output rhythm.json
-beatscope doctor
-beatscope benchmark
-```
-
-针对密集混音，可通过 `.[high-quality]` 使用可选的 Beat This 与 Demucs 输入；选择 CUDA 后不会静默退回 CPU。
-
-## 文档
-
-- [MCP 服务与客户端设置](docs/mcp.md)
-- [消费者符合性结果](evaluations/agent-interoperability/conformance.md)
+- [本地 Studio 与电影渲染器](docs/local-movie.md)
+- [Studio 设计与失败契约](docs/design/movie-studio.md)
+- [MCP 服务](docs/mcp.md)
 - [冻结的跨 Agent 任务](evaluations/agent-interoperability/TASK.md)
 - [仓库 Skill](skills/beatscope-visualizer/SKILL.md)
-- [版本发布](https://github.com/chosuicide/beatscope/releases)
 
-## 开发验证
+开发门禁：
 
 ```powershell
 pytest -q
 npm run test:js
-beatscope validate-handoff examples\shared\fixture.beatscope --checkpoints examples\shared\checkpoints.json
+npm run check:web-deps
+npm run typecheck --prefix web-src
+npm run build --prefix web-src
 ```
-
-仓库包含 Python、JavaScript、浏览器、包完整性、MCP、benchmark 和跨平台回归测试。CI 只重放已经提交的证据，不会在流水线里联系远程 Agent。
 
 ## 已知边界
 
-- BeatScope 提供确定性音乐时序，不替代完整的艺术指导。
-- 结构家族描述重复关系，不识别情绪、歌词或主歌/副歌。
-- 内置分析器报告瞬态与频段证据，不判断乐器身份。
-- `response_relevance` 是从谱面共识学到的预算排序值，不是概率、置信度或音乐真理。
-- 导出包和示例不包含原始音频。
+- BeatScope 提供确定性时序，不替代完整艺术指导。
+- 结构家族只描述重复关系，不识别情绪、歌词或歌曲段落名称。
+- 分析器报告瞬态与频段证据，不判断乐器身份。
+- `response_relevance` 是排序值，不是概率、置信度或音乐真理。
 - MP3 需要本地 libsndfile 支持或 FFmpeg。
-- 很长、渐变或结构含糊的歌曲可能诚实地只得到一个结构段。
-- 拍点、速度与结构的准确度仍主要依赖确定性合成 fixture。响应排序器目前只有一个有授权的 StepMania 封存来源；更多曲风、格式和公开 MIR 数据集仍待补齐。
+- 很长、渐进或结构含糊的歌曲可能诚实地只得到一个结构段。
+- Studio 当前内置一套成片模板；时序包刻意与渲染器解耦。
+- 拍点、速度与结构的准确度仍主要由合成 fixture 守住。更广的公开真实音乐评测仍待补齐。
 
 ## 许可证
 

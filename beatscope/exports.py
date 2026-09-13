@@ -305,7 +305,14 @@ def canonical_json_bytes(value: Any) -> bytes:
             return [round6(item) for item in node]
         return node
 
-    canonical = json.dumps(round6(value), indent=2, ensure_ascii=False, allow_nan=False)
+    # Sort object keys as well as normalising numbers. The paired JSON member
+    # is loaded again by validate-handoff before executable templates are
+    # reconstructed; a module generated from insertion order would therefore
+    # have different (but semantically equivalent) bytes and fail the trust
+    # boundary for real user exports.
+    canonical = json.dumps(
+        round6(value), indent=2, ensure_ascii=False, sort_keys=True, allow_nan=False
+    )
     return (canonical + "\n").encode("utf-8")
 
 

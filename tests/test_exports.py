@@ -6,6 +6,7 @@ import zipfile
 from pathlib import Path
 
 from beatscope.exports import generate_codex_export, generate_rhythm_midi, generate_rhythm_csv
+from beatscope.consumer_validation import validate_handoff
 from beatscope.cli import run_doctor, main
 
 
@@ -318,6 +319,19 @@ def test_codex_export_package_is_deterministic():
     finally:
         first.close()
         second.close()
+
+
+def test_fresh_codex_export_passes_its_executable_trust_boundary(tmp_path):
+    """A live export must validate, not only the checked-in no-ranker fixture."""
+    package = tmp_path / "fresh.beatscope.zip"
+    package.write_bytes(generate_codex_export(_visual_export_rhythm()))
+
+    report = validate_handoff(package)
+    checks = {check["name"]: check for check in report["checks"]}
+
+    assert checks["executable-trust"]["status"] == "passed"
+    assert checks["node-probe"]["status"] == "passed"
+    assert checks["worker-smoke"]["status"] == "passed"
 
 
 def test_codex_export_visual_shim_imports_in_node(tmp_path):

@@ -13,16 +13,16 @@
 
 export function createModelContextHarness() {
   const registered = [];
-  const controllers = [];
-  let aborted = 0;
+  const signals = new Set();
+  const abortedSignals = new Set();
   const modelContext = {
     registerTool(tool, options = {}) {
       const record = { tool, options };
       registered.push(record);
       const signal = options.signal;
       if (signal) {
-        controllers.push(signal);
-        signal.addEventListener('abort', () => { aborted += 1; }, { once: true });
+        signals.add(signal);
+        signal.addEventListener('abort', () => { abortedSignals.add(signal); }, { once: true });
       }
       return Promise.resolve();
     },
@@ -33,7 +33,8 @@ export function createModelContextHarness() {
   return {
     modelContext,
     registered,
-    abortCount: () => aborted,
+    /** Distinct signals aborted — one shared controller counts once. */
+    abortCount: () => abortedSignals.size,
     names: () => registered.filter((record) => !record.options.signal?.aborted).map((record) => record.tool.name),
     /** Invoke one registered tool exactly as the browser would. */
     async execute(name, input = {}, { signal } = {}) {

@@ -20,6 +20,7 @@
     "../web-src/src/webmcp/timing.ts",
     "../web-src/src/webmcp/movie.ts",
     "../web-src/src/webmcp/actions.ts",
+    "../web-src/src/webmcp/register.ts",
     "../web-src/src/movie/types.ts",
     "../beatscope/runtime/runtime.d.mts",
     "../beatscope/web/mv-plan.d.mts"

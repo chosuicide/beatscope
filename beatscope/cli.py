@@ -164,7 +164,10 @@ def run_validate_consumer(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="beatscope", description="Create an editable rhythm map locally")
+    parser = argparse.ArgumentParser(
+        prog="beatscope",
+        description="Measure music locally for deterministic video and portable timing handoffs",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     # analyze
