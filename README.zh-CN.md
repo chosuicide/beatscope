@@ -12,7 +12,7 @@ BeatScope 测量拍点、原始瞬态、多频段能量、变速段和重复结�
 
 它不会猜 kick、snare、808，也不会为了网格好看而把真实事件挪到另一个时刻。
 
-![Beathi Studio 播放确定性成片，时序图与画面共用同一个媒体时钟](docs/demo/beathi-studio.gif)
+[![Beathi Studio 播放确定性成片，时序图与画面共用同一个媒体时钟](docs/demo/beathi-studio-poster.webp)](docs/demo/beathi-studio.mp4)
 
 ## 下载即用
 
@@ -47,13 +47,13 @@ beatscope serve --open
 
 ## 同一份时序，另一种视觉语言
 
-![Coding Agent 根据 BeatScope 时序事实与视觉参考生成 Dirt / Cold / Rings](docs/demo/agent-to-film.webp)
+[![Coding Agent 根据 BeatScope 时序事实与视觉参考生成 Dirt / Cold / Rings](docs/demo/agent-to-film-poster.webp)](docs/demo/agent-to-film.mp4)
 
 内置模板是开箱即看的预览，不是作品上限。把导出的时序包交给 Coding Agent，说明你想做什么，再提供现有的视频、图片或视觉参考。包内 Skill 会要求 Agent 先校验测量结果，并主动询问缺少的创作输入，而不是擅自编造。**Dirt / Cold / Rings** 就是这样的成品：剪切与响应沿用 BeatScope 的真实时间戳，视觉系统则属于新作品。带声音的完整宣传片已附在 v0.12.0 Release。
 
 ## Studio 里有什么
 
-![当前 Beathi Studio：结构、实时预览、导出与 cue map](docs/demo/beathi-studio.png)
+![当前 Beathi Studio：结构、实时预览、导出与 cue map](docs/demo/beathi-studio.webp)
 
 Studio 刻意做成一个页面，而不是另一条剪辑时间线：
 
@@ -63,7 +63,7 @@ Studio 刻意做成一个页面，而不是另一条剪辑时间线：
 - **数据导出**：时序包、MIDI 和 CSV；不会把原始音频塞进包里。
 - **分析区**：全曲导航，以及 impact、scale、flow、flash/bloom、motion 的八小节细节。
 
-![同一首已分析歌曲的全曲结构与八小节节奏细节](docs/demo/beathi-analysis-map.png)
+![同一首已分析歌曲的全曲结构与八小节节奏细节](docs/demo/beathi-analysis-map.webp)
 
 媒体元素是唯一播放时钟。预览、播放头、结构列表和两张节奏图都读取它；Seek 不会重启分析，也不会偷偷产生第二套时间线。
 
@@ -180,6 +180,7 @@ beatscope benchmark-structure
 
 - [本地 Studio 与电影渲染器](docs/local-movie.md)
 - [Studio 设计与失败契约](docs/design/movie-studio.md)
+- [公开节拍基准](docs/public-benchmark.md)
 - [MCP 服务](docs/mcp.md)
 - [冻结的跨 Agent 任务](evaluations/agent-interoperability/TASK.md)
 - [仓库 Skill](skills/beatscope-visualizer/SKILL.md)

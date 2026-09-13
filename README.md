@@ -12,7 +12,7 @@ BeatScope measures beats, raw transients, multiband energy, tempo changes and re
 
 It does not guess kick, snare or 808 labels, and it never moves a real event onto a cleaner-looking grid.
 
-![Beathi Studio playing a deterministic film while the timing maps follow the same media clock](docs/demo/beathi-studio.gif)
+[![Beathi Studio playing a deterministic film while the timing maps follow the same media clock](docs/demo/beathi-studio-poster.webp)](docs/demo/beathi-studio.mp4)
 
 ## Download and run
 
@@ -47,13 +47,13 @@ Analysis, preview and rendering stay on the machine; request-scoped temporary fi
 
 ## One timing package, another visual language
 
-![A coding Agent turns BeatScope timing facts and a visual reference into Dirt / Cold / Rings](docs/demo/agent-to-film.webp)
+[![A coding Agent turns BeatScope timing facts and a visual reference into Dirt / Cold / Rings](docs/demo/agent-to-film-poster.webp)](docs/demo/agent-to-film.mp4)
 
 The built-in template is an immediate preview, not a ceiling. Give a coding Agent the exported timing package, describe the piece you want, and share whatever footage, images or visual references you have. The package teaches the Agent to verify the measurements first and ask for missing creative inputs instead of inventing them. **Dirt / Cold / Rings** is one such result: the cuts and reactions use BeatScope timestamps, while the visual system belongs to the new work. The full showcase MP4 is attached to the v0.12.0 release.
 
 ## What the Studio shows
 
-![The current Beathi Studio with structure, live preview, exports and the cue map](docs/demo/beathi-studio.png)
+![The current Beathi Studio with structure, live preview, exports and the cue map](docs/demo/beathi-studio.webp)
 
 The Studio is deliberately one screen rather than an editing timeline:
 
@@ -63,7 +63,7 @@ The Studio is deliberately one screen rather than an editing timeline:
 - **Data export** — the timing package, MIDI and CSV. Source audio is not bundled.
 - **Analysis dock** — a full-song overview and an eight-bar map for impact, scale, flow, flash/bloom and motion cues.
 
-![Full-song structure and eight-bar rhythm detail from the same analysed track](docs/demo/beathi-analysis-map.png)
+![Full-song structure and eight-bar rhythm detail from the same analysed track](docs/demo/beathi-analysis-map.webp)
 
 The media element is the only playback clock. The film preview, playhead, structure list and both maps read that clock; seeking does not restart analysis or invent a second timeline.
 
@@ -180,6 +180,7 @@ beatscope benchmark-structure
 
 - [Local Studio and movie renderer](docs/local-movie.md)
 - [Studio design and failure contracts](docs/design/movie-studio.md)
+- [Public beat benchmark](docs/public-benchmark.md)
 - [MCP server](docs/mcp.md)
 - [Frozen cross-Agent task](evaluations/agent-interoperability/TASK.md)
 - [Repository Skill](skills/beatscope-visualizer/SKILL.md)
