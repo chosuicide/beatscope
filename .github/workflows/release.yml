@@ -125,7 +125,18 @@ jobs:
         with:
           path: release-assets
           merge-multiple: true
+      # Release notes are versioned files in the repository, so a release always
+      # carries real prose: GitHub's generated notes only summarise merged pull
+      # requests, and this project pushes to main directly.
+      - name: Compose the release body
+        shell: bash
+        run: |
+          notes=".github/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$notes" ]; then cp "$notes" release-body.md; else
+            printf 'See the assets below. Full changelog: %s/%s
+' "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare" "$GITHUB_REF_NAME" > release-body.md
+          fi
       - uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          body_path: release-body.md
           files: release-assets/*
