@@ -1,0 +1,23 @@
+{
+  "schema": "beatscope-cross-source-candidate-lock-1",
+  "method": "strength-anchored-pairwise-boosted-chart-consensus-v4",
+  "selection_policy": "top-k-utility-with-pairwise-and-source-safety",
+  "selected": "full-t48-d2-lr0.05-ml32-l21.0-mv0.5",
+  "development_dataset_sha256": "b1c0c743f0c89aec1989f02c686ef3e407ec285edf623a5f9e8e62fdbcfb4f37",
+  "development_manifest_sha256": "a5857bfd3aa11e4d3396f912fc73976fd8c90b9c9876516deb3e7371a04263c3",
+  "selection_report_sha256": "df39860853b1f9bc651b22340bb4ad4b7e4db427fa919526ea2282f191ab94e8",
+  "candidate_sha256": "888f54051f4aafd685cc2d5ce17b63259f3b5eab9f35944d24aaf66d15ad4a7a",
+  "non_metric_candidate_sha256": "1324ee4dbe3a3a305cb7813ca8a87952464f0d759aeec9ffbae3c28d8884a6fb",
+  "source_ids": [
+    "club-fantastic-season-1-and-2-consumed",
+    "mageia-stepmix1-development",
+    "outfox-serenity-main",
+    "sockmania-version-18"
+  ],
+  "song_count": 55,
+  "chart_count": 497,
+  "event_count": 70883,
+  "preference_pair_count": 167909,
+  "consumed_club_fantastic_attempt_id": "3fd052928784e2cde977ecd2ce6daf4cef735df8fa63b607d08fdcf4c17dc804",
+  "consumed_club_fantastic_report_sha256": "ac538f16599586d41b8363f29170303573477e94b11a8534d2ac8a8ec2bdd876"
+}

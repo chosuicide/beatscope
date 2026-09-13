@@ -642,3 +642,264 @@ def evaluate_promotion_gates(report: dict[str, Any]) -> list[dict[str, Any]]:
 
 def promotion_status(gate_results: list[dict[str, Any]]) -> str:
     return "passed" if all(result["passed"] for result in gate_results) else "rejected"
+
+
+# ------------------------------------------- Round 2-B anchored boosted model
+
+from .event_ranker_boost import (  # noqa: E402  (runtime inference)
+    MODEL_METHOD_V4,
+    MODEL_SCHEMA_V3,
+    boost_score,
+)
+
+
+def build_boost_model_json(feature_view: str, model: dict[str, Any], *,
+                           train_song_count: int, validation_song_count: int,
+                           preference_pair_count: int, dataset_sha256: str,
+                           manifest_sha256: str, status: str = "pending") -> dict[str, Any]:
+    """Assemble the portable schema-v2 strength-anchored model shape."""
+    view_names = boost_feature_names(feature_view)
+    return {
+        "schema": MODEL_SCHEMA_V3,
+        "method": MODEL_METHOD_V4,
+        "evidence_schema": EVIDENCE_SCHEMA,
+        "feature_order": view_names,
+        "feature_view": feature_view,
+        "base_value": model["base_value"],
+        "anchor": {
+            "feature_index": model["anchor_feature_index"],
+            "weight": model["anchor_weight"],
+        },
+        "learning_rate": model["learning_rate"],
+        "trees": model["trees"],
+        "training": {
+            "dataset_sha256": dataset_sha256,
+            "manifest_sha256": manifest_sha256,
+            "train_song_count": train_song_count,
+            "validation_song_count": validation_song_count,
+            "preference_pair_count": preference_pair_count,
+        },
+        "promotion": {
+            "status": status,
+            "evaluation_report_sha256": None,
+        },
+    }
+
+
+def validate_boost_model_json(model: Any) -> list[str]:
+    """Contract validation for the schema-v3 strength-anchored model."""
+    errors: list[str] = []
+    if not isinstance(model, dict):
+        return ["model must be a JSON object"]
+    expected_top_level = {
+        "schema", "method", "evidence_schema", "feature_order", "feature_view",
+        "base_value", "anchor", "learning_rate", "trees", "training", "promotion",
+    }
+    if set(model) != expected_top_level:
+        errors.append("model must hold exactly the schema-v3 top-level fields")
+    if model.get("schema") != MODEL_SCHEMA_V3:
+        errors.append(f"schema must be {MODEL_SCHEMA_V3!r}")
+    if model.get("method") != MODEL_METHOD_V4:
+        errors.append(f"method must be {MODEL_METHOD_V4!r}")
+    if model.get("evidence_schema") != EVIDENCE_SCHEMA:
+        errors.append(f"evidence_schema must be {EVIDENCE_SCHEMA!r}")
+    feature_order = model.get("feature_order")
+    if not isinstance(feature_order, list) or not feature_order:
+        errors.append("feature_order must be a non-empty list")
+        return errors
+    if len(set(feature_order)) != len(feature_order):
+        errors.append("feature_order must not repeat a feature name")
+    known = set(BASE_FEATURE_ORDER)
+    unknown = [name for name in feature_order if name not in known]
+    if unknown:
+        errors.append(f"feature_order holds unknown features: {sorted(unknown)}")
+    feature_view = model.get("feature_view")
+    if feature_view not in ("full", "non_metric"):
+        errors.append("feature_view must be full or non_metric")
+    else:
+        expected_order = boost_feature_names(feature_view)
+        if feature_order != expected_order:
+            errors.append(f"feature_order must exactly match the {feature_view} boosted view")
+    base_value = model.get("base_value")
+    if not _finite_number(base_value):
+        errors.append("base_value must be a finite number")
+    learning_rate = model.get("learning_rate")
+    if not _finite_number(learning_rate) or float(learning_rate) <= 0.0:
+        errors.append("learning_rate must be a positive finite number")
+    anchor = model.get("anchor")
+    if not isinstance(anchor, dict) or set(anchor) != {"feature_index", "weight"}:
+        errors.append("anchor must hold exactly feature_index and weight")
+    else:
+        anchor_index = anchor.get("feature_index")
+        valid_anchor_index = (isinstance(anchor_index, int)
+                              and not isinstance(anchor_index, bool)
+                              and anchor_index == 0)
+        if not valid_anchor_index or feature_order[0] != "onset_strength":
+            errors.append("anchor feature_index must address onset_strength at position 0")
+        anchor_weight = anchor.get("weight")
+        if (not _finite_number(anchor_weight) or float(anchor_weight) != 1.0):
+            errors.append("anchor weight must be the frozen value 1.0")
+
+    trees = model.get("trees")
+    if not isinstance(trees, list) or len(trees) > 72:
+        errors.append("trees must be a list of at most 72 trees")
+        return errors
+    view_positions = {name: position for position, name in enumerate(feature_order)}
+
+    def check_node(node: Any, depth: int, path: str) -> None:
+        if not isinstance(node, dict):
+            errors.append(f"{path} must be an object")
+            return
+        if "value" in node:
+            if set(node) != {"value"}:
+                errors.append(f"{path} leaf must hold exactly 'value'")
+            elif not _finite_number(node["value"]):
+                errors.append(f"{path}.value must be finite")
+            return
+        if depth >= 2:
+            errors.append(f"{path} exceeds the depth-2 limit")
+            return
+        if set(node) != {"feature_index", "threshold", "left", "right"}:
+            errors.append(f"{path} split must hold exactly feature_index, threshold, left, right")
+            return
+        index = node["feature_index"]
+        name = (feature_order[index]
+                if isinstance(index, int) and not isinstance(index, bool)
+                and 0 <= index < len(feature_order) else None)
+        if name is None:
+            errors.append(f"{path}.feature_index must address the frozen feature view")
+            return
+        if not _finite_number(node["threshold"]):
+            errors.append(f"{path}.threshold must be finite")
+        if index != view_positions.get(name):
+            errors.append(f"{path}.feature_index must equal the feature's view position")
+        check_node(node["left"], depth + 1, f"{path}.left")
+        check_node(node["right"], depth + 1, f"{path}.right")
+
+    for position, tree in enumerate(trees):
+        check_node(tree, 0, f"trees[{position}]")
+
+    training = model.get("training")
+    training_keys = {"dataset_sha256", "manifest_sha256", "train_song_count",
+                     "validation_song_count", "preference_pair_count"}
+    if not isinstance(training, dict) or set(training) != training_keys:
+        errors.append("training must hold exactly the five provenance fields")
+    promotion = model.get("promotion")
+    if not isinstance(promotion, dict) or set(promotion) != {"status", "evaluation_report_sha256"}:
+        errors.append("promotion must hold exactly status and evaluation_report_sha256")
+    elif promotion.get("status") not in ("pending", "passed", "rejected"):
+        errors.append("promotion status must be pending, passed, or rejected")
+    elif promotion.get("status") == "passed" and not promotion.get("evaluation_report_sha256"):
+        errors.append("a passed promotion needs a matching evaluation report hash")
+    raw = json.dumps(model)
+    for forbidden in ("pickle", "eval(", "exec(", "subprocess", "os.system"):
+        if forbidden in raw:
+            errors.append(f"model bytes must not contain {forbidden!r}")
+    return errors
+
+
+def canonical_boost_model_bytes(model: dict[str, Any]) -> bytes:
+    """Serialize a valid schema-v3 model to deterministic UTF-8 JSON bytes."""
+    errors = validate_boost_model_json(model)
+    if errors:
+        raise RankerError("model_contract_mismatch", "; ".join(errors))
+    encoded = (json.dumps(model, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode("utf-8")
+    if len(encoded) >= 64 * 1024:
+        raise RankerError("model_contract_mismatch", "canonical model must be smaller than 64 KiB")
+    return encoded
+
+
+def _finite_number(value: Any) -> bool:
+    return (isinstance(value, (int, float)) and not isinstance(value, bool)
+            and math.isfinite(float(value)))
+
+
+def boost_feature_names(feature_view: str) -> list[str]:
+    """Frozen Round 2-B view over the original 36 evidence columns."""
+    if feature_view not in ("full", "non_metric"):
+        raise RankerError("model_contract_mismatch", f"unknown boosted feature view: {feature_view}")
+    return [name for name in BASE_FEATURE_ORDER
+            if feature_view == "full" or not name.startswith("metric_")]
+
+
+def boost_feature_indices(feature_view: str) -> list[int]:
+    return [FEATURE_ORDER.index(name) for name in boost_feature_names(feature_view)]
+
+
+def boost_score_rows(events: list[dict[str, Any]], groups: list[dict[str, Any]],
+                     strengths: dict[int, float], model: dict[str, Any]) -> list[dict[str, Any]]:
+    """Rank every event with the boosted scorer; bounded, timestamp-free."""
+    errors = validate_boost_model_json(model)
+    if errors:
+        raise RankerError("model_contract_mismatch", "; ".join(errors))
+    positions = [FEATURE_ORDER.index(name) for name in model["feature_order"]]
+    matrix = np.array(
+        [extract_features(event, groups, strengths[event["onset_id"]]) for event in events],
+        dtype=np.float64,
+    )
+    if not np.isfinite(matrix).all():
+        raise RankerError("non_finite_feature", "feature matrix contains a non-finite value")
+    anchor = model["anchor"]
+    scores = boost_score(
+        matrix[:, positions], model["trees"], float(model["base_value"]),
+        float(model["learning_rate"]), int(anchor["feature_index"]),
+        float(anchor["weight"]),
+    )
+    relevances = 0.5 * (1.0 + np.tanh(0.5 * scores))
+    return [
+        {"onset_id": int(event["onset_id"]), "response_relevance": _round6(float(relevance))}
+        for event, relevance in zip(events, relevances)
+    ]
+
+
+def select_boosted_candidate(candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Validation eligibility plus the frozen lexicographic selection order.
+
+    Eligibility (plan section 5.6): overall pairwise delta >= +0.02, dense
+    tertile delta > 0, NDCG@10 delta >= -0.01, sparse recall delta >= -0.015,
+    finite source slices losing no more than 0.01, and, for a full-view
+    candidate, a non-metric counterpart improving by at least +0.01 over
+    strength. Selection order: larger minimum source delta, larger dense
+    delta, larger overall delta, larger NDCG@10, fewer trees, shallower
+    depth, smaller serialized model, feature view name.
+    """
+    eligible: list[dict[str, Any]] = []
+    for candidate in candidates:
+        required_metrics = (
+            candidate.get("overall_pairwise_delta"), candidate.get("dense_tertile_delta"),
+            candidate.get("ndcg_delta"), candidate.get("recall_delta"),
+        )
+        if not all(_finite_number(value) for value in required_metrics):
+            continue
+        source_deltas = candidate["source_deltas"]
+        if not source_deltas or not all(
+                isinstance(value, float) and math.isfinite(value)
+                for value in source_deltas.values()):
+            continue
+        if candidate["overall_pairwise_delta"] < 0.02:
+            continue
+        if not (candidate["dense_tertile_delta"] > 0.0):
+            continue
+        if candidate["ndcg_delta"] < -0.01:
+            continue
+        if candidate["recall_delta"] < -0.015:
+            continue
+        if min(source_deltas.values()) < -0.01:
+            continue
+        if candidate["feature_view"] == "full" \
+                and (candidate.get("non_metric_pairwise_delta") is None
+                     or candidate["non_metric_pairwise_delta"] < 0.01):
+            continue
+        eligible.append(candidate)
+    if not eligible:
+        return None
+    return max(eligible, key=lambda candidate: (
+        min(candidate["source_deltas"].values()),
+        candidate["dense_tertile_delta"],
+        candidate["overall_pairwise_delta"],
+        candidate["ndcg_delta"],
+        -candidate["trees"],
+        -candidate["depth"],
+        -candidate["model_bytes"],
+        1.0 if candidate["feature_view"] == "full" else 0.0,
+    ))

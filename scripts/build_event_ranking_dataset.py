@@ -108,7 +108,8 @@ def segment_map_for(project: dict, onset_times: dict[int, float]) -> dict[int, i
     return mapping
 
 
-def build_dataset(corpus_path: Path, output_dir: Path) -> tuple[dict, str]:
+def build_dataset(corpus_path: Path, output_dir: Path,
+                  consumed_manifest: Path | None = None) -> tuple[dict, str]:
     corpus = json.loads(corpus_path.read_text(encoding="utf-8"))
     if corpus.get("schema") != CORPUS_SCHEMA:
         raise ChartLabelError("malformed_chart", f"corpus schema must be {CORPUS_SCHEMA!r}")
@@ -157,6 +158,17 @@ def build_dataset(corpus_path: Path, output_dir: Path) -> tuple[dict, str]:
                                "detail": "license and permission_note must be recorded before training"})
             source_summaries.append({
                 "id": source_id, "format": fmt, "license": license_class or "unknown",
+                "source_revision": None,
+                "chart_file_count": 0, "partition": partition,
+            })
+            continue
+        source_revision = str(source.get("source_revision", "")).strip()
+        if partitioned_corpus and not source_revision:
+            exclusions.append({"source_id": source_id, "reason": "missing_source_revision",
+                               "detail": "partitioned sources must record a source revision"})
+            source_summaries.append({
+                "id": source_id, "format": fmt, "license": license_class,
+                "source_revision": None,
                 "chart_file_count": 0, "partition": partition,
             })
             continue
@@ -205,6 +217,7 @@ def build_dataset(corpus_path: Path, output_dir: Path) -> tuple[dict, str]:
             "id": source_id,
             "format": fmt,
             "license": license_class,
+            "source_revision": source_revision,
             "chart_file_count": chart_count,
             "partition": partition,
         })
@@ -307,12 +320,29 @@ def build_dataset(corpus_path: Path, output_dir: Path) -> tuple[dict, str]:
         filtered_song = {**song, "charts": kept_charts}
         final_groups.append(filtered_song)
 
+    source_by_song = {}
+    for entry in chart_entries:
+        source_by_song.setdefault(entry["audio_sha256"], entry["source_id"])
+    consumed_audio_shas = _consumed_manifest_songs(consumed_manifest)
+    if consumed_audio_shas:
+        kept_groups = []
+        for song in final_groups:
+            if song["audio_sha256"] in consumed_audio_shas:
+                song["exclusions"].append({
+                    "chart_sha256": "", "reason": cl.CODE_CONSUMED_V2_TEST_SONG})
+            else:
+                kept_groups.append(song)
+        final_groups = kept_groups
     if partitioned_corpus:
         holdout = {
             song["audio_sha256"] for song in final_groups
             if partitions_by_song[song["audio_sha256"]] == {"test"}
         }
-        assignments = cl.assign_splits_with_holdout(final_groups, holdout)
+        if holdout:
+            assignments = cl.assign_splits_with_holdout(final_groups, holdout)
+        else:
+            assignments = cl.assign_development_splits(final_groups, source_by_song,
+                                                       frozen_assignments)
     else:
         assignments = cl.assign_splits(final_groups, frozen_assignments)
     fingerprints = {
@@ -322,7 +352,18 @@ def build_dataset(corpus_path: Path, output_dir: Path) -> tuple[dict, str]:
         )
         for song in final_groups
     }
-    leakage_errors = cl.audit_split_leakage(final_groups, assignments, fingerprints)
+    if partitioned_corpus:
+        chart_hashes_by_song: dict[str, set[str]] = {}
+        timeline_hash_by_chart: dict[str, str] = {}
+        for entry in chart_entries:
+            chart_hashes_by_song.setdefault(entry["audio_sha256"], set()).add(
+                entry["chart"]["chart_sha256"])
+            timeline_hash_by_chart[entry["chart"]["chart_sha256"]] = cl.marker_sequence_hash(
+                entry["chart"]["markers_seconds"])
+        leakage_errors = cl.audit_partition_leakage(
+            final_groups, assignments, fingerprints, chart_hashes_by_song, timeline_hash_by_chart)
+    else:
+        leakage_errors = cl.audit_split_leakage(final_groups, assignments, fingerprints)
     if leakage_errors:
         for error in leakage_errors:
             print(error, file=sys.stderr)
@@ -400,8 +441,6 @@ def build_dataset(corpus_path: Path, output_dir: Path) -> tuple[dict, str]:
             }))
 
     dataset_text = "\n".join(dataset_lines) + ("\n" if dataset_lines else "")
-    dataset_path = output_dir / "dataset.jsonl"
-    dataset_path.write_text(dataset_text, encoding="utf-8", newline="\n")
 
     manifest = {
         "schema": MANIFEST_SCHEMA,
@@ -447,10 +486,48 @@ def build_dataset(corpus_path: Path, output_dir: Path) -> tuple[dict, str]:
             "exclusion_count": len(
                 [exclusion for song in song_groups for exclusion in song["exclusions"]]) + len(exclusions),
         },
+        "development_readiness": {
+            "song_count": len(final_groups),
+            "source_count": len({source_by_song.get(song["audio_sha256"], "")
+                                 for song in final_groups}),
+            "chart_count": sum(len(song["charts"]) for song in final_groups),
+            "validation_song_count": sum(
+                1 for song in final_groups if assignments[song["audio_sha256"]] == "validation"),
+            "minimums": {
+                "min_dev_songs": cl.MIN_DEV_SONGS,
+                "min_dev_sources": cl.MIN_DEV_SOURCES,
+                "min_dev_charts": cl.MIN_DEV_CHARTS,
+                "min_dev_validation_songs": cl.MIN_DEV_VALIDATION_SONGS,
+            },
+        },
     }
+    manifest_text = cl.canonical_json_text(manifest)
+    conflicts = cl.consumed_artifact_conflicts(
+        sha256_bytes(dataset_text.encode("utf-8")), sha256_bytes(manifest_text.encode("utf-8")))
+    if conflicts:
+        for name in conflicts:
+            print(f"{cl.CODE_CONSUMED_V2_ARTIFACT}: produced {name} matches a consumed "
+                  "v2 evaluation artifact; it may never be rebuilt or recycled",
+                  file=sys.stderr)
+        raise SystemExit(1)
+    dataset_path = output_dir / "dataset.jsonl"
+    dataset_path.write_text(dataset_text, encoding="utf-8", newline="\n")
     manifest_path = output_dir / "training-manifest.json"
-    manifest_path.write_text(cl.canonical_json_text(manifest), encoding="utf-8", newline="\n")
-    return manifest, cl.sha256_text(cl.canonical_json_text(manifest))
+    manifest_path.write_text(manifest_text, encoding="utf-8", newline="\n")
+    return manifest, cl.sha256_text(manifest_text)
+
+
+def _consumed_manifest_songs(path: Path | None) -> set[str]:
+    """Audio SHAs of the consumed v2 test partition (plan section 1.3)."""
+    if path is None or not path.is_file():
+        return set()
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    if manifest.get("schema") != MANIFEST_SCHEMA:
+        raise ChartLabelError("malformed_chart", f"consumed manifest schema must be {MANIFEST_SCHEMA!r}")
+    return {
+        song["audio_sha256"] for song in manifest.get("songs", [])
+        if song.get("split") == "test"
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -459,6 +536,9 @@ def main(argv: list[str] | None = None) -> int:
                         help="ignored operator corpus registry JSON (plan section 3.2)")
     parser.add_argument("--output", type=Path, default=Path("build/event-ranking"),
                         help="ignored output directory")
+    parser.add_argument("--consumed-manifest", type=Path, default=None,
+                        help="manifest of the consumed v2 evaluation; its test songs "
+                             "are excluded before splitting")
     parser.add_argument("--dry-run", action="store_true",
                         help="report what would be built without writing artifacts")
     args = parser.parse_args(argv)
@@ -478,7 +558,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     try:
-        manifest, manifest_sha = build_dataset(args.corpus, args.output)
+        manifest, manifest_sha = build_dataset(args.corpus, args.output, args.consumed_manifest)
     except SystemExit as exit_error:
         return int(exit_error.code or 1)
     print(json.dumps({

@@ -51,6 +51,25 @@ MIN_UNIQUE_MARKERS_PER_CHART = 2
 SPLIT_SALT = "beatscope-v011-split:"
 VALIDATION_FRACTION = 0.15
 TEST_FRACTION = 0.15
+DEVELOPMENT_VALIDATION_FRACTION = 0.25
+# Round 2-B corpus minimums (v0.11 Round 2-B plan section 3.2).
+MIN_DEV_SONGS = 32
+MIN_DEV_SOURCES = 2
+MIN_DEV_CHARTS = 96
+MIN_DEV_VALIDATION_SONGS = 8
+CODE_CHART_HASH_ACROSS_SPLITS = "chart_hash_across_splits"
+CODE_TIMELINE_HASH_ACROSS_SPLITS = "timeline_hash_across_splits"
+CODE_CONSUMED_V2_ARTIFACT = "consumed_v2_artifact"
+CODE_CONSUMED_V2_TEST_SONG = "consumed_v2_test_song"
+# Consumed historical evaluation (v0.11 Round 2-B plan section 1.3).  These
+# artifacts and the test partition behind them may never select, tune, or
+# promote another candidate.
+CONSUMED_V2_ARTIFACTS = (
+    "78282ab15c3594ee4bd4aa4bc46e4494366615ee9b254db8c657192ecf2e006a",
+    "e97e9faa994f14cdef93d3baaf03550ec24b60af694553ea28611f737c29b5d0",
+    "b089fcc3035e02a4279f36580b256ea1e57c9a96259329b7d2936118e76889fb",
+    "6a74d48a90481ada2792a2f9d4e1cad786bf7a1b08aa74a0ca55b25212570052",
+)
 MIN_CALIBRATION_CHARTS = 3
 MAX_CALIBRATION_OFFSET_SECONDS = 0.035
 MAX_CALIBRATION_MAD_SECONDS = 0.010
@@ -1052,4 +1071,123 @@ def audit_split_leakage(song_groups: list[dict[str, Any]], assignments: dict[str
                 )
             else:
                 seen_fingerprint[fingerprint] = assignments[sha]
+    return errors
+
+
+def consumed_artifact_conflicts(dataset_sha256: str | None, manifest_sha256: str | None,
+                                selected_sha256: str | None = None,
+                                report_sha256: str | None = None) -> list[str]:
+    """Name every produced artifact whose hash matches the consumed v2 set."""
+    candidates = {
+        "dataset.jsonl": dataset_sha256,
+        "training-manifest.json": manifest_sha256,
+        "selected.json": selected_sha256,
+        "evaluation-report.json": report_sha256,
+    }
+    return sorted(
+        name for name, digest in candidates.items()
+        if digest and str(digest).lower() in CONSUMED_V2_ARTIFACTS
+    )
+
+
+def assign_development_splits(song_groups: list[dict[str, Any]],
+                              source_by_song: dict[str, str],
+                              frozen_assignments: dict[str, str] | None = None) -> dict[str, str]:
+    """Source-aware 75/25 train/validation split; B1 has no test role.
+
+    Strata are ``(source_id, format, density_tertile)``; ordering inside a
+    stratum is the salted content hash, so adding songs never moves a frozen
+    assignment. Any would-be test allocation is folded into training (plan
+    section 4.1).
+    """
+    family_by_song: dict[str, tuple[str, str]] = {}
+    density_by_song: dict[str, float] = {}
+    for song in song_groups:
+        sha = song["audio_sha256"]
+        source_id = source_by_song.get(sha, "unknown")
+        formats = sorted({chart["chart"]["format"] for chart in song["charts"]})
+        family_by_song[sha] = (source_id, formats[0] if len(formats) == 1 else "mixed")
+        densities = [_chart_density(chart["chart"]) for chart in song["charts"]]
+        density_by_song[sha] = sum(densities) / len(densities) if densities else math.inf
+
+    tertile_by_song: dict[str, int] = {}
+    by_family: dict[tuple[str, str], list[float]] = {}
+    for sha, density in density_by_song.items():
+        by_family.setdefault(family_by_song[sha], []).append(density)
+    for family in by_family:
+        ordered_songs = sorted(
+            (density, sha) for sha, density in density_by_song.items()
+            if family_by_song[sha] == family
+        )
+        for rank, (_density, sha) in enumerate(ordered_songs):
+            tertile_by_song[sha] = (
+                0 if len(ordered_songs) < 6
+                else min(2, int(rank * 3 / len(ordered_songs)))
+            )
+
+    strata: dict[tuple[str, str, int], list[dict[str, Any]]] = {}
+    for song in song_groups:
+        sha = song["audio_sha256"]
+        source_id, fmt = family_by_song[sha]
+        strata.setdefault((source_id, fmt, tertile_by_song[sha]), []).append(song)
+
+    frozen_assignments = frozen_assignments or {}
+    invalid = sorted(set(frozen_assignments.values()) - {"train", "validation"})
+    if invalid:
+        raise ValueError(f"invalid frozen development split values: {invalid}")
+    assignments: dict[str, str] = {
+        song["audio_sha256"]: frozen_assignments[song["audio_sha256"]]
+        for song in song_groups if song["audio_sha256"] in frozen_assignments
+    }
+    for (_source, _fmt, _tertile), songs in strata.items():
+        ordered = [song for song in sorted(songs, key=lambda song: _split_hash(song["audio_sha256"]))
+                   if song["audio_sha256"] not in assignments]
+        total = len(ordered)
+        if total == 0:
+            continue
+        validation_count = max(1, int(round(total * DEVELOPMENT_VALIDATION_FRACTION)))
+        if total >= 8:
+            validation_count = max(2, validation_count)
+        validation_count = min(validation_count, total - 1)
+        for position, song in enumerate(ordered):
+            assignments[song["audio_sha256"]] = (
+                "validation" if position < validation_count else "train")
+    return assignments
+
+
+def audit_partition_leakage(song_groups: list[dict[str, Any]], assignments: dict[str, str],
+                            fingerprint_by_song: dict[str, str],
+                            chart_hashes_by_song: dict[str, set[str]],
+                            timeline_hash_by_chart: dict[str, str]) -> list[str]:
+    """Audio SHA, fingerprint, chart hash, and timeline hash never cross splits."""
+    errors: list[str] = []
+    seen: dict[str, dict[str, str]] = {"audio": {}, "fingerprint": {}, "chart": {}, "timeline": {}}
+    codes = {
+        "audio": CODE_DUPLICATE_AUDIO_ACROSS_SPLITS,
+        "fingerprint": CODE_DUPLICATE_AUDIO_ACROSS_SPLITS,
+        "chart": CODE_CHART_HASH_ACROSS_SPLITS,
+        "timeline": CODE_TIMELINE_HASH_ACROSS_SPLITS,
+    }
+
+    def claim(kind: str, key: str, split: str) -> None:
+        if not key:
+            return
+        previous = seen[kind].get(key)
+        if previous is not None and previous != split:
+            errors.append(
+                f"{codes[kind]}: {kind} {key[:12]} spans {previous} and {split}")
+        else:
+            seen[kind][key] = split
+
+    for song in song_groups:
+        sha = song["audio_sha256"]
+        split = assignments.get(sha)
+        if split is None:
+            errors.append(f"song {sha} has no split assignment")
+            continue
+        claim("audio", sha, split)
+        claim("fingerprint", fingerprint_by_song.get(sha, ""), split)
+        for chart_hash in sorted(chart_hashes_by_song.get(sha, set())):
+            claim("chart", chart_hash, split)
+            claim("timeline", timeline_hash_by_chart.get(chart_hash, ""), split)
     return errors

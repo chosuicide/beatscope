@@ -10,6 +10,7 @@ tests/fixtures/visual/*.json text eol=lf
 tests/fixtures/webmcp/*.json text eol=lf
 tests/fixtures/event_evidence/*.json text eol=lf
 tests/fixtures/event_ranking/** text eol=lf
+tests/fixtures/event_ranking_v5/** text eol=lf
 tests/snapshots/webmcp/*.json text eol=lf
 tests/snapshots/event-evidence/*.json text eol=lf
 beatscope/web/demo/*.json text eol=lf

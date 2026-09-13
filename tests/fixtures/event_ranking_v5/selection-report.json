@@ -1,0 +1,666 @@
+{
+  "schema": "beatscope-response-ranking-cross-source-selection-1",
+  "method": "strength-anchored-pairwise-boosted-chart-consensus-v4",
+  "dataset_sha256": "b1c0c743f0c89aec1989f02c686ef3e407ec285edf623a5f9e8e62fdbcfb4f37",
+  "manifest_sha256": "a5857bfd3aa11e4d3396f912fc73976fd8c90b9c9876516deb3e7371a04263c3",
+  "source_ids": [
+    "club-fantastic-season-1-and-2-consumed",
+    "mageia-stepmix1-development",
+    "outfox-serenity-main",
+    "sockmania-version-18"
+  ],
+  "song_count": 55,
+  "selection_policy": "top-k-utility-with-pairwise-and-source-safety",
+  "candidates": [
+    {
+      "name": "full-t24-d1-lr0.05-ml32-l21.0-mv0.5",
+      "feature_view": "full",
+      "trees": 24,
+      "depth": 1,
+      "learning_rate": 0.05,
+      "min_leaf_events": 32,
+      "leaf_l2": 1.0,
+      "max_leaf_value": 0.5,
+      "folds": [
+        {
+          "held_source": "club-fantastic-season-1-and-2-consumed",
+          "train_song_count": 34,
+          "validation_song_count": 21
+        },
+        {
+          "held_source": "mageia-stepmix1-development",
+          "train_song_count": 35,
+          "validation_song_count": 20
+        },
+        {
+          "held_source": "outfox-serenity-main",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        },
+        {
+          "held_source": "sockmania-version-18",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        }
+      ],
+      "deltas_vs_strength": {
+        "pairwise_accuracy": 0.00581,
+        "ndcg_at_10": 0.04887,
+        "recall_at_k": 0.00309,
+        "top_support_precision_at_k": 0.016135
+      },
+      "dense_tertile_delta": 0.008586,
+      "source_deltas": {
+        "club-fantastic-season-1-and-2-consumed": 0.005027,
+        "mageia-stepmix1-development": 0.006728,
+        "outfox-serenity-main": 0.004118,
+        "sockmania-version-18": 0.007232
+      },
+      "bootstrap_pairwise": {
+        "lower_95": 0.003013,
+        "upper_95": 0.008618,
+        "indices_sha256": "5d58e93e151b4273f50132e741172a4a4706dc87bb11f2b62d334f8783c72e92",
+        "replicates": 10000,
+        "seed": 20260908
+      },
+      "validated_song_count": 55,
+      "non_metric_pairwise_delta": 0.00581
+    },
+    {
+      "name": "non_metric-t24-d1-lr0.05-ml32-l21.0-mv0.5",
+      "feature_view": "non_metric",
+      "trees": 24,
+      "depth": 1,
+      "learning_rate": 0.05,
+      "min_leaf_events": 32,
+      "leaf_l2": 1.0,
+      "max_leaf_value": 0.5,
+      "folds": [
+        {
+          "held_source": "club-fantastic-season-1-and-2-consumed",
+          "train_song_count": 34,
+          "validation_song_count": 21
+        },
+        {
+          "held_source": "mageia-stepmix1-development",
+          "train_song_count": 35,
+          "validation_song_count": 20
+        },
+        {
+          "held_source": "outfox-serenity-main",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        },
+        {
+          "held_source": "sockmania-version-18",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        }
+      ],
+      "deltas_vs_strength": {
+        "pairwise_accuracy": 0.00581,
+        "ndcg_at_10": 0.04887,
+        "recall_at_k": 0.00309,
+        "top_support_precision_at_k": 0.016135
+      },
+      "dense_tertile_delta": 0.008586,
+      "source_deltas": {
+        "club-fantastic-season-1-and-2-consumed": 0.005027,
+        "mageia-stepmix1-development": 0.006728,
+        "outfox-serenity-main": 0.004118,
+        "sockmania-version-18": 0.007232
+      },
+      "bootstrap_pairwise": {
+        "lower_95": 0.003013,
+        "upper_95": 0.008618,
+        "indices_sha256": "5d58e93e151b4273f50132e741172a4a4706dc87bb11f2b62d334f8783c72e92",
+        "replicates": 10000,
+        "seed": 20260908
+      },
+      "validated_song_count": 55,
+      "non_metric_pairwise_delta": null
+    },
+    {
+      "name": "full-t24-d2-lr0.05-ml32-l21.0-mv0.5",
+      "feature_view": "full",
+      "trees": 24,
+      "depth": 2,
+      "learning_rate": 0.05,
+      "min_leaf_events": 32,
+      "leaf_l2": 1.0,
+      "max_leaf_value": 0.5,
+      "folds": [
+        {
+          "held_source": "club-fantastic-season-1-and-2-consumed",
+          "train_song_count": 34,
+          "validation_song_count": 21
+        },
+        {
+          "held_source": "mageia-stepmix1-development",
+          "train_song_count": 35,
+          "validation_song_count": 20
+        },
+        {
+          "held_source": "outfox-serenity-main",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        },
+        {
+          "held_source": "sockmania-version-18",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        }
+      ],
+      "deltas_vs_strength": {
+        "pairwise_accuracy": 0.007002,
+        "ndcg_at_10": 0.147369,
+        "recall_at_k": 0.008182,
+        "top_support_precision_at_k": 0.019009
+      },
+      "dense_tertile_delta": 0.010613,
+      "source_deltas": {
+        "club-fantastic-season-1-and-2-consumed": 0.00553,
+        "mageia-stepmix1-development": 0.008863,
+        "outfox-serenity-main": 0.005984,
+        "sockmania-version-18": 0.007115
+      },
+      "bootstrap_pairwise": {
+        "lower_95": 0.003961,
+        "upper_95": 0.010079,
+        "indices_sha256": "5d58e93e151b4273f50132e741172a4a4706dc87bb11f2b62d334f8783c72e92",
+        "replicates": 10000,
+        "seed": 20260908
+      },
+      "validated_song_count": 55,
+      "non_metric_pairwise_delta": 0.006857
+    },
+    {
+      "name": "non_metric-t24-d2-lr0.05-ml32-l21.0-mv0.5",
+      "feature_view": "non_metric",
+      "trees": 24,
+      "depth": 2,
+      "learning_rate": 0.05,
+      "min_leaf_events": 32,
+      "leaf_l2": 1.0,
+      "max_leaf_value": 0.5,
+      "folds": [
+        {
+          "held_source": "club-fantastic-season-1-and-2-consumed",
+          "train_song_count": 34,
+          "validation_song_count": 21
+        },
+        {
+          "held_source": "mageia-stepmix1-development",
+          "train_song_count": 35,
+          "validation_song_count": 20
+        },
+        {
+          "held_source": "outfox-serenity-main",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        },
+        {
+          "held_source": "sockmania-version-18",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        }
+      ],
+      "deltas_vs_strength": {
+        "pairwise_accuracy": 0.006857,
+        "ndcg_at_10": 0.053591,
+        "recall_at_k": 0.004275,
+        "top_support_precision_at_k": 0.019061
+      },
+      "dense_tertile_delta": 0.010744,
+      "source_deltas": {
+        "club-fantastic-season-1-and-2-consumed": 0.005171,
+        "mageia-stepmix1-development": 0.008863,
+        "outfox-serenity-main": 0.00592,
+        "sockmania-version-18": 0.007115
+      },
+      "bootstrap_pairwise": {
+        "lower_95": 0.003763,
+        "upper_95": 0.010014,
+        "indices_sha256": "5d58e93e151b4273f50132e741172a4a4706dc87bb11f2b62d334f8783c72e92",
+        "replicates": 10000,
+        "seed": 20260908
+      },
+      "validated_song_count": 55,
+      "non_metric_pairwise_delta": null
+    },
+    {
+      "name": "full-t48-d2-lr0.05-ml32-l21.0-mv0.5",
+      "feature_view": "full",
+      "trees": 48,
+      "depth": 2,
+      "learning_rate": 0.05,
+      "min_leaf_events": 32,
+      "leaf_l2": 1.0,
+      "max_leaf_value": 0.5,
+      "folds": [
+        {
+          "held_source": "club-fantastic-season-1-and-2-consumed",
+          "train_song_count": 34,
+          "validation_song_count": 21
+        },
+        {
+          "held_source": "mageia-stepmix1-development",
+          "train_song_count": 35,
+          "validation_song_count": 20
+        },
+        {
+          "held_source": "outfox-serenity-main",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        },
+        {
+          "held_source": "sockmania-version-18",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        }
+      ],
+      "deltas_vs_strength": {
+        "pairwise_accuracy": 0.013123,
+        "ndcg_at_10": 0.262323,
+        "recall_at_k": 0.04841,
+        "top_support_precision_at_k": 0.060692
+      },
+      "dense_tertile_delta": 0.015559,
+      "source_deltas": {
+        "club-fantastic-season-1-and-2-consumed": 0.009841,
+        "mageia-stepmix1-development": 0.016769,
+        "outfox-serenity-main": 0.010368,
+        "sockmania-version-18": 0.015303
+      },
+      "bootstrap_pairwise": {
+        "lower_95": 0.009214,
+        "upper_95": 0.017265,
+        "indices_sha256": "5d58e93e151b4273f50132e741172a4a4706dc87bb11f2b62d334f8783c72e92",
+        "replicates": 10000,
+        "seed": 20260908
+      },
+      "validated_song_count": 55,
+      "non_metric_pairwise_delta": 0.010352
+    },
+    {
+      "name": "non_metric-t48-d2-lr0.05-ml32-l21.0-mv0.5",
+      "feature_view": "non_metric",
+      "trees": 48,
+      "depth": 2,
+      "learning_rate": 0.05,
+      "min_leaf_events": 32,
+      "leaf_l2": 1.0,
+      "max_leaf_value": 0.5,
+      "folds": [
+        {
+          "held_source": "club-fantastic-season-1-and-2-consumed",
+          "train_song_count": 34,
+          "validation_song_count": 21
+        },
+        {
+          "held_source": "mageia-stepmix1-development",
+          "train_song_count": 35,
+          "validation_song_count": 20
+        },
+        {
+          "held_source": "outfox-serenity-main",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        },
+        {
+          "held_source": "sockmania-version-18",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        }
+      ],
+      "deltas_vs_strength": {
+        "pairwise_accuracy": 0.010352,
+        "ndcg_at_10": 0.102365,
+        "recall_at_k": 0.002705,
+        "top_support_precision_at_k": 0.027055
+      },
+      "dense_tertile_delta": 0.01611,
+      "source_deltas": {
+        "club-fantastic-season-1-and-2-consumed": 0.008707,
+        "mageia-stepmix1-development": 0.01375,
+        "outfox-serenity-main": 0.00426,
+        "sockmania-version-18": 0.011672
+      },
+      "bootstrap_pairwise": {
+        "lower_95": 0.006244,
+        "upper_95": 0.014541,
+        "indices_sha256": "5d58e93e151b4273f50132e741172a4a4706dc87bb11f2b62d334f8783c72e92",
+        "replicates": 10000,
+        "seed": 20260908
+      },
+      "validated_song_count": 55,
+      "non_metric_pairwise_delta": null
+    },
+    {
+      "name": "full-t72-d2-lr0.03-ml32-l21.0-mv0.4",
+      "feature_view": "full",
+      "trees": 72,
+      "depth": 2,
+      "learning_rate": 0.03,
+      "min_leaf_events": 32,
+      "leaf_l2": 1.0,
+      "max_leaf_value": 0.4,
+      "folds": [
+        {
+          "held_source": "club-fantastic-season-1-and-2-consumed",
+          "train_song_count": 34,
+          "validation_song_count": 21
+        },
+        {
+          "held_source": "mageia-stepmix1-development",
+          "train_song_count": 35,
+          "validation_song_count": 20
+        },
+        {
+          "held_source": "outfox-serenity-main",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        },
+        {
+          "held_source": "sockmania-version-18",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        }
+      ],
+      "deltas_vs_strength": {
+        "pairwise_accuracy": 0.009569,
+        "ndcg_at_10": 0.177308,
+        "recall_at_k": 0.018021,
+        "top_support_precision_at_k": 0.029227
+      },
+      "dense_tertile_delta": 0.013044,
+      "source_deltas": {
+        "club-fantastic-season-1-and-2-consumed": 0.007361,
+        "mageia-stepmix1-development": 0.011916,
+        "outfox-serenity-main": 0.007637,
+        "sockmania-version-18": 0.011423
+      },
+      "bootstrap_pairwise": {
+        "lower_95": 0.005969,
+        "upper_95": 0.013276,
+        "indices_sha256": "5d58e93e151b4273f50132e741172a4a4706dc87bb11f2b62d334f8783c72e92",
+        "replicates": 10000,
+        "seed": 20260908
+      },
+      "validated_song_count": 55,
+      "non_metric_pairwise_delta": 0.00836
+    },
+    {
+      "name": "non_metric-t72-d2-lr0.03-ml32-l21.0-mv0.4",
+      "feature_view": "non_metric",
+      "trees": 72,
+      "depth": 2,
+      "learning_rate": 0.03,
+      "min_leaf_events": 32,
+      "leaf_l2": 1.0,
+      "max_leaf_value": 0.4,
+      "folds": [
+        {
+          "held_source": "club-fantastic-season-1-and-2-consumed",
+          "train_song_count": 34,
+          "validation_song_count": 21
+        },
+        {
+          "held_source": "mageia-stepmix1-development",
+          "train_song_count": 35,
+          "validation_song_count": 20
+        },
+        {
+          "held_source": "outfox-serenity-main",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        },
+        {
+          "held_source": "sockmania-version-18",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        }
+      ],
+      "deltas_vs_strength": {
+        "pairwise_accuracy": 0.00836,
+        "ndcg_at_10": 0.08403,
+        "recall_at_k": 0.003674,
+        "top_support_precision_at_k": 0.022899
+      },
+      "dense_tertile_delta": 0.013509,
+      "source_deltas": {
+        "club-fantastic-season-1-and-2-consumed": 0.005815,
+        "mageia-stepmix1-development": 0.011881,
+        "outfox-serenity-main": 0.004704,
+        "sockmania-version-18": 0.009591
+      },
+      "bootstrap_pairwise": {
+        "lower_95": 0.004655,
+        "upper_95": 0.012216,
+        "indices_sha256": "5d58e93e151b4273f50132e741172a4a4706dc87bb11f2b62d334f8783c72e92",
+        "replicates": 10000,
+        "seed": 20260908
+      },
+      "validated_song_count": 55,
+      "non_metric_pairwise_delta": null
+    },
+    {
+      "name": "full-t48-d2-lr0.05-ml64-l22.0-mv0.4",
+      "feature_view": "full",
+      "trees": 48,
+      "depth": 2,
+      "learning_rate": 0.05,
+      "min_leaf_events": 64,
+      "leaf_l2": 2.0,
+      "max_leaf_value": 0.4,
+      "folds": [
+        {
+          "held_source": "club-fantastic-season-1-and-2-consumed",
+          "train_song_count": 34,
+          "validation_song_count": 21
+        },
+        {
+          "held_source": "mageia-stepmix1-development",
+          "train_song_count": 35,
+          "validation_song_count": 20
+        },
+        {
+          "held_source": "outfox-serenity-main",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        },
+        {
+          "held_source": "sockmania-version-18",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        }
+      ],
+      "deltas_vs_strength": {
+        "pairwise_accuracy": 0.010751,
+        "ndcg_at_10": 0.180388,
+        "recall_at_k": 0.022263,
+        "top_support_precision_at_k": 0.034804
+      },
+      "dense_tertile_delta": 0.013856,
+      "source_deltas": {
+        "club-fantastic-season-1-and-2-consumed": 0.008371,
+        "mageia-stepmix1-development": 0.013377,
+        "outfox-serenity-main": 0.008883,
+        "sockmania-version-18": 0.012261
+      },
+      "bootstrap_pairwise": {
+        "lower_95": 0.007005,
+        "upper_95": 0.014671,
+        "indices_sha256": "5d58e93e151b4273f50132e741172a4a4706dc87bb11f2b62d334f8783c72e92",
+        "replicates": 10000,
+        "seed": 20260908
+      },
+      "validated_song_count": 55,
+      "non_metric_pairwise_delta": 0.00886
+    },
+    {
+      "name": "non_metric-t48-d2-lr0.05-ml64-l22.0-mv0.4",
+      "feature_view": "non_metric",
+      "trees": 48,
+      "depth": 2,
+      "learning_rate": 0.05,
+      "min_leaf_events": 64,
+      "leaf_l2": 2.0,
+      "max_leaf_value": 0.4,
+      "folds": [
+        {
+          "held_source": "club-fantastic-season-1-and-2-consumed",
+          "train_song_count": 34,
+          "validation_song_count": 21
+        },
+        {
+          "held_source": "mageia-stepmix1-development",
+          "train_song_count": 35,
+          "validation_song_count": 20
+        },
+        {
+          "held_source": "outfox-serenity-main",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        },
+        {
+          "held_source": "sockmania-version-18",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        }
+      ],
+      "deltas_vs_strength": {
+        "pairwise_accuracy": 0.00886,
+        "ndcg_at_10": 0.102787,
+        "recall_at_k": 0.003778,
+        "top_support_precision_at_k": 0.024078
+      },
+      "dense_tertile_delta": 0.014413,
+      "source_deltas": {
+        "club-fantastic-season-1-and-2-consumed": 0.006218,
+        "mageia-stepmix1-development": 0.012418,
+        "outfox-serenity-main": 0.005326,
+        "sockmania-version-18": 0.010153
+      },
+      "bootstrap_pairwise": {
+        "lower_95": 0.004958,
+        "upper_95": 0.012915,
+        "indices_sha256": "5d58e93e151b4273f50132e741172a4a4706dc87bb11f2b62d334f8783c72e92",
+        "replicates": 10000,
+        "seed": 20260908
+      },
+      "validated_song_count": 55,
+      "non_metric_pairwise_delta": null
+    },
+    {
+      "name": "full-t72-d2-lr0.03-ml64-l22.0-mv0.4",
+      "feature_view": "full",
+      "trees": 72,
+      "depth": 2,
+      "learning_rate": 0.03,
+      "min_leaf_events": 64,
+      "leaf_l2": 2.0,
+      "max_leaf_value": 0.4,
+      "folds": [
+        {
+          "held_source": "club-fantastic-season-1-and-2-consumed",
+          "train_song_count": 34,
+          "validation_song_count": 21
+        },
+        {
+          "held_source": "mageia-stepmix1-development",
+          "train_song_count": 35,
+          "validation_song_count": 20
+        },
+        {
+          "held_source": "outfox-serenity-main",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        },
+        {
+          "held_source": "sockmania-version-18",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        }
+      ],
+      "deltas_vs_strength": {
+        "pairwise_accuracy": 0.009575,
+        "ndcg_at_10": 0.177308,
+        "recall_at_k": 0.018021,
+        "top_support_precision_at_k": 0.029227
+      },
+      "dense_tertile_delta": 0.013044,
+      "source_deltas": {
+        "club-fantastic-season-1-and-2-consumed": 0.007375,
+        "mageia-stepmix1-development": 0.011916,
+        "outfox-serenity-main": 0.007637,
+        "sockmania-version-18": 0.011423
+      },
+      "bootstrap_pairwise": {
+        "lower_95": 0.005976,
+        "upper_95": 0.013289,
+        "indices_sha256": "5d58e93e151b4273f50132e741172a4a4706dc87bb11f2b62d334f8783c72e92",
+        "replicates": 10000,
+        "seed": 20260908
+      },
+      "validated_song_count": 55,
+      "non_metric_pairwise_delta": 0.008365
+    },
+    {
+      "name": "non_metric-t72-d2-lr0.03-ml64-l22.0-mv0.4",
+      "feature_view": "non_metric",
+      "trees": 72,
+      "depth": 2,
+      "learning_rate": 0.03,
+      "min_leaf_events": 64,
+      "leaf_l2": 2.0,
+      "max_leaf_value": 0.4,
+      "folds": [
+        {
+          "held_source": "club-fantastic-season-1-and-2-consumed",
+          "train_song_count": 34,
+          "validation_song_count": 21
+        },
+        {
+          "held_source": "mageia-stepmix1-development",
+          "train_song_count": 35,
+          "validation_song_count": 20
+        },
+        {
+          "held_source": "outfox-serenity-main",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        },
+        {
+          "held_source": "sockmania-version-18",
+          "train_song_count": 48,
+          "validation_song_count": 7
+        }
+      ],
+      "deltas_vs_strength": {
+        "pairwise_accuracy": 0.008365,
+        "ndcg_at_10": 0.08403,
+        "recall_at_k": 0.003674,
+        "top_support_precision_at_k": 0.022899
+      },
+      "dense_tertile_delta": 0.013509,
+      "source_deltas": {
+        "club-fantastic-season-1-and-2-consumed": 0.005827,
+        "mageia-stepmix1-development": 0.011881,
+        "outfox-serenity-main": 0.004704,
+        "sockmania-version-18": 0.009591
+      },
+      "bootstrap_pairwise": {
+        "lower_95": 0.004662,
+        "upper_95": 0.012222,
+        "indices_sha256": "5d58e93e151b4273f50132e741172a4a4706dc87bb11f2b62d334f8783c72e92",
+        "replicates": 10000,
+        "seed": 20260908
+      },
+      "validated_song_count": 55,
+      "non_metric_pairwise_delta": null
+    }
+  ],
+  "selected": "full-t48-d2-lr0.05-ml32-l21.0-mv0.5",
+  "selection_status": "selected"
+}

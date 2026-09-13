@@ -1,0 +1,23 @@
+{
+  "schema": "beatscope-response-ranking-candidate-lock-1",
+  "method": "strength-anchored-pairwise-boosted-chart-consensus-v4",
+  "candidate_sha256": "b11095b81a1d9c7ba7d0ce51cfdf1642abb3f1cca528f93151c11e8d7528cfb7",
+  "non_metric_candidate_sha256": "160283e411fdd1557f3fccce140a29df03dcf49b5779aae6df71bc240d15ea17",
+  "selection_report_sha256": "fdc7a5cf5fc43043631fba204bcc258709ce366808f69c67c810540caf9cb246",
+  "development_dataset_sha256": "53e42460750508578d038b9bcd6b93586d02eec3e9dbffe65946d63a45e4cb3d",
+  "development_manifest_sha256": "c2cfab358c703fd48ba971e239f5aefe8b8b1488f5da116a9ec3c9217028178c",
+  "development_source_ids": [
+    "mageia-stepmix1-development",
+    "outfox-serenity-main",
+    "sockmania-version-18"
+  ],
+  "evaluation_dataset_sha256": "6b36aa26f5807b72bfc5ba6f8513a07ad8c35f39d77a127322fb162057256d5a",
+  "evaluation_manifest_sha256": "030ace2a1a3b6f47913997dfc15531c9667e58510b5ee9fe99b0ad7425ed9e36",
+  "holdout": {
+    "source_id": "club-fantastic-season-1-and-2",
+    "source_revision": "zip-sha256:79c73b5a4af53384cd8c46cc0aaecff33562335ca6c02016e86daca90627d895",
+    "license": "creator-authorized-noncommercial",
+    "retained_song_count": 21,
+    "retained_chart_count": 144
+  }
+}

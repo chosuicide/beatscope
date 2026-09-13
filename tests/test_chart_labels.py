@@ -11,7 +11,11 @@ from pathlib import Path
 
 import pytest
 
+import beatscope.chart_labels as cl
 from beatscope.chart_labels import (
+    assign_development_splits,
+    audit_partition_leakage,
+    consumed_artifact_conflicts,
     CODE_ALIGNMENT_MATCH_RATE_TOO_LOW,
     CODE_MALFORMED_CHART,
     CODE_UNSUPPORTED_CHART_FORMAT,
@@ -563,3 +567,94 @@ def _chart(markers: list[float], index: int) -> dict:
         "diagnostics": {"raw_object_count": len(markers), "normalized_marker_count": len(markers),
                         "ignored_tail_count": 0, "ignored_hazard_count": 0},
     }
+
+
+# ------------------------------------------------- Round 2-B development splits
+
+
+def test_development_split_allocates_within_source_strata_without_test():
+    songs = []
+    source_by_song = {}
+    for index in range(12):
+        sha = f"{index:064x}"
+        source_by_song[sha] = "pack-one" if index < 6 else "pack-two"
+        songs.append({"audio_sha256": sha, "charts": [], "exclusions": []})
+    assignments = assign_development_splits(songs, source_by_song)
+    assert set(assignments.values()) == {"train", "validation"}
+    per_source = {}
+    for sha, split in assignments.items():
+        per_source.setdefault(source_by_song[sha], {}).setdefault(split, 0)
+        per_source[source_by_song[sha]][split] += 1
+    for source, counts in per_source.items():
+        assert counts.get("validation", 0) >= 1
+        assert counts.get("train", 0) >= 3
+
+
+def test_development_split_requires_two_validation_songs_for_large_strata():
+    songs = []
+    source_by_song = {}
+    for index in range(8):
+        sha = f"{index:064x}"
+        source_by_song[sha] = "single-pack"
+        songs.append({"audio_sha256": sha, "charts": [], "exclusions": []})
+    assignments = assign_development_splits(songs, source_by_song)
+    validation = [sha for sha, split in assignments.items() if split == "validation"]
+    assert len(validation) >= 2
+
+
+def test_development_split_is_stable_when_songs_are_added():
+    # Freeze semantics: existing assignments survive via frozen_assignments;
+    # new songs are allocated without moving them (plan section 4.1).
+    base_songs = [{"audio_sha256": f"{index:064x}", "charts": [], "exclusions": []}
+                  for index in range(10)]
+    sources = {f"{index:064x}": "pack" for index in range(10)}
+    base = assign_development_splits(copy.deepcopy(base_songs), sources)
+    larger = base_songs + [{"audio_sha256": "f" * 64, "charts": [], "exclusions": []}]
+    sources["f" * 64] = "pack"
+    updated = assign_development_splits(larger, sources, frozen_assignments=base)
+    for sha, split in base.items():
+        assert updated[sha] == split
+    assert updated["f" * 64] in {"train", "validation"}
+
+
+def test_frozen_development_assignment_values_are_validated():
+    songs = [{"audio_sha256": "a" * 64, "charts": [], "exclusions": []}]
+    with pytest.raises(ValueError):
+        assign_development_splits(songs, {"a" * 64: "pack"}, {"a" * 64: "test"})
+
+
+def test_consumed_artifact_conflicts_detect_exact_hashes():
+    assert consumed_artifact_conflicts(cl.CONSUMED_V2_ARTIFACTS[0], None) == ["dataset.jsonl"]
+    assert consumed_artifact_conflicts(None, None, cl.CONSUMED_V2_ARTIFACTS[2]) == ["selected.json"]
+    assert consumed_artifact_conflicts("0" * 64, "1" * 64) == []
+    assert len(cl.CONSUMED_V2_ARTIFACTS) == 4
+
+
+def test_partition_leakage_audits_all_four_dimensions():
+    songs = [{"audio_sha256": "a" * 64, "charts": [], "exclusions": []},
+             {"audio_sha256": "b" * 64, "charts": [], "exclusions": []}]
+    assignments = {"a" * 64: "train", "b" * 64: "validation"}
+    fingerprints = {"a" * 64: "f" * 64, "b" * 64: "e" * 64}
+    charts = {"a" * 64: {"c" * 64}, "b" * 64: {"d" * 64}}
+    timelines = {"c" * 64: "t" * 64, "d" * 64: "u" * 64}
+    assert audit_partition_leakage(songs, assignments, fingerprints, charts, timelines) == []
+
+    # Distinct audio shas never conflict even inside one split.
+    same_audio = {"a" * 64: "train", "b" * 64: "train"}
+    assert audit_partition_leakage(songs, same_audio, fingerprints, charts, timelines) == []
+    # An unassigned song is itself an audit error.
+    partial = {"a" * 64: "train"}
+    errors = audit_partition_leakage(songs, partial, fingerprints, charts, timelines)
+    assert any("no split assignment" in error for error in errors)
+
+    shared_fingerprint = {"a" * 64: "z" * 64, "b" * 64: "z" * 64}
+    errors = audit_partition_leakage(songs, assignments, shared_fingerprint, charts, timelines)
+    assert any("fingerprint" in error for error in errors)
+
+    shared_chart = {"a" * 64: {"c" * 64}, "b" * 64: {"c" * 64}}
+    errors = audit_partition_leakage(songs, assignments, fingerprints, shared_chart, timelines)
+    assert any("chart_hash_across_splits" in error for error in errors)
+
+    shared_timeline = {"c" * 64: "w" * 64, "d" * 64: "w" * 64}
+    errors = audit_partition_leakage(songs, assignments, fingerprints, charts, shared_timeline)
+    assert any("timeline_hash_across_splits" in error for error in errors)
