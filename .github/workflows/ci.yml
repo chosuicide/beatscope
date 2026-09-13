@@ -32,6 +32,10 @@ jobs:
         run: |
           python -m pip install -e ".[dev,mcp]"
           npm ci --prefix web-src --no-audit --no-fund
+      - name: Build the studio the server serves
+        run: |
+          npm ci --prefix web-src --no-audit --no-fund
+          npm run build --prefix web-src
       - name: Lint
         run: python -m ruff check beatscope scripts tests evaluations
       - name: Python tests
