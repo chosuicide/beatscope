@@ -107,6 +107,32 @@ def test_report_is_deterministic_and_keeps_failures_explicit(tmp_path, monkeypat
     assert "| test | 1 | 1 | 0.500 | 0.200 | 0.700 | — |" in report_markdown(report)
 
 
+def test_parallel_report_preserves_input_order(tmp_path, monkeypatch):
+    tracks = [
+        _track(tmp_path, "Jive", f"song-{index}", "0 1\n0.5 2\n1 3\n")
+        for index in range(6)
+    ]
+    monkeypatch.setattr(
+        "beatscope.public_benchmark.evaluate_events",
+        lambda reference, estimated: {key: 1.0 for key in (
+            "f_measure", "cemgil", "cmlc", "cmlt", "amlc", "amlt"
+        )},
+    )
+    report = run_public_benchmark(
+        tracks,
+        {"test": lambda path: ([0.0, 0.5, 1.0], [])},
+        workers=3,
+    )
+    assert [row["track_id"] for row in report["systems"]["test"]["tracks"]] == [
+        track.track_id for track in tracks
+    ]
+
+
+def test_parallel_worker_count_must_be_positive():
+    with pytest.raises(ValueError, match="workers must be positive"):
+        run_public_benchmark([], {}, workers=0)
+
+
 def test_recorded_public_measurement_is_canonical_and_hash_locked():
     path = Path("evaluations/public-beat/ballroom-32-v1.json")
     payload = json.loads(path.read_text(encoding="utf-8"))
@@ -115,4 +141,16 @@ def test_recorded_public_measurement_is_canonical_and_hash_locked():
         "796a15bd4b170f2b56dd8a20deeb56f5fad72231cb9199e6bd4bbd07c733a6e2"
     )
     assert payload["dataset"]["selected_tracks"] == 32
+    assert all(not system["failures"] for system in payload["systems"].values())
+
+
+def test_recorded_balanced_half_is_canonical_and_hash_locked():
+    """The published measurement is a deterministic genre-balanced half."""
+    path = Path("evaluations/public-beat/ballroom-349-v1.json")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert path.read_bytes() == canonical_report_bytes(payload)
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == (
+        "e048db449892a23e3b4640727757ce5139ff5401f7aa5cc86d7918f6292a6ad9"
+    )
+    assert payload["dataset"]["selected_tracks"] == 349
     assert all(not system["failures"] for system in payload["systems"].values())

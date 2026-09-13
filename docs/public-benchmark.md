@@ -38,7 +38,8 @@ a quick genre-balanced sample (replace the two roots with the extracted paths):
     python scripts/benchmark_public.py \
       --audio-root build/public-benchmark/audio/BallroomData \
       --annotation-root build/public-benchmark/annotations/BallroomAnnotations-1db08914a8ae15edb01f104046e30bad88effe67 \
-      --limit 32
+      --limit 32 \
+      --workers 4
 
 Omit --limit for all 698 tracks. Use
 `--systems beatscope librosa beat-this` to include the official Beat This final0
@@ -87,3 +88,34 @@ Sources: [mirdata Ballroom loader](https://mirdata.readthedocs.io/en/stable/_mod
 [Ballroom annotations](https://github.com/CPJKU/BallroomAnnotations),
 [Beat This](https://github.com/CPJKU/beat_this), and
 [mir_eval beat metrics](https://github.com/mir-evaluation/mir_eval/blob/main/mir_eval/beat.py).
+
+## Recorded measurement: a genre-balanced half (349 of 698)
+
+349 excerpts (a deterministic, genre-balanced half of Ballroom) were evaluated
+with all three systems, zero failures. This supersedes the 32-track sample as
+the published measurement; that sample stays as the quick development snapshot.
+
+| System | Beat F-measure | CMLt | AMLt | Downbeat F-measure |
+| --- | ---: | ---: | ---: | ---: |
+| BeatScope lightweight 0.7.0 | **0.701** | 0.472 | 0.765 | 0.410 |
+| librosa default 1.0.0 | 0.699 | **0.494** | 0.761 | — |
+| Beat This 1.1.0 final0 (CUDA) | 0.991 | 0.987 | 0.987 | 0.988 |
+
+Canonical per-track report:
+[`evaluations/public-beat/ballroom-349-v1.json`](../evaluations/public-beat/ballroom-349-v1.json)
+(SHA-256 `e048db449892a23e3b4640727757ce5139ff5401f7aa5cc86d7918f6292a6ad9`).
+
+What these numbers do and do not say:
+
+- it is a **half of the corpus**, not the full 698-track result, and it is
+  labelled that way everywhere;
+- BeatScope's beat tracking is **level with librosa** (0.701 vs 0.699) while its
+  continuity measures sit slightly below it (CMLt 0.472 vs 0.494), and its
+  **downbeat phase estimation remains a clear weakness** at 0.410 - the honest
+  reading is that downbeats are not yet a strength of this analyzer;
+- Beat This scores near the ceiling because **Ballroom is part of its published
+  training data**: it is an upper-bound reference, not a fair unseen opponent,
+  and it must not be presented as a leaderboard win;
+- these are corpus measurements, not a release gate and not a claim about every
+  genre. Reproduce with the same command plus `--limit 349`, or omit `--limit`
+  for all 698.

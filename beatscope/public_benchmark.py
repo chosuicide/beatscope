@@ -6,6 +6,7 @@ validity, never changes a baseline, and never downloads audio in normal tests.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import math
@@ -233,14 +234,19 @@ def _aggregate(rows: list[dict[str, Any]], key: str) -> dict[str, float] | None:
 def run_public_benchmark(
     tracks: Iterable[BenchmarkTrack],
     estimators: dict[str, Estimator],
+    *,
+    workers: int = 1,
 ) -> dict[str, Any]:
     """Run every estimator on the same files and return a canonical report."""
+    if workers < 1:
+        raise ValueError("workers must be positive")
     selected = list(tracks)
     systems: dict[str, Any] = {}
     for name, estimator in estimators.items():
         rows: list[dict[str, Any]] = []
         failures: list[dict[str, str]] = []
-        for track in selected:
+
+        def evaluate_track(track: BenchmarkTrack) -> tuple[dict[str, Any] | None, dict[str, str] | None]:
             try:
                 reference, reference_downbeats = read_ballroom_annotation(track.annotation_path)
                 estimated, estimated_downbeats = estimator(track.audio_path)
@@ -255,9 +261,27 @@ def run_public_benchmark(
                     row["downbeat_f_measure"] = evaluate_events(
                         reference_downbeats, estimated_downbeats
                     )["f_measure"]
-                rows.append(row)
+                return row, None
             except Exception as exc:
-                failures.append({"track_id": track.track_id, "error": f"{type(exc).__name__}: {exc}"})
+                return None, {
+                    "track_id": track.track_id,
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+
+        if workers == 1:
+            outcomes = map(evaluate_track, selected)
+        else:
+            executor = ThreadPoolExecutor(max_workers=workers)
+            outcomes = executor.map(evaluate_track, selected)
+        try:
+            for row, failure in outcomes:
+                if row is not None:
+                    rows.append(row)
+                if failure is not None:
+                    failures.append(failure)
+        finally:
+            if workers != 1:
+                executor.shutdown(wait=True)
         aggregate = {
             key: value
             for key in (*_METRIC_NAMES.values(), "downbeat_f_measure")

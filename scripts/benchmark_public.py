@@ -42,6 +42,12 @@ def main() -> int:
     parser.add_argument("--beat-this-model", default="final0")
     parser.add_argument("--device", default="cpu")
     parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="parallel track workers; use 1 for constrained machines",
+    )
+    parser.add_argument(
         "--cache-dir",
         type=Path,
         default=Path("build/public-benchmark/predictions"),
@@ -80,7 +86,7 @@ def main() -> int:
                 system_id,
             )
 
-    report = run_public_benchmark(tracks, estimators)
+    report = run_public_benchmark(tracks, estimators, workers=args.workers)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / "results.json").write_bytes(canonical_report_bytes(report))
     (args.output_dir / "results.md").write_text(report_markdown(report), encoding="utf-8", newline="\n")
