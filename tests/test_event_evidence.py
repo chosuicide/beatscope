@@ -667,25 +667,7 @@ def test_frozen_snapshots_match_four_representative_cases(snapshot_audio_dir: Pa
         # category and relationship.  Compare that portable semantic contract
         # here; formula-level tests above retain exact arithmetic coverage and
         # the characterization baseline still gates counts and timing errors.
-        actual = json.loads(raw)
-        expected = json.loads(committed)
-
-        def compare(left, right, path="root"):
-            assert type(left) is type(right), path
-            if isinstance(left, dict):
-                assert left.keys() == right.keys(), path
-                for key in left:
-                    compare(left[key], right[key], f"{path}.{key}")
-            elif isinstance(left, list):
-                assert len(left) == len(right), path
-                for index, (item, other) in enumerate(zip(left, right)):
-                    compare(item, other, f"{path}[{index}]")
-            elif isinstance(left, float):
-                assert left == pytest.approx(right, abs=0.11), path
-            else:
-                assert left == right, path
-
-        compare(actual, expected)
+        _compare_event_evidence(json.loads(raw), json.loads(committed))
 
 
 # ------------------------------------------------------- performance budgets
@@ -736,3 +718,65 @@ def test_ten_thousand_onsets_meet_performance_and_memory_budgets():
 def test_bundle_round6_never_emits_negative_zero():
     assert _round6(-0.0000001) == 0.0
     assert str(_round6(-0.0)) == "0.0"
+
+# ----------------------------------------------- portable snapshot comparison
+
+def _compare_event_evidence(actual, expected) -> None:
+    """Compare a regenerated evidence document to its frozen snapshot.
+
+    Every event, category, relationship and count is compared exactly. Floats
+    get a tolerance, because FFT implementations and CPU math libraries move
+    tied measurements: ``rank`` is a midrank percentile inside a neighbourhood,
+    so one slot is ``1 / sample_count`` wide and a tie turning into a strict
+    win moves it by one and a half slots. In a six-sample neighbourhood that is
+    0.25 - far above a fixed 0.11, and the reason this used to fail only on
+    Linux. The tolerance therefore follows the neighbourhood the rank was taken
+    in; ``contrast`` and every other float keep the strict bound.
+    """
+
+    def compare(left, right, path="root", float_abs=0.11):
+        assert type(left) is type(right), path
+        if isinstance(left, dict):
+            assert left.keys() == right.keys(), path
+            sample_count = left.get("sample_count")
+            slot = 2.0 / sample_count if isinstance(sample_count, int) and sample_count > 0 else 0.0
+            for key in left:
+                relaxed = max(float_abs, slot) if key == "rank" else float_abs
+                compare(left[key], right[key], f"{path}.{key}", relaxed)
+        elif isinstance(left, list):
+            assert len(left) == len(right), path
+            for index, (item, other) in enumerate(zip(left, right)):
+                compare(item, other, f"{path}[{index}]", float_abs)
+        elif isinstance(left, float):
+            assert left == pytest.approx(right, abs=float_abs), f"{path} (abs={float_abs:g})"
+        else:
+            assert left == right, path
+
+    compare(actual, expected)
+
+
+def test_rank_tolerance_follows_the_neighbourhood_but_stays_honest() -> None:
+    """The platform allowance is a couple of slots, never a free pass."""
+    def document(high: float, sample_count: int, events: int = 2) -> dict:
+        return {
+            "schema": "beatscope-event-evidence-1",
+            "events": [
+                {"id": index + 1, "local": {"sample_count": sample_count, "rank": {"high": high, "mid": 0.5, "low": 0.5}, "contrast": {"high": 0.2, "mid": 0.2, "low": 0.2}}}
+                for index in range(events)
+            ],
+        }
+
+    # One and a half slots in a six-sample neighbourhood: tolerated.
+    _compare_event_evidence(document(0.666667, 6), document(0.416667, 6))
+    # Two slots in a twenty-sample neighbourhood is 0.1: also within the rule.
+    _compare_event_evidence(document(0.55, 20), document(0.45, 20))
+    # Beyond the allowance, the same comparison must fail.
+    with pytest.raises(AssertionError):
+        _compare_event_evidence(document(0.9, 6), document(0.416667, 6))
+    # A moved contrast, a changed count or a changed event total is never a float tolerance problem.
+    moved_contrast = document(0.416667, 6)
+    moved_contrast["events"][0]["local"]["contrast"]["high"] = 0.9
+    with pytest.raises(AssertionError):
+        _compare_event_evidence(moved_contrast, document(0.416667, 6))
+    with pytest.raises(AssertionError):
+        _compare_event_evidence(document(0.416667, 6, events=3), document(0.416667, 6, events=2))
