@@ -14,6 +14,7 @@ import { MovieTransport } from './MovieTransport';
 import { CueMap } from './CueMap';
 import type { MovieRhythm } from './types';
 import { createMusicGrid } from '../../../beatscope/web/music-grid.mjs';
+import type { AgentActivity, ExportResult, MovieActionResult, ResponseRelevanceSidecar, StudioDirectorPort, StudioDirectorSnapshot, StudioStage } from '../webmcp/types.js';
 import { LANGS, setLang, t, useCopy, useLang } from './copy';
 import './studio.css';
 
@@ -40,6 +41,20 @@ export default function MovieStudio() {
   const [stage, setStage] = useState('idle'), [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState(''), [capability, setCapability] = useState<{ available: boolean; message: string } | null>(null);
   const [rhythm, setRhythm] = useState<MovieRhythm | null>(null);
+  /* The v0.11 ordering sidecar, loaded best-effort beside the rhythm. The
+     WebMCP port reads it through this ref; a missing or invalid sidecar stays
+     an honest null and never blocks preview or playback. */
+  const [relevance, setRelevance] = useState<ResponseRelevanceSidecar | null>(null);
+  const relevanceRef = useRef<ResponseRelevanceSidecar | null>(null);
+  relevanceRef.current = relevance;
+  /* Page-changing Agent actions, newest last; rendered by the action strip. */
+  const [activity, setActivity] = useState<AgentActivity[]>([]);
+  const activityRef = useRef<AgentActivity[]>([]);
+  activityRef.current = activity;
+  /* One audition restoration snapshot, replaced only by a validated audition. */
+  const auditionRef = useRef<{ time: number; playing: boolean } | null>(null);
+  const auditionCleanup = useRef<(() => void) | null>(null);
+  const dataExport = useRef<HTMLAnchorElement>(null);
   const [time, setTime] = useState(0), [playing, setPlaying] = useState(false);
   const [startBar, setStartBar] = useState(1), [follow, setFollow] = useState(true);
   const [elapsed, setElapsed] = useState(0);
@@ -75,10 +90,49 @@ export default function MovieStudio() {
     setTime(clamped);
     sendPreview({ type: 't', value: clamped });
   };
+  const playMedia = async (): Promise<{ playing: boolean; requiresUserGesture: boolean }> => {
+    const element = player();
+    if (!element) return { playing: false, requiresUserGesture: false };
+    try { await element.play(); return { playing: true, requiresUserGesture: false }; }
+    catch { return { playing: false, requiresUserGesture: true }; }
+  };
+  const pauseMedia = (): void => { player()?.pause(); };
   const toggle = () => {
     const element = player();
     if (!element) return;
-    if (element.paused) void element.play().catch(e => setError(String(e))); else element.pause();
+    if (element.paused) void playMedia(); else pauseMedia();
+  };
+
+  /* Audition drives the same media element: seek to the start, play only when
+     asked, stop at the end through the element's own timeupdate, and keep one
+     restoration snapshot for the last validated audition. */
+  const auditionRange = async (start: number, end: number, autoplay: boolean, signal: AbortSignal) => {
+    const element = player();
+    if (!element) return { started: false, start, end, requires_user_gesture: false };
+    auditionCleanup.current?.();
+    auditionRef.current = { time: element.currentTime, playing: !element.paused };
+    seek(start);
+    const stop = () => { if (element.currentTime >= end - 0.02) { element.pause(); cleanup(); } };
+    const cleanup = () => {
+      element.removeEventListener('timeupdate', stop);
+      signal.removeEventListener('abort', cleanup);
+      if (auditionCleanup.current === cleanup) auditionCleanup.current = null;
+    };
+    auditionCleanup.current = cleanup;
+    element.addEventListener('timeupdate', stop);
+    signal.addEventListener('abort', cleanup, { once: true });
+    if (!autoplay) return { started: false, start, end, requires_user_gesture: false };
+    const outcome = await playMedia();
+    return { started: outcome.playing, start, end, requires_user_gesture: outcome.requiresUserGesture };
+  };
+  const restoreAudition = async () => {
+    const saved = auditionRef.current;
+    if (!saved) return { restored: false, time: 0, playing: false };
+    auditionCleanup.current?.();
+    auditionRef.current = null;
+    seek(saved.time);
+    if (saved.playing) await playMedia(); else pauseMedia();
+    return { restored: true, time: saved.time, playing: saved.playing };
   };
 
   /* The media element is the only clock: rAF keeps the transport, the live
@@ -142,6 +196,13 @@ export default function MovieStudio() {
   async function loadRhythm(id: string, token: number) {
     const next: MovieRhythm = await request(`/api/projects/${id}`);
     if (token === generation.current) setRhythm(next);
+    try {
+      const sidecar: ResponseRelevanceSidecar = await request(`/api/projects/${id}/response-relevance`);
+      if (token === generation.current) setRelevance(sidecar);
+    } catch {
+      // No ranking sidecar: raw timing stays available, ranked queries say so.
+      if (token === generation.current) setRelevance(null);
+    }
   }
   async function movieLoop(id: string, token: number) {
     setStage('rendering');
@@ -161,14 +222,34 @@ export default function MovieStudio() {
       await wait(); if (token !== generation.current) return;
     }
   }
+  async function submitMovie(id: string, token: number, seed?: number): Promise<Job> {
+    const next: Job = await request('/api/movies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_id: id, seed: seed ?? sessionRef.current.seed ?? 1 }) });
+    if (token !== generation.current) return next;
+    sendSeed(next.seed);
+    save({ ...sessionRef.current, projectId: id, analysisId: undefined, movieId: next.id, seed: next.seed });
+    return next;
+  }
   async function createMovie(id: string, token: number) {
     setStage('rendering'); setJob(null);
     startedRef.current = Date.now();
-    const next: Job = await request('/api/movies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_id: id, seed: sessionRef.current.seed ?? 1 }) });
+    const next = await submitMovie(id, token);
     if (token !== generation.current) return;
-    sendSeed(next.seed);
-    save({ ...sessionRef.current, projectId: id, analysisId: undefined, movieId: next.id, seed: next.seed });
     await movieLoop(next.id, token);
+  }
+  /* The Agent path returns as soon as the job exists; progress is read back
+     through the state tool while the poll keeps running. */
+  async function startRenderForAgent(seed?: number): Promise<MovieActionResult> {
+    const id = sessionRef.current.projectId;
+    if (!id) throw new Error('no project');
+    const token = ++generation.current;
+    setStage('rendering'); setJob(null);
+    startedRef.current = Date.now();
+    const next = await submitMovie(id, token, seed);
+    void movieLoop(next.id, token);
+    return { action: 'start', job: { id: next.id, state: next.state, progress: Number(next.progress ?? 0), video_ready: Boolean(next.video_url) }, seed: sessionRef.current.seed ?? null };
+  }
+  async function cancelMovieRender(): Promise<void> {
+    if (sessionRef.current.movieId) await request(`/api/movies/${sessionRef.current.movieId}/cancel`, { method: 'POST' });
   }
   async function analysisLoop(id: string, token: number) {
     setStage('analyzing');
@@ -212,7 +293,7 @@ export default function MovieStudio() {
     audio.current?.pause(); video.current?.pause();
     setError(''); setRhythm(null); setTime(0); setPlaying(false); setStartBar(1); setFollow(true);
     const seed = crypto.getRandomValues(new Uint32Array(1))[0] & 0xffffff;
-    setJob(null); setStage('uploading'); save({ name: file.name, seed });
+    setJob(null); setStage('uploading'); setRelevance(null); auditionCleanup.current?.(); auditionRef.current = null; save({ name: file.name, seed });
     startedRef.current = null;
     try {
       const next = await request('/api/jobs/analyze', {
@@ -252,6 +333,61 @@ export default function MovieStudio() {
     ? Math.max(0, elapsed / job.progress - elapsed)
     : null;
   const exportBase = session.projectId ? `/api/projects/${encodeURIComponent(session.projectId)}/export` : null;
+  const timingPackageUrl = exportBase ? `${exportBase}/codex.zip` : null;
+  const timingPackageName = session.projectId ? `${session.projectId}.beatscope-codex.zip` : 'timing-package.zip';
+  /* Same URL as the visible Data export button: the button keeps its native
+     anchor (the most reliable path), the tool path clicks the same href and
+     falls back to the button when a programmatic download is refused. */
+  async function downloadTimingPackage(): Promise<ExportResult> {
+    if (!timingPackageUrl) throw new Error('no project');
+    if (!('download' in HTMLAnchorElement.prototype)) {
+      dataExport.current?.focus();
+      return { filename: timingPackageName, started: false, requires_user_action: true };
+    }
+    const anchor = document.createElement('a');
+    anchor.href = timingPackageUrl;
+    anchor.download = timingPackageName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    return { filename: timingPackageName, started: true, requires_user_action: false };
+  }
+
+  /* One stable port object, refreshed every render: tool callbacks read it
+     through this ref, so an older call can never mutate a new session. */
+  const port: StudioDirectorPort = {
+    snapshot: (): StudioDirectorSnapshot => {
+      const element = player();
+      return {
+        stage: stage as StudioStage,
+        projectId: sessionRef.current.projectId ?? null,
+        name: sessionRef.current.name,
+        rhythm,
+        responseRelevance: relevanceRef.current,
+        seed: sessionRef.current.seed ?? null,
+        movieJob: job ? { id: job.id, state: job.state, progress: Number(job.progress ?? 0), video_ready: Boolean(job.video_url) } : null,
+        currentTime: element ? element.currentTime : time,
+        duration,
+        playing: element ? !element.paused : playing,
+        rendererAvailable: Boolean(capability?.available),
+      };
+    },
+    seek: (target: number) => seek(target),
+    play: () => playMedia(),
+    pause: () => pauseMedia(),
+    audition: (start, end, autoplay, signal) => auditionRange(start, end, autoplay, signal),
+    restoreAudition: () => restoreAudition(),
+    render: async (action, seed) => {
+      if (action === 'start') return startRenderForAgent(seed);
+      await cancelMovieRender();
+      const current = port.snapshot();
+      return { action: 'cancel', job: current.movieJob, seed: current.seed };
+    },
+    exportTimingPackage: () => downloadTimingPackage(),
+    recordAgentAction: (entry: AgentActivity) => setActivity((list) => [...list.slice(-4), entry]),
+  };
+  const portRef = useRef<StudioDirectorPort>(port);
+  portRef.current = port;
   const currentBar = grid.barAtTime(time) ?? 1;
 
   return (
@@ -415,7 +551,8 @@ export default function MovieStudio() {
             <div className="rail-cap">{copy.dataExport}</div>
             <a
               className={`btn-line wide${exportBase ? '' : ' off'}`}
-              href={exportBase ? `${exportBase}/codex.zip` : undefined}
+              ref={dataExport}
+              href={timingPackageUrl ?? undefined}
               download
               aria-disabled={!exportBase}
             >

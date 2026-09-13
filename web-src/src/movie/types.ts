@@ -10,6 +10,9 @@ export interface MovieRhythm {
   onsets?: { id?: string | number; time: number; strength: number; bands?: Record<string, number>; accent?: boolean }[];
   patterns?: {
     segments?: {
+      id?: string | number;
+      index?: number;
+      variant?: number;
       family: string;
       display_label?: string;
       start_bar?: number;

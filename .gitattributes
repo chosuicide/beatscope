@@ -10,4 +10,5 @@ tests/fixtures/event_evidence/*.json text eol=lf
 tests/fixtures/event_ranking/** text eol=lf
 tests/fixtures/event_ranking_v5/** text eol=lf
 tests/snapshots/event-evidence/*.json text eol=lf
+tests/snapshots/studio-webmcp/*.json text eol=lf
 examples/shared/** -text

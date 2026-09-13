@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noEmitOnError": true,
+    "declaration": false,
+    "rewriteRelativeImportExtensions": true,
+    "outDir": ".generated",
+    "rootDir": "../web-src/src"
+  },
+  "include": [
+    "../web-src/src/webmcp/types.ts",
+    "../web-src/src/webmcp/contracts.ts",
+    "../web-src/src/webmcp/responses.ts",
+    "../web-src/src/webmcp/timing.ts",
+    "../web-src/src/webmcp/movie.ts",
+    "../web-src/src/webmcp/actions.ts",
+    "../web-src/src/movie/types.ts",
+    "../beatscope/runtime/runtime.d.mts",
+    "../beatscope/web/mv-plan.d.mts"
+  ]
+}
