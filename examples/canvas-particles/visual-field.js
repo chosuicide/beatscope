@@ -1,10 +1,10 @@
 // Planar particle field — an authored geometry mapping for the Canvas
 // reference consumer. Pure and seek-safe: every value is a function of
-// particle identity, the current BeatScope frame, and the canvas size.
+// particle identity, the current timing state, and the canvas size.
 // No random state, no accumulated frame count, no wall clock.
 //
 // This module contains no beat mathematics: all timing facts arrive via
-// the BeatScope frame (timing bands, onset, accent, scene composition).
+// getVisualState, and the direction below is authored here, in the example.
 // It is example code, not a BeatScope SDK.
 
 export const FIELD_COLUMNS = 56;
@@ -38,24 +38,60 @@ export function createParticleField(columns = FIELD_COLUMNS, rows = FIELD_ROWS) 
   return particles;
 }
 
-const IDENTITY_COMPOSITION = Object.freeze({
-  spread: 0.5,
-  twist: 0,
-  flow: 0.5,
-  orbit: 0,
-  void: 0,
-  contrast: 0.5,
-  paletteMix: 0,
-});
 
-function frameInputs(frame) {
-  const timing = frame.timing;
-  const scene = frame.scene || null;
-  const composition = scene ? scene.composition : IDENTITY_COMPOSITION;
-  const transition = scene ? scene.transition : null;
-  const onset = timing.onset && timing.onset.value ? timing.onset.value : 0;
-  const accent = timing.accent && timing.accent.value ? timing.accent.value : 0;
-  return { timing, composition, transition, onset, accent };
+/**
+ * Authored direction. The package reports measured facts — bands, phases,
+ * transients, structure — and this example turns them into the composition
+ * channels its geometry expects. These numbers are the example's own choices:
+ * the package ships no scene, no palette and no transition envelope, by design.
+ */
+const LEAD_SECONDS = 1.2; // how long before a boundary the plane starts to open
+const SETTLE_SECONDS = 0.9; // how long an arrival takes to settle back
+const HIT_SECONDS = 0.12; // how long a transient keeps its impulse
+
+export function directionFor(state) {
+  const structure = state.structure || null;
+  const span = structure ? Math.max(1e-6, structure.endTime - structure.startTime) : 1;
+  const sinceBoundary = structure ? structure.phase * span : 0;
+  const toBoundary = structure && Number.isFinite(structure.secondsToBoundary)
+    ? structure.secondsToBoundary
+    : Infinity;
+  const approach = Math.max(0, Math.min(1, 1 - toBoundary / LEAD_SECONDS));
+  const settle = Math.max(0, 1 - sinceBoundary / SETTLE_SECONDS);
+  const onset = state.onset && state.onset.value ? state.onset.value : 0;
+  const accent = state.accent && state.accent.value ? state.accent.value : 0;
+  const impulse = Math.max(0, 1 - sinceBoundary / HIT_SECONDS) * Math.max(onset, accent);
+  return {
+    composition: {
+      spread: 0.16 + state.mid * 0.26, // mid band widens the plane
+      twist: Math.sin(state.barPhase * Math.PI * 2) * 0.32, // one slow turn per bar
+      flow: 0.3 + state.low * 0.5, // low band sets the wave speed
+      orbit: structure ? structure.phase : 0, // progress through the segment
+      void: approach * 0.35, // the gap opens as a boundary approaches
+      contrast: 0.45 + state.high * 0.35, // high band lifts contrast
+      paletteMix: Math.max(approach, settle), // bounded colour shift at boundaries
+    },
+    transition: {
+      stage: approach > 0 ? "approach" : settle > 0 ? "settle" : "idle",
+      approach,
+      cross: 0,
+      settle,
+      impulse,
+    },
+    onset,
+    accent,
+  };
+}
+
+function frameInputs(state) {
+  const direction = directionFor(state);
+  return {
+    timing: state,
+    composition: direction.composition,
+    transition: direction.transition,
+    onset: direction.onset,
+    accent: direction.accent,
+  };
 }
 
 /**
@@ -64,8 +100,8 @@ function frameInputs(frame) {
  * of this, so reduced motion can scale displacement without touching
  * layout.
  */
-export function particleLayout(field, frame, size) {
-  const { composition } = frameInputs(frame);
+export function particleLayout(field, state, size) {
+  const { composition } = frameInputs(state);
   const centerX = size.width / 2;
   const centerY = size.height * 0.42;
   const layout = new Array(field.length);
@@ -87,22 +123,22 @@ export function particleLayout(field, frame, size) {
 }
 
 /**
- * Screen-space points for one media-time frame. The same (field, frame,
+ * Screen-space points for one media-time state. The same (field, state,
  * size, reducedMotion) always yields the same points, so pause, seek,
  * and replay render identical geometry. Every displacement term is
  * linear in one motion factor (1, or 0.25 under reduced motion), so
  * reduced motion scales the displacement vector exactly and leaves the
  * layout, depth, and timing state unchanged.
  */
-export function particlePoints(field, frame, size, reducedMotion = false) {
-  const { timing, composition, transition, onset, accent } = frameInputs(frame);
+export function particlePoints(field, state, size, reducedMotion = false) {
+  const { timing, composition, transition, onset, accent } = frameInputs(state);
   const motion = reducedMotion ? 0.25 : 1;
   const envelope = transition ? transition.settle + transition.approach * 0.5 : 0;
   const pop = transition ? transition.impulse * 0.25 * motion : 0;
   const wavePhase = timing.time * (0.35 + composition.flow * 0.5) + composition.orbit * Math.PI;
   const centerX = size.width / 2;
   const centerY = size.height * 0.42;
-  const layout = particleLayout(field, frame, size);
+  const layout = particleLayout(field, state, size);
   const points = new Array(field.length);
   for (let i = 0; i < field.length; i += 1) {
     const particle = field[i];
@@ -145,10 +181,10 @@ export function particlePoints(field, frame, size, reducedMotion = false) {
 }
 
 /**
- * Family palettes for the reference field. Family identity comes from
- * the BeatScope scene (neutral A/B/C labels); unknown families fall
- * back to the neutral slate. paletteMix eases the tones toward the
- * family accent at scene boundaries.
+ * Family palettes for the reference field. Family identity comes from the
+ * measured structure segment (neutral A/B/C labels); unknown families fall
+ * back to the neutral slate. The authored envelope eases the tones toward the
+ * family accent at segment boundaries.
  */
 const FAMILY_PALETTES = Object.freeze({
   A: Object.freeze(["#232833", "#5d7d8f", "#cfdde2"]),
@@ -176,16 +212,16 @@ function blendHex(a, b, mix) {
 }
 
 /**
- * Palette for one frame. The scene frame does not expose the incoming
- * family, so paletteMix instead eases the background and highlight
- * tones toward the family accent — a bounded boundary colour shift
- * that stays a pure function of the frame.
+ * Palette for one frame. The family comes from the measured structure segment
+ * (`state.structure.family`), and the authored boundary envelope eases the
+ * background and highlight tones toward the family accent — a bounded colour
+ * shift that stays a pure function of the frame.
  */
-export function framePalette(frame) {
-  const scene = frame.scene;
-  if (!scene) return NEUTRAL_PALETTE.slice();
-  const current = familyPalette(scene.family);
-  const paletteMix = scene.composition ? scene.composition.paletteMix : 0;
+export function framePalette(state) {
+  const family = state && state.structure ? state.structure.family : null;
+  if (!family) return NEUTRAL_PALETTE.slice();
+  const current = familyPalette(family);
+  const paletteMix = directionFor(state).composition.paletteMix;
   if (!paletteMix) return current.slice();
   return [
     blendHex(current[0], current[1], paletteMix * 0.5),

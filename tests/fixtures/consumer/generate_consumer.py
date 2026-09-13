@@ -36,6 +36,7 @@ import argparse
 import hashlib
 import io
 import json
+import shutil
 import math
 import subprocess
 import sys
@@ -251,40 +252,45 @@ def analyze_project(wav_path: Path) -> dict[str, Any]:
 # -------------------------------------------------------------- checkpoints
 
 
-def _checkpoint_times(project: dict[str, Any], timeline: dict[str, Any]) -> tuple[list[float], list[float]]:
+def _checkpoint_times(project: dict[str, Any]) -> tuple[list[float], list[float]]:
     """Ordered checkpoint times plus an out-of-order seek sequence.
 
-    The seek sequence is a permutation of recorded times (the probe
-    compares each sequence entry against the recorded frame), so every
-    settle midpoint is recorded as a checkpoint too.
+    Every time is a timing fact from the package itself: the start, the end, one
+    steady-state beat with both neighbours at +/- 1 ms, one beat midpoint, and
+    every measured structure boundary with its immediate neighbours so a
+    boundary can be replayed from either side. The seek sequence is a
+    permutation of recorded times (the probe compares each entry against the
+    recorded frame).
     """
     beats = [float(b["time"]) for b in project["beats"]]
     duration = float(project["source"]["duration"])
-    boundaries = [float(t["time"]) for t in timeline["transitions"]]
-    settle_midpoints = [float(t["time"]) + float(t["settle_seconds"]) / 2.0 for t in timeline["transitions"]]
+    segments = (project.get("patterns") or {}).get("segments") or []
+    boundaries = [
+        float(segment["start_time"])
+        for segment in segments
+        if 0.0 < float(segment["start_time"]) < duration
+    ]
 
     times: set[float] = {0.0, duration}
     beat = beats[5] if len(beats) > 5 else beats[0]
+    midpoint = (beats[4] + beats[5]) / 2.0 if len(beats) > 5 else beat + 0.001
     times.add(round(beat, 9))
-    # A beat midpoint and a beat +/- 1 ms sit inside the steady-state window.
-    times.add(round((beats[4] + beats[5]) / 2.0, 9))
+    times.add(round(midpoint, 9))
     times.add(round(beat - 0.001, 9))
     times.add(round(beat + 0.001, 9))
     for boundary in boundaries:
         times.add(round(boundary - 0.001, 9))
         times.add(round(boundary, 9))
         times.add(round(boundary + 0.001, 9))
-    for midpoint in settle_midpoints:
-        times.add(round(midpoint, 9))
     times.add(round(duration - 0.001, 9))
-    ordered = sorted(times)
+    ordered = [t for t in sorted(times) if 0.0 <= t <= duration]
 
     seek_sequence = [
         round(duration, 9),
         0.0,
-        round(settle_midpoints[-1], 9),
-        round(boundaries[0] - 0.001, 9),
-        round((beats[4] + beats[5]) / 2.0, 9),
+        round(boundaries[-1] - 0.001, 9) if boundaries else round(beat + 0.001, 9),
+        round(boundaries[0], 9) if boundaries else round(beat, 9),
+        round(midpoint, 9),
     ]
     assert set(seek_sequence) <= set(ordered), "seek sequence must replay recorded checkpoints"
     return ordered, seek_sequence
@@ -300,7 +306,9 @@ import { pathToFileURL } from 'node:url';
 const times = JSON.parse(readFileSync(process.argv[3], 'utf8'));
 const probe = await import(pathToFileURL(process.argv[4]).href);
 const moduleNamespace = await import(pathToFileURL(process.argv[2]).href);
-const frames = times.map((time) => probe.canonicalFrame(moduleNamespace, time));
+const manifest = JSON.parse(readFileSync(process.argv[5], 'utf8'));
+const frameFunction = probe.frameFunctionName(manifest);
+const frames = times.map((time) => probe.canonicalFrame(moduleNamespace, time, { frameFunction }));
 process.stdout.write(JSON.stringify(frames));
 """
 
@@ -335,8 +343,9 @@ def _node_frames(fixture_dir: Path, times: list[float], workdir: Path) -> bytes:
     runner.write_text(_NODE_RUNNER, encoding="utf-8", newline="\n")
     times_file.write_text(json.dumps(times), encoding="utf-8", newline="\n")
     entry = (fixture_dir / "visual-state.js").resolve()
+    manifest_file = (fixture_dir / MANIFEST_MEMBER).resolve()
     result = subprocess.run(
-        ["node", str(runner), str(entry), str(times_file), str(probe_source)],
+        ["node", str(runner), str(entry), str(times_file), str(probe_source), str(manifest_file)],
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -361,10 +370,13 @@ def build_fixture(output_dir: Path) -> dict[str, Any]:
         write_wav(wav_path, render_audio())
 
         project = analyze_project(wav_path)
-        # This generator reproduces the frozen v0.9 interoperability fixture.
-        # New additive package capabilities are exercised by fresh-export tests.
+        # The fixture is the timing-only package the product ships: measured
+        # facts plus the optional ordering sidecar, no visual layer.
         zip_bytes = generate_codex_export(project, include_response_relevance=False)
         fixture_dir = output_dir / "fixture.beatscope"
+        if fixture_dir.exists():
+            # Regeneration must not leave members of an older shape behind.
+            shutil.rmtree(fixture_dir)
         members: dict[str, bytes] = {}
         with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:
             for info in archive.infolist():
@@ -377,7 +389,6 @@ def build_fixture(output_dir: Path) -> dict[str, Any]:
                 members[info.filename] = data
 
         rhythm_map = json.loads(members["rhythm-map.json"].decode("utf-8"))
-        timeline = json.loads(members["visual-timeline.json"].decode("utf-8"))
         manifest = json.loads(members[MANIFEST_MEMBER].decode("utf-8"))
 
         # The frozen fixture must satisfy the same contract consumers
@@ -385,11 +396,11 @@ def build_fixture(output_dir: Path) -> dict[str, Any]:
         # the honest capability set for this arrangement.
         manifest_errors = validate_manifest(manifest, members) + manifest_duration_errors(manifest, rhythm_map)
         assert not manifest_errors, f"exported manifest failed contract validation: {manifest_errors}"
-        assert manifest["capabilities"]["scenes"] is True, "fixture arrangement must carry scene artifacts"
+        assert manifest["capabilities"]["scenes"] is False, "the package ships no visual layer"
         assert manifest["capabilities"]["structure"] is True, "fixture arrangement must carry structure segments"
 
         duration = float(project["source"]["duration"])
-        times, seek_sequence = _checkpoint_times(project, timeline)
+        times, seek_sequence = _checkpoint_times(project)
         frames_canonical = _node_frames(fixture_dir, times, workdir)
         checkpoints = {
             "schema": CHECKPOINT_SCHEMA,

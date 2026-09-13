@@ -7,8 +7,8 @@ player code, no build system, and no re-analysis of audio.
 ## What it proves
 
 - The handoff package is the **only** musical timing source. `app.js`
-  imports `getBeatScopeFrame` from `../shared/fixture.beatscope/` and
-  never touches `rhythm-map.json` directly.
+  imports `getVisualState` from `../shared/fixture.beatscope/` and never
+  touches `rhythm-map.json` directly.
 - `audio.currentTime` is the **only** clock. The one
   `requestAnimationFrame` loop reads the current media time and repaints;
   there is no wall-clock timing and no accumulated frame state, so

@@ -1,20 +1,42 @@
-# BeatScope export
+# BeatScope timing package — consumer-fixture
 
-Files in this handoff:
+The measured timing facts for one audio file, packaged for a coding agent or a
+visual tool. Read `AGENT.md` next: it is the contract. `BEATSCOPE.md` holds the
+timing invariants.
 
-- `rhythm-map.json` — versioned timing data: duration, BPM, origin, bars/beats, raw onsets, accents, low/mid/high energy, and sections.
-- `beatscope-package.json` — machine-readable routing manifest: entry, probe, honest capabilities, exported function names, and sha256 integrity over every member.
-- `AGENT.md` — the short Agent routing document; start there.
-- `consumer-probe.js` — self-verification probe: `node consumer-probe.js .` checks every declared function and replays checkpoints when a checkpoint file is supplied.
-- `visual-state.js` — pure `getVisualState(time)` plus, when visual artifacts are present, `getSceneState(time)` and `getBeatScopeFrame(time)`. No random state; safe to call after seek.
-- `beatscope-runtime.js` — the shared runtime module `visual-state.js` builds on (`createTrack`).
-- `worker-example.js` — ready-to-use module Worker adapter. The main thread sends audio time; the Worker returns deterministic timing and scene state.
-- `scene-director.js` — the shared scene orchestrator behind `getSceneState` (seek-safe, deterministic).
-- `visual-recipe.json` — compiled family identities: motif, palette slot, and composition channels per structural family.
-- `visual-timeline.json` — those identities instantiated on the real song: scenes and boundary transitions in seconds.
-- `visual-recipe-data.js` / `visual-timeline-data.js` — generated importable copies of the two JSON documents.
-- `BEATSCOPE.md` — implementation handoff and timing invariants.
-- `SKILL.md` — portable Codex skill for building a visual from this package.
-- `references/schema.md` — exact field semantics for the skill.
+## Files
 
-The source audio is not copied into this package. Pair it with the original local file named `consumer-fixture`.
+- `rhythm-map.json` — the authoritative timing data: duration, tempo and origin,
+  bars and beats, raw onsets with strength and band energy, accents, sampled
+  energy, and structure segments.
+- `rhythm.mid` — the same facts for a DAW: a tempo map plus one note per onset,
+  velocity from strength.
+- `rhythm.csv` — the same facts as a table: raw and quantised time, offset in
+  milliseconds, bar/beat/step, strength, band energy, and the accent flag.
+- `beatscope-package.json` — the routing manifest: entry module, probe, honest
+  capabilities, exported function names, a short summary, and the sha256 of every
+  member.
+- `visual-state.js` — dependency-free accessor: `getVisualState(time)`, plus
+  `getResponseEvents(start, end, budget)` when the manifest declares it.
+- `beatscope-runtime.js` — the shared runtime `visual-state.js` builds on.
+- `worker-example.js` — a module Worker adapter: the main thread sends audio time,
+  the worker returns the frame facts.
+- `consumer-probe.js` — self-check: `node consumer-probe.js .`.
+- `BEATSCOPE.md` — timing invariants.
+- `SKILL.md`, `references/schema.md` — how to consume the package, and the exact
+  field semantics.
+- `LICENSE` — terms for the shipped code.
+
+## Not in this package
+
+No audio: pair the package with the original local file named
+`consumer-fixture`. No assets, no fonts, no palette, no style, no scene timeline,
+no rendered video, and no statement about aspect ratio, frame rate or pacing.
+Those are decisions for you and the user to make together. The package also never
+contains machine paths or cache locations.
+
+## Authority
+
+`rhythm-map.json` is the authoritative data. `visual-state.js` embeds the same map
+only so that `import` works without a build step or a fetch layer; when the two
+ever disagree, the JSON wins.

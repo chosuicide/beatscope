@@ -1,77 +1,55 @@
 ---
 name: beatscope-visualizer
-description: Build deterministic audio-reactive web, video, or motion visuals from a BeatScope export package.
+description: Consume a BeatScope timing package — deterministic rhythm facts for one audio file — when building or customising an audio-reactive visual.
 ---
 
-# BeatScope visualizer handoff
+# BeatScope timing package
 
-Use this skill when a BeatScope export package is provided for an audio-reactive visual. Read `BEATSCOPE.md`, then inspect `rhythm-map.json` and `visual-state.js` before writing visual code.
+Use this skill when a BeatScope package (a folder or zip holding `beatscope-package.json`) is provided for a piece of music. The package is **timing facts only**: it carries no style, no scene, no assets and no task. Read `AGENT.md` first — it is the contract — and `BEATSCOPE.md` for the invariants.
+
+## What you have
+
+- `rhythm-map.json` — the authoritative facts: beats, onsets with strength and band energy, accents, sampled energy, structure segments.
+- `rhythm.mid` / `rhythm.csv` — the same facts for a DAW or a spreadsheet.
+- `response-relevance.json` — an ordering value for spending a limited response budget, when the manifest enables it.
+- `visual-state.js` — the dependency-free accessor: `getVisualState(time)`, plus `getResponseEvents(start, end, budget)`.
+- `beatscope-package.json` — the routing manifest: entry, probe, capabilities, function names, a track summary, and the sha256 of every member.
+
+## What is not in the package
+
+No audio (pair it with the original local file; the package names it), no footage or images, no fonts, no palette, no style, no scene timeline, no rendered video, and no statement about aspect ratio, frame rate or pacing. Do not assume any of these exist: **ask the user**. The package deliberately stops at measurement, because the visual is a decision you make with them.
 
 ## Timing contract
 
 - Do not re-analyse the audio. The exported timing and energy data are the inspected facts.
-- Make `audio.currentTime` the only clock. When the package carries `visual-recipe.json`, call `getBeatScopeFrame(audio.currentTime)` on each render — it returns `{ timing, scene }` from one call. Otherwise sample `getVisualState(audio.currentTime)`.
+- Make `audio.currentTime` the only clock: sample `getVisualState(audio.currentTime)` once per animation frame. Offline, derive seconds from the frame number and the composition FPS. Never accumulate time across frames.
 - Keep visuals seek-safe and pause-safe: the same time must produce the same frame, with no wall-clock drift, hidden timers, or non-reproducible random state.
-- Timing state and scene state are separate surfaces: `getVisualState(time)` reports rhythm facts (bar, beat, energy, impulses); `getSceneState(time)` reports the structural visual scene. Never merge them into one ad-hoc state object.
-- Use the export's `duration`, `bpm`, `origin`, `beats`, `onsets`, `energy`, and `sections` as available; when the map carries `patterns.segments`, those are the whole-song structure facts. Gracefully handle missing optional arrays.
+- When the manifest enables `response_relevance`, use `getResponseEvents(start, end, budget)` for effects or edits that cannot afford every onset. Choose the budget per shot or section and, when the choice matters, show the user the event counts for two or three budgets instead of inventing a global threshold. The selected objects are existing onsets and keep their stored times.
+- Honour `prefers-reduced-motion` in your own motion: the exported facts never change, but your animation should drop continuous agitation and keep layout or contrast changes calm.
+- Read fields defensively: optional arrays such as `energy` or `patterns.segments` may be absent.
 
-## Scene contract (v0.8)
+## What the fields mean
 
-When `visual-recipe.json` and `visual-timeline.json` are present, `getSceneState(time)` returns the compiled scene. Rules:
-
-- Family identity must persist across repetitions: every occurrence of family `A` wears the same motif and palette slot. `variant` means controlled visual variation of that identity (bounded `variant_delta`), never a different musical role.
-- Respect the recipe tokens before inventing new ones: the palette, transition timing (`lead_beats`, `settle_beats`), and motion limits (`max_scene_spread`, `max_scene_twist`, `max_palette_mix`) are the design budget.
-- `scene.transition` reports `stage` (`approach`, `cross`, `settle`, `idle`) with envelopes already scaled by the transition's `lead_seconds`/`settle_seconds`. The transition `driver` selects the treatment (`phase-turn`, `radial-part`, `aperture`, `flow-shear`, or the neutral cross-settle); it describes why the boundary exists, not an emotion. Do not label boundaries with feelings.
-- Do not animate every property at every boundary. Pick at most two channels (for example spread + contrast) and let the envelopes drive them.
-- Keep all extra motion seek-safe: derive everything from `getSceneState(audio.currentTime)` the same way every frame.
-- Preserve reduced-motion behavior: honor `prefers-reduced-motion` and pass `{ reducedMotion: true }` to `getSceneState` so envelopes collapse to their calm form.
-- Never rename the neutral `A`/`B`/`A′` families without explicit user instruction.
-
-## Motion mapping
-
-Use `low` for scale or weight, `mid` for surface motion, and `high` for light or fine detail. Use `onset` and `accent` for short impact impulses, `beatPhase` and `barPhase` for repeatable breathing, and `section` for larger composition changes. Treat these as rhythm-strength signals, not instrument identity: do not claim a signal is a kick, snare, or 808.
-
-When `patterns.segments` exists, treat it as the whole-song form:
-
-- Drive scene-level changes (palette, layout, framing) from segment boundaries; keep moment-level motion on beats and onsets.
-- `family` (`A`, `B`, ...) marks recurrence, not musical role: equal families repeat the same material. `variant` marks a passage related to its family but audibly changed — keep a variant's scene related to its family's scene instead of inventing a new one.
-- Never rename `A`/`B` to Verse/Chorus or any other section name without the user's instruction; the letters are deliberately neutral.
-- `state.structure` from `getVisualState(time)` reports the current segment (`id`, `family`, `variant`, `label`, `index`), its `phase`, and `secondsToBoundary`; the shared runtime also exposes `track.structureLead` and `track.boundaryImpulse` for approach and arrival emphasis. Derive transitions from these rather than re-parsing the JSON per frame.
+- `beat`, `bar`, `beatPhase`, `barPhase` — position in the measured grid. The phases interpolate between the two real beats around the query, so variable tempo stays honest.
+- `low`, `mid`, `high`, `all` — measured band energy, 0-1. Frequency evidence, never instrument identity: do not claim a signal is a kick, snare, or 808.
+- `onset`, `accent` — transient impulses with `value` and `age` (seconds since the event).
+- `state.structure` — the current segment (`id`, `family`, `variant`, `label`, `index`), its `phase`, and `secondsToBoundary`; `track.structureLead` and `track.boundaryImpulse` describe approach and arrival.
+- `family` (`A`, `B`, ...) marks recurrence, not musical role: `A′` is related to `A`, never "Chorus". Never rename the neutral letters unless the user asks.
+- `response_relevance` is an ordering value learned from human-authored rhythm charts — not probability, confidence, or a command to animate. When ranking is unavailable, `getResponseEvents` reports `chronological-fallback`; keep that fact in your diagnostics instead of presenting the fallback as ranked output.
 
 ## Minimal example (no build system)
 
 ```html
 <script type="module">
-  import { getBeatScopeFrame } from './visual-state.js';
+  import { getVisualState } from './visual-state.js';
   const circle = document.querySelector('#pulse');
   function render() {
-    const frame = getBeatScopeFrame(audio.currentTime);
-    circle.setAttribute('r', 20 + frame.timing.low * 30);
+    const frame = getVisualState(audio.currentTime);
+    circle.setAttribute('r', 20 + frame.low * 30);
     requestAnimationFrame(render);
   }
   render();
 </script>
 ```
 
-## Advanced example (scene-driven composition)
-
-```html
-<script type="module">
-  import { getBeatScopeFrame } from './visual-state.js';
-  function render() {
-    const { timing, scene } = getBeatScopeFrame(audio.currentTime, {
-      reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
-    });
-    // Scene composition channels are pre-interpolated across boundaries;
-    // onsets stay moment-level. Two channels at a boundary, no more.
-    const spread = scene ? scene.composition.spread : 0.14;
-    const approach = scene ? scene.transition.approach : 0;
-    stage.style.setProperty('--spread', String(spread + timing.onset * 0.05));
-    stage.style.setProperty('--settle', String(approach));
-    requestAnimationFrame(render);
-  }
-  render();
-</script>
-```
-
-Keep controls accessible and make pause, replay, and arbitrary seek work without special cases. Read [`references/schema.md`](references/schema.md) when exact field semantics are needed.
+Keep controls accessible and make pause, replay, and arbitrary seek work without special cases. Verify the package before building: `node consumer-probe.js .` — and read [`references/schema.md`](references/schema.md) when exact field semantics are needed.

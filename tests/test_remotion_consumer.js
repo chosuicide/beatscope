@@ -12,13 +12,19 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { runCheckpointSuite } from '../beatscope/runtime/consumer-probe.js';
+import {
+  frameFunctionName,
+  runCheckpointSuite,
+} from '../beatscope/runtime/consumer-probe.js';
 
 const moduleNamespace = await import(
   pathToFileURL(fileURLToPath(new URL('../examples/shared/fixture.beatscope/visual-state.js', import.meta.url))).href
 );
 const checkpoints = JSON.parse(
   readFileSync(new URL('../examples/shared/checkpoints.json', import.meta.url), 'utf8'),
+);
+const manifest = JSON.parse(
+  readFileSync(new URL('../examples/shared/fixture.beatscope/beatscope-package.json', import.meta.url), 'utf8'),
 );
 const declaration = JSON.parse(
   readFileSync(new URL('../examples/remotion-composition/beatscope-consumer.json', import.meta.url), 'utf8'),
@@ -32,7 +38,9 @@ const { DURATION_SECONDS, frameTime, compositionDuration, sceneState } = stateMo
 // --- the frame source behind the composition reproduces the checkpoints -------
 
 {
-  const suite = runCheckpointSuite(moduleNamespace, checkpoints, {});
+  const suite = runCheckpointSuite(moduleNamespace, checkpoints, {
+    frameFunction: frameFunctionName(manifest),
+  });
   assert.equal(suite.ok, true, `checkpoint suite failed: ${JSON.stringify(suite.errors)}`);
 }
 

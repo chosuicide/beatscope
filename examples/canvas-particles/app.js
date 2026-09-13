@@ -1,9 +1,10 @@
 // Canvas reference consumer: one requestAnimationFrame loop reads
-// audio.currentTime, calls getBeatScopeFrame, and paints the planar
-// particle field. The audio element owns transport; the visual only
-// samples the current media time, so pause, seek, and replay are all
-// exact by construction.
-import { getBeatScopeFrame } from "../shared/fixture.beatscope/visual-state.js";
+// audio.currentTime, calls getVisualState, and paints the planar particle
+// field. The audio element owns transport; the visual only samples the current
+// media time, so pause, seek, and replay are all exact by construction. The
+// direction (spread, twist, flow, boundary envelopes) is authored in
+// visual-field.js — the package ships facts, not a scene.
+import { getVisualState } from "../shared/fixture.beatscope/visual-state.js";
 import { createParticleField, particlePoints, framePalette } from "./visual-field.js";
 
 const canvas = document.getElementById("stage");
@@ -61,15 +62,14 @@ function formatTime(seconds) {
   return `${minutes}:${rest.toFixed(1).padStart(4, "0")}`;
 }
 
-function draw(frame, size) {
-  const [, accent] = framePalette(frame);
-  const timing = frame.timing;
-  const scene = frame.scene;
+function draw(state, size) {
+  const [, accent] = framePalette(state);
+  const timing = state;
   const impulse = timing.onset?.value ?? 0;
   const accentHit = timing.accent?.value ?? 0;
   context.fillStyle = "#f0efe9";
   context.fillRect(0, 0, size.width, size.height);
-  const points = particlePoints(field, frame, size, reducedMotion());
+  const points = particlePoints(field, state, size, reducedMotion());
 
   context.strokeStyle = "#151515";
   context.lineCap = "round";
@@ -105,13 +105,16 @@ function draw(frame, size) {
   context.font = "600 12px ui-monospace, SFMono-Regular, Consolas, monospace";
   context.fillText(`BAR ${String(timing.bar).padStart(2, "0")}  BEAT ${timing.beat}`, 18, 28);
   context.textAlign = "right";
-  context.fillText(scene ? `${scene.scene.family}${scene.scene.variant ? "'" : ""}` : "LEGACY", size.width - 18, 28);
+  const structure = timing.structure || null;
+  context.fillText(structure ? `${structure.family}${structure.variant ? "'" : ""}` : "—", size.width - 18, 28);
   context.textAlign = "left";
   context.globalAlpha = 1;
 }
 
 function frameAt(time) {
-  return getBeatScopeFrame(time, { reducedMotion: reducedMotion() });
+  // The facts never depend on presentation: reduced motion is the example's
+  // own displacement switch, applied in particlePoints.
+  return getVisualState(time);
 }
 
 let seekDragging = false;

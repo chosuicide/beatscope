@@ -12,6 +12,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
+  frameFunctionName,
   runCheckpointSuite,
 } from '../beatscope/runtime/consumer-probe.js';
 
@@ -20,6 +21,9 @@ const moduleNamespace = await import(
 );
 const checkpoints = JSON.parse(
   readFileSync(new URL('../examples/shared/checkpoints.json', import.meta.url), 'utf8'),
+);
+const manifest = JSON.parse(
+  readFileSync(new URL('../examples/shared/fixture.beatscope/beatscope-package.json', import.meta.url), 'utf8'),
 );
 const declaration = JSON.parse(
   readFileSync(new URL('../examples/canvas-particles/beatscope-consumer.json', import.meta.url), 'utf8'),
@@ -33,7 +37,9 @@ const { createParticleField, particlePoints, particleLayout, framePalette, hash0
 // --- the consumer's frame source reproduces the frozen checkpoints -----------
 
 {
-  const suite = runCheckpointSuite(moduleNamespace, checkpoints, {});
+  const suite = runCheckpointSuite(moduleNamespace, checkpoints, {
+    frameFunction: frameFunctionName(manifest),
+  });
   assert.equal(suite.ok, true, `checkpoint suite failed: ${JSON.stringify(suite.errors)}`);
 }
 
@@ -66,7 +72,7 @@ const { createParticleField, particlePoints, particleLayout, framePalette, hash0
   const size = { width: 960, height: 540 };
   const times = [...checkpoints.times, ...checkpoints.seek_sequence];
   for (const time of times) {
-    const frame = moduleNamespace.getBeatScopeFrame(time);
+    const frame = moduleNamespace.getVisualState(time);
     const points = particlePoints(field, frame, size, false);
     assert.equal(points.length, field.length);
     for (const point of points) {
@@ -79,9 +85,9 @@ const { createParticleField, particlePoints, particleLayout, framePalette, hash0
   // Seek determinism: revisiting a media time reproduces the exact same
   // geometry — no accumulated state, no frame-count dependence.
   const [first, second] = checkpoints.seek_sequence.slice(0, 2);
-  const before = particlePoints(field, moduleNamespace.getBeatScopeFrame(first), size, false);
-  particlePoints(field, moduleNamespace.getBeatScopeFrame(second), size, false);
-  const after = particlePoints(field, moduleNamespace.getBeatScopeFrame(first), size, false);
+  const before = particlePoints(field, moduleNamespace.getVisualState(first), size, false);
+  particlePoints(field, moduleNamespace.getVisualState(second), size, false);
+  const after = particlePoints(field, moduleNamespace.getVisualState(first), size, false);
   assert.deepEqual(after, before, 'geometry drifted after an intervening seek');
 }
 
@@ -90,18 +96,17 @@ const { createParticleField, particlePoints, particleLayout, framePalette, hash0
 {
   const field = createParticleField();
   const size = { width: 960, height: 540 };
-  const time = 15.365075; // a boundary checkpoint with scene motion
-  const fullFrame = moduleNamespace.getBeatScopeFrame(time);
-  const reducedFrame = moduleNamespace.getBeatScopeFrame(time, { reducedMotion: true });
+  const time = 15.365075; // a boundary checkpoint with authored motion
+  const fullFrame = moduleNamespace.getVisualState(time);
   assert.deepEqual(
-    JSON.parse(JSON.stringify(fullFrame.timing)),
-    JSON.parse(JSON.stringify(reducedFrame.timing)),
-    'reduced motion must not change timing state',
+    JSON.parse(JSON.stringify(fullFrame)),
+    JSON.parse(JSON.stringify(moduleNamespace.getVisualState(time))),
+    'the facts must be a pure function of time',
   );
 
   const full = particlePoints(field, fullFrame, size, false);
-  // Same frame, geometry-level flag only: the runtime's own reducedMotion
-  // handling (timing equality above) is separate from displacement scaling.
+  // Same state, example-level flag only: reduced motion is the consumer's own
+  // displacement switch, because the package reports facts, not motion.
   const reduced = particlePoints(field, fullFrame, size, true);
   assert.equal(reduced.length, full.length);
 
@@ -132,11 +137,11 @@ const { createParticleField, particlePoints, particleLayout, framePalette, hash0
 // --- palettes follow family identity and stay bounded --------------------------
 
 {
-  const frame = moduleNamespace.getBeatScopeFrame(checkpoints.times[0]);
-  const palette = framePalette(frame);
+  const state = moduleNamespace.getVisualState(checkpoints.times[0]);
+  const palette = framePalette(state);
   assert.equal(palette.length, 3);
   assert.ok(palette.every((tone) => typeof tone === 'string'));
-  const unknown = framePalette({ scene: { family: 'Z', composition: {} } });
+  const unknown = framePalette({ ...state, structure: { ...(state.structure || {}), family: 'Z' } });
   assert.ok(unknown.every((tone) => typeof tone === 'string'));
 }
 

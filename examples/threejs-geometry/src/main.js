@@ -4,8 +4,8 @@
 // the current time and frame — never an accumulated delta — so seek and
 // replay land on identical geometry.
 import * as THREE from "three";
-import { getBeatScopeFrame } from "../../shared/fixture.beatscope/visual-state.js";
-import { mapFrame, familyColor, pointOpacity } from "./beatscope-mapping.js";
+import { getVisualState } from "../../shared/fixture.beatscope/visual-state.js";
+import { direction, mapFrame, familyColor, pointOpacity } from "./beatscope-mapping.js";
 import { seededShell } from "./seeded-geometry.js";
 
 const canvas = document.getElementById("stage");
@@ -76,7 +76,7 @@ function duration() {
 }
 
 function frameAt(time) {
-  return getBeatScopeFrame(time, { reducedMotion: reducedMotion() });
+  return getVisualState(time);
 }
 
 window.__BEATSCOPE_CONSUMER__ = Object.freeze({
@@ -152,14 +152,16 @@ function paint() {
 
   // Rotation and scale derive from t and the frame — never from deltas.
   cloud.rotation.y = mapped.cameraPhase + mapped.twist * Math.PI * motion;
-  cloud.rotation.z = (frame.timing.barPhase - 0.5) * 0.22 * motion;
-  const accent = frame.timing.accent?.value ?? 0;
+  cloud.rotation.z = (frame.barPhase - 0.5) * 0.22 * motion;
+  const accent = frame.accent?.value ?? 0;
   const scale = mapped.scale * (1 + accent * 0.12 * motion);
   cloud.scale.setScalar(scale);
-  const boundary = frame.scene?.transition?.cross ?? 0;
+  // The authored direction supplies the boundary envelope; the package
+  // reports the facts it is derived from.
+  const boundary = direction(frame).transition.cross;
   cage.rotation.y = -mapped.cameraPhase * 0.35;
   cage.scale.set(1 + boundary * 0.18, 1 - boundary * 0.05, 1 + boundary * 0.18);
-  cageMaterial.opacity = 0.12 + frame.timing.mid * 0.2;
+  cageMaterial.opacity = 0.12 + frame.mid * 0.2;
   camera.position.x = Math.sin(mapped.cameraPhase * 0.55) * 0.5 * motion;
   camera.position.z = 4.2 + Math.cos(mapped.cameraPhase * 0.4) * 0.25 * motion;
   camera.lookAt(0, 0, 0);

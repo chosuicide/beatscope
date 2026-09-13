@@ -1,18 +1,38 @@
-# BeatScope handoff: consumer-fixture
+# BeatScope timing handoff: consumer-fixture
 
-This package is the inspected timing data for one audio file. It is intended to be handed to an agent making an audio-reactive web, video, or motion visual.
+This package records what BeatScope measured in one audio file, plus an optional
+ordering value for spending a limited response budget. It carries no visual
+language and no task: what the visual is, is your decision.
 
-## Rules
+## Clock contract
 
-- Do not re-analyse the audio. Use `rhythm-map.json` as the source of analysed timing facts.
-- Use `audio.currentTime` as the only clock. When the package carries visual artifacts, call `getBeatScopeFrame(audio.currentTime)` from `visual-state.js` — one call returning `{ timing, scene }` — and treat timing state and scene state as separate surfaces. Otherwise call `getVisualState(time)`.
-- Every animation must remain correct after pause, seek, replay, and rendering a single frame. Do not use wall-clock timers or non-reproducible random motion.
-- Keep playback controls and the visual clock separate: audio controls own transport; the visual samples the current time.
-- Heavy state queries may run in a module Worker via `worker-example.js`; the main thread still owns the audio element and sends its current time.
-- When `visual-recipe.json` is present, respect its tokens (palette, transition timing, motion limits) before inventing new ones, keep family identity stable across repetitions, and keep any extra motion seek-safe.
+- Time is seconds of media time, from 0 to the duration in `beatscope-package.json`.
+- Interactive playback samples `audio.currentTime` once per frame; offline
+  rendering derives seconds from the frame number and the composition FPS. Never
+  accumulate time across frames.
+- Every query is pure: pause, seek, replay, and rendering a single frame resolve
+  the same instant to the same facts. Keep your own animation state seek-safe the
+  same way — no wall-clock timers, no unseeded random motion.
 
-## Suggested mapping
+## What the facts mean
 
-`low`, `mid`, and `high` can drive separate scale, density, or line-weight layers. `onset` and `accent` are short impulses; `beatPhase` and `barPhase` provide repeatable breathing; `section` can change composition density or palette. These are starting points, not instrument labels. The data does not identify kick, snare, or 808. When `rhythm-map.json` carries `patterns.segments`, treat segment boundaries as scene-level changes, treat `family` and `variant` as recurrence rather than musical role, and never rename the neutral `A`/`B` families without instruction. When `visual-timeline.json` is present, `getSceneState(time).scene` reports the compiled scene (`family`, `variant`, `motif`, `phase`) and `.transition` reports the boundary envelope (`stage`, `approach`, `cross`, `settle`) — do not animate every property at every boundary.
+- `beatPhase` and `barPhase` interpolate between the two measured beats around
+  the query, so variable tempo stays honest instead of drifting off a global BPM.
+- `low`, `mid`, and `high` are measured band energy: frequency evidence, not
+  instrument labels. The data never identifies a kick or a snare.
+- `onset` and `accent` are transients with a strength and an age.
+- Structure segments carry a neutral family letter (`A`, `B`, ...) that marks
+  recurrence, not a musical role. Never rename them to Verse or Chorus unless the
+  user says so.
+- `getResponseEvents(start, end, budget)` returns existing onsets at their stored
+  times, chosen by a bounded ordering value learned from human-authored rhythm
+  charts. It is not a probability, a confidence score, or an instruction to
+  animate every selected event. When ranking is unavailable it reports
+  `chronological-fallback`, and that fact belongs in your diagnostics.
 
-The original file name, duration, BPM, origin, beats, raw onsets, energy arrays, section annotations, and (when present) whole-song structure segments are recorded in `rhythm-map.json`.
+## Invariants
+
+- Never re-analyse the audio, and never scan arrays every frame for facts the
+  frame already carries.
+- The audio element owns transport; the visual only samples the current time.
+- Honour reduced-motion preferences.

@@ -19,6 +19,7 @@ import {
   canonicalFrame,
   canonicalFrameJson,
   inspectPackage,
+  frameFunctionName,
   runCheckpointSuite,
   sha256Hex,
 } from '../beatscope/runtime/consumer-probe.js';
@@ -32,6 +33,7 @@ const checkpoints = JSON.parse(
 const moduleNamespace = await import(
   pathToFileURL(fileURLToPath(new URL('../examples/shared/fixture.beatscope/visual-state.js', import.meta.url))).href
 );
+const timingOptions = { frameFunction: frameFunctionName(manifest) };
 
 // --- sha256 -----------------------------------------------------------------
 
@@ -89,7 +91,7 @@ const moduleNamespace = await import(
 }
 
 {
-  const lying = { ...manifest, capabilities: { ...manifest.capabilities, scenes: false } };
+  const lying = { ...manifest, functions: { ...manifest.functions, frame: 'getBeatScopeFrame' }, capabilities: { ...manifest.capabilities, scenes: false } };
   const report = await inspectPackage(lying, moduleNamespace);
   assert.equal(report.ok, false);
   assert.ok(report.errors.some((error) => error.includes('functions.frame:requires-scenes')));
@@ -111,7 +113,7 @@ const moduleNamespace = await import(
 // --- runCheckpointSuite -----------------------------------------------------
 
 {
-  const report = runCheckpointSuite(moduleNamespace, checkpoints, {});
+  const report = runCheckpointSuite(moduleNamespace, checkpoints, timingOptions);
   assert.deepEqual(report.errors, []);
   assert.equal(report.ok, true);
   assert.equal(report.frames_sha256, checkpoints.frames_sha256);
@@ -119,17 +121,18 @@ const moduleNamespace = await import(
 }
 
 {
-  const wrong = runCheckpointSuite(moduleNamespace, checkpoints, { packageSha256: 'f'.repeat(64) });
+  const wrong = runCheckpointSuite(moduleNamespace, checkpoints, { ...timingOptions, packageSha256: 'f'.repeat(64) });
   assert.ok(wrong.errors.includes('package_sha256:mismatch'));
   const right = runCheckpointSuite(moduleNamespace, checkpoints, {
     packageSha256: checkpoints.package_sha256,
+    ...timingOptions,
   });
   assert.equal(right.ok, true);
 }
 
 {
   const tampered = { ...checkpoints, frames_sha256: 'a'.repeat(64) };
-  const report = runCheckpointSuite(moduleNamespace, tampered, {});
+  const report = runCheckpointSuite(moduleNamespace, tampered, timingOptions);
   assert.equal(report.ok, false);
   assert.ok(report.errors.includes('frames_sha256:mismatch'));
 }
@@ -141,17 +144,17 @@ const moduleNamespace = await import(
   const tampered = {
     ...checkpoints,
     frames_sha256: sha256Hex(
-      JSON.stringify(shifted.map((time) => canonicalFrame(moduleNamespace, time))),
+      JSON.stringify(shifted.map((time) => canonicalFrame(moduleNamespace, time, timingOptions))),
     ),
   };
-  const report = runCheckpointSuite(moduleNamespace, tampered, {});
+  const report = runCheckpointSuite(moduleNamespace, tampered, timingOptions);
   assert.equal(report.ok, false);
   assert.ok(report.errors.includes('frames_sha256:mismatch'));
 }
 
 {
   const tampered = { ...checkpoints, seek_sequence: [0.5] };
-  const report = runCheckpointSuite(moduleNamespace, tampered, {});
+  const report = runCheckpointSuite(moduleNamespace, tampered, timingOptions);
   assert.equal(report.ok, false);
   assert.ok(report.errors.some((error) => error.includes('seek_sequence:unrecorded-time')));
 }
@@ -159,7 +162,7 @@ const moduleNamespace = await import(
 // --- assertSeekDeterminism --------------------------------------------------
 
 {
-  const result = assertSeekDeterminism(moduleNamespace, checkpoints.seek_sequence, {});
+  const result = assertSeekDeterminism(moduleNamespace, checkpoints.seek_sequence, timingOptions);
   assert.equal(result.ok, true);
   assert.equal(result.queries, checkpoints.seek_sequence.length * 3);
 }

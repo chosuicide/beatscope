@@ -109,6 +109,17 @@ function canonicalFrameObject(moduleNamespace, time, options) {
  * JSON.stringify of the result is the canonical serialization, because
  * object keys are inserted in sorted order.
  */
+/**
+ * The function a package's canonical frame comes from: the manifest's `frame`
+ * when it declares a scene surface, otherwise the timing function. A
+ * timing-only package has no `getBeatScopeFrame`, and its canonical frame is
+ * exactly `getVisualState(time)`.
+ */
+export function frameFunctionName(manifest) {
+  const functions = isPlainObject(manifest) && isPlainObject(manifest.functions) ? manifest.functions : {};
+  return typeof functions.frame === "string" && functions.frame.trim() ? functions.frame : functions.timing;
+}
+
 export function canonicalFrame(moduleNamespace, time, options) {
   return canonicalFrameObject(moduleNamespace, time, options);
 }
@@ -542,7 +553,7 @@ async function runCli(argv) {
   const report = await inspectPackage(manifest, moduleNamespace);
   if (checkpointsPath) {
     const checkpoints = JSON.parse(readFileSync(resolve(checkpointsPath), "utf8"));
-    report.checkpoints = runCheckpointSuite(moduleNamespace, checkpoints, {});
+    report.checkpoints = runCheckpointSuite(moduleNamespace, checkpoints, { frameFunction: frameFunctionName(manifest) });
     report.ok = report.ok && report.checkpoints.ok;
   }
   return report;

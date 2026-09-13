@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import re
 import os
 import shutil
 import subprocess
@@ -48,28 +49,42 @@ PROBE_SOURCE_PATH = REPO_ROOT / "beatscope" / "runtime" / "consumer-probe.js"
 PROBE_SIZE_BUDGET = 24 * 1024
 AGENT_WORD_BUDGET = 900
 
-# The v0.8.1 handoff member set, kept as the historical baseline; commit 2
-# deliberately extends it with the self-describing contract members.
-V081_MEMBERS = frozenset(
+# The live handoff carries timing facts only: the v0.8 visual layer (recipe,
+# timeline, scene director, scene surface) is no longer shipped, because the
+# package states no task and pre-decides no visual language.
+TIMING_ONLY_MEMBERS = frozenset(
     {
-        "BEATSCOPE.md",
+        MANIFEST_MEMBER,
         "README.md",
-        "SKILL.md",
-        "beatscope-runtime.js",
+        "AGENT.md",
         "rhythm-map.json",
-        "scene-director.js",
-        "visual-recipe-data.js",
-        "visual-recipe.json",
+        "rhythm.mid",
+        "rhythm.csv",
+        "response-relevance.json",
+        "response-relevance-data.js",
         "visual-state.js",
-        "visual-timeline-data.js",
-        "visual-timeline.json",
+        "beatscope-runtime.js",
         "worker-example.js",
+        "consumer-probe.js",
+        "BEATSCOPE.md",
+        "SKILL.md",
         "references/schema.md",
+        "LICENSE",
     }
 )
-V090_CONTRACT_MEMBERS = frozenset({"beatscope-package.json", "AGENT.md", "consumer-probe.js"})
-V090_MEMBERS = V081_MEMBERS | V090_CONTRACT_MEMBERS
-R3_RESPONSE_MEMBERS = frozenset({"response-relevance.json", "response-relevance-data.js"})
+VISUAL_MEMBERS = frozenset(
+    {
+        "visual-recipe.json",
+        "visual-timeline.json",
+        "visual-recipe-data.js",
+        "visual-timeline-data.js",
+        "scene-director.js",
+    }
+)
+
+# The frozen fixture is a timing-only package: the live member set minus the
+# response sidecar, which this arrangement does not need to exercise.
+FIXTURE_MEMBERS = TIMING_ONLY_MEMBERS - frozenset({"response-relevance.json", "response-relevance-data.js"})
 
 AUDIO_SUFFIXES = {".wav", ".wave", ".mp3", ".flac", ".ogg", ".m4a", ".aiff", ".aif", ".opus"}
 
@@ -109,7 +124,7 @@ def test_frozen_fixture_matches_lock():
     lock = json.loads(LOCK_PATH.read_text(encoding="utf-8"))
     assert validate_fixture_lock(lock) == []
     members = _fixture_members()
-    assert set(members) == V090_MEMBERS
+    assert set(members) == FIXTURE_MEMBERS
     content_digest = package_member_digest(
         {name: data for name, data in members.items() if name != MANIFEST_MEMBER}
     )
@@ -120,36 +135,53 @@ def test_frozen_fixture_matches_lock():
     assert validate_checkpoints(checkpoints, members) == []
     manifest = json.loads(members[MANIFEST_MEMBER].decode("utf-8"))
     assert validate_manifest(manifest, members) == []
-    assert manifest["package_version"] == PACKAGE_VERSION
+    # The fixture is a frozen snapshot: it keeps whichever package_version
+    # shipped when it was frozen. Live exports track PACKAGE_VERSION (checked in
+    # test_export_manifest_is_valid_honest_and_deterministic).
+    assert re.fullmatch(r"\d+\.\d+\.\d+", manifest["package_version"])
 
 
 def test_checkpoints_cover_required_times():
     checkpoints = json.loads(CHECKPOINTS_PATH.read_text(encoding="utf-8"))
-    timeline = json.loads((FIXTURE_DIR / "visual-timeline.json").read_text(encoding="utf-8"))
+    rhythm_map = json.loads((FIXTURE_DIR / "rhythm-map.json").read_text(encoding="utf-8"))
+    segments = (rhythm_map.get("patterns") or {}).get("segments") or []
+    boundaries = [
+        float(segment["start_time"])
+        for segment in segments
+        if 0.0 < float(segment["start_time"]) < float(checkpoints["duration"])
+    ]
+    assert boundaries, "the fixture arrangement carries measured structure boundaries"
     times = checkpoints["times"]
     assert times[0] == 0.0
     assert abs(times[-1] - checkpoints["duration"]) < 1e-6
-    for transition in timeline["transitions"]:
-        boundary = float(transition["time"])
+    # Every boundary can be replayed from either side of the measurement.
+    for boundary in boundaries:
         assert round(boundary - 0.001, 9) in times
         assert round(boundary, 9) in times
         assert round(boundary + 0.001, 9) in times
-    # A beat midpoint sits strictly between two beats.
-    assert len(times) > 3 * len(timeline["transitions"]) + 2
+    # A beat midpoint sits strictly between two beats, plus the steady-state beat
+    # and its neighbours, the start and the end.
+    assert len(times) > 3 * len(boundaries) + 2
     assert len(checkpoints["seek_sequence"]) >= 3
 
 
-def test_frozen_package_exports_public_v08_functions():
+def test_frozen_package_exports_the_timing_surface():
+    """The package is timing facts only: no scene surface is shipped."""
     shim = (FIXTURE_DIR / "visual-state.js").read_text(encoding="utf-8")
     assert "export function getVisualState" in shim
-    assert "export function getSceneState" in shim
-    assert "export function getBeatScopeFrame" in shim
+    assert "export function getSceneState" not in shim
+    assert "export function getBeatScopeFrame" not in shim
 
 
-def test_export_member_set_adds_only_r3_response_sidecar():
-    """Fresh exports add the response sidecar without rewriting the frozen v0.9 fixture."""
+def test_export_member_set_is_timing_only():
+    """A fresh export carries measured facts; the visual layer is not shipped."""
     archive = zipfile.ZipFile(io.BytesIO(generate_codex_export(_rhythm_for_export())))
-    assert set(archive.namelist()) == V090_MEMBERS | R3_RESPONSE_MEMBERS
+    names = set(archive.namelist())
+    assert names == TIMING_ONLY_MEMBERS
+    assert not (names & VISUAL_MEMBERS)
+    # The sidecars that carry the same facts into a DAW or a spreadsheet ship
+    # inside the package now, instead of only behind separate downloads.
+    assert {"rhythm.mid", "rhythm.csv"} <= names
 
 
 def test_export_manifest_is_valid_honest_and_deterministic():
@@ -160,11 +192,13 @@ def test_export_manifest_is_valid_honest_and_deterministic():
     rhythm_map = json.loads(members["rhythm-map.json"].decode("utf-8"))
     assert manifest_duration_errors(manifest, rhythm_map) == []
     # Capabilities describe what the package actually carries.
-    assert manifest["capabilities"]["scenes"] is ("visual-recipe.json" in members)
+    assert manifest["capabilities"]["scenes"] is False
+    assert "frame" not in manifest["functions"] and "scene" not in manifest["functions"]
     assert manifest["capabilities"]["structure"] is bool(rhythm_map.get("patterns", {}).get("segments"))
     assert manifest["capabilities"]["module_worker"] is ("worker-example.js" in members)
     assert manifest["capabilities"]["response_relevance"] is True
-    assert manifest["functions"]["frame"] == "getBeatScopeFrame"
+    assert manifest["display_name"] == "characterization.wav"
+    assert set(manifest["summary"]) == {"bpm", "bars", "beats", "onsets", "segments"}
     assert manifest["functions"]["timing"] == "getVisualState"
     assert manifest["functions"]["response_events"] == "getResponseEvents"
     # Two exports of the same input are byte-identical, manifest included.
@@ -198,20 +232,22 @@ def test_agent_document_routes_the_agent():
     # Plan section 5: the routing anchors every Agent needs.
     for anchor in (
         "beatscope-package.json",
-        manifest["functions"]["frame"],
+        manifest["functions"]["timing"],
+        manifest["functions"]["response_events"],
         "audio.currentTime",
-        "frame / fps",
+        "frame number",
         "re-analyse",
         "seek",
-        "reduced motion",
+        "reduced-motion",
         "consumer-probe.js",
-        "frame.timing",
-        "frame.scene",
         "instruments",
         "SKILL.md",
     ):
         assert anchor in agent, f"AGENT.md is missing {anchor!r}"
-    assert "import { getBeatScopeFrame } from './visual-state.js';" in agent
+    # The package states facts, not a task: it must not pre-decide the visual.
+    for forbidden in ("Build a new audio-reactive visual consumer", "getBeatScopeFrame", "visual-recipe"):
+        assert forbidden not in agent, f"AGENT.md still prescribes visual work: {forbidden!r}"
+    assert "Settle these with the user" in agent
 
 
 def test_probe_ships_in_package_and_stays_dependency_free():
@@ -313,6 +349,7 @@ def test_no_committed_audio_anywhere_under_examples():
 
 @pytest.mark.skipif(_node_missing(), reason="node is required to render checkpoint frames")
 def test_fixture_regeneration_is_byte_identical(tmp_path: Path):
+    # Exercise the current timing-only generator in two independent processes.
     generated = (tmp_path / "first", tmp_path / "second")
     for output in generated:
         result = subprocess.run(
@@ -694,12 +731,18 @@ def test_run_index_is_schema_shaped_and_hash_pinned():
     assert index["schema"] == "beatscope-agent-run-index-1"
     assert isinstance(index["runs"], list)
     task_sha256 = hashlib.sha256((EVAL_DIR / "TASK.md").read_bytes()).hexdigest()
-    lock = json.loads((REPO_ROOT / "examples" / "shared" / "fixture-lock.json").read_text(encoding="utf-8"))
     for run in index["runs"]:
         assert run["schema"] == "beatscope-agent-run-1"
         assert run["task_sha256"] == task_sha256, "run record predates the frozen task"
-        assert run["package_sha256"] == lock["package_sha256"], "run record predates the frozen fixture"
+        # A run pins the fixture generation it was recorded against. The fixture
+        # has since been regenerated for the timing-only package, so the record
+        # stays historical evidence rather than tracking the live lock: the
+        # digest must be well formed and the record self-consistent.
+        archived = json.loads((EVAL_DIR / "historical-fixture-lock.json").read_text(encoding="utf-8"))
+        assert run["package_sha256"] in {archived["package_sha256"], json.loads(LOCK_PATH.read_text())["package_sha256"]}
         assert run["validator"]["failed"] >= 0
+    records = [json.loads(path.read_text(encoding="utf-8")) for path in sorted((EVAL_DIR / "runs").glob("*.json")) if path.name != "index.json"]
+    assert index["runs"] == records, "index must be derived from actual run records"
 
 
 def test_recorder_rejects_private_or_underdocumented_records():
@@ -815,7 +858,7 @@ def test_conformance_table_replays_from_checked_in_evidence():
     regenerated = generator.build_markdown()
     checked_in = (EVAL_DIR / "conformance.md").read_text(encoding="utf-8")
     assert regenerated == checked_in
-    # With zero recorded runs the cross-Agent claim must stay pending.
+    # One historical Codex run does not establish cross-Agent interoperability.
     assert "PENDING" in regenerated
 
 

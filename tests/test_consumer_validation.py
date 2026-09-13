@@ -121,7 +121,9 @@ def test_frozen_fixture_passes_every_check_in_directory_form():
         "manifest": "passed",
         "integrity": "passed",
         "rhythm-map": "passed",
-        "visual-artifacts": "passed",
+        # The fixture is the timing-only package: there are no visual artifacts
+        # to validate, and the check honestly reports that instead of passing.
+        "visual-artifacts": "skipped",
         "executable-trust": "passed",
         "node-probe": "passed",
         "checkpoints": "passed",

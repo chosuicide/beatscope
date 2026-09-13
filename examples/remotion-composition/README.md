@@ -13,12 +13,12 @@ no `requestAnimationFrame`.
   BeatScope core package gains no Remotion or React dependency.
 - `src/state.js` is the whole integration: a pure, React-free module
   that turns a media time into one serializable state object using the
-  package's `getBeatScopeFrame`. The React tree (`BeatScopeScope.tsx`)
+  package's `getVisualState`, and authors its own direction from those facts. The React tree (`BeatScopeScope.tsx`)
   only renders that object, so rendering frame N twice yields identical
   serialized state before rasterization.
 - The clock follows the plan's rule exactly: `time =
   Math.max(0, (frame - startFrame) / fps)`, then
-  `getBeatScopeFrame(time)`. The same second maps to the same state at
+  `getVisualState(time)`. The same second maps to the same state at
   24, 30, and 60 fps (pinned by tests).
 - Duration derives from the package: `compositionDuration(fps) =
   ceil(30.0001 * fps)`; beyond-duration frames clamp to the final state,

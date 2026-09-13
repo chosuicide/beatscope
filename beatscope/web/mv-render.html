@@ -1,0 +1,30 @@
+<!doctype html><html><meta charset="utf-8"><title>Beathi render worker</title><style>html,body{margin:0;background:#050505}canvas{display:block;width:1080px;height:1080px}</style><canvas width="1080" height="1080"></canvas><script type="module">
+import {createTrack} from './beatscope-runtime.js';
+import {createMovie} from './mv-frame.mjs';
+import {createFrameEncoder} from './mv-encode.mjs';
+const params=new URLSearchParams(location.search);
+const data=await(await fetch('./input.json')).json();
+const plan=await(await fetch('./plan.json')).json();
+const track=createTrack(data.rhythm,{responseRelevance:data.ranking});
+const canvas=document.querySelector('canvas');
+window.renderAt=createMovie(canvas,data.rhythm,track,plan);
+window.renderAt(0);
+// In-page encoding: the worker asks for it with ?encode=webcodecs and streams
+// the returned Annex B chunks into FFmpeg, which only muxes them.
+window.encoderCodec=null;
+if(params.get('encode')==='webcodecs'){
+ const encoder=await createFrameEncoder({
+  canvas,
+  fps:plan.fps,
+  token:params.get('token')||'',
+  bitrate:Number(params.get('bitrate'))||undefined,
+  onError:error=>{window.encodeError=String(error&&error.message?error.message:error);},
+ });
+ if(encoder){
+  window.encoderCodec=encoder.codec;
+  window.encodeAt=async t=>{window.renderAt(t);await encoder.encode(t);};
+  window.finishEncode=()=>encoder.finish();
+ }
+}
+window.ready=true;
+</script></html>

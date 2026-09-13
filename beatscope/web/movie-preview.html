@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>Beathi preview</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0b0d; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #fallback {
+    position: absolute; inset: 0; display: none; place-items: center;
+    color: #d9d5ff; background: #101014;
+    font: 12px/1.6 'Geist', -apple-system, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+    text-align: center; padding: 24px;
+  }
+  #fallback.on { display: grid; }
+  #fallback p { margin: 0 0 8px; }
+  #fallback button {
+    font: inherit; margin: 4px 0 10px; padding: 6px 14px; cursor: pointer;
+    color: #e8e5ff; background: #23222b; border: 1px solid #3a3946; border-radius: 5px;
+  }
+  #fallback-reason { font-size: 11px; opacity: 0.7; max-width: 42ch; }
+</style>
+<canvas id="frame" width="1080" height="1080"></canvas>
+<div id="fallback">
+  <div>
+    <p id="fallback-title">Live preview unavailable (WebGL2 required).</p>
+    <p id="fallback-note">The film can still be generated.</p>
+    <button id="retry" type="button">Retry</button>
+    <p id="fallback-reason"></p>
+  </div>
+</div>
+<script type="module">
+import { createMovie } from './mv-frame.mjs';
+import { makePlan } from './mv-plan.mjs';
+import { createTrack } from '../runtime/runtime.js';
+
+const canvas = document.getElementById('frame');
+const fallback = document.getElementById('fallback');
+const params = new URLSearchParams(location.search);
+const projectId = params.get('project') || '';
+let seed = params.has('seed') ? Number(params.get('seed')) : 1;
+if (!Number.isInteger(seed) || seed < 0 || seed >= 2**24) seed = 1;
+let render = null;
+let buildError = null;
+let generation = 0, latestTime = 0, buildingSeed = null;
+
+function post(message) {
+  if (window.parent && window.parent !== window) window.parent.postMessage(message, location.origin);
+}
+
+function applyCopy() {
+  const zh = params.get('lang') === 'zh';
+  const webgl = /webgl/i.test(buildError || '');
+  document.getElementById('fallback-title').textContent = zh
+    ? `实时预览不可用${webgl ? '（需要 WebGL2）' : ''}。`
+    : `Live preview unavailable${webgl ? ' (WebGL2 required)' : ''}.`;
+  document.getElementById('fallback-note').textContent = zh
+    ? '请重试；若仍失败，请检查下方原因。'
+    : 'Retry, or check the reason below.';
+  document.getElementById('retry').textContent = zh ? '重试' : 'Retry';
+}
+
+async function build(nextSeed) {
+  // A seed the preview already renders does not need another build: the render
+  // poll repeats it, and rebuilding would churn the GL stack for nothing.
+  if ((render && nextSeed === seed) || buildingSeed === nextSeed) return;
+  const token = ++generation;
+  buildingSeed = nextSeed;
+  if (render && render.dispose) render.dispose();
+  render = null;
+  seed = nextSeed;
+  try {
+    const [rhythm, ranking] = await Promise.all([
+      fetch(`/api/projects/${encodeURIComponent(projectId)}`).then((response) => {
+        if (!response.ok) throw new Error(`rhythm ${response.status}`);
+        return response.json();
+      }),
+      fetch(`/api/projects/${encodeURIComponent(projectId)}/response-relevance`)
+        .then((response) => (response.ok ? response.json() : null))
+        .catch(() => null),
+    ]);
+    if (token !== generation) return;
+    const track = createTrack(rhythm, { responseRelevance: ranking });
+    const plan = makePlan(rhythm, track.responseBetween(0, rhythm.source.duration), seed);
+    render = createMovie(canvas, rhythm, track, plan);
+    render(latestTime);
+    buildError = null;
+    fallback.classList.remove('on');
+    post({ type: 'ready', seed, duration: rhythm.source.duration, shots: plan.shots.length });
+  } catch (error) {
+    if (token !== generation) return;
+    buildError = String(error && error.message ? error.message : error);
+    render?.dispose?.();
+    render = null;
+    document.getElementById('fallback-reason').textContent = buildError;
+    applyCopy();
+    fallback.classList.add('on');
+    post({ type: 'error', message: buildError });
+  } finally {
+    if (token === generation) buildingSeed = null;
+  }
+}
+
+window.addEventListener('message', (event) => {
+  if (event.origin !== location.origin || event.source !== window.parent) return;
+  const data = event.data || {};
+  if (data.type === 't' && Number.isFinite(data.value)) {
+    latestTime = Math.max(0, data.value);
+    try { render?.(latestTime); } catch (error) { post({ type: 'error', message: String(error) }); }
+  } else if (data.type === 'seed') {
+    if (Number.isInteger(data.value) && data.value >= 0 && data.value < 2**24) void build(data.value);
+  }
+});
+
+// Release the GL context when this preview goes away; otherwise every song the
+// host opens leaks one context until the browser stops granting them.
+window.addEventListener('pagehide', () => {
+  generation++;
+  if (render && render.dispose) render.dispose();
+  render = null;
+});
+
+document.getElementById('retry').addEventListener('click', () => {
+  fallback.classList.remove('on');
+  void build(seed);
+});
+
+applyCopy();
+
+// The host may pass the seed before / after load; a missing project means the
+// preview stays on the fallback rather than showing a wrong song.
+if (!projectId) {
+  fallback.classList.add('on');
+} else {
+  await build(seed);
+  post({ type: 'loaded' });
+}
+</script>
+</html>

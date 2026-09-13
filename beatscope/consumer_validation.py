@@ -113,13 +113,6 @@ _RUNTIME_FINGERPRINT_FILES = frozenset(
     }
 )
 
-# The public v0.9 fixture remains a trust root for older handoffs. R3 adds
-# one pure query to the runtime; accepting this exact historical digest keeps
-# frozen packages verifiable without accepting arbitrary executable bytes.
-_TRUSTED_LEGACY_RUNTIME_SHA256 = frozenset({
-    "2be4b7c3d8009922342ff6cc3e8ffda262b0390821581b8c326ba323121e5751",
-})
-
 # The packaged worker targets browser module Workers (`self.onmessage` /
 # `self.postMessage`). Under Node's worker_threads a tiny bootstrap maps
 # that exact surface onto parentPort before the worker module evaluates.
@@ -512,10 +505,9 @@ def _executable_trust_check(
         actual = members.get(name)
         if actual is None:
             errors.append(f"executable:missing:{name}")
-        elif actual != trusted and not (
-            name == "beatscope-runtime.js"
-            and sha256_hex(actual) in _TRUSTED_LEGACY_RUNTIME_SHA256
-        ):
+        elif actual != trusted:
+            # Strict: the fixture is regenerated from the current generators, so
+            # no historical allowance is needed.
             errors.append(f"executable:untrusted-bytes:{name}")
     return _check(
         "executable-trust",
@@ -896,7 +888,14 @@ def _browser_check(entry_page: Path, allowed_root: Path, node: str | None, timeo
             workdir, timeout,
         )
     if report is None:
-        return _failed_check("browser", [f"browser:{error}" for error in errors])
+        # Only explicit missing tooling is unavailable. A crash, malformed
+        # report or timeout cannot silently turn a required check into a skip.
+        missing_browser = any("Executable doesn't exist" in error for error in errors)
+        return _check(
+            "browser", STATUS_UNAVAILABLE if missing_browser else STATUS_FAILED,
+            errors=[f"browser:{error}" for error in errors],
+            notes=["browser harness did not produce a valid report"],
+        )
     if any("Executable doesn't exist" in error for error in errors):
         return _check("browser", STATUS_UNAVAILABLE, errors=errors, notes=["install the pinned Chromium browser"])
     return _check(
