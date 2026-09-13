@@ -120,12 +120,6 @@ beatscope validate-consumer examples\remotion-composition --offline
 
 在支持 WebMCP 的浏览器里，工作室会注册七个工具：Agent 可以查看已加载的歌曲、请求一组有界的原始响应时刻、解释某个镜头为什么在这里切、试听一段、以指定种子开始渲染，并准备时序包——全程拿不到原始音频，也不会跑第二套分析。按钮和工具走同一批函数；每一次会改动页面的调用都会出现在传送条上方的窄条里，试听后可以 Restore。普通浏览器看不到任何新增界面。所有计算都留在用户本机；`response_relevance` 是排序值，绝不是概率或置信度。契约、限额与本地验证步骤见 [docs/webmcp-studio.md](docs/webmcp-studio.md)。
 
-## 看这支宣传片
-
-四十八秒：一首歌，被测量，然后把时序交给另一个 agent——剪辑、节奏与视觉语言是它的作品，卡点用的是我们的测量。
-
-[![宣传片开场字卡](docs/demo/beathi-promo-poster.webp)](docs/demo/beathi-promo.mp4)
-
 ## MCP
 
 ```powershell
