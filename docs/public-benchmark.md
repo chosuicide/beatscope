@@ -1,0 +1,89 @@
+# Public beat benchmark
+
+BeatScope's synthetic fixtures answer “did this commit regress?” They do not
+answer “how accurate is this analyzer on recorded music?” This benchmark is a
+separate, non-blocking evaluation against third-party human annotations.
+
+## Dataset
+
+The first corpus is the 698-excerpt **Ballroom Rhythm Dataset**:
+
+- audio archive: the original ISMIR 2004 tempo-contest download, MD5
+  2872a3e52070bc342a4510a95e2fa0b8;
+- beat and bar annotations: CPJKU/BallroomAnnotations at commit
+  1db08914a8ae15edb01f104046e30bad88effe67;
+- annotation format: one measured time and metrical position per row;
+- license reported by mirdata: CC BY-NC-SA 4.0.
+
+Audio and annotations belong under ignored build storage and are never included
+in the repository, wheel, handoff package, Studio or release.
+
+SMC was considered first because it stresses difficult rhythms. It is not the
+first shipped corpus because the official Beat This release states that its
+original audio is not publicly available. The runner accepts arbitrary matching
+WAV and annotation roots, so an authorized local SMC copy can be evaluated
+later without changing the metric code.
+
+## Reproduce
+
+Install the optional evaluators:
+
+    python -m pip install ".[public-benchmark]"
+
+Download the [official audio archive](https://mtg.upf.edu/ismir2004/contest/tempoContest/data1.tar.gz)
+and the [revision-pinned annotation archive](https://github.com/CPJKU/BallroomAnnotations/archive/1db08914a8ae15edb01f104046e30bad88effe67.zip),
+verify the audio MD5 above, and unpack both under ignored build storage. Then run
+a quick genre-balanced sample (replace the two roots with the extracted paths):
+
+    python scripts/benchmark_public.py \
+      --audio-root build/public-benchmark/audio/BallroomData \
+      --annotation-root build/public-benchmark/annotations/BallroomAnnotations-1db08914a8ae15edb01f104046e30bad88effe67 \
+      --limit 32
+
+Omit --limit for all 698 tracks. Use
+`--systems beatscope librosa beat-this` to include the official Beat This final0
+model; the first use downloads its published model weights.
+Use --device cuda only when the local PyTorch installation reports CUDA.
+
+The command caches each prediction by system id and audio SHA-256, so an
+interrupted full run resumes without recomputing finished tracks. It writes
+canonical results.json and a compact results.md. It uses
+mir_eval.beat.evaluate with five-second trimming, including F-measure, Cemgil,
+CMLc, CMLt, AMLc and AMLt. Downbeat F-measure is reported only by systems that
+actually predict downbeats. Failures remain visible per track instead of being
+silently removed.
+
+## Interpretation
+
+This is a corpus measurement, not a release gate and not a claim about every
+genre. Ballroom is rhythmically regular and Beat This was trained with Ballroom
+data, so a direct comparison is descriptive rather than a fair unseen-test
+leaderboard. A future unseen or authorized difficult-rhythm corpus must be
+reported separately, never blended into this score.
+
+## First recorded measurement
+
+The repository includes a deterministic 32-track development snapshot: exactly
+four excerpts from each of Ballroom's eight genres, selected by the documented
+content-independent hash order. All three systems evaluated the same tracks and
+reported zero failures.
+
+| System | Beat F-measure | CMLt | AMLt | Downbeat F-measure |
+| --- | ---: | ---: | ---: | ---: |
+| BeatScope lightweight 0.7.0 | **0.677** | **0.469** | **0.782** | 0.390 |
+| librosa default 1.0.0 | 0.644 | 0.434 | 0.766 | — |
+| Beat This 1.1.0 final0 (CUDA) | 0.991 | 0.986 | 0.986 | **0.982** |
+
+The canonical per-track report is
+[`evaluations/public-beat/ballroom-32-v1.json`](../evaluations/public-beat/ballroom-32-v1.json)
+(SHA-256 `796a15bd4b170f2b56dd8a20deeb56f5fad72231cb9199e6bd4bbd07c733a6e2`).
+This is deliberately labelled a development snapshot, not the final 698-track
+result. It already establishes two useful facts: BeatScope's beat tracking is
+competitive with the conventional librosa baseline on this sample, while its
+downbeat phase estimation is a clear weakness; Beat This is not a fair unseen
+comparison here because its published training data includes Ballroom.
+
+Sources: [mirdata Ballroom loader](https://mirdata.readthedocs.io/en/stable/_modules/mirdata/datasets/ballroom.html),
+[Ballroom annotations](https://github.com/CPJKU/BallroomAnnotations),
+[Beat This](https://github.com/CPJKU/beat_this), and
+[mir_eval beat metrics](https://github.com/mir-evaluation/mir_eval/blob/main/mir_eval/beat.py).

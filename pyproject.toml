@@ -24,6 +24,7 @@ dependencies = ["numpy>=1.24", "soundfile>=0.12", "librosa>=0.10"]
 dev = ["pytest>=7", "mcp>=2,<3", "anyio>=4", "ruff>=0.9", "setuptools>=68"]
 high-quality = ["demucs>=4.1"]
 mcp = ["mcp>=2,<3"]
+public-benchmark = ["mir_eval>=0.8,<1", "beat-this>=1.1,<2"]
 
 [project.scripts]
 beatscope = "beatscope.cli:main"
