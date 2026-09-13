@@ -132,9 +132,10 @@ jobs:
         shell: bash
         run: |
           notes=".github/release-notes/${GITHUB_REF_NAME}.md"
-          if [ -f "$notes" ]; then cp "$notes" release-body.md; else
-            printf 'See the assets below. Full changelog: %s/%s
-' "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare" "$GITHUB_REF_NAME" > release-body.md
+          if [ -f "$notes" ]; then
+            cp "$notes" release-body.md
+          else
+            echo "See the assets below." > release-body.md
           fi
       - uses: softprops/action-gh-release@v2
         with:
