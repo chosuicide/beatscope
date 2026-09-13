@@ -201,9 +201,13 @@ jobs:
 
       - name: Studio Director browser round trip
         run: |
-          python tests/browser/studio_webmcp_server.py --port 8771 > build/studio-webmcp-server.json &
+          mkdir -p build
+          python tests/browser/studio_webmcp_server.py --port 8771 > build/studio-webmcp-server.json 2>&1 &
           SERVER_PID=$!
-          sleep 3
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8771/app/ > /dev/null; then break; fi
+            sleep 1
+          done
           node tests/browser/studio-webmcp-smoke.mjs http://127.0.0.1:8771
           STATUS=$?
           kill $SERVER_PID || true
