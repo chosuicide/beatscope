@@ -18,10 +18,10 @@ BeatScope 测量拍点、原始瞬态、多频段能量、变速段和重复结�
 
 **Windows：**在 [v0.12.0 Release](https://github.com/chosuicide/beatscope/releases/tag/v0.12.0) 下载 `Beathi-Studio-v0.12.0-windows-x64.zip`，解压后双击 **Beathi Studio.exe**。便携包已带分析器和视频工具链，会在浏览器打开本地工作台；音频不会上传到服务器。
 
-**Python 3.10+：**也可以从 PyPI 或源码安装：
+**Python 3.10+：**也可以从最新 GitHub Release 下载 wheel，或从源码安装：
 
 ```powershell
-pip install beatscope
+pip install beatscope-0.12.0-py3-none-any.whl
 beatscope serve --open
 ```
 

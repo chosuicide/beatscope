@@ -165,6 +165,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -172,7 +177,9 @@ jobs:
           cache-dependency-path: web-src/package-lock.json
 
       - name: Install locked frontend dependencies
-        run: npm ci --prefix web-src --no-audit --no-fund
+        run: |
+          python -m pip install -e .
+          npm ci --prefix web-src --no-audit --no-fund
 
       - name: Typecheck and build Beathi Studio
         run: |

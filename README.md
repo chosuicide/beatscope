@@ -18,10 +18,10 @@ It does not guess kick, snare or 808 labels, and it never moves a real event ont
 
 **Windows:** download `Beathi-Studio-v0.12.0-windows-x64.zip` from the [v0.12.0 release](https://github.com/chosuicide/beatscope/releases/tag/v0.12.0), extract it, then double-click **Beathi Studio.exe**. The portable build includes the analyser and movie toolchain; it opens a local Studio in your browser and keeps audio on the machine.
 
-**Python 3.10+:** install from PyPI or source, then open the Studio:
+**Python 3.10+:** download the wheel from the latest GitHub Release, or install from source, then open the Studio:
 
 ```powershell
-pip install beatscope
+pip install beatscope-0.12.0-py3-none-any.whl
 beatscope serve --open
 ```
 
