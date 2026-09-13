@@ -73,6 +73,33 @@ const callTool = (name, input = {}) => page.evaluate(
   [name, input],
 );
 
+const verifyRealRender = async () => {
+  const started = await callTool('beatscope_render_movie', { action: 'start' });
+  assert.equal(started.result.ok, true, JSON.stringify(started.result));
+  assert.ok(Number.isInteger(started.result.data.seed), 'a 24-bit seed is reported');
+  let final;
+  for (let attempt = 0; attempt < 900; attempt += 1) {
+    final = (await callTool('beatscope_get_studio_state')).result;
+    const job = final.data.movie.job;
+    if (job?.state === 'complete') break;
+    if (job?.state === 'failed') throw new Error(`render failed: ${JSON.stringify(job)}`);
+    await page.waitForTimeout(500);
+  }
+  const job = final.data.movie.job;
+  assert.equal(job?.state, 'complete', `render did not finish: ${JSON.stringify(job)}`);
+  assert.equal(job.video_ready, true);
+  const video = await page.request.get(`${base}/api/movies/${job.id}/video`, { headers: { Range: 'bytes=0-2047' } });
+  assert.equal(video.status(), 206, `the film route answered ${video.status()}`);
+  const filmHead = await video.body();
+  const contentRange = video.headers()['content-range'] || '';
+  const rangeMatch = /^bytes 0-2047\/(\d+)$/.exec(contentRange);
+  assert.ok(rangeMatch, `rendered film must report its complete byte length, got ${contentRange}`);
+  const filmBytes = Number(rangeMatch[1]);
+  assert.ok(filmBytes > 10_000, `rendered film is implausibly small (${filmBytes} bytes)`);
+  assert.ok(filmHead.subarray(0, 64).includes(Buffer.from('ftyp')), 'rendered film must carry an MP4 ftyp box');
+  console.log(`  render: seed ${started.result.data.seed} -> ${job.state}, MP4 verified (${filmBytes} bytes)`);
+};
+
 try {
   await page.goto(`${base}/app/`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.mv-agent', { timeout: 15000 });
@@ -87,16 +114,28 @@ try {
   /* The sidecar load is best-effort and lands just after the rhythm, so wait
      for it: a state read that races it would report ranking as unavailable. */
   let state;
-  const requireRenderer = process.argv.includes('--render');
+  const renderOnly = process.argv.includes('--render-only');
+  const requireRenderer = process.argv.includes('--render') || renderOnly;
   for (let attempt = 0; attempt < 60; attempt += 1) {
     state = (await callTool('beatscope_get_studio_state')).result;
     if (state.data?.track?.response_relevance_available && (!requireRenderer || state.data?.capabilities?.rendering)) break;
     await page.waitForTimeout(250);
   }
   assert.equal(state.ok, true, JSON.stringify(state));
-  assert.equal(state.data.track.bars, downbeats.length);
+  if (!renderOnly) assert.equal(state.data.track.bars, downbeats.length);
   assert.equal(state.data.track.response_relevance_available, true);
   assert.ok(!('projects' in state.data));
+
+  // The heavy CI job uses an eight-second fixture and proves only the real
+  // browser/encoder/file route.  The full 48-second interaction contract is
+  // exercised by the normal path below without needlessly rendering it.
+  if (renderOnly) {
+    assert.equal(state.data.capabilities.rendering, true, 'the renderer must be available for --render-only');
+    await verifyRealRender();
+    console.log('Studio Director real-render path OK.');
+    await browser.close();
+    process.exit(0);
+  }
 
   // 6. timing window matches the fixture exactly, bar windows included
   const timing = await callTool('beatscope_inspect_timing', { start_bar: 2, end_bar: 3, include: ['beats', 'onsets'] });
@@ -168,33 +207,7 @@ try {
   // state tool reports the finished job and its MP4 answers on the same origin.
   if (process.argv.includes('--render')) {
     assert.equal(state.data.capabilities.rendering, true, 'the renderer must be available for --render');
-    const started = await callTool('beatscope_render_movie', { action: 'start' });
-    assert.equal(started.result.ok, true, JSON.stringify(started.result));
-    assert.ok(Number.isInteger(started.result.data.seed), 'a 24-bit seed is reported');
-    let final;
-    // Software capture/encoding on a shared Linux runner is intentionally
-    // slower than the packaged desktop path.  Keep polling the bounded job
-    // instead of turning runner contention into a false render failure.
-    for (let attempt = 0; attempt < 900; attempt += 1) {
-      final = (await callTool('beatscope_get_studio_state')).result;
-      const job = final.data.movie.job;
-      if (job?.state === 'complete') break;
-      if (job?.state === 'failed') throw new Error(`render failed: ${JSON.stringify(job)}`);
-      await page.waitForTimeout(500);
-    }
-    const job = final.data.movie.job;
-    assert.equal(job?.state, 'complete', `render did not finish: ${JSON.stringify(job)}`);
-    assert.equal(job.video_ready, true);
-    const video = await page.request.get(`${base}/api/movies/${job.id}/video`, { headers: { Range: 'bytes=0-2047' } });
-    assert.equal(video.status(), 206, `the film route answered ${video.status()}`);
-    const filmHead = await video.body();
-    const contentRange = video.headers()['content-range'] || '';
-    const rangeMatch = /^bytes 0-2047\/(\d+)$/.exec(contentRange);
-    assert.ok(rangeMatch, `rendered film must report its complete byte length, got ${contentRange}`);
-    const filmBytes = Number(rangeMatch[1]);
-    assert.ok(filmBytes > 10_000, `rendered film is implausibly small (${filmBytes} bytes)`);
-    assert.ok(filmHead.subarray(0, 64).includes(Buffer.from('ftyp')), 'rendered film must carry an MP4 ftyp box');
-    console.log(`  render: seed ${started.result.data.seed} -> ${job.state}, MP4 verified (${filmBytes} bytes)`);
+    await verifyRealRender();
   }
 
   // 12. budgets: latency and serialized size (plan §12)

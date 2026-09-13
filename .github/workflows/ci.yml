@@ -263,10 +263,10 @@ jobs:
           BEATSCOPE_MV_CRF: "28"
         run: |
           mkdir -p build
-          python tests/browser/studio_webmcp_server.py --port 8772 > build/studio-render-server.json &
+          python tests/browser/studio_webmcp_server.py --port 8772 --short-render > build/studio-render-server.json &
           SERVER_PID=$!
           sleep 3
-          node tests/browser/studio-webmcp-smoke.mjs http://127.0.0.1:8772 --render
+          node tests/browser/studio-webmcp-smoke.mjs http://127.0.0.1:8772 --render-only
           STATUS=$?
           kill $SERVER_PID || true
           exit $STATUS

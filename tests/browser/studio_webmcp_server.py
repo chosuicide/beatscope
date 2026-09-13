@@ -22,11 +22,17 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 PROJECT_ID = "0a1b2c3d4e5f"
 FIXTURE = REPO / "tests" / "fixtures" / "structure" / "aba.rhythm.json"
+SHORT_RENDER_FIXTURE = REPO / "tests" / "fixtures" / "runtime" / "structure-project.json"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=0)
+    parser.add_argument(
+        "--short-render",
+        action="store_true",
+        help="serve the eight-second runtime fixture for the real-render smoke",
+    )
     args = parser.parse_args()
 
     work = Path(tempfile.mkdtemp(prefix="beatscope-studio-webmcp-"))
@@ -34,7 +40,8 @@ def main() -> int:
     project = work / ".beatscope-cache" / "projects" / PROJECT_ID
     project.mkdir(parents=True)
 
-    rhythm = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    fixture = SHORT_RENDER_FIXTURE if args.short_render else FIXTURE
+    rhythm = json.loads(fixture.read_text(encoding="utf-8"))
     rhythm["project_id"] = PROJECT_ID
 
     audio = project / "source.audio"
