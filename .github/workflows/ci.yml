@@ -212,3 +212,48 @@ jobs:
             build/webmcp-evidence
             build/webmcp-demo/index.html
           retention-days: 7
+
+  canvas-conformance:
+    # One browser job owns the v0.12 design contract. It rebuilds the React
+    # app before capture, then checks both frozen references and live Pixi
+    # geometry; committed screenshots alone are not accepted as evidence.
+    name: Beathi Canvas conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            web-src/package-lock.json
+            tests/browser/package-lock.json
+
+      - name: Install locked frontend and browser dependencies
+        run: |
+          npm ci --prefix web-src --no-audit --no-fund
+          npm ci --prefix tests/browser --no-audit --no-fund
+
+      - name: Install pinned Chromium
+        working-directory: tests/browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Typecheck and build Beathi Canvas
+        run: |
+          npm run typecheck --prefix web-src
+          npm run build --prefix web-src
+
+      - name: Verify frozen design references
+        run: node tests/canvas/snapshot/run-reference-check.mjs
+
+      - name: Capture and verify live implementation
+        run: node tests/canvas/snapshot/run-impl-conformance.mjs
+
+      - name: Upload visual evidence on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beathi-canvas-conformance
+          path: tests/canvas/snapshot/impl-*.png
+          retention-days: 7

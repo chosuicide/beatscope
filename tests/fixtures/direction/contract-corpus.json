@@ -1,0 +1,1698 @@
+{
+ "schema": "beatscope-direction-1",
+ "number_cases": [
+  [
+   0.0,
+   "0"
+  ],
+  [
+   -0.0,
+   "0"
+  ],
+  [
+   1.0,
+   "1"
+  ],
+  [
+   0.5,
+   "0.5"
+  ],
+  [
+   -2.5,
+   "-2.5"
+  ],
+  [
+   0.1,
+   "0.1"
+  ],
+  [
+   0.3333333333333333,
+   "0.333333"
+  ],
+  [
+   15.9869,
+   "15.9869"
+  ],
+  [
+   0.123456789,
+   "0.123457"
+  ],
+  [
+   1e-07,
+   "0"
+  ],
+  [
+   -1e-07,
+   "0"
+  ],
+  [
+   2.0000006,
+   "2.000001"
+  ],
+  [
+   123.4567894,
+   "123.456789"
+  ],
+  [
+   1920,
+   "1920"
+  ],
+  [
+   1000000000000000.0,
+   "1000000000000000"
+  ]
+ ],
+ "expected_props_canonical": "{\"M_case\":0.5,\"a_first\":0.1,\"big\":1920,\"esc\":\"line\\nbreak \\\"quoted\\\" back\\\\slash\",\"neg\":-2.5,\"neg_tiny\":0,\"neg_zero\":0,\"one\":1,\"prec\":0.123457,\"round_down\":123.456789,\"round_up\":2.000001,\"third\":0.333333,\"time\":15.9869,\"tiny\":0,\"unicode\":\"雾中之雾\",\"z_last\":1,\"zero\":0}",
+ "doc_cases": [
+  {
+   "name": "minimal-valid",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [],
+   "expected_notice_codes": [],
+   "canonical": "{\"assets\":[],\"composition\":{\"background\":\"#F5F1E8\",\"height\":1080,\"primary_ratio\":\"16:9\",\"width\":1920},\"diagnostics\":{},\"project_id\":\"62bce8192088\",\"project_title\":\"Beyond the Fog\",\"scenes\":[{\"anchor\":{\"end_bar\":13,\"kind\":\"bars\",\"start_bar\":1},\"end_time\":24,\"family\":\"section\",\"id\":\"scene-01\",\"layers\":[],\"responses\":[],\"start_time\":0,\"title\":\"Scene 01\",\"transition_out\":\"cut\"}],\"schema\":\"beatscope-direction-1\",\"source_rhythm_sha256\":\"abababababababababababababababababababababababababababababababab\",\"theme\":{},\"transitions\":[],\"version\":\"0.12.0\"}",
+   "canonical_sha256": "0aa8f2c6827b0b31a749816dd9d05e21a945a3f03cc8386ae3026a5c0ff075b2"
+  },
+  {
+   "name": "full-valid",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [
+       {
+        "id": "lay-title-01",
+        "kind": "editorial-typography",
+        "label": "Title",
+        "visible": true,
+        "locked": false,
+        "opacity": 1.0,
+        "blend": "normal",
+        "transform": {
+         "x": 0.1,
+         "y": 0.2,
+         "w": 0.5,
+         "h": 0.3,
+         "rotation": -0.123457,
+         "crop": {
+          "left": 0.0,
+          "top": 0.1,
+          "right": 1.0,
+          "bottom": 0.9
+         }
+        },
+        "props": {}
+       }
+      ],
+      "responses": [
+       {
+        "id": "resp-01",
+        "target_layer_id": "lay-title-01",
+        "label": "Mid onsets lift",
+        "driver": {
+         "kind": "ranked_onsets",
+         "band": "mid",
+         "tier": "primary",
+         "max_events_per_bar": 2,
+         "refractory_beats": 0.4
+        },
+        "motion": {
+         "kind": "opacity_lift",
+         "amount": 0.08,
+         "attack_seconds": 0.02,
+         "release_seconds": 0.3
+        }
+       },
+       {
+        "id": "resp-02",
+        "target_layer_id": "lay-title-01",
+        "label": "Beat phase sway",
+        "driver": {
+         "kind": "beat_phase",
+         "subdivision": 2
+        },
+        "motion": {
+         "kind": "translate_recoil",
+         "axis": [
+          1.0,
+          0.0
+         ],
+         "amount": 6.0,
+         "attack_seconds": 0.03,
+         "release_seconds": 0.25
+        }
+       },
+       {
+        "id": "resp-03",
+        "target_layer_id": "lay-title-01",
+        "label": "Low energy drift",
+        "driver": {
+         "kind": "energy_envelope",
+         "band": "low"
+        },
+        "motion": {
+         "kind": "scale_pulse",
+         "amount": 1.04,
+         "attack_seconds": 0.4,
+         "release_seconds": 1.2
+        },
+        "unavailable_reason": "energy stream not compiled for this project"
+       }
+      ]
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [],
+   "expected_notice_codes": [],
+   "canonical": "{\"assets\":[],\"composition\":{\"background\":\"#F5F1E8\",\"height\":1080,\"primary_ratio\":\"16:9\",\"width\":1920},\"diagnostics\":{},\"project_id\":\"62bce8192088\",\"project_title\":\"Beyond the Fog\",\"scenes\":[{\"anchor\":{\"end_bar\":13,\"kind\":\"bars\",\"start_bar\":1},\"end_time\":24,\"family\":\"section\",\"id\":\"scene-01\",\"layers\":[{\"blend\":\"normal\",\"id\":\"lay-title-01\",\"kind\":\"editorial-typography\",\"label\":\"Title\",\"locked\":false,\"opacity\":1,\"props\":{},\"transform\":{\"crop\":{\"bottom\":0.9,\"left\":0,\"right\":1,\"top\":0.1},\"h\":0.3,\"rotation\":-0.123457,\"w\":0.5,\"x\":0.1,\"y\":0.2},\"visible\":true}],\"responses\":[{\"driver\":{\"band\":\"mid\",\"kind\":\"ranked_onsets\",\"max_events_per_bar\":2,\"refractory_beats\":0.4,\"tier\":\"primary\"},\"id\":\"resp-01\",\"label\":\"Mid onsets lift\",\"motion\":{\"amount\":0.08,\"attack_seconds\":0.02,\"kind\":\"opacity_lift\",\"release_seconds\":0.3},\"target_layer_id\":\"lay-title-01\"},{\"driver\":{\"kind\":\"beat_phase\",\"subdivision\":2},\"id\":\"resp-02\",\"label\":\"Beat phase sway\",\"motion\":{\"amount\":6,\"attack_seconds\":0.03,\"axis\":[1,0],\"kind\":\"translate_recoil\",\"release_seconds\":0.25},\"target_layer_id\":\"lay-title-01\"},{\"driver\":{\"band\":\"low\",\"kind\":\"energy_envelope\"},\"id\":\"resp-03\",\"label\":\"Low energy drift\",\"motion\":{\"amount\":1.04,\"attack_seconds\":0.4,\"kind\":\"scale_pulse\",\"release_seconds\":1.2},\"target_layer_id\":\"lay-title-01\",\"unavailable_reason\":\"energy stream not compiled for this project\"}],\"start_time\":0,\"title\":\"Scene 01\",\"transition_out\":\"cut\"}],\"schema\":\"beatscope-direction-1\",\"source_rhythm_sha256\":\"abababababababababababababababababababababababababababababababab\",\"theme\":{},\"transitions\":[],\"version\":\"0.12.0\"}",
+   "canonical_sha256": "d7b98d76a29d7a98fddfe87471675305377960deedd89e12d16b23f4c9f7709a"
+  },
+  {
+   "name": "formatting",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "雾中之雾",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [
+       {
+        "id": "lay-title-01",
+        "kind": "editorial-typography",
+        "label": "Title",
+        "visible": true,
+        "locked": false,
+        "opacity": 1.0,
+        "blend": "normal",
+        "transform": {
+         "x": 0.1,
+         "y": 0.2,
+         "w": 0.5,
+         "h": 0.3,
+         "rotation": -0.123457,
+         "crop": {
+          "left": 0.0,
+          "top": 0.1,
+          "right": 1.0,
+          "bottom": 0.9
+         }
+        },
+        "props": {
+         "z_last": 1,
+         "M_case": 0.5,
+         "a_first": 0.1,
+         "zero": 0.0,
+         "neg_zero": -0.0,
+         "one": 1.0,
+         "neg": -2.5,
+         "third": 0.3333333333333333,
+         "time": 15.9869,
+         "prec": 0.123456789,
+         "tiny": 1e-07,
+         "neg_tiny": -1e-07,
+         "round_up": 2.0000006,
+         "round_down": 123.4567894,
+         "big": 1920,
+         "unicode": "雾中之雾",
+         "esc": "line\nbreak \"quoted\" back\\slash"
+        }
+       }
+      ],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [],
+   "expected_notice_codes": [],
+   "canonical": "{\"assets\":[],\"composition\":{\"background\":\"#F5F1E8\",\"height\":1080,\"primary_ratio\":\"16:9\",\"width\":1920},\"diagnostics\":{},\"project_id\":\"62bce8192088\",\"project_title\":\"雾中之雾\",\"scenes\":[{\"anchor\":{\"end_bar\":13,\"kind\":\"bars\",\"start_bar\":1},\"end_time\":24,\"family\":\"section\",\"id\":\"scene-01\",\"layers\":[{\"blend\":\"normal\",\"id\":\"lay-title-01\",\"kind\":\"editorial-typography\",\"label\":\"Title\",\"locked\":false,\"opacity\":1,\"props\":{\"M_case\":0.5,\"a_first\":0.1,\"big\":1920,\"esc\":\"line\\nbreak \\\"quoted\\\" back\\\\slash\",\"neg\":-2.5,\"neg_tiny\":0,\"neg_zero\":0,\"one\":1,\"prec\":0.123457,\"round_down\":123.456789,\"round_up\":2.000001,\"third\":0.333333,\"time\":15.9869,\"tiny\":0,\"unicode\":\"雾中之雾\",\"z_last\":1,\"zero\":0},\"transform\":{\"crop\":{\"bottom\":0.9,\"left\":0,\"right\":1,\"top\":0.1},\"h\":0.3,\"rotation\":-0.123457,\"w\":0.5,\"x\":0.1,\"y\":0.2},\"visible\":true}],\"responses\":[],\"start_time\":0,\"title\":\"Scene 01\",\"transition_out\":\"cut\"}],\"schema\":\"beatscope-direction-1\",\"source_rhythm_sha256\":\"abababababababababababababababababababababababababababababababab\",\"theme\":{},\"transitions\":[],\"version\":\"0.12.0\"}",
+   "canonical_sha256": "852cce9d6c108fd447f74e0204c39cd633d650153a4dee173f2eab688423a311"
+  },
+  {
+   "name": "unknown-kinds",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [
+       {
+        "id": "lay-title-01",
+        "kind": "hologram",
+        "label": "Title",
+        "visible": true,
+        "locked": false,
+        "opacity": 1.0,
+        "blend": "phosphor",
+        "transform": {
+         "x": 0.1,
+         "y": 0.2,
+         "w": 0.5,
+         "h": 0.3,
+         "rotation": -0.123457,
+         "crop": {
+          "left": 0.0,
+          "top": 0.1,
+          "right": 1.0,
+          "bottom": 0.9
+         }
+        },
+        "props": {}
+       }
+      ],
+      "responses": [
+       {
+        "id": "resp-01",
+        "target_layer_id": "lay-title-01",
+        "label": "Mid onsets lift",
+        "driver": {
+         "kind": "spectral_flux",
+         "band": "mid"
+        },
+        "motion": {
+         "kind": "wiggle",
+         "amount": 1.0
+        }
+       }
+      ]
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [],
+   "expected_notice_codes": [
+    "direction/layer-blend-unknown",
+    "direction/layer-kind-unknown",
+    "direction/driver-unknown",
+    "direction/motion-unknown"
+   ],
+   "canonical": "{\"assets\":[],\"composition\":{\"background\":\"#F5F1E8\",\"height\":1080,\"primary_ratio\":\"16:9\",\"width\":1920},\"diagnostics\":{},\"project_id\":\"62bce8192088\",\"project_title\":\"Beyond the Fog\",\"scenes\":[{\"anchor\":{\"end_bar\":13,\"kind\":\"bars\",\"start_bar\":1},\"end_time\":24,\"family\":\"section\",\"id\":\"scene-01\",\"layers\":[{\"blend\":\"phosphor\",\"id\":\"lay-title-01\",\"kind\":\"hologram\",\"label\":\"Title\",\"locked\":false,\"opacity\":1,\"props\":{},\"transform\":{\"crop\":{\"bottom\":0.9,\"left\":0,\"right\":1,\"top\":0.1},\"h\":0.3,\"rotation\":-0.123457,\"w\":0.5,\"x\":0.1,\"y\":0.2},\"visible\":true}],\"responses\":[{\"driver\":{\"band\":\"mid\",\"kind\":\"spectral_flux\"},\"id\":\"resp-01\",\"label\":\"Mid onsets lift\",\"motion\":{\"amount\":1,\"kind\":\"wiggle\"},\"target_layer_id\":\"lay-title-01\"}],\"start_time\":0,\"title\":\"Scene 01\",\"transition_out\":\"cut\"}],\"schema\":\"beatscope-direction-1\",\"source_rhythm_sha256\":\"abababababababababababababababababababababababababababababababab\",\"theme\":{},\"transitions\":[],\"version\":\"0.12.0\"}",
+   "canonical_sha256": "faf19fa1e777d26916886b4fb726516db97e8cf4ea1be20e89c68975e8ed246e"
+  },
+  {
+   "name": "unknown-top-level-key",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {},
+    "editor_notes": {
+     "keep": "一切都会保留",
+     "z": 1,
+     "A": 2
+    }
+   },
+   "expected_error_codes": [],
+   "expected_notice_codes": [],
+   "canonical": "{\"assets\":[],\"composition\":{\"background\":\"#F5F1E8\",\"height\":1080,\"primary_ratio\":\"16:9\",\"width\":1920},\"diagnostics\":{},\"editor_notes\":{\"A\":2,\"keep\":\"一切都会保留\",\"z\":1},\"project_id\":\"62bce8192088\",\"project_title\":\"Beyond the Fog\",\"scenes\":[{\"anchor\":{\"end_bar\":13,\"kind\":\"bars\",\"start_bar\":1},\"end_time\":24,\"family\":\"section\",\"id\":\"scene-01\",\"layers\":[],\"responses\":[],\"start_time\":0,\"title\":\"Scene 01\",\"transition_out\":\"cut\"}],\"schema\":\"beatscope-direction-1\",\"source_rhythm_sha256\":\"abababababababababababababababababababababababababababababababab\",\"theme\":{},\"transitions\":[],\"version\":\"0.12.0\"}",
+   "canonical_sha256": "f15bec5245c682f1fe43b28d70159307faf5a3c972ad13bff9ac11d4f1eecb85"
+  },
+  {
+   "name": "time-anchors",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "A",
+      "family": "section",
+      "anchor": {
+       "kind": "time",
+       "start_seconds": 0.0,
+       "end_seconds": 30.0
+      },
+      "start_time": 0.0,
+      "end_time": 30.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     },
+     {
+      "id": "scene-02",
+      "title": "B",
+      "family": "section",
+      "anchor": {
+       "kind": "time",
+       "start_seconds": 30.0,
+       "end_seconds": 48.0
+      },
+      "start_time": 30.0,
+      "end_time": 48.0,
+      "transition_out": "hold-through",
+      "layers": [],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [],
+   "expected_notice_codes": [],
+   "canonical": "{\"assets\":[],\"composition\":{\"background\":\"#F5F1E8\",\"height\":1080,\"primary_ratio\":\"16:9\",\"width\":1920},\"diagnostics\":{},\"project_id\":\"62bce8192088\",\"project_title\":\"Beyond the Fog\",\"scenes\":[{\"anchor\":{\"end_seconds\":30,\"kind\":\"time\",\"start_seconds\":0},\"end_time\":30,\"family\":\"section\",\"id\":\"scene-01\",\"layers\":[],\"responses\":[],\"start_time\":0,\"title\":\"A\",\"transition_out\":\"cut\"},{\"anchor\":{\"end_seconds\":48,\"kind\":\"time\",\"start_seconds\":30},\"end_time\":48,\"family\":\"section\",\"id\":\"scene-02\",\"layers\":[],\"responses\":[],\"start_time\":30,\"title\":\"B\",\"transition_out\":\"hold-through\"}],\"schema\":\"beatscope-direction-1\",\"source_rhythm_sha256\":\"abababababababababababababababababababababababababababababababab\",\"theme\":{},\"transitions\":[],\"version\":\"0.12.0\"}",
+   "canonical_sha256": "8c3598c8f538c1b139ccc1369346828bf699fa603a31ee9b319a33d7bf2d4370"
+  },
+  {
+   "name": "duplicate-scene-id",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     },
+     {
+      "id": "scene-01",
+      "title": "Scene 02",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 13,
+       "end_bar": 25
+      },
+      "start_time": 24.0,
+      "end_time": 48.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/scene-duplicate"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "bad-scene-id",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "Scene-1",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/scene-id"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "bad-transition",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "crossfade",
+      "layers": [],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/scene-transition"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "inverted-times",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 30.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/scene-times"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "overlap-bars-and-time",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     },
+     {
+      "id": "scene-02",
+      "title": "Scene 02",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 25
+      },
+      "start_time": 0.0,
+      "end_time": 48.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/scene-overlap",
+    "direction/scene-continuity"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "overlap-time-only",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     },
+     {
+      "id": "scene-02",
+      "title": "Scene 02",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 13,
+       "end_bar": 25
+      },
+      "start_time": 0.0,
+      "end_time": 48.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/scene-continuity"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "bad-ratio",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "4:3",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/ratio"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "square-ratio-valid",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "1:1",
+     "width": 1080,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [],
+   "expected_notice_codes": [],
+   "canonical": "{\"assets\":[],\"composition\":{\"background\":\"#F5F1E8\",\"height\":1080,\"primary_ratio\":\"1:1\",\"width\":1080},\"diagnostics\":{},\"project_id\":\"62bce8192088\",\"project_title\":\"Beyond the Fog\",\"scenes\":[{\"anchor\":{\"end_bar\":13,\"kind\":\"bars\",\"start_bar\":1},\"end_time\":24,\"family\":\"section\",\"id\":\"scene-01\",\"layers\":[],\"responses\":[],\"start_time\":0,\"title\":\"Scene 01\",\"transition_out\":\"cut\"}],\"schema\":\"beatscope-direction-1\",\"source_rhythm_sha256\":\"abababababababababababababababababababababababababababababababab\",\"theme\":{},\"transitions\":[],\"version\":\"0.12.0\"}",
+   "canonical_sha256": "6020ffd59184ccaae4a10b99f182bfa9e702f5d4c517158846a06edaca538204"
+  },
+  {
+   "name": "composition-size-mismatch",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1080,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/composition"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "bad-background",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "cream"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/composition"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "bad-project-id",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "beyondthefog",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/project-id"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "bad-source-sha",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/source-sha"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "bad-schema",
+   "doc": {
+    "schema": "beatscope-direction-2",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [],
+      "responses": []
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/schema-version"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "empty-scenes",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/scenes"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "transform-out-of-range",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [
+       {
+        "id": "lay-title-01",
+        "kind": "editorial-typography",
+        "label": "Title",
+        "visible": true,
+        "locked": false,
+        "opacity": 1.0,
+        "blend": "normal",
+        "transform": {
+         "x": 1.5,
+         "y": 0.2,
+         "w": 0.5,
+         "h": 0.3,
+         "rotation": -0.123457,
+         "crop": {
+          "left": 0.0,
+          "top": 0.1,
+          "right": 1.0,
+          "bottom": 0.9
+         }
+        },
+        "props": {}
+       }
+      ],
+      "responses": [
+       {
+        "id": "resp-01",
+        "target_layer_id": "lay-title-01",
+        "label": "Mid onsets lift",
+        "driver": {
+         "kind": "ranked_onsets",
+         "band": "mid",
+         "tier": "primary",
+         "max_events_per_bar": 2,
+         "refractory_beats": 0.4
+        },
+        "motion": {
+         "kind": "opacity_lift",
+         "amount": 0.08,
+         "attack_seconds": 0.02,
+         "release_seconds": 0.3
+        }
+       }
+      ]
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/layer-transform"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "crop-out-of-range",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [
+       {
+        "id": "lay-title-01",
+        "kind": "editorial-typography",
+        "label": "Title",
+        "visible": true,
+        "locked": false,
+        "opacity": 1.0,
+        "blend": "normal",
+        "transform": {
+         "x": 0.1,
+         "y": 0.2,
+         "w": 0.5,
+         "h": 0.3,
+         "rotation": -0.123457,
+         "crop": {
+          "left": 0.0,
+          "top": 0.0,
+          "right": 2.0,
+          "bottom": 1.0
+         }
+        },
+        "props": {}
+       }
+      ],
+      "responses": [
+       {
+        "id": "resp-01",
+        "target_layer_id": "lay-title-01",
+        "label": "Mid onsets lift",
+        "driver": {
+         "kind": "ranked_onsets",
+         "band": "mid",
+         "tier": "primary",
+         "max_events_per_bar": 2,
+         "refractory_beats": 0.4
+        },
+        "motion": {
+         "kind": "opacity_lift",
+         "amount": 0.08,
+         "attack_seconds": 0.02,
+         "release_seconds": 0.3
+        }
+       }
+      ]
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/layer-transform"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "opacity-out-of-range",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [
+       {
+        "id": "lay-title-01",
+        "kind": "editorial-typography",
+        "label": "Title",
+        "visible": true,
+        "locked": false,
+        "opacity": 1.5,
+        "blend": "normal",
+        "transform": {
+         "x": 0.1,
+         "y": 0.2,
+         "w": 0.5,
+         "h": 0.3,
+         "rotation": -0.123457,
+         "crop": {
+          "left": 0.0,
+          "top": 0.1,
+          "right": 1.0,
+          "bottom": 0.9
+         }
+        },
+        "props": {}
+       }
+      ],
+      "responses": [
+       {
+        "id": "resp-01",
+        "target_layer_id": "lay-title-01",
+        "label": "Mid onsets lift",
+        "driver": {
+         "kind": "ranked_onsets",
+         "band": "mid",
+         "tier": "primary",
+         "max_events_per_bar": 2,
+         "refractory_beats": 0.4
+        },
+        "motion": {
+         "kind": "opacity_lift",
+         "amount": 0.08,
+         "attack_seconds": 0.02,
+         "release_seconds": 0.3
+        }
+       }
+      ]
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/layer-opacity"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "response-layer-missing",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [
+       {
+        "id": "lay-title-01",
+        "kind": "editorial-typography",
+        "label": "Title",
+        "visible": true,
+        "locked": false,
+        "opacity": 1.0,
+        "blend": "normal",
+        "transform": {
+         "x": 0.1,
+         "y": 0.2,
+         "w": 0.5,
+         "h": 0.3,
+         "rotation": -0.123457,
+         "crop": {
+          "left": 0.0,
+          "top": 0.1,
+          "right": 1.0,
+          "bottom": 0.9
+         }
+        },
+        "props": {}
+       }
+      ],
+      "responses": [
+       {
+        "id": "resp-01",
+        "target_layer_id": "lay-missing",
+        "label": "Mid onsets lift",
+        "driver": {
+         "kind": "ranked_onsets",
+         "band": "mid",
+         "tier": "primary",
+         "max_events_per_bar": 2,
+         "refractory_beats": 0.4
+        },
+        "motion": {
+         "kind": "opacity_lift",
+         "amount": 0.08,
+         "attack_seconds": 0.02,
+         "release_seconds": 0.3
+        }
+       }
+      ]
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/response-layer"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "bad-subdivision",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [
+       {
+        "id": "lay-title-01",
+        "kind": "editorial-typography",
+        "label": "Title",
+        "visible": true,
+        "locked": false,
+        "opacity": 1.0,
+        "blend": "normal",
+        "transform": {
+         "x": 0.1,
+         "y": 0.2,
+         "w": 0.5,
+         "h": 0.3,
+         "rotation": -0.123457,
+         "crop": {
+          "left": 0.0,
+          "top": 0.1,
+          "right": 1.0,
+          "bottom": 0.9
+         }
+        },
+        "props": {}
+       }
+      ],
+      "responses": [
+       {
+        "id": "resp-01",
+        "target_layer_id": "lay-title-01",
+        "label": "Mid onsets lift",
+        "driver": {
+         "kind": "beat_phase",
+         "subdivision": 3
+        },
+        "motion": {
+         "kind": "opacity_lift",
+         "amount": 0.08,
+         "attack_seconds": 0.02,
+         "release_seconds": 0.3
+        }
+       }
+      ]
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/driver"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "negative-refractory",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [
+       {
+        "id": "lay-title-01",
+        "kind": "editorial-typography",
+        "label": "Title",
+        "visible": true,
+        "locked": false,
+        "opacity": 1.0,
+        "blend": "normal",
+        "transform": {
+         "x": 0.1,
+         "y": 0.2,
+         "w": 0.5,
+         "h": 0.3,
+         "rotation": -0.123457,
+         "crop": {
+          "left": 0.0,
+          "top": 0.1,
+          "right": 1.0,
+          "bottom": 0.9
+         }
+        },
+        "props": {}
+       }
+      ],
+      "responses": [
+       {
+        "id": "resp-01",
+        "target_layer_id": "lay-title-01",
+        "label": "Mid onsets lift",
+        "driver": {
+         "kind": "ranked_onsets",
+         "band": "mid",
+         "tier": "primary",
+         "max_events_per_bar": 2,
+         "refractory_beats": -0.1
+        },
+        "motion": {
+         "kind": "opacity_lift",
+         "amount": 0.08,
+         "attack_seconds": 0.02,
+         "release_seconds": 0.3
+        }
+       }
+      ]
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/driver"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "negative-attack",
+   "doc": {
+    "schema": "beatscope-direction-1",
+    "version": "0.12.0",
+    "project_id": "62bce8192088",
+    "project_title": "Beyond the Fog",
+    "source_rhythm_sha256": "abababababababababababababababababababababababababababababababab",
+    "composition": {
+     "primary_ratio": "16:9",
+     "width": 1920,
+     "height": 1080,
+     "background": "#F5F1E8"
+    },
+    "theme": {},
+    "assets": [],
+    "scenes": [
+     {
+      "id": "scene-01",
+      "title": "Scene 01",
+      "family": "section",
+      "anchor": {
+       "kind": "bars",
+       "start_bar": 1,
+       "end_bar": 13
+      },
+      "start_time": 0.0,
+      "end_time": 24.0,
+      "transition_out": "cut",
+      "layers": [
+       {
+        "id": "lay-title-01",
+        "kind": "editorial-typography",
+        "label": "Title",
+        "visible": true,
+        "locked": false,
+        "opacity": 1.0,
+        "blend": "normal",
+        "transform": {
+         "x": 0.1,
+         "y": 0.2,
+         "w": 0.5,
+         "h": 0.3,
+         "rotation": -0.123457,
+         "crop": {
+          "left": 0.0,
+          "top": 0.1,
+          "right": 1.0,
+          "bottom": 0.9
+         }
+        },
+        "props": {}
+       }
+      ],
+      "responses": [
+       {
+        "id": "resp-01",
+        "target_layer_id": "lay-title-01",
+        "label": "Mid onsets lift",
+        "driver": {
+         "kind": "ranked_onsets",
+         "band": "mid",
+         "tier": "primary",
+         "max_events_per_bar": 2,
+         "refractory_beats": 0.4
+        },
+        "motion": {
+         "kind": "opacity_lift",
+         "amount": 0.08,
+         "attack_seconds": -1.0,
+         "release_seconds": 0.3
+        }
+       }
+      ]
+     }
+    ],
+    "transitions": [],
+    "diagnostics": {}
+   },
+   "expected_error_codes": [
+    "direction/motion"
+   ],
+   "expected_notice_codes": []
+  },
+  {
+   "name": "not-an-object",
+   "doc": [
+    1,
+    2,
+    3
+   ],
+   "expected_error_codes": [
+    "direction/schema"
+   ],
+   "expected_notice_codes": []
+  }
+ ]
+}

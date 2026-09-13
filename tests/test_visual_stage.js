@@ -247,7 +247,10 @@ function stubStageCanvas() {
 }
 
 {
-  const markup = await readFile(new URL('../beatscope/web/index.html', import.meta.url), 'utf-8');
+  // v0.12 moves the legacy particle Studio to /legacy.html while /app/
+  // becomes the spatial workspace. Keep the old accessibility contract on
+  // its actual compatibility carrier instead of reading a deleted path.
+  const markup = await readFile(new URL('../beatscope/web/legacy.html', import.meta.url), 'utf-8');
   // The follow-structure toggle ships checked, hidden until artifacts land.
   assert.match(markup, /id="followStructureControl"[^>]*hidden/);
   assert.match(markup, /id="followStructure" type="checkbox" checked/);
@@ -255,6 +258,10 @@ function stubStageCanvas() {
   assert.match(markup, /id="visualStageStack"[^>]*role="img"/);
   assert.match(markup, /id="visualStageStack"[^>]*aria-label="Audio-reactive particle instrument driven by playback time"/);
   assert.match(markup, /id="seekRange"[^>]*aria-label="Seek audio"/);
+
+  const appMarkup = await readFile(new URL('../beatscope/web/app/index.html', import.meta.url), 'utf-8');
+  assert.match(appMarkup, /<title>Beathi Canvas · BeatScope<\/title>/);
+  assert.match(appMarkup, /<div id="root"><\/div>/);
 }
 
 console.log('Visual stage OK: lifecycle gating, diagnostics, debug entry contract.');

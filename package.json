@@ -7,6 +7,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "test:js": "node scripts/run-js-tests.mjs"
+    "test:js": "node scripts/run-js-tests.mjs",
+    "test:canvas": "node tests/canvas/snapshot/run-reference-check.mjs",
+    "check:web-deps": "node scripts/check-web-deps.mjs"
   }
 }

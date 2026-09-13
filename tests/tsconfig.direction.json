@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "skipLibCheck": true,
+    "noEmitOnError": true,
+    "declaration": false,
+    "rewriteRelativeImportExtensions": true,
+    "outDir": ".generated",
+    "rootDir": "../web-src/src"
+  },
+  "include": [
+    "../web-src/src/direction/contract.ts",
+    "../web-src/src/direction/types.ts",
+    "../web-src/src/direction/layout.ts",
+    "../web-src/src/direction/commands.ts",
+    "../web-src/src/demo/rhythm.ts",
+    "../web-src/src/demo/document.ts"
+  ]
+}

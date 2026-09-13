@@ -1,0 +1,104 @@
+/* Beathi Canvas design tokens — frozen contract (docs/design/beathi-canvas/design-tokens.json).
+   Values are contract: change only with a new design-gate approval. */
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/Geist-Variable.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/Geist-Mono-Variable.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+
+:root {
+  --paper-0: #f7f6f2;
+  --paper-1: #fbfaf7;
+  --paper-2: rgba(255, 255, 252, 0.82);
+  --ink-0: #171719;
+  --ink-1: #4f4d55;
+  --ink-2: #77737d;
+  --line-soft: rgba(34, 31, 40, 0.075);
+  --line-strong: rgba(34, 31, 40, 0.14);
+  --accent: #7567e8;
+  --accent-wash: #ece9ff;
+  --danger: #b94a57;
+  --shadow-board: 0 1px 1px rgba(35, 30, 45, 0.045), 0 8px 24px rgba(35, 30, 45, 0.065),
+    0 28px 70px rgba(35, 30, 45, 0.035);
+  --shadow-float: 0 1px 0 rgba(255, 255, 255, 0.78) inset, 0 12px 36px rgba(31, 27, 40, 0.12),
+    0 2px 8px rgba(31, 27, 40, 0.06);
+  --shadow-desk: 0 1px 2px rgba(35, 30, 45, 0.1), 0 6px 16px rgba(35, 30, 45, 0.1),
+    0 18px 44px rgba(35, 30, 45, 0.07);
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-settle: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --z-canvas: 0;
+  --z-board: 10;
+  --z-panel: 30;
+  --z-transport: 40;
+  --z-popover: 50;
+  --z-toast: 60;
+  --z-dialog: 70;
+  --font-ui: 'Geist', -apple-system, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --focus-ring: 0 0 0 3px rgba(117, 103, 232, 0.18);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  font-family: var(--font-ui);
+  color: var(--ink-0);
+  background: var(--paper-0);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+button {
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -40px;
+  z-index: var(--z-dialog);
+  background: var(--ink-0);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  text-decoration: none;
+  transition: top 120ms var(--ease-out);
+}
+.skip-link:focus {
+  top: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

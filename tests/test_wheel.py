@@ -33,6 +33,13 @@ REQUIRED_MODULES = [
     "beatscope/runtime/consumer-probe.js",
     "beatscope/runtime/consumer-browser.mjs",
     "beatscope/runtime/consumer-offline.mjs",
+    # v0.12: the Beathi Canvas build ships in the wheel; the legacy Studio
+    # page stays packaged under its renamed path until the Round 5 removal.
+    # fonts/ and demo-media/ use stable names, unlike the hashed assets/.
+    "beatscope/web/app/index.html",
+    "beatscope/web/app/fonts/Geist-Variable.woff2",
+    "beatscope/web/app/demo-media/halftone.png",
+    "beatscope/web/legacy.html",
 ]
 
 # Release policy (v0.10): the frozen demo audio/fixtures are static-host

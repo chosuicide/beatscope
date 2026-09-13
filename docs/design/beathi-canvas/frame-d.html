@@ -1,0 +1,120 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<link rel="stylesheet" href="beathi.css"><title>D · Prompt / Package</title></head>
+<body><div class="frame">
+  <header class="topbar">
+    <svg class="mark" viewBox="0 0 24 24"><rect x="1" y="1" width="22" height="22" rx="6" fill="#171719"/><path d="M7 16.5V8.5M12 16.5v-6M17 16.5v-3.5" stroke="#fbfaf7" stroke-width="2.2" stroke-linecap="round"/></svg>
+    <span class="tb-name">Beyond the Fog</span><span class="tb-dot"></span>
+    <span class="tb-save">All changes saved</span>
+    <span class="tb-sp"></span>
+    <button class="tbtn">Present</button>
+    <button class="btn-line">Preview</button>
+    <button class="btn-ink">Export</button>
+  </header>
+
+  <aside class="dock">
+    <div class="seg"><div class="seg-plate"></div><b class="on">Scenes</b><b>Layers</b><b>Motion</b></div>
+    <div class="dcap">Beyond the Fog · chronological</div>
+    <div class="drow"><span class="idx">01</span><span class="nm">Cold Open</span><span class="tm">00:00–00:24</span></div>
+    <div class="drow on"><span class="idx">02</span><span class="nm">Pressure</span><span class="tm">00:24–00:52</span></div>
+    <div class="drow"><span class="idx">03</span><span class="nm">Release Valve</span><span class="tm">00:52–01:16</span></div>
+    <div class="drow"><span class="idx"></span><svg class="layic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3.5 10.5 8 6 12.5"/></svg><span class="nm" style="color:var(--ink-1)">More scenes</span><span class="tm">7</span></div>
+    <div class="dfoot">10 scenes · 04:02 · proposal 03 under review</div>
+  </aside>
+
+  <section class="stage" style="left:280px;right:400px">
+    <div class="grain"></div>
+    <svg class="wires" viewBox="0 0 760 852">
+      <defs><marker id="ad" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L6,3L0,6z" fill="#171719"/></marker></defs>
+      <path d="M-20,360 C14,360 26,360 60,360" fill="none" stroke="rgba(34,31,40,.3)" marker-end="url(#ad)"/>
+    </svg>
+
+    <!-- selected board with ghosted candidate overlay -->
+    <article class="board sel" style="left:60px;top:150px;width:640px">
+      <header class="bh"><span class="bidx">02</span><span class="bttl">Pressure</span><span class="btme">00:24–00:52</span></header>
+      <div class="bb" style="height:360px"><div class="art art-ed">
+        <div class="ae-h" style="left:32px;top:22px;width:300px;font-size:72px">Pressure</div>
+        <div class="ae-rule" style="left:32px;top:160px;width:140px;height:3px"></div>
+        <div class="ae-tc" style="left:32px;top:174px">00:24.0 — 00:52.0 · BAR 13–26</div>
+        <div class="strip" style="left:500px;top:80px;width:26px;height:180px"></div>
+        <div class="strip" style="left:538px;top:120px;width:12px;height:120px"></div>
+        <svg class="regmk" style="left:588px;top:16px" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="4.5"/><path d="M8 0v4M8 12v4M0 8h4M12 8h4"/></svg>
+      </div></div>
+      <footer class="bf"><span>5 responses</span><span class="tr">dissolve · 240 ms</span></footer>
+    </article>
+
+    <!-- ghost candidate: strips earlier + downbeat invert region -->
+    <div class="ghost" style="left:540px;top:224px;width:150px;height:290px">
+      <span class="gtag">media-slice · strips earlier</span>
+    </div>
+    <div class="ghost" style="left:140px;top:304px;width:180px;height:110px">
+      <span class="gtag">graphic-field · invert 120 ms</span>
+    </div>
+
+    <!-- selection handles -->
+    <span class="hdl" style="left:49px;top:139px"></span>
+    <span class="hdl" style="left:703px;top:139px"></span>
+    <span class="hdl" style="left:49px;top:573px"></span>
+    <span class="hdl" style="left:703px;top:573px"></span>
+
+    <!-- before / after toggle -->
+    <div class="mseg" style="left:470px;top:112px"><b>Before</b><b class="on">After</b></div>
+
+    <div class="transport">
+      <div class="tp-in">
+        <button class="tp-play"><svg width="12" height="14" viewBox="0 0 12 14"><path d="M1.5,1 L11,7 L1.5,13 Z" fill="#fff"/></svg></button>
+        <div class="tp-tl"><div class="tp-fill" style="width:16%"></div><div class="tp-knob" style="left:16%"></div></div>
+        <span class="tp-n">20·2</span>
+        <span class="tp-time">00:38.6</span>
+        <span class="tp-sc">Pressure</span>
+        <span class="tp-div"></span>
+        <button class="tp-ic" title="Loop"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6V5a2 2 0 0 1 2-2h7l-2-2m2 2-2 2M13 10v1a2 2 0 0 1-2 2H4l2 2m-2-2 2-2"/></svg></button>
+        <button class="tp-ic" title="Zoom to current"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="4.5"/><path d="M8 0.5v3M8 12.5v3M0.5 8h3M12.5 8h3"/></svg></button>
+        <span class="tp-n">88%</span>
+      </div>
+    </div>
+  </section>
+
+  <aside class="insp" style="width:400px">
+    <div class="icrumb">Beyond the Fog / Proposal 03</div>
+    <div class="ihead"><h2>Direction proposal</h2><span class="kchip">pending</span>
+      <button class="ibtn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3.5 5.5 8 10 12.5"/></svg></button></div>
+    <p class="note" style="padding:8px 16px 0;font-family:var(--font-mono);font-size:10px">beatscope.propose_direction_patch</p>
+
+    <div class="isec">
+      <h3>Summary</h3>
+      <div class="irow"><span class="ilab">Intent</span><span style="font-size:13px;letter-spacing:-.008em;line-height:18px">Reveal strips earlier on high-band onsets; protect the dense passage.</span></div>
+      <div class="irow"><span class="ilab">Scope</span><span class="dmono" style="color:var(--ink-0)">Pressure, Undertow</span></div>
+      <div class="irow"><span class="ilab">Basis</span><span class="dmono" style="color:var(--ink-0)">ranked onsets · T1–T2</span></div>
+    </div>
+
+    <div class="isec">
+      <h3>Changes</h3>
+      <div class="dsum"><span>+2 added</span><span>±1 changed</span><span>−0 removed</span></div>
+      <div class="dg">
+        <h4>Added</h4>
+        <div class="drow2"><span class="sg">+</span><span>Pressure / media-slice<span class="sub">boundary → directional wipe · 240 ms</span></span></div>
+        <div class="drow2"><span class="sg">+</span><span>Undertow / graphic-field<span class="sub">downbeat → invert region · 120 ms</span></span></div>
+        <h4>Changed</h4>
+        <div class="drow2"><span class="sg">±</span><span>Pressure / editorial-typography<span class="sub">max events per bar <span class="dmono">6 → 4</span></span></span></div>
+        <h4>Removed</h4>
+        <div class="drow2" style="color:var(--ink-2)"><span class="sg">−</span><span>None</span></div>
+      </div>
+    </div>
+
+    <div class="isec">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn-ink" style="height:30px;line-height:30px">Apply patch</button>
+        <button class="tbtn">Reject</button>
+      </div>
+      <div class="resrow" style="margin-top:8px"><svg class="chev" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3.5 10.5 8 6 12.5"/></svg><span class="rt" style="color:var(--ink-1)">Raw JSON</span><span class="note">12 lines</span></div>
+    </div>
+
+    <div class="isec">
+      <h3>Export package</h3>
+      <div class="ckrow"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M5.2 8.2 7.2 10.2 10.8 6.2"/></svg></span>References<span class="val">12 verified</span></div>
+      <div class="ckrow"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M5.2 8.2 7.2 10.2 10.8 6.2"/></svg></span>Included assets<span class="val">3 files · 4.6 MB</span></div>
+      <div class="ckrow mut"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M5.5 8h5"/></svg></span>Audio<span class="val">excluded by policy</span></div>
+      <div class="trow2"><button class="btn-line">Export…</button><button class="tbtn">Copy checklist</button></div>
+    </div>
+  </aside>
+</div></body></html>

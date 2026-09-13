@@ -148,7 +148,14 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         # Static assets; /runtime/* maps to the shared JS runtime modules.
-        clean_path = path.lstrip("/") or "index.html"
+        # `/` routes to the Beathi Canvas app (web/app); the legacy Studio
+        # page stays reachable at /legacy.html until the Round 5 removal.
+        if path == "/":
+            self._send(302, b"", "text/plain", {"Location": "/app/"})
+            return
+        clean_path = path.lstrip("/") or "app/index.html"
+        if clean_path in ("app", "app/"):
+            clean_path = "app/index.html"
         if clean_path.startswith("runtime/"):
             asset_file = RUNTIME_ROOT / clean_path[len("runtime/"):]
             resolved_root = RUNTIME_ROOT.resolve()
@@ -166,6 +173,9 @@ class Handler(BaseHTTPRequestHandler):
                 ".svg": "image/svg+xml",
                 ".png": "image/png",
                 ".ico": "image/x-icon",
+                ".woff2": "font/woff2",
+                ".woff": "font/woff",
+                ".mp3": "audio/mpeg",
             }
             kind = kind_map.get(ext, "application/octet-stream")
             self._send(200, asset_file.read_bytes(), kind)
@@ -292,6 +302,20 @@ class Handler(BaseHTTPRequestHandler):
                 temp.unlink(missing_ok=True)
             return
 
+        self._send(404, b"Not found", "text/plain")
+
+    def do_PUT(self) -> None:
+        route = urlparse(self.path)
+        path = route.path
+        if path.startswith("/api/projects/") and (path.endswith("/direction") or path.endswith("/workspace")):
+            raw_size = self.headers.get("Content-Length", "0")
+            size = int(raw_size) if raw_size.isdigit() else 0
+            body = self.rfile.read(size) if size else b""
+            headers_dict = {k: v for k, v in self.headers.items()}
+            handler = WEB_API.handle_put_workspace if path.endswith("/workspace") else WEB_API.handle_put_direction
+            status, resp_headers, body_bytes = handler(path, body, headers_dict)
+            self._send(status, body_bytes, resp_headers.get("Content-Type", "application/json"), resp_headers)
+            return
         self._send(404, b"Not found", "text/plain")
 
     def do_DELETE(self) -> None:

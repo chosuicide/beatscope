@@ -15,6 +15,8 @@ from .visual_recipe_schema import validate_visual_recipe, validate_visual_timeli
 
 RECIPE_FILENAME = "visual-recipe.json"
 TIMELINE_FILENAME = "visual-timeline.json"
+DIRECTION_FILENAME = "direction.json"
+WORKSPACE_FILENAME = "workspace.json"
 
 # Bounded wait for the artifact regeneration lock.  Regeneration is
 # deterministic, so an expired wait degrades to harmless concurrent writes
@@ -372,6 +374,39 @@ class ProjectManager:
     def save_adjustments(self, project_id: str, adjustments: dict[str, Any]) -> None:
         p_dir = self.get_project_dir(project_id)
         (p_dir / "adjustments.json").write_text(json.dumps(adjustments, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    def get_project_direction_bytes(self, project_id: str) -> bytes | None:
+        """The stored direction sidecar, or None when never saved/derived.
+
+        The sidecar holds exactly the canonical bytes that were PUT (or
+        lazily derived), so the ETag over these bytes is stable across
+        restarts without re-serializing.
+        """
+        direction_file = self.get_project_dir(project_id) / DIRECTION_FILENAME
+        if direction_file.is_file():
+            try:
+                return direction_file.read_bytes()
+            except OSError:
+                return None
+        return None
+
+    def save_project_direction_bytes(self, project_id: str, data: bytes) -> None:
+        """Persist canonical direction bytes atomically (plan section 4.7)."""
+        p_dir = self.get_project_dir(project_id)
+        _atomic_write_bytes(p_dir / DIRECTION_FILENAME, data)
+
+    def get_project_workspace_bytes(self, project_id: str) -> bytes | None:
+        workspace_file = self.get_project_dir(project_id) / WORKSPACE_FILENAME
+        if workspace_file.is_file():
+            try:
+                return workspace_file.read_bytes()
+            except OSError:
+                return None
+        return None
+
+    def save_project_workspace_bytes(self, project_id: str, data: bytes) -> None:
+        p_dir = self.get_project_dir(project_id)
+        _atomic_write_bytes(p_dir / WORKSPACE_FILENAME, data)
 
     def list_projects(self) -> list[dict[str, Any]]:
         """List recently analyzed projects."""

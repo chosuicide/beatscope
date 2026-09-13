@@ -9,6 +9,16 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from .exports import generate_rhythm_midi, generate_rhythm_csv, generate_codex_export
+from .direction import (
+    build_direction_document,
+    canonical_direction_bytes,
+    canonical_workspace_bytes,
+    derive_scenes_from_structure,
+    direction_etag,
+    migrate_round2_draft,
+    validate_direction,
+    validate_workspace,
+)
 from .jobs import JobManager
 from .project import ProjectManager
 from .response_relevance import build_response_relevance, canonical_response_relevance_bytes
@@ -16,6 +26,7 @@ from .visual_recipe import canonical_visual_bytes
 
 
 MAX_UPLOAD_BYTES = 500 * 1024 * 1024
+MAX_DIRECTION_BYTES = 8 * 1024 * 1024
 
 
 class WebApi:
@@ -118,6 +129,23 @@ class WebApi:
         ):
             return self._serve_response_relevance(parts[2], headers)
 
+        # 11. GET /api/projects/<id>/direction
+        if (
+            len(parts) == 4
+            and parts[0] == "api"
+            and parts[1] == "projects"
+            and parts[3] == "direction"
+        ):
+            return self._serve_direction(parts[2], headers)
+
+        if (
+            len(parts) == 4
+            and parts[0] == "api"
+            and parts[1] == "projects"
+            and parts[3] == "workspace"
+        ):
+            return self._serve_workspace(parts[2], headers)
+
         return 404, {"Content-Type": "text/plain"}, b"Not found"
 
     def handle_delete(self, path: str) -> tuple[int, dict[str, str], bytes]:
@@ -199,6 +227,254 @@ class WebApi:
             if etag in candidates or "*" in candidates:
                 return 304, response_headers, b""
         return 200, response_headers, body
+
+    def _direction_bytes_or_error(
+        self, project_id: str
+    ) -> tuple[bytes, str | None] | tuple[None, None] | tuple[None, tuple[int, dict[str, str], bytes]]:
+        """Stored direction bytes, deriving + persisting them when absent.
+
+        Returns ``(bytes, derived_mode)`` on success, ``(None, None)`` when
+        the project does not exist, or ``(None, error_response)`` when the
+        stored/derivable document is unusable.
+        """
+        if len(project_id) != 12 or any(ch not in "0123456789abcdef" for ch in project_id):
+            return None, (404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}')
+        rhythm = self.project_manager.get_project_rhythm(project_id)
+        if rhythm is None:
+            return None, (
+                404,
+                {"Content-Type": "application/json"},
+                json.dumps({"error": "Project not found"}).encode(),
+            )
+        body = self.project_manager.get_project_direction_bytes(project_id)
+        if body is None:
+            try:
+                scenes, mode = derive_scenes_from_structure(rhythm)
+                document = build_direction_document(rhythm, scenes)
+                body = canonical_direction_bytes(document)
+            except (KeyError, TypeError, ValueError) as exc:
+                return None, (
+                    422,
+                    {"Content-Type": "application/json"},
+                    json.dumps({
+                        "error": "direction/derive-failed",
+                        "message": str(exc),
+                    }).encode(),
+                )
+            self.project_manager.save_project_direction_bytes(project_id, body)
+            return body, mode
+        return body, None
+
+    def _serve_direction(
+        self, project_id: str, headers: dict[str, str]
+    ) -> tuple[int, dict[str, str], bytes]:
+        """Serve the project direction document (plan Round 2 Commit 1).
+
+        The body is the stored canonical byte-for-byte document; a first
+        GET derives the initial scenes from the Rhythm IR, persists the
+        sidecar and reports the derivation mode in ``X-Direction-Derived``.
+        The ETag is the SHA-256 of the exact bytes so ``If-None-Match``
+        answers 304. A stored document that no longer validates still
+        carries its ETag so clients can reconcile via If-Match PUT.
+        """
+        result = self._direction_bytes_or_error(project_id)
+        body = result[0]
+        if body is None:
+            error = result[1]
+            assert error is not None
+            return error
+        derived_mode = result[1]
+
+        try:
+            document = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, ValueError):
+            document = None
+        stored_errors: list[str] = []
+        if not isinstance(document, dict):
+            stored_errors.append("direction/schema: stored direction sidecar is not a JSON object")
+        else:
+            migrated = migrate_round2_draft(document)
+            stored_errors, _ = validate_direction(migrated)
+            if not stored_errors and migrated != document:
+                body = canonical_direction_bytes(migrated)
+                self.project_manager.save_project_direction_bytes(project_id, body)
+                document = migrated
+
+        etag = direction_etag(body)
+        response_headers = {
+            "Content-Type": "application/json; charset=utf-8",
+            "ETag": etag,
+        }
+        if derived_mode:
+            response_headers["X-Direction-Derived"] = derived_mode
+        if stored_errors:
+            response_headers["X-Direction-Invalid"] = "1"
+            return 422, response_headers, json.dumps({
+                "error": "direction/invalid",
+                "errors": stored_errors,
+            }).encode("utf-8")
+
+        if_none_match = headers.get("If-None-Match") or headers.get("if-none-match")
+        if if_none_match:
+            candidates = {candidate.strip() for candidate in if_none_match.split(",")}
+            if etag in candidates or "*" in candidates:
+                return 304, response_headers, b""
+        return 200, response_headers, body
+
+    def handle_put_direction(
+        self, path: str, body: bytes, headers: dict[str, str]
+    ) -> tuple[int, dict[str, str], bytes]:
+        """PUT /api/projects/<id>/direction with optimistic concurrency.
+
+        Requires ``If-Match`` carrying the ETag from a prior GET/PUT; a
+        stale or missing precondition refuses the write (412/428) instead
+        of clobbering the other editor's state. Invalid documents are
+        refused with the stable ``direction/invalid`` code and the full
+        error list; accepted bodies are re-canonicalized so the stored
+        bytes (and therefore the ETag) are deterministic.
+        """
+        parts = [p for p in path.strip("/").split("/") if p]
+        if not (len(parts) == 4 and parts[0] == "api" and parts[1] == "projects" and parts[3] == "direction"):
+            return 404, {"Content-Type": "text/plain"}, b"Not found"
+        project_id = parts[2]
+
+        if len(body) > MAX_DIRECTION_BYTES:
+            return 413, {"Content-Type": "application/json"}, json.dumps({
+                "error": "direction/too-large",
+                "message": f"direction document exceeds {MAX_DIRECTION_BYTES} bytes",
+            }).encode()
+
+        result = self._direction_bytes_or_error(project_id)
+        current_bytes = result[0]
+        if current_bytes is None and result[1] is not None:
+            error = result[1]
+            assert error is not None
+            return error
+        current_etag = direction_etag(current_bytes or b"")
+
+        if_match = headers.get("If-Match") or headers.get("if-match")
+        if not if_match:
+            return 428, {"Content-Type": "application/json"}, json.dumps({
+                "error": "direction/precondition-required",
+                "message": "PUT direction requires an If-Match ETag from a prior GET or PUT",
+                "current_etag": current_etag,
+            }).encode()
+        candidates = {candidate.strip() for candidate in if_match.split(",")}
+        if current_etag not in candidates and "*" not in candidates:
+            try:
+                current_document = json.loads((current_bytes or b"{}").decode("utf-8"))
+            except (UnicodeDecodeError, ValueError):
+                current_document = None
+            return 409, {"Content-Type": "application/json"}, json.dumps({
+                "error": "direction_conflict",
+                "message": "the direction document changed since your last read",
+                "current_etag": current_etag,
+                "current_document": current_document,
+            }).encode()
+
+        try:
+            document = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, ValueError) as exc:
+            return 422, {"Content-Type": "application/json"}, json.dumps({
+                "error": "direction/invalid",
+                "errors": [f"direction/schema: body is not valid JSON ({exc})"],
+            }).encode()
+        if not isinstance(document, dict):
+            return 422, {"Content-Type": "application/json"}, json.dumps({
+                "error": "direction/invalid",
+                "errors": ["direction/schema: document must be an object"],
+            }).encode()
+        errors, _ = validate_direction(document)
+        rhythm = self.project_manager.get_project_rhythm(project_id)
+        if document.get("project_id") != project_id:
+            errors.append("direction/project-mismatch: project_id does not match route")
+        if rhythm and document.get("source_rhythm_sha256") != rhythm.get("source", {}).get("sha256"):
+            errors.append("direction/source-mismatch: source_rhythm_sha256 does not match project")
+        if errors:
+            return 422, {"Content-Type": "application/json"}, json.dumps({
+                "error": "direction/invalid",
+                "errors": errors,
+            }).encode("utf-8")
+
+        canonical = canonical_direction_bytes(document)
+        self.project_manager.save_project_direction_bytes(project_id, canonical)
+        return 200, {"Content-Type": "application/json"}, json.dumps({
+            "status": "ok",
+            "etag": direction_etag(canonical),
+        }).encode()
+
+    def _workspace_bytes(self, project_id: str) -> bytes | None:
+        if len(project_id) != 12 or any(ch not in "0123456789abcdef" for ch in project_id):
+            return None
+        rhythm = self.project_manager.get_project_rhythm(project_id)
+        if rhythm is None:
+            return None
+        body = self.project_manager.get_project_workspace_bytes(project_id)
+        if body is None:
+            document = {
+                "schema": "beathi-workspace-1",
+                "version": "0.12.0",
+                "project_id": project_id,
+                "source_rhythm_sha256": rhythm.get("source", {}).get("sha256", ""),
+                "layout": {"boards": {}},
+                "camera": {"x": 0, "y": 0, "zoom": 1},
+                "selection": {"sceneId": None, "layerId": None, "responseId": None},
+                "panels": {"dockOpen": True, "inspectorOpen": True, "packageOpen": False},
+            }
+            body = canonical_workspace_bytes(document)
+            self.project_manager.save_project_workspace_bytes(project_id, body)
+        return body
+
+    def _serve_workspace(self, project_id: str, headers: dict[str, str]) -> tuple[int, dict[str, str], bytes]:
+        body = self._workspace_bytes(project_id)
+        if body is None:
+            return 404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}'
+        etag = direction_etag(body)
+        response_headers = {"Content-Type": "application/json; charset=utf-8", "ETag": etag}
+        if_none_match = headers.get("If-None-Match") or headers.get("if-none-match")
+        if if_none_match and (etag in {v.strip() for v in if_none_match.split(",")} or "*" in if_none_match):
+            return 304, response_headers, b""
+        return 200, response_headers, body
+
+    def handle_put_workspace(self, path: str, body: bytes, headers: dict[str, str]) -> tuple[int, dict[str, str], bytes]:
+        parts = [p for p in path.strip("/").split("/") if p]
+        if not (len(parts) == 4 and parts[:2] == ["api", "projects"] and parts[3] == "workspace"):
+            return 404, {"Content-Type": "text/plain"}, b"Not found"
+        project_id = parts[2]
+        current = self._workspace_bytes(project_id)
+        if current is None:
+            return 404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}'
+        current_etag = direction_etag(current)
+        if_match = headers.get("If-Match") or headers.get("if-match")
+        if not if_match:
+            return 428, {"Content-Type": "application/json"}, json.dumps({
+                "error": "workspace/precondition-required", "current_etag": current_etag,
+            }).encode()
+        if current_etag not in {v.strip() for v in if_match.split(",")} and "*" not in if_match:
+            return 409, {"Content-Type": "application/json"}, json.dumps({
+                "error": "workspace_conflict", "current_etag": current_etag,
+            }).encode()
+        try:
+            document = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, ValueError) as exc:
+            return 422, {"Content-Type": "application/json"}, json.dumps({
+                "error": "workspace/invalid", "errors": [f"workspace/schema: invalid JSON ({exc})"],
+            }).encode()
+        errors = validate_workspace(document)
+        rhythm = self.project_manager.get_project_rhythm(project_id)
+        if isinstance(document, dict) and document.get("project_id") != project_id:
+            errors.append("workspace/project-mismatch: project_id does not match route")
+        if isinstance(document, dict) and rhythm and document.get("source_rhythm_sha256") != rhythm.get("source", {}).get("sha256"):
+            errors.append("workspace/source-mismatch: source_rhythm_sha256 does not match project")
+        if errors:
+            return 422, {"Content-Type": "application/json"}, json.dumps({
+                "error": "workspace/invalid", "errors": errors,
+            }).encode()
+        canonical = canonical_workspace_bytes(document)
+        self.project_manager.save_project_workspace_bytes(project_id, canonical)
+        return 200, {"Content-Type": "application/json"}, json.dumps({
+            "status": "ok", "etag": direction_etag(canonical),
+        }).encode()
 
     def _serve_file_range(self, file_path: Path, range_header: str | None) -> tuple[int, dict[str, str], bytes]:
         """Serve media file supporting HTTP 206 Byte Ranges for audio seeking."""

@@ -29,7 +29,10 @@ WEB_ROOT = REPO_ROOT / "beatscope" / "web"
 RUNTIME_ROOT = REPO_ROOT / "beatscope" / "runtime"
 DEMO_ROOT = WEB_ROOT / "demo"
 
-WEB_HTML = ("index.html",)
+# The legacy Studio page ships in the wheel as web/legacy.html (web/app hosts
+# the Beathi Canvas) but remains the static demo's GitHub Pages entry point
+# under the canonical name index.html.
+WEB_HTML = (("legacy.html", "index.html"),)
 WEB_CSS = ("style.css",)
 
 FORBIDDEN_PATTERNS = (
@@ -90,7 +93,9 @@ def verify_fixture_lock() -> None:
 
 
 def copy_web_assets(output: Path) -> None:
-    for name in WEB_HTML + WEB_CSS:
+    for src_name, out_name in WEB_HTML:
+        shutil.copyfile(WEB_ROOT / src_name, output / out_name)
+    for name in WEB_CSS:
         shutil.copyfile(WEB_ROOT / name, output / name)
     # GitHub Pages is a static host: mark this build so the app always loads
     # the frozen Director fixture and never exposes controls that POST to the

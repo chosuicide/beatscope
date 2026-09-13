@@ -1,0 +1,82 @@
+{
+  "$comment": "Beathi Canvas frozen design tokens (v0.12 plan section 2.5). Values are contract: change only with a new design-gate approval.",
+  "color": {
+    "paper-0": "#f7f6f2",
+    "paper-1": "#fbfaf7",
+    "paper-2": "rgba(255,255,252,.82)",
+    "ink-0": "#171719",
+    "ink-1": "#4f4d55",
+    "ink-2": "#77737d",
+    "line-soft": "rgba(34,31,40,.075)",
+    "line-strong": "rgba(34,31,40,.14)",
+    "accent": "#7567e8",
+    "accent-wash": "#ece9ff",
+    "danger": "#b94a57"
+  },
+  "shadow": {
+    "board": "0 1px 1px rgba(35,30,45,.045),0 8px 24px rgba(35,30,45,.065),0 28px 70px rgba(35,30,45,.035)",
+    "float": "0 1px 0 rgba(255,255,255,.78) inset,0 12px 36px rgba(31,27,40,.12),0 2px 8px rgba(31,27,40,.06)"
+  },
+  "easing": {
+    "out": "cubic-bezier(.2,0,0,1)",
+    "settle": "cubic-bezier(.32,.72,0,1)",
+    "in": "cubic-bezier(.4,0,1,1)"
+  },
+  "z-scale": {
+    "canvas": 0,
+    "board": 10,
+    "panel": 30,
+    "transport": 40,
+    "popover": 50,
+    "toast": 60,
+    "dialog": 70
+  },
+  "typography": {
+    "ui-family": "'Geist',-apple-system,'PingFang SC','Microsoft YaHei',system-ui,sans-serif",
+    "mono-family": "'Geist Mono',ui-monospace,'Cascadia Mono',Consolas,monospace",
+    "roles": {
+      "workspace-title": { "size": 15, "weight": 620, "tracking": "-0.018em", "line-height": 20 },
+      "control": { "size": 13, "weight": 520, "tracking": "-0.008em", "line-height": 18 },
+      "annotation": { "size": 11, "weight": 520, "tracking": "+0.012em", "line-height": 15 },
+      "numeric-mono": { "size": "11-12", "weight": 500, "tabular": true, "line-height": 16 }
+    },
+    "minimum-size-px": 10,
+    "display-face": "Geist 900, letter-spacing -0.035em, optional scaleX(0.94) for condensed mastheads",
+    "fonts": {
+      "ui": { "file": "fonts/Geist-Variable.woff2", "license": "SIL OFL 1.1", "copyright": "Copyright (c) 2023 Vercel, in collaboration with basement.studio" },
+      "mono": { "file": "fonts/Geist-Mono-Variable.woff2", "license": "SIL OFL 1.1", "copyright": "Copyright (c) 2023 Vercel, in collaboration with basement.studio" }
+    }
+  },
+  "component-metrics": {
+    "topbar-height": 48,
+    "mark-size": 24,
+    "export-button": { "height": 30, "radius": 9 },
+    "dock-width": 280,
+    "segmented-rows": "34px rows, 8px inset, 7px radius, moving plate",
+    "inspector-width": 320,
+    "inspector-label-column": 104,
+    "input-height": 28,
+    "focus-ring": "0 0 0 3px rgba(117,103,232,.18)",
+    "collapsed-panel-rail": 52,
+    "transport": "52px inner + 8px outer glass, blur(18px) saturate(1.08), 32px play circle",
+    "menu": { "padding": 6, "row": 8, "radius": 10 },
+    "dialog-veil": "rgba ink 8% + 2px blur",
+    "toast-max-visible": 3
+  },
+  "canvas": {
+    "camera-zoom-clamp": [0.12, 3.0],
+    "wheel": "pan",
+    "ctrl-cmd-wheel": "zoom around pointer, focal point invariant 1e-6",
+    "snap-threshold-px": 7,
+    "connector": "SVG 1px base, 1.5px active, arrowheads only above 45% zoom",
+    "handle-screen-px": 8,
+    "lod": [
+      { "below-zoom": 0.28, "render": "silhouette" },
+      { "zoom": "0.28-0.55", "render": "poster + title" },
+      { "above-zoom": 0.55, "render": "full controls" }
+    ],
+    "board-shadow-min-zoom": 0.35,
+    "hover": "translateY(-1px) + shadow, never scale",
+    "selection": "2px accent outline + 6px moat, no glow"
+  }
+}

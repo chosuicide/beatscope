@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Beathi Canvas — B overview</title>
+<link rel="stylesheet" href="beathi.css">
+<style>
+  .stage{left:52px;right:52px}
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <!-- top project bar -->
+  <div class="topbar">
+    <svg class="mark" viewBox="0 0 24 24"><rect x="1" y="1" width="22" height="22" rx="6" fill="#171719"/><path d="M7 16.5V8.5M12 16.5v-6M17 16.5v-3.5" stroke="#fbfaf7" stroke-width="2.2" stroke-linecap="round"/></svg>
+    <div class="tb-name">Beyond the Fog</div><div class="tb-dot"></div>
+    <div class="tb-save">All changes saved</div>
+    <div class="tb-sp"></div>
+    <button class="tbtn">Present</button>
+    <button class="btn-line">Preview</button>
+    <button class="btn-ink">Export</button>
+  </div>
+
+  <!-- left rail: scenes dock collapsed -->
+  <div class="rail" style="left:0;border-right:1px solid var(--line-soft)">
+    <button class="ibtn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/><path d="M6 2.5v11"/></svg></button>
+    <button class="ibtn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2.5 14 5.5 8 8.5 2 5.5Z"/><path d="M2 8.5 8 11.5 14 8.5"/></svg></button>
+    <div class="rlab">Scenes</div>
+  </div>
+
+  <!-- canvas field: the desk wall -->
+  <div class="stage">
+    <div class="grain"></div>
+
+    <!-- quiet chronology (dashed, behind prints) -->
+    <svg class="wires" width="1336" height="852">
+      <path class="quiet" d="M276,212 C290,212 286,178 300,178"/>
+      <path class="quiet" d="M540,178 C554,178 550,224 564,224"/>
+      <path class="quiet" d="M804,224 C818,224 814,186 828,186"/>
+      <path class="quiet" d="M1068,186 C1082,186 1078,208 1092,208"/>
+      <path class="quiet" d="M1332,208 C1332,384 20,372 20,530"/>
+      <path class="quiet" d="M260,530 C274,530 270,500 284,500"/>
+      <path class="quiet" d="M524,500 C538,500 534,552 548,552"/>
+      <path class="act" d="M788,552 C802,552 798,518 812,518"/>
+      <path class="quiet" d="M1052,518 C1066,518 1062,540 1076,540"/>
+    </svg>
+
+    <!-- row 1 -->
+    <div class="board flat rot-m1" style="left:36px;top:130px;width:240px">
+      <div class="bh h30"><span class="bidx">01</span><svg class="fg" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="1.5" width="10" height="4" rx="1"/><rect x="3.5" y="7.5" width="6" height="4" rx="1"/></svg><span class="bttl">Cold Open</span><span class="btme">00:00</span></div>
+      <div class="bb" style="height:135px">
+        <div class="art art-ed">
+          <div class="papertex"></div>
+          <div class="print" style="left:10px;top:9px;width:150px;padding-bottom:12px">
+            <div class="ph photo" style="height:64px;background-image:url('fog-ridge.png');background-position:50% 38%"></div>
+          </div>
+          <div class="pcap" style="left:22px;top:80px;padding:2px 8px 3px"><div class="disp" style="font-size:13px">COLD OPEN</div></div>
+          <div class="ae-tc" style="right:9px;bottom:5px">00:00–00:24</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="board flat rot-p1" style="left:300px;top:96px;width:240px">
+      <div class="tape" style="right:16px;top:-7px;transform:rotate(-42deg);z-index:20"></div>
+      <div class="bh h30"><span class="bidx">02</span><svg class="fg" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5"/><rect x="4.5" y="4.5" width="4" height="4"/></svg><span class="bttl">Pressure</span><span class="btme">A′</span></div>
+      <div class="bb" style="height:135px">
+        <div class="art" style="background:linear-gradient(rgba(19,19,21,.88),rgba(19,19,21,.88)),url('paper-fiber.png');background-size:auto,220px">
+          <div class="photo torn-l" style="position:absolute;right:0;top:0;width:48%;height:100%;background-image:url('fog-ridge.png');background-position:72% 55%;filter:saturate(.72) contrast(1.06) brightness(.95)"></div>
+          <div class="iv-h" style="left:10px;top:48px;font-size:24px;transform:rotate(-2deg)">PRESSURE</div>
+          <div class="ae-rule" style="left:10px;top:86px;width:64px;height:2px;background:#f0eee6"></div>
+          <div class="sgtag" style="left:10px;bottom:6px">BAR 13–26</div>
+          <svg class="regmk" style="right:9px;top:9px" width="11" height="11" viewBox="0 0 13 13"><circle cx="6.5" cy="6.5" r="4.6" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M6.5 0v13M0 6.5h13" stroke="currentColor" stroke-width="1.2"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="board flat rot-m05" style="left:564px;top:142px;width:240px">
+      <div class="bh h30"><span class="bidx">03</span><svg class="fg" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="6.5" cy="6.5" r="5"/></svg><span class="bttl">Release Valve</span><span class="btme">00:52</span></div>
+      <div class="bb" style="height:135px">
+        <div class="art art-md">
+          <div class="msl photo" style="width:38%;background-image:url('fog-bright.png');background-position:22% 42%"></div>
+          <div class="msl photo" style="flex:1;background-image:url('fog-ridge.png');background-position:82% 62%"></div>
+          <div class="mdtag" style="top:7px;left:9px;bottom:auto">SHOT A</div>
+          <div class="mdtag" style="top:7px;left:98px;bottom:auto">SHOT B</div>
+          <div class="iv-h" style="left:9px;bottom:24px;font-size:12px;letter-spacing:.08em">RELEASE VALVE</div>
+          <div class="mdtag">CUT 03 · 2 SLICES</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="board flat sel rot-p15" style="left:828px;top:104px;width:240px">
+      <div class="bh h30"><span class="bidx">04</span><svg class="fg" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M6.5 1.5 12 11.5H1Z"/></svg><span class="bttl">Undertow</span><span class="btme">01:16</span></div>
+      <div class="bb" style="height:135px">
+        <div class="art art-sg">
+          <svg class="sgv" style="position:absolute;left:0;top:40px" width="240" height="52" viewBox="0 0 240 52"><polyline points="0,40 28,35 50,41 72,26 94,37 116,14 138,33 160,21 182,39 204,28 240,34" fill="none"/></svg>
+          <div class="scan" style="left:150px"></div>
+          <div class="mono10" style="position:absolute;right:9px;top:7px;color:rgba(240,238,230,.55)">01:16–01:44</div>
+          <div class="sgtag">T3 · CONTOURS</div>
+        </div>
+      </div>
+    </div>
+    <div class="hdl" style="left:819px;top:95px"></div>
+    <div class="hdl" style="left:1073px;top:95px"></div>
+    <div class="hdl" style="left:819px;top:274px"></div>
+    <div class="hdl" style="left:1073px;top:274px"></div>
+
+    <div class="board flat rot-m2" style="left:1092px;top:126px;width:240px">
+      <div class="bh h30"><span class="bidx">05</span><svg class="fg" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="1.5" width="10" height="4" rx="1"/><rect x="3.5" y="7.5" width="6" height="4" rx="1"/></svg><span class="bttl">Sirens</span><span class="btme">01:44</span></div>
+      <div class="bb" style="height:135px">
+        <div class="art art-ed">
+          <div class="papertex" style="opacity:.4"></div>
+          <div style="position:absolute;left:16px;top:14px;width:96px;height:92px;background:#fbfaf7;box-shadow:0 1px 2px rgba(35,30,45,.14),0 4px 12px rgba(35,30,45,.12);transform:rotate(-3.5deg)"></div>
+          <div style="position:absolute;left:72px;top:24px;width:108px;height:94px;background:#fdfcf8;box-shadow:0 1px 2px rgba(35,30,45,.16),0 5px 14px rgba(35,30,45,.14);transform:rotate(2deg);padding:9px 9px 0">
+            <div class="disp" style="font-size:17px">SIRENS</div>
+            <div class="ae-rule" style="position:static;width:34px;height:2px;margin-top:5px"></div>
+            <div class="mono10" style="margin-top:8px;color:#6a675e">SIDE B · 02:06</div>
+          </div>
+          <div class="tape" style="left:108px;top:18px;width:44px;transform:rotate(38deg)"></div>
+          <div class="ae-tc" style="right:9px;bottom:5px">01:44–02:06</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- row 2 -->
+    <div class="board flat rot-p1" style="left:20px;top:448px;width:240px">
+      <div class="bh h30"><span class="bidx">06</span><svg class="fg" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="6.5" cy="6.5" r="5"/></svg><span class="bttl">Low Tide</span><span class="btme">02:06</span></div>
+      <div class="bb" style="height:135px">
+        <div class="art" style="background:#0e0e11">
+          <div class="photo" style="position:absolute;left:0;right:0;top:14px;bottom:14px;background-image:url('fog-bright.png');background-position:50% 30%;filter:saturate(.8) contrast(1.04)"></div>
+          <div class="iv-h" style="left:10px;bottom:20px;font-size:13px;letter-spacing:.08em">LOW TIDE</div>
+          <div class="mono10" style="position:absolute;right:10px;bottom:20px;color:rgba(240,238,230,.75)">02:06–02:30</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="board flat rot-m05" style="left:284px;top:418px;width:240px">
+      <div class="bh h30"><span class="bidx">07</span><svg class="fg" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="1.5" width="10" height="4" rx="1"/><rect x="3.5" y="7.5" width="6" height="4" rx="1"/></svg><span class="bttl">Harbor Lights</span><span class="btme">02:30</span></div>
+      <div class="bb" style="height:135px">
+        <div class="art art-ed">
+          <div class="papertex"></div>
+          <div class="htov" style="right:0;top:0;width:104px;height:100%"></div>
+          <div class="disp" style="position:absolute;left:10px;top:26px;font-size:21px">HARBOR</div>
+          <div class="ae-rule" style="left:10px;top:58px;width:52px;height:2px"></div>
+          <div class="mono10" style="position:absolute;left:10px;bottom:8px;color:#6a675e">02:30–02:58</div>
+          <svg class="regmk" style="right:12px;top:10px" width="11" height="11" viewBox="0 0 13 13"><circle cx="6.5" cy="6.5" r="4.6" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M6.5 0v13M0 6.5h13" stroke="currentColor" stroke-width="1.2"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="board flat rot-p15" style="left:548px;top:470px;width:240px">
+      <div class="bh h30"><span class="bidx">08</span><svg class="fg" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5"/><rect x="4.5" y="4.5" width="4" height="4"/></svg><span class="bttl">Riptide</span><span class="btme">A′</span></div>
+      <div class="bb" style="height:135px">
+        <div class="art" style="background:linear-gradient(rgba(19,19,21,.88),rgba(19,19,21,.88)),url('paper-fiber.png');background-size:auto,220px">
+          <div class="photo torn-r" style="position:absolute;left:0;top:0;width:44%;height:100%;background-image:url('fog-bright.png');background-position:16% 66%;filter:saturate(.72) contrast(1.06) brightness(.92)"></div>
+          <div class="iv-h" style="right:10px;top:48px;font-size:24px;transform:rotate(2deg);text-align:right;left:110px">RIPTIDE</div>
+          <div class="ae-rule" style="right:10px;top:86px;width:64px;height:2px;background:#f0eee6"></div>
+          <div class="sgtag" style="left:auto;right:10px;bottom:6px">BAR 61–74</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="board flat live rot-m1" style="left:812px;top:436px;width:240px">
+      <div class="tape" style="left:14px;top:30px;transform:rotate(40deg);z-index:20"></div>
+      <div class="bh h30"><span class="bidx">09</span><svg class="fg" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M6.5 1.5 12 11.5H1Z"/></svg><span class="bttl">Fog Field</span><span class="taglive"><span style="width:6px;height:6px;background:var(--accent);display:inline-block"></span>LIVE</span><span class="btme">03:16</span></div>
+      <div class="bb" style="height:135px">
+        <div class="art art-sg">
+          <svg class="sgv" style="position:absolute;left:34px;top:14px;width:120;height:120" viewBox="0 0 120 120" fill="none"><ellipse cx="60" cy="60" rx="52" ry="30" opacity=".5"/><ellipse cx="60" cy="60" rx="34" ry="19" opacity=".75"/><ellipse cx="60" cy="60" rx="16" ry="9"/></svg>
+          <div class="scan" style="left:58px"></div>
+          <div class="mono10" style="position:absolute;right:9px;top:7px;color:rgba(240,238,230,.55)">03:16–03:32</div>
+          <div class="sgtag">T1 · FIELD</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="board flat hov" style="left:1076px;top:458px;width:240px">
+      <div class="bh h30"><span class="bidx">10</span><svg class="fg" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="1.5" width="10" height="4" rx="1"/><rect x="3.5" y="7.5" width="6" height="4" rx="1"/></svg><span class="bttl">Reprise</span><span class="btme">03:32</span></div>
+      <div class="bb" style="height:135px">
+        <div class="art" style="background:#101014">
+          <div class="photo" style="position:absolute;inset:0;background-image:url('fog-ridge.png');background-position:50% 72%;filter:saturate(.65) contrast(1.05) brightness(.9)"></div>
+          <div class="pcap" style="left:50%;top:52px;transform:translateX(-50%) rotate(-1deg);padding:2px 10px 3px"><div class="disp" style="font-size:13px">REPRISE</div></div>
+          <div class="mono10" style="position:absolute;right:10px;bottom:6px;color:rgba(240,238,230,.75)">03:32–04:02</div>
+        </div>
+      </div>
+    </div>
+    <svg class="cursor" style="left:1246px;top:588px" width="15" height="18" viewBox="0 0 15 18"><path d="M1.5 1 L13 10.2 L7.6 10.9 L10.6 16.4 L8.3 17.6 L5.3 12 L1.5 15 Z" fill="#fbfaf7" stroke="#171719" stroke-width="1.2"/></svg>
+
+    <!-- desk dressing -->
+    <div class="scrap rot-m05" style="left:40px;top:648px">
+      <div class="t">Scene index — reel 02</div>
+      <div class="m">06–10 · printed 4-up</div>
+    </div>
+    <div class="tape" style="left:52px;top:642px;transform:rotate(-38deg);z-index:21"></div>
+
+    <!-- minimap -->
+    <div class="minimap" style="right:12px;bottom:104px">
+      <div class="mm-b" style="left:10px;top:21px;width:37px;height:25px"></div>
+      <div class="mm-b" style="left:50px;top:16px;width:37px;height:25px"></div>
+      <div class="mm-b" style="left:90px;top:22px;width:37px;height:25px"></div>
+      <div class="mm-b sel" style="left:130px;top:17px;width:37px;height:25px"></div>
+      <div class="mm-b" style="left:171px;top:20px;width:37px;height:25px"></div>
+      <div class="mm-b" style="left:7px;top:62px;width:37px;height:25px"></div>
+      <div class="mm-b" style="left:47px;top:58px;width:37px;height:25px"></div>
+      <div class="mm-b" style="left:88px;top:65px;width:37px;height:25px"></div>
+      <div class="mm-b liv" style="left:128px;top:60px;width:37px;height:25px"></div>
+      <div class="mm-b" style="left:168px;top:63px;width:37px;height:25px"></div>
+      <div class="mm-vp" style="left:4px;top:4px;width:204px;height:110px"></div>
+    </div>
+  </div>
+
+  <!-- right rail: inspector collapsed -->
+  <div class="rail" style="right:0;border-left:1px solid var(--line-soft)">
+    <button class="ibtn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/><path d="M6 2.5v11"/></svg></button>
+    <button class="ibtn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/><path d="M2.5 6h11"/></svg></button>
+    <div class="rlab">Inspector</div>
+  </div>
+
+  <!-- floating transport -->
+  <div class="transport"><div class="tp-in">
+    <button class="tp-play"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 2.2h2.2v7.6H3zM6.8 2.2H9v7.6H6.8z" fill="#fbfaf7"/></svg></button>
+    <div class="tp-tl"><div class="tp-fill" style="width:83%"></div><div class="tp-knob" style="left:83%"></div></div>
+    <span class="tp-time">03:24.0</span>
+    <div class="tp-div"></div>
+    <span class="tp-n">103·1</span>
+    <span class="tp-sc">Fog Field</span>
+    <div class="tp-div"></div>
+    <button class="tp-ic on"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 7.5a5.5 5.5 0 1 1 1.6 3.9M2 7.5V4.6M2 7.5h2.9"/></svg></button>
+    <span class="tp-n">44%</span>
+  </div></div>
+
+</div>
+</body>
+</html>
