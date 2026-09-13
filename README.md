@@ -47,6 +47,16 @@ beatscope serve
 
 Open `http://127.0.0.1:8765`, choose a WAV, FLAC, MP3, OGG, or M4A file, and press play. Analysis is local; request-scoped temporary files are removed after processing.
 
+## Compose an artwork (local preview)
+
+Open `/app/?composition=1` on your local server. The new workspace puts one artwork in the centre: add text or media, drag and resize objects, then choose which ones respond to the music. **Stay still** is a valid choice.
+
+The three background materials use Butterchurn's original presets and audio response, with author credits. Foreground objects use BeatScope's measured event times and optional v0.11 ranking. These are separate systems; background feedback is not guaranteed to reproduce the same pixels after seeking.
+
+**Export for Agent** saves the artwork, its media, shared foreground runtime, original timing package, preview page and checksums. Unzip it, run `node probe.mjs`, then `python -m http.server 8080`. Relink the original audio in the preview; its SHA-256 must match. Audio is excluded from the archive.
+
+This is a local preview, not a new published release. The existing workspace and WebMCP Director remain available at their original entry points. The new editor currently has an English interface, two foreground response operators, and no video-file export. Cross-Agent validation of the new composition package is still pending.
+
 ## Work with BeatScope from the browser
 
 BeatScope Director exposes the loaded track as eight WebMCP tools. An Agent can
@@ -91,12 +101,13 @@ The three reference works below consume the same frozen handoff. They share timi
 All three read one function:
 
 ```js
-import { getBeatScopeFrame } from "./fixture.beatscope/visual-state.js";
+import { getVisualState } from "./fixture.beatscope/visual-state.js";
 
 function render(time) {
-  const { timing, scene } = getBeatScopeFrame(time);
-  // timing: bar, beat, phase, LOW/MID/HIGH, onset, accent
-  // scene: structure-aware composition and transition envelopes
+  const facts = getVisualState(time);
+  // facts: bar, beat, beatPhase/barPhase, LOW/MID/HIGH, onset, accent, structure
+  // The direction — spread, flow, boundary envelopes, palette — is authored by
+  // each consumer, because the package ships measurements and no scene.
 }
 ```
 
@@ -123,7 +134,7 @@ local audio
    └─ neutral structure: A / B / A′ + boundaries
                 │
                 ├─ Studio player and eight-bar cue map
-                ├─ deterministic visual recipe + scene timeline
+                ├─ optional response ordering for a bounded animation budget
                 ├─ MCP queries
                 └─ self-describing handoff package
 ```
@@ -140,23 +151,23 @@ The current eight bars expose `IMPACT`, `LOW / SCALE`, `MID / FLOW`, `HIGH / FLA
 
 ### Handoff package
 
-Every export includes the rhythm map, deterministic runtime, scene artifacts, Agent routing instructions, a Skill, integrity hashes, and a dependency-free probe:
+Every export carries measured timing facts, a deterministic runtime, Agent routing instructions, a Skill, integrity hashes, and a dependency-free probe — and deliberately **no visual layer**: no recipe, no scene timeline, no style, no task statement, because the visual is the consumer's decision and a package that pre-decides it stops the agent from asking the user what they want.
 
 ```text
 project.beatscope/
-├── beatscope-package.json
-├── AGENT.md
-├── rhythm-map.json
-├── response-relevance.json
-├── visual-state.js
-├── visual-recipe.json
-├── visual-timeline.json
-├── consumer-probe.js
-├── beatscope-runtime.js
-├── scene-director.js
-├── worker-example.js
-├── SKILL.md
-└── references/schema.md
+├── beatscope-package.json     routing manifest: entry, probe, capabilities, summary, per-member sha256
+├── README.md                  the inventory, what is deliberately absent, what is authoritative
+├── AGENT.md                   the contract: clock, purity, ground rules, what to settle with the user
+├── rhythm-map.json            the measured facts (authoritative)
+├── rhythm.mid / rhythm.csv    the same facts for a DAW or a spreadsheet
+├── response-relevance.json    ordering-only sidecar for spending a response budget (+ -data.js copy)
+├── visual-state.js            getVisualState(time), getResponseEvents(start, end, budget)
+├── beatscope-runtime.js       the shared runtime the accessor builds on
+├── worker-example.js          module Worker adapter
+├── consumer-probe.js          self-check: node consumer-probe.js .
+├── BEATSCOPE.md               timing invariants
+├── SKILL.md, references/schema.md
+└── LICENSE
 ```
 
 Source audio is never bundled. `response-relevance.json` contains onset ids and bounded ordering values, never replacement timestamps. A consumer can verify paths, manifest shape, hashes, executable templates, checkpoints, and clock semantics before it runs package JavaScript.

@@ -8,7 +8,10 @@ chain of thought, account IDs, or vendor billing data.
 
 ## Status: pending — the cross-Agent claim is not yet earned
 
-The repository currently contains **zero** recorded Agent runs. The
+The repository contains **one historical Codex run**, recorded on 2026-09-02
+against the earlier visual-inclusive fixture. Its package digest is preserved
+in `../historical-fixture-lock.json`; it is not evidence that an Agent has
+tested the current timing-only package. The
 engineering release therefore claims only what is demonstrated in the
 reference consumers: one handoff package driving Canvas, Three.js, and
 Remotion through the same deterministic frame contract. The claim
@@ -51,6 +54,6 @@ The "validated across Coding Agents" claim is allowed only when:
 ## Replay
 
 CI replays the checked-in evidence: every run record must match the
-frozen `TASK.md` hash and the shared fixture lock, and the normalized
+frozen `TASK.md` hash and its current or archived fixture lock, and the normalized
 conformance reports in `../reports/` must regenerate byte-identically.
 CI never contacts remote Agents or model APIs.

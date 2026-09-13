@@ -47,6 +47,16 @@ beatscope serve
 
 打开 `http://127.0.0.1:8765`，选择 WAV、FLAC、MP3、OGG 或 M4A 文件并播放。分析完全在本地完成，请求产生的临时文件会在处理后清理。
 
+## 做一张自己的作品（本地预览）
+
+在本地服务打开 `/app/?composition=1`。新工作台以一张作品为中心：添加文字或媒体，拖动和缩放对象，再决定哪些对象跟着音乐响应。选择 **Stay still**，让它保持静止，也完全可以。
+
+三种视觉背景沿用 Butterchurn 原始预设及其音频响应，并注明作者。前景对象读取 BeatScope 的实测事件时间和可选的 v0.11 排序。这是两套独立来源；背景的反馈画面不保证在跳转后逐像素复现。
+
+**Export for Agent** 会打包作品文档、媒体、共享的前景运行时、原时序包、预览页和校验值。解压后运行 `node probe.mjs`，再运行 `python -m http.server 8080`。在预览页重新选择原音频，SHA-256 匹配后才能播放。压缩包不包含音频。
+
+目前是本地预览，不是新发布版本。旧工作台和 WebMCP Director 的入口仍保留。新编辑器暂为英文界面，提供两种前景响应算子，不导出视频文件；新作品包的跨 Agent 验证尚未完成。
+
 ## 在浏览器里与 BeatScope 协作
 
 BeatScope Director 把当前加载的曲目以八个 WebMCP 工具暴露给页面内的 Agent。它可以查看任意时刻、读取有界事件、寻找并比较视觉段落，然后在用户正在观看的同一个播放器里 Focus、试听并循环该段落。
@@ -88,12 +98,12 @@ python tests/browser/webmcp_demo_server.py --port 8770 --directory build/webmcp-
 三者都只读取一个函数：
 
 ```js
-import { getBeatScopeFrame } from "./fixture.beatscope/visual-state.js";
+import { getVisualState } from "./fixture.beatscope/visual-state.js";
 
 function render(time) {
-  const { timing, scene } = getBeatScopeFrame(time);
-  // timing：小节、拍、相位、LOW/MID/HIGH、onset、accent
-  // scene：跟随结构的构图与过渡包络
+  const facts = getVisualState(time);
+  // facts：小节、拍、相位、LOW/MID/HIGH、onset、accent、结构分段
+  // 视觉方向（疏密、流动、边界包络、配色）由每个消费者自己编写——包里只有测量结果，没有场景。
 }
 ```
 
@@ -141,19 +151,19 @@ function render(time) {
 
 ```text
 project.beatscope/
-├── beatscope-package.json
-├── AGENT.md
-├── rhythm-map.json
-├── response-relevance.json
-├── visual-state.js
-├── visual-recipe.json
-├── visual-timeline.json
-├── consumer-probe.js
-├── beatscope-runtime.js
-├── scene-director.js
-├── worker-example.js
-├── SKILL.md
-└── references/schema.md
+├── beatscope-package.json     路由清单：入口、探针、能力、摘要、逐成员 sha256
+├── README.md                  文件清单、刻意不含的东西、谁是权威
+├── AGENT.md                   契约：时钟、纯度、禁令、需要与用户确认的问题
+├── rhythm-map.json            实测事实（权威）
+├── rhythm.mid / rhythm.csv    同一份事实，给 DAW 或表格
+├── response-relevance.json    只用于排预算的排序侧车（另有 -data.js 副本）
+├── visual-state.js            getVisualState(time)、getResponseEvents(start, end, budget)
+├── beatscope-runtime.js       访问器所依赖的共享运行时
+├── worker-example.js          module Worker 适配器
+├── consumer-probe.js          自检：node consumer-probe.js .
+├── BEATSCOPE.md               时间不变量
+├── SKILL.md、references/schema.md
+└── LICENSE
 ```
 
 交接包绝不携带原始音频。`response-relevance.json` 只包含 onset id 和有界排序值，不会提供替代时间戳。消费者可以先验证路径、manifest、哈希、可执行模板、检查点和时钟语义，再运行包内 JavaScript。

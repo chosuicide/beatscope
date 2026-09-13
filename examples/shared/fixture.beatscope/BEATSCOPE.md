@@ -1,38 +1,49 @@
-# BeatScope timing handoff: consumer-fixture
+# BeatScope timing invariants: consumer-fixture
 
-This package records what BeatScope measured in one audio file, plus an optional
-ordering value for spending a limited response budget. It carries no visual
-language and no task: what the visual is, is your decision.
+The rules a consumer must not break, and what the reported fields actually
+mean. The collaboration flow lives in `AGENT.md`; API details live in
+`SKILL.md` and `references/schema.md`.
 
 ## Clock contract
 
-- Time is seconds of media time, from 0 to the duration in `beatscope-package.json`.
+- Time is seconds of media time, from 0 to the duration in
+  `beatscope-package.json`.
 - Interactive playback samples `audio.currentTime` once per frame; offline
-  rendering derives seconds from the frame number and the composition FPS. Never
-  accumulate time across frames.
-- Every query is pure: pause, seek, replay, and rendering a single frame resolve
-  the same instant to the same facts. Keep your own animation state seek-safe the
-  same way — no wall-clock timers, no unseeded random motion.
+  rendering derives seconds from the frame number and the composition FPS.
+  Never accumulate time across frames.
+- Every query is pure: pause, seek, replay and single-frame rendering resolve
+  the same instant to the same facts. Keep your own animation state seek-safe
+  the same way - no wall-clock timers, no unseeded random motion.
 
-## What the facts mean
+## What the fields mean
 
-- `beatPhase` and `barPhase` interpolate between the two measured beats around
-  the query, so variable tempo stays honest instead of drifting off a global BPM.
-- `low`, `mid`, and `high` are measured band energy: frequency evidence, not
-  instrument labels. The data never identifies a kick or a snare.
-- `onset` and `accent` are transients with a strength and an age.
-- Structure segments carry a neutral family letter (`A`, `B`, ...) that marks
-  recurrence, not a musical role. Never rename them to Verse or Chorus unless the
-  user says so.
-- `getResponseEvents(start, end, budget)` returns existing onsets at their stored
-  times, chosen by a bounded ordering value learned from human-authored rhythm
-  charts. It is not a probability, a confidence score, or an instruction to
-  animate every selected event. When ranking is unavailable it reports
-  `chronological-fallback`, and that fact belongs in your diagnostics.
+- `beat`, `bar`, `beatPhase`, `barPhase`: position in the measured grid. The
+  phases interpolate between the two real beats around the query, so variable
+  tempo stays honest instead of drifting off a global BPM.
+- `low`, `mid`, `high`, `all`: measured band energy, 0-1. Frequency evidence,
+  never instrument identity - the data does not identify a kick, snare or 808,
+  and a consumer must not claim it does.
+- `onset`, `accent`: transients with a `value` and an `age` in seconds.
+- `state.structure`: the current segment (`id`, `family`, `variant`, `label`,
+  `index`), its `phase`, `nextBoundaryTime` and `secondsToBoundary`. Family
+  letters mark recurrence, not musical role: `A'` is related to `A`, never
+  "Chorus". Never rename them unless the user asks.
+- `response_relevance`: an ordering value learned from human-authored rhythm
+  charts, used to spend a limited response budget. It is not a probability, a
+  confidence score or an instruction to animate everything it ranks.
+
+## Times: measured versus quantised
+
+- Every onset carries the instant it was measured at (`raw_time`, exposed as
+  `time` by the API). That is the only value a cut, marker or edit may use.
+- `rhythm.mid` is quantised to the exported subdivision and `rhythm.csv` also
+  carries `quantized_time` with `offset_ms`: both are annotations. Snapping a
+  cut to a grid the user did not ask for is a defect, not a simplification.
 
 ## Invariants
 
 - Never re-analyse the audio, and never scan arrays every frame for facts the
   frame already carries.
 - The audio element owns transport; the visual only samples the current time.
-- Honour reduced-motion preferences.
+- Honour `prefers-reduced-motion`: the facts never change, but your motion must
+  drop continuous agitation.

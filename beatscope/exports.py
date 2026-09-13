@@ -422,108 +422,123 @@ def _license_bytes() -> bytes | None:
 
 
 def _handoff_document(display_name: str) -> str:
-    """BEATSCOPE.md: the timing invariants a consumer must not break."""
-    return f"""# BeatScope timing handoff: {display_name}
+    """BEATSCOPE.md: the timing invariants. This file owns them."""
+    return f"""# BeatScope timing invariants: {display_name}
 
-This package records what BeatScope measured in one audio file, plus an optional
-ordering value for spending a limited response budget. It carries no visual
-language and no task: what the visual is, is your decision.
+The rules a consumer must not break, and what the reported fields actually
+mean. The collaboration flow lives in `AGENT.md`; API details live in
+`SKILL.md` and `references/schema.md`.
 
 ## Clock contract
 
-- Time is seconds of media time, from 0 to the duration in `beatscope-package.json`.
+- Time is seconds of media time, from 0 to the duration in
+  `beatscope-package.json`.
 - Interactive playback samples `audio.currentTime` once per frame; offline
-  rendering derives seconds from the frame number and the composition FPS. Never
-  accumulate time across frames.
-- Every query is pure: pause, seek, replay, and rendering a single frame resolve
-  the same instant to the same facts. Keep your own animation state seek-safe the
-  same way — no wall-clock timers, no unseeded random motion.
+  rendering derives seconds from the frame number and the composition FPS.
+  Never accumulate time across frames.
+- Every query is pure: pause, seek, replay and single-frame rendering resolve
+  the same instant to the same facts. Keep your own animation state seek-safe
+  the same way - no wall-clock timers, no unseeded random motion.
 
-## What the facts mean
+## What the fields mean
 
-- `beatPhase` and `barPhase` interpolate between the two measured beats around
-  the query, so variable tempo stays honest instead of drifting off a global BPM.
-- `low`, `mid`, and `high` are measured band energy: frequency evidence, not
-  instrument labels. The data never identifies a kick or a snare.
-- `onset` and `accent` are transients with a strength and an age.
-- Structure segments carry a neutral family letter (`A`, `B`, ...) that marks
-  recurrence, not a musical role. Never rename them to Verse or Chorus unless the
-  user says so.
-- `getResponseEvents(start, end, budget)` returns existing onsets at their stored
-  times, chosen by a bounded ordering value learned from human-authored rhythm
-  charts. It is not a probability, a confidence score, or an instruction to
-  animate every selected event. When ranking is unavailable it reports
-  `chronological-fallback`, and that fact belongs in your diagnostics.
+- `beat`, `bar`, `beatPhase`, `barPhase`: position in the measured grid. The
+  phases interpolate between the two real beats around the query, so variable
+  tempo stays honest instead of drifting off a global BPM.
+- `low`, `mid`, `high`, `all`: measured band energy, 0-1. Frequency evidence,
+  never instrument identity - the data does not identify a kick, snare or 808,
+  and a consumer must not claim it does.
+- `onset`, `accent`: transients with a `value` and an `age` in seconds.
+- `state.structure`: the current segment (`id`, `family`, `variant`, `label`,
+  `index`), its `phase`, `nextBoundaryTime` and `secondsToBoundary`. Family
+  letters mark recurrence, not musical role: `A'` is related to `A`, never
+  "Chorus". Never rename them unless the user asks.
+- `response_relevance`: an ordering value learned from human-authored rhythm
+  charts, used to spend a limited response budget. It is not a probability, a
+  confidence score or an instruction to animate everything it ranks.
+
+## Times: measured versus quantised
+
+- Every onset carries the instant it was measured at (`raw_time`, exposed as
+  `time` by the API). That is the only value a cut, marker or edit may use.
+- `rhythm.mid` is quantised to the exported subdivision and `rhythm.csv` also
+  carries `quantized_time` with `offset_ms`: both are annotations. Snapping a
+  cut to a grid the user did not ask for is a defect, not a simplification.
 
 ## Invariants
 
 - Never re-analyse the audio, and never scan arrays every frame for facts the
   frame already carries.
 - The audio element owns transport; the visual only samples the current time.
-- Honour reduced-motion preferences.
+- Honour `prefers-reduced-motion`: the facts never change, but your motion must
+  drop continuous agitation.
 """
 
 
 def _readme_document(display_name: str, has_relevance: bool) -> str:
-    """README.md: the inventory, what is missing, and what is authoritative."""
+    """README.md: the inventory, what is absent, and what is authoritative."""
     relevance = (
-        "- `response-relevance.json` (+ `response-relevance-data.js`) — ordering-only sidecar "
+        "- `response-relevance.json` (+ `response-relevance-data.js`) - ordering-only sidecar "
         "for spending a consumer-chosen onset budget; it carries event ids rather than event "
-        "times, and the values are not probability or confidence.\n"
+        "times (what the value means: `BEATSCOPE.md`).\n"
         if has_relevance
         else ""
     )
-    return f"""# BeatScope timing package — {display_name}
+    return f"""# BeatScope timing package - {display_name}
 
 The measured timing facts for one audio file, packaged for a coding agent or a
-visual tool. Read `AGENT.md` next: it is the contract. `BEATSCOPE.md` holds the
-timing invariants.
+visual tool. Start with `AGENT.md`: it owns the flow and explains how to read
+this package without loading megabytes into context.
 
 ## Files
 
-- `rhythm-map.json` — the authoritative timing data: duration, tempo and origin,
+- `rhythm-map.json` - the authoritative timing data: duration, tempo and origin,
   bars and beats, raw onsets with strength and band energy, accents, sampled
-  energy, and structure segments.
-- `rhythm.mid` — the same facts for a DAW: a tempo map plus one note per onset,
-  velocity from strength.
-- `rhythm.csv` — the same facts as a table: raw and quantised time, offset in
-  milliseconds, bar/beat/step, strength, band energy, and the accent flag.
-{relevance}- `beatscope-package.json` — the routing manifest: entry module, probe, honest
-  capabilities, exported function names, a short summary, and the sha256 of every
-  member.
-- `visual-state.js` — dependency-free accessor: `getVisualState(time)`, plus
+  energy, and structure segments. Query it; do not read it in full.
+- `rhythm.mid` - the same facts for a DAW: a tempo map plus one note per onset,
+  velocity from strength. Quantised; `BEATSCOPE.md` says what that means for
+  edits.
+- `rhythm.csv` - the same facts as a table: `raw_time` next to
+  `quantized_time` and `offset_ms`, bar/beat/step, strength, band energy,
+  accent flag.
+{relevance}- `beatscope-package.json` - the routing manifest: entry module, probe, honest
+  capabilities, exported function names, a short summary, and the sha256 of
+  every member.
+- `visual-state.js` - dependency-free accessor: `getVisualState(time)`, plus
   `getResponseEvents(start, end, budget)` when the manifest declares it.
-- `beatscope-runtime.js` — the shared runtime `visual-state.js` builds on.
-- `worker-example.js` — a module Worker adapter: the main thread sends audio time,
-  the worker returns the frame facts.
-- `consumer-probe.js` — self-check: `node consumer-probe.js .`.
-- `BEATSCOPE.md` — timing invariants.
-- `SKILL.md`, `references/schema.md` — how to consume the package, and the exact
-  field semantics.
-- `LICENSE` — terms for the shipped code.
+- `beatscope-runtime.js` - the shared runtime `visual-state.js` builds on.
+- `worker-example.js` - a module Worker adapter: the main thread sends audio
+  time, the worker returns the frame facts.
+- `consumer-probe.js` - self-check: `node consumer-probe.js .`.
+- `AGENT.md` - the entry point: the flow, the questions, the deliverable.
+- `BEATSCOPE.md` - the timing invariants and field meanings.
+- `SKILL.md`, `references/schema.md` - how to consume the API, exact field
+  semantics.
+- `LICENSE` - terms for the shipped code.
 
 ## Not in this package
 
 No audio: pair the package with the original local file named
 `{display_name}`. No assets, no fonts, no palette, no style, no scene timeline,
 no rendered video, and no statement about aspect ratio, frame rate or pacing.
-Those are decisions for you and the user to make together. The package also never
-contains machine paths or cache locations.
+Those are decisions for you and the user to make together. The package also
+never contains machine paths or cache locations.
 
 ## Authority
 
-`rhythm-map.json` is the authoritative data. `visual-state.js` embeds the same map
-only so that `import` works without a build step or a fetch layer; when the two
-ever disagree, the JSON wins.
+`rhythm-map.json` is the authoritative data. `visual-state.js` embeds the same
+map only so that `import` works without a build step or a fetch layer; when the
+two ever disagree, the JSON wins.
 """
 
 
 def _agent_document(display_name: str, duration: float, rhythm_map: dict[str, Any]) -> str:
-    """Build the short Agent routing document (plan section 5).
+    """AGENT.md: the single entry point, the flow, and how to read the rest.
 
-    Deterministic and display-name-scoped only: no wall clock, no machine paths,
-    no audio facts beyond what the manifest already carries. Kept under roughly
-    900 words; detailed field semantics live in ``references/schema.md``.
+    Deterministic and display-name-scoped only: no wall clock, no machine
+    paths. Kept under roughly 900 words. Every other document is reference,
+    consulted on demand - this file does not restate the timing invariants
+    (BEATSCOPE.md) or the API details (SKILL.md, references/schema.md).
     """
     beats = len(rhythm_map.get("beats") or [])
     onsets = len(rhythm_map.get("onsets") or [])
@@ -533,68 +548,57 @@ def _agent_document(display_name: str, duration: float, rhythm_map: dict[str, An
 
 You are reading the measured timing facts for one audio file: {duration:.3f} s,
 {bars} bars, {beats} beats, {onsets} transients, {segments} structural segments.
-This package describes the music. It carries no visual style, no scene, no
-assets, and no task, because the visual is a decision you make with the user.
+This package describes the music. It carries no style, no scene, no assets and
+no task: the visual is a decision you make with the user.
+
+## Read this package cheaply
+
+- Do **not** read `rhythm-map.json` or `response-relevance-data.js` in full:
+  they are megabytes of numbers. Query them with a program and print only the
+  window you need; one short script beats a full read.
+- Ask the runtime for a window, not for the song:
+  `getResponseEvents(start, end, budget)` returns just the candidates in that
+  span, at their measured times.
+- Cut on measured times: cuts, markers and edits come from `raw_time`, never
+  from a quantised grid. `BEATSCOPE.md` says which file carries which.
+- The other documents are reference, not a reading order. Consult them when a
+  question comes up:
+
+  | File | Authoritative for |
+  | --- | --- |
+  | `beatscope-package.json` | entry module, capabilities, function names, per-member sha256 |
+  | `BEATSCOPE.md` | the clock contract, what the fields mean, the invariants |
+  | `SKILL.md`, `references/schema.md` | how to consume the API, exact field semantics |
+  | `rhythm.mid`, `rhythm.csv` | the same facts for a DAW or a spreadsheet (quantised: `BEATSCOPE.md`) |
+  | `README.md` | the inventory, what is deliberately absent, what is authoritative |
+
+## Work with the user
+
+Ask about intent, material and taste. Never ask about technicalities: nobody
+outside this package knows what an event budget is, and choosing it is your job.
+
+1. What are we making: a new visual, their own version of something they have
+   seen, a tool, or an edit of footage they already have?
+2. What material exists (footage, images, logo, typeface, palette) and what may
+   you generate?
+3. Where will it play, in what shape: aspect ratio, frame rate, resolution,
+   whole song or one section?
+4. Two or three references they like, and anything they never want to see.
+5. Derive the response budget yourself from those answers: a calm montage and a
+   fast cut want different densities. To agree on pacing, talk in their terms
+   ("a cut about every two seconds", "only the big hits") - never ask anyone to
+   pick a number of onsets or compare budgets.
+6. Show your plan before building: which facts drive what, how dense it will be
+   and what stays still. Then deliver the consumer, a two-line note on what
+   drives what, and how to re-render it.
 
 ## Start here
 
-1. Read `beatscope-package.json` first. It is the routing document: entry module,
-   exported functions, the honest capability set, a short summary of the track,
-   and the sha256 of every member.
-2. Verify before you build: run `node consumer-probe.js .` from the package root.
-   It imports the entry module, checks every declared function, and reports
-   whether the package agrees with itself on this machine.
-3. Query facts, never audio: `getVisualState(time)` for the frame, and
-   `getResponseEvents(start, end, budget)` when the manifest enables
-   `response_relevance`.
-
-## Clock contract
-
-- Time is seconds of media time, from `clock.minimum` to `clock.maximum`.
-- Interactive playback: sample `audio.currentTime` once per animation frame and
-  pass it in. Offline rendering: derive seconds from the frame number and the
-  composition FPS. Never accumulate time across frames.
-- Every query is pure: pause, seek, replay, re-render one frame, or query in any
-  order. The answer for a given time never changes. Keep your own animation state
-  seek-safe the same way.
-
-## What you can trust
-
-- `beatPhase` and `barPhase` interpolate between the two measured beats around the
-  query, so variable tempo stays honest.
-- `low`, `mid`, `high` are measured band energy: frequency evidence, not
-  instrument labels. The data never identifies a kick, snare, or 808.
-- Structure families (`A`, `B`, ...) mark recurrence, never musical roles, and
-  `variant` means a related passage rather than a new identity.
-- `response_relevance` is an ordering value learned from human-authored rhythm
-  charts. Spend it through `getResponseEvents(start, end, budget)`: the returned
-  objects are existing onsets at their stored times, and the value is not a
-  probability or a command to animate everything it ranks. When ranking is
-  unavailable the call reports `chronological-fallback`; keep that fact in your
-  diagnostics instead of presenting the fallback as ranked output.
-
-## Ground rules
-
-- Never re-analyse the audio, and never scan arrays every frame to re-derive facts
-  the frame already carries.
-- The audio element owns transport; the visual only samples the current time.
-- Keep animation deterministic: no wall-clock timers, no unseeded random motion,
-  nothing that breaks single-frame rendering.
-- Respect reduced-motion preferences: drop continuous agitation, keep the
-  composition honest.
-- Do not infer instruments, emotion, or semantic section names.
-
-## Settle these with the user before writing visual code
-
-- What are we making: a new visual, a variation of something they have seen, a
-  tool, or an edit of existing footage?
-- Do they have material (footage, images, logo, palette, fonts), or should it be
-  generated?
-- Format: aspect ratio, frame rate, resolution, whole song or a segment?
-- How dense should the responses be? Run `getResponseEvents` for two or three
-  budgets and show the event counts, then let the user choose instead of guessing
-  a threshold.
-- Delivery: an interactive page, a rendered file, or both?
+1. Verify the package before writing code: `node consumer-probe.js .`
+2. Query facts, never audio: `getVisualState(time)` for one instant;
+   `getResponseEvents(start, end, budget)` for the candidates in a window.
+3. Sample media time: `audio.currentTime` once per frame, or `frame / fps`
+   offline. Never accumulate time. The full contract is in `BEATSCOPE.md`.
 
 ## Self-check before you finish
 
@@ -604,11 +608,9 @@ Timing parity must be exact: the same time must resolve to the same facts.
 
 ## Package honesty
 
-`beatscope-package.json` describes what exists, not aspirations. Trust it over any
-other description: if it does not declare a function or a file, do not use it.
-`README.md` lists what is deliberately absent, `SKILL.md` and
-`references/schema.md` cover consumption and exact field semantics, and
-`BEATSCOPE.md` holds the timing invariants.
+`beatscope-package.json` describes what exists, not aspirations. Trust it over
+any other description: if it does not declare a function or a file, do not use
+it. `README.md` lists what is deliberately absent.
 """
 
 

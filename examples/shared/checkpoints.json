@@ -1,7 +1,7 @@
 {
   "duration": 30.0001,
   "frames_sha256": "c2b7681d1e16121e5779fe13f8bf98e6ae6cb00c499a60be4023943ceaf075cf",
-  "package_sha256": "47b8d427150964b9ae9426f60444e72f6013a5279f09948fe2468a9b1487438b",
+  "package_sha256": "79caf7d49bce29966ec92dc2e0a73a0cb7be4f65e994bae0ccaf12212e06269a",
   "schema": "beatscope-consumer-checkpoints-1",
   "seek_sequence": [
     30.0001,

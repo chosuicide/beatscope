@@ -108,6 +108,12 @@ def copy_web_assets(output: Path) -> None:
     ).replace('class="wordmark" href="/"', 'class="wordmark" href="./index.html"', 1)
     html_path.write_text(html, encoding="utf-8")
     for source in sorted(WEB_ROOT.glob("*.js")):
+        # The movie template (mv-*) belongs to the local studio, which serves
+        # it through its own whitelists (mv_jobs.py staging and the render
+        # worker). The static demo never references it, and shipping it would
+        # drag a dependency graph across the .js/.mjs split for nothing.
+        if source.name.startswith("mv-"):
+            continue
         # Source modules live beside beatscope/runtime, while the static
         # bundle nests runtime inside itself. Rewrite only that known import
         # edge so the bundle also works below a host prefix such as

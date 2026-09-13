@@ -695,12 +695,12 @@
 }
 .chip.drag.hot {
   border-color: var(--accent);
-  background: var(--lilac-wash);
+  background: var(--accent-wash);
   transform: translateY(-1px);
 }
 .chip.drag.armed {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--lilac-wash);
+  box-shadow: 0 0 0 2px var(--accent-wash);
 }
 .chip.drag:focus-visible,
 .chain-target:focus-visible {
@@ -719,7 +719,7 @@
 }
 .chain-target.hot {
   border-color: var(--accent);
-  background: var(--lilac-wash);
+  background: var(--accent-wash);
 }
 .chain-target .tm {
   font-size: 12px;
@@ -737,11 +737,11 @@
   cursor: pointer;
 }
 .chain-remove:hover {
-  color: var(--destructive);
+  color: var(--danger);
 }
 .chain-notice {
   margin-top: 8px;
-  color: var(--destructive);
+  color: var(--danger);
 }
 .chip.acc {
   border-color: rgba(117, 103, 232, 0.4);

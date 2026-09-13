@@ -428,7 +428,7 @@ function compareCodePoints(a: string, b: string): number {
   return i >= a.length ? -1 : 1;
 }
 
-function canonicalJson(value: unknown, out: string[]): void {
+export function canonicalJson(value: unknown, out: string[]): void {
   if (value === null) {
     out.push('null');
   } else if (value === true) {

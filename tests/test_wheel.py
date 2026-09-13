@@ -16,6 +16,13 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_MODULES = [
+    "beatscope/mv_jobs.py",
+    "beatscope/web/mv-worker.mjs",
+    "beatscope/web/mv-plan.mjs",
+    "beatscope/web/mv-frame.mjs",
+    "beatscope/web/mv-visual.js",
+    "beatscope/web/mv-render.html",
+    "beatscope/web/app/movie-poster.webp",
     "beatscope/event_evidence.py",
     "beatscope/chart_labels.py",
     "beatscope/event_ranker.py",

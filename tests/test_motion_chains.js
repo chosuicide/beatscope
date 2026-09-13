@@ -15,14 +15,16 @@
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 
-import {
+import { compileDirectionContract } from './helpers/direction-contract.mjs';
+compileDirectionContract();
+const {
   compileDirection,
   getDirectionState,
   applyReducedMotion,
   registeredDriverKinds,
   registeredOperatorKinds,
   videoSourceTime,
-} from './.generated/motion/evaluate.js';
+} = await import('./.generated/motion/evaluate.js');
 
 const BAR = 2.0; // 120 bpm, 4/4
 

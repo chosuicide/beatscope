@@ -1,6 +1,8 @@
 # BeatScope timing package fields
 
-The package carries measured timing facts for one audio file. It ships no visual layer: no recipe, no scene timeline, no palette. `getVisualState(time)` and `getResponseEvents(start, end, budget)` are the only accessors, and `rhythm-map.json` is the authoritative data.
+The field reference. The collaboration flow lives in `AGENT.md`, the timing invariants in `BEATSCOPE.md`, and how to consume the API in `SKILL.md`; this file is what to look up when you need an exact field.
+
+The package carries measured timing facts for one audio file, and ships no visual layer: no recipe, no scene timeline, no palette. `getVisualState(time)` and `getResponseEvents(start, end, budget)` are the only accessors, and `rhythm-map.json` is the authoritative data — query it, do not read it in full.
 
 ## rhythm-map.json
 
@@ -33,11 +35,11 @@ The routing manifest. Trust it over prose: if it does not declare a function or 
 
 ## rhythm.mid
 
-Standard MIDI file: one tempo-map track (per-segment when the song changes tempo) plus one note per onset on middle C, velocity from `strength`, quantised to the exported subdivision. It carries no beats layer and no markers; use `rhythm.csv` or the JSON when you need raw times.
+Standard MIDI file: one tempo-map track (per-segment when the song changes tempo) plus one note per onset on middle C, velocity from `strength`, **quantised to the exported subdivision**. It carries no beats layer and no markers. Because it is quantised it is a musical reference, never an exact cut list: every cut, marker or edit uses the measured time from `rhythm.csv` (`raw_time`) or the JSON.
 
 ## rhythm.csv
 
-One row per onset: `raw_time`, `quantized_time`, `offset_ms`, `bar`, `beat`, `step`, `strength`, `low`, `mid`, `high`, `accent`.
+One row per onset: `raw_time`, `quantized_time`, `offset_ms`, `bar`, `beat`, `step`, `strength`, `low`, `mid`, `high`, `accent`. `raw_time` is the measured instant and the one to cut on; `quantized_time` and `offset_ms` describe how far the onset sits from the grid, which is information, not a correction.
 
 ## Response relevance (v0.11)
 

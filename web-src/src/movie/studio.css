@@ -1,0 +1,651 @@
+/**
+ * Movie studio styles.
+ *
+ * Editor-grade layout: top bar, a facts rail, the stage, an inspector rail and
+ * the cue map docked underneath. Values come from tokens.css / shell.css — the
+ * rails borrow the dock rhythm (hairline separators, 7px rows) so the screen
+ * reads as part of the same product as the canvas workspace.
+ */
+
+.mv-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 0;
+  background: var(--paper-0);
+  color: var(--ink-0);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  overflow: hidden;
+}
+.mv-shell .topbar {
+  position: static;
+  flex: none;
+}
+.mv-shell .tb-name {
+  max-width: 26ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mv-facts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 14px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-2);
+  letter-spacing: 0.02em;
+}
+.mv-facts b {
+  font-weight: 600;
+  color: var(--ink-1);
+}
+.mv-facts i {
+  width: 1px;
+  height: 10px;
+  background: var(--line-strong);
+}
+
+.mv-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.mv-chip.run {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-wash);
+}
+.mv-chip.ok {
+  color: #4f6a4a;
+  border-color: rgba(79, 106, 74, 0.35);
+  background: rgba(79, 106, 74, 0.08);
+}
+.mv-chip.bad {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+.mv-notice,
+.mv-error {
+  flex: none;
+  margin: 8px 16px 0;
+  padding: 7px 11px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--paper-1);
+  font-size: 12px;
+  color: var(--ink-1);
+}
+.mv-error {
+  justify-content: space-between;
+  color: var(--danger);
+}
+.mv-error button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* ---------------- body: rail | stage | rail ---------------- */
+
+.mv-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 224px minmax(0, 1fr) 264px;
+}
+
+.mv-rail {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 10px;
+  overflow-y: auto;
+  background: var(--paper-1);
+}
+.mv-body > .mv-rail:first-child {
+  border-right: 1px solid var(--line-soft);
+}
+.mv-body > .mv-rail:last-child {
+  border-left: 1px solid var(--line-soft);
+}
+
+.rail-cap {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--ink-2);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.rail-foot {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-2);
+}
+
+/* structure list */
+.seg-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.seg-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(24px, max-content) 1fr auto;
+  grid-template-areas: 'fam meta time' 'energy energy energy';
+  align-items: center;
+  gap: 4px 6px;
+  padding: 5px 6px 6px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.seg-row:hover {
+  background: rgba(34, 31, 40, 0.035);
+}
+.seg-row.on {
+  background: var(--accent-wash);
+}
+.seg-fam {
+  grid-area: fam;
+  min-width: 24px;
+  max-width: 96px;
+  height: 18px;
+  padding: 0 6px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-1);
+}
+.seg-row.on .seg-fam {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.seg-meta {
+  grid-area: meta;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.seg-time {
+  grid-area: time;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-2);
+}
+.seg-energy {
+  grid-area: energy;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line-soft);
+  overflow: hidden;
+}
+.seg-energy i {
+  display: block;
+  height: 100%;
+  background: var(--ink-2);
+}
+.seg-row.on .seg-energy i {
+  background: var(--accent);
+}
+
+/* inspector cards */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: var(--paper-0);
+}
+.kv {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.kv b {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--ink-0);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.kv .tone-run { color: var(--accent); }
+.kv .tone-ok { color: #4f6a4a; }
+.kv .tone-bad { color: var(--danger); }
+
+.btn-line.wide {
+  width: 100%;
+  justify-content: center;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  height: 28px;
+}
+.btn-line.off {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.row2 .btn-line {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  text-decoration: none;
+}
+
+/* ---------------- stage ---------------- */
+
+.mv-stage {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px 10px;
+}
+.mv-stage > .mv-frame {
+  align-self: center;
+}
+.stage-head {
+  width: min(100%, 560px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.stage-name {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--ink-1);
+}
+.stage-sep {
+  width: 1px;
+  height: 10px;
+  background: var(--line-strong);
+}
+.stage-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.mv-frame {
+  position: relative;
+  /* the composition is the hero: it takes the space the charts leave */
+  flex: 1 1 auto;
+  min-height: 0;
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0b0b0d;
+  box-shadow: var(--shadow-board);
+}
+.mv-frame > video,
+.mv-frame > iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #0b0b0d;
+}
+.mv-placeholder {
+  position: absolute;
+  inset: 0;
+  background: #0b0b0d;
+}
+.mv-placeholder::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(11, 11, 13, 0.6) 0%, rgba(11, 11, 13, 0.26) 55%, rgba(11, 11, 13, 0.5) 100%);
+  pointer-events: none;
+}
+.mv-placeholder img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mv-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #f7f6f2;
+  text-align: center;
+}
+.mv-empty .note {
+  color: rgba(247, 246, 242, 0.72);
+}
+.mv-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 2px;
+  background: var(--accent);
+  transition: width 220ms var(--ease-out);
+}
+.mv-warning {
+  margin: 0;
+  font-size: 10px;
+  color: var(--ink-2);
+}
+
+/* transport: the canvas contract, placed in the flow */
+.mv-transport {
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  flex: none;
+  width: min(100%, 560px);
+}
+.mv-transport .tp-in {
+  width: 100%;
+}
+.mv-transport .tp-tl {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 150px;
+  cursor: pointer;
+  /* the rail is 3px tall, so the gesture owns the pointer and ::before widens
+     the grab band to something a cursor can actually catch */
+  touch-action: none;
+}
+.mv-transport .tp-tl::before {
+  content: '';
+  position: absolute;
+  inset: -9px 0;
+}
+.mv-transport .tp-tl:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.mv-transport .tp-tl:active .tp-knob {
+  transform: translate(-50%, -50%) scale(1.3);
+}
+.mv-transport .tp-n {
+  min-width: 4.5em;
+}
+.mv-transport .tp-play:disabled {
+  opacity: 0.4;
+}
+.mv-transport .tbtn {
+  text-decoration: none;
+}
+
+/* ---------------- cue map ---------------- */
+
+.cm {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 16px 10px;
+  border-top: 1px solid var(--line-soft);
+  background: var(--paper-1);
+}
+.cm-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cm-head h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 620;
+  letter-spacing: -0.014em;
+  color: var(--ink-0);
+}
+.cm-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-2);
+}
+.cm-stack {
+  position: relative;
+  width: 100%;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--paper-0);
+}
+.cm-stack canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.cm-stack canvas:first-child {
+  cursor: crosshair;
+}
+.cm-stack canvas:last-child {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.cm-stack-overview {
+  aspect-ratio: 1560 / 104;
+}
+.cm-stack-map {
+  aspect-ratio: 1400 / 232;
+  max-height: 22vh;
+}
+/* Expand / collapse. The wrapper animates its own height (grid row 1fr -> 0fr),
+   and inside it the blocks leave in reverse order while a mask wipes down from
+   the header, so the plots slide away underneath it instead of blinking out. */
+.cm-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 440ms var(--ease-settle);
+}
+
+.cm.collapsed .cm-body {
+  grid-template-rows: 0fr;
+}
+
+@property --cm-wipe {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+.cm-body-inner {
+  min-height: 0;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--cm-wipe, 0px), #000 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--cm-wipe, 0px), #000 100%);
+  transition: --cm-wipe 440ms var(--ease-settle);
+}
+
+.cm.collapsed .cm-body-inner {
+  --cm-wipe: 240px;
+}
+
+.cm-body-inner > * {
+  transition: opacity 300ms var(--ease-out), transform 440ms var(--ease-settle);
+}
+
+.cm-body-inner > *:nth-child(1) { transition-delay: 60ms; }
+.cm-body-inner > *:nth-child(2) { transition-delay: 120ms; }
+.cm-body-inner > *:nth-child(3) { transition-delay: 180ms; }
+.cm-body-inner > *:nth-child(4) { transition-delay: 240ms; }
+
+.cm.collapsed .cm-body-inner > * {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.cm.collapsed .cm-body-inner > *:nth-child(1) { transition-delay: 0ms; }
+.cm.collapsed .cm-body-inner > *:nth-child(2) { transition-delay: 40ms; }
+.cm.collapsed .cm-body-inner > *:nth-child(3) { transition-delay: 80ms; }
+.cm.collapsed .cm-body-inner > *:nth-child(4) { transition-delay: 120ms; }
+.cm-toggle {
+  font-size: 10px;
+  padding: 4px 8px;
+}
+.cm-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-2);
+}
+.cm-tools > div {
+  display: flex;
+  gap: 4px;
+}
+.cm-tools .tbtn {
+  font-size: 10px;
+  padding: 4px 7px;
+}
+.cm-tools .tbtn:disabled {
+  opacity: 0.4;
+}
+
+@media (max-width: 1200px) {
+  .mv-body {
+    grid-template-columns: 190px minmax(0, 1fr) 224px;
+  }
+}
+@media (max-width: 980px) {
+  .mv-shell {
+    overflow: auto;
+    height: auto;
+  }
+  .mv-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mv-body > .mv-rail {
+    border: none;
+    border-top: 1px solid var(--line-soft);
+  }
+  .mv-frame {
+    width: min(100%, 52vh);
+  }
+}
+
+/* Cards and segment rows arrive with a small offset, top to bottom, so a
+   finished analysis lands as a sequence instead of a flash. */
+@keyframes mv-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.mv-shell > .cm,
+.mv-rail > .card,
+.seg-list > li {
+  animation: mv-card-in 460ms var(--ease-settle) both;
+}
+
+.mv-rail > .card:nth-of-type(2) { animation-delay: 70ms; }
+.mv-rail > .card:nth-of-type(3) { animation-delay: 140ms; }
+
+.seg-list > li:nth-child(1) { animation-delay: 30ms; }
+.seg-list > li:nth-child(2) { animation-delay: 55ms; }
+.seg-list > li:nth-child(3) { animation-delay: 80ms; }
+.seg-list > li:nth-child(4) { animation-delay: 105ms; }
+.seg-list > li:nth-child(5) { animation-delay: 130ms; }
+.seg-list > li:nth-child(6) { animation-delay: 155ms; }
+.seg-list > li:nth-child(7) { animation-delay: 180ms; }
+.seg-list > li:nth-child(8) { animation-delay: 205ms; }
+.seg-list > li:nth-child(n + 9) { animation-delay: 230ms; }
+
+/* tokens.css zeroes durations under reduced motion but leaves delays, which
+   would hold the content invisible for the stagger */
+@media (prefers-reduced-motion: reduce) {
+  .mv-shell > .cm,
+  .mv-rail > .card,
+  .seg-list > li,
+  .cm-body,
+  .cm-body-inner,
+  .cm-body-inner > * {
+    animation-delay: 0ms !important;
+    transition-delay: 0ms !important;
+  }
+}
+
+/* Language switch: two buttons, the active one underlined by tone only. */
+.mv-lang {
+  display: flex;
+  gap: 2px;
+  flex: none;
+}
+
+.mv-lang .tbtn {
+  font-size: 10px;
+  padding: 3px 7px;
+  letter-spacing: 0.4px;
+}
+
+.mv-lang .tbtn.on {
+  color: var(--ink-0);
+  border-color: var(--line-strong);
+  background: rgba(255, 255, 255, 0.55);
+}

@@ -29,6 +29,8 @@ from .jobs import JobManager
 from .project import ProjectManager
 from .response_relevance import build_response_relevance, canonical_response_relevance_bytes
 from .visual_recipe import canonical_visual_bytes
+from .composition_store import composition_request, _LOCK as COMPOSITION_LOCK
+from .media_http import describe_media
 
 
 MAX_UPLOAD_BYTES = 500 * 1024 * 1024
@@ -46,6 +48,25 @@ class WebApi:
     def handle_get(self, path: str, query: dict[str, list[str]], headers: dict[str, str]) -> tuple[int, dict[str, str], bytes]:
         """Handle GET requests. Returns (status_code, headers_dict, body_bytes)."""
         parts = [p for p in path.strip("/").split("/") if p]
+        if len(parts) >= 3 and parts[:2] == ["api", "projects"] and (len(parts[2]) != 12 or any(c not in "0123456789abcdef" for c in parts[2])):
+            return 404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}'
+
+        if len(parts) == 4 and parts[:2] == ["api", "projects"] and parts[3] == "composition":
+            return composition_request(self.project_manager, parts[2])
+        if len(parts) == 5 and parts[:2] == ["api", "projects"] and parts[3:] == ["export", "composition.zip"]:
+            from .composition_export import composition_archive
+
+            status, version_headers, document_bytes = composition_request(self.project_manager, parts[2])
+            if status != 200:
+                return status, version_headers, document_bytes
+            expected = headers.get("If-Match") or headers.get("if-match")
+            if expected and expected != version_headers["ETag"]:
+                return 409, version_headers, b'{"error":"composition/export-version-changed"}'
+            try:
+                archive = composition_archive(json.loads(document_bytes), self.project_manager.get_project_rhythm(parts[2]), self._asset_store(parts[2]))
+            except (ValueError, OSError) as exc:
+                return 422, {"Content-Type": "application/json"}, json.dumps({"error": "composition/export-failed", "message": str(exc)}).encode()
+            return 200, {"Content-Type": "application/zip", "Content-Disposition": 'attachment; filename="beatscope-composition.zip"'}, archive
 
         # 1. GET /api/jobs/<job_id>
         if len(parts) == 3 and parts[0] == "api" and parts[1] == "jobs":
@@ -107,12 +128,9 @@ class WebApi:
             rhythm = self.project_manager.get_project_rhythm(project_id)
             if not rhythm:
                 return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Project not found"}).encode()
-            artifacts = self.project_manager.get_project_visual_artifacts(project_id)
-            if artifacts is None:
-                return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Project not found"}).encode()
-            archive = generate_codex_export(
-                rhythm, visual_artifacts=(artifacts["recipe"], artifacts["timeline"]),
-            )
+            # The handoff carries timing facts only; the visual layer is the
+            # consumer decision, so nothing is compiled into the package here.
+            archive = generate_codex_export(rhythm)
             return 200, {
                 "Content-Type": "application/zip",
                 "Content-Disposition": f'attachment; filename="{project_id}.beatscope-codex.zip"',
@@ -427,6 +445,16 @@ class WebApi:
             "etag": direction_etag(canonical),
         }).encode()
 
+    def handle_put_composition(self, path: str, body: bytes, headers: dict[str, str]):
+        parts = path.strip("/").split("/")
+        if len(parts) != 4 or parts[:2] != ["api", "projects"] or parts[3] != "composition":
+            return 404, {"Content-Type": "text/plain"}, b"Not found"
+        with COMPOSITION_LOCK:
+            return composition_request(
+                self.project_manager, parts[2], body,
+                headers.get("If-Match") or headers.get("if-match"), self._asset_ids(parts[2]),
+            )
+
     def _asset_ids(self, project_id: str) -> set[str] | None:
         """Manifest asset ids for reference validation, or None when the
         project itself is unknown (validation is skipped in that case)."""
@@ -489,6 +517,12 @@ class WebApi:
     def handle_delete_asset(
         self, path: str, query: dict[str, list[str]]
     ) -> tuple[int, dict[str, str], bytes]:
+        with COMPOSITION_LOCK:
+            return self._delete_asset_locked(path, query)
+
+    def _delete_asset_locked(
+        self, path: str, query: dict[str, list[str]]
+    ) -> tuple[int, dict[str, str], bytes]:
         """DELETE /api/projects/<id>/assets/<asset_id>[?confirm=1].
 
         Deleting an in-use asset requires explicit confirmation and reports
@@ -512,6 +546,19 @@ class WebApi:
             except (UnicodeDecodeError, ValueError):
                 direction = None
         in_use = AssetStore.referenced_by(direction, asset_id)
+        composition_path = self.project_manager.get_project_dir(parts[2]) / "composition.json"
+        if composition_path.exists():
+            from .composition import MAX_COMPOSITION_BYTES, validate_composition
+
+            try:
+                if composition_path.stat().st_size > MAX_COMPOSITION_BYTES:
+                    raise ValueError("composition too large")
+                composition = json.loads(composition_path.read_bytes())
+                if validate_composition(composition):
+                    raise ValueError("invalid composition")
+                in_use.extend("composition/" + obj["id"] for obj in composition["objects"] if obj["asset_id"] == asset_id)
+            except (ValueError, UnicodeError):
+                return 409, {"Content-Type": "application/json"}, b'{"error":"asset/composition-unreadable"}'
         confirm = (query.get("confirm", ["0"])[0] or "0") not in ("0", "false", "")
         if in_use and not confirm:
             return 409, {"Content-Type": "application/json"}, json.dumps({
@@ -596,46 +643,8 @@ class WebApi:
         }).encode()
 
     def _serve_file_range(self, file_path: Path, range_header: str | None) -> tuple[int, dict[str, str], bytes]:
-        """Serve media file supporting HTTP 206 Byte Ranges for audio seeking."""
-        file_size = file_path.stat().st_size
-        content_type = "audio/wav"
-        if file_path.suffix.lower() == ".mp3":
-            content_type = "audio/mpeg"
-        elif file_path.suffix.lower() == ".ogg":
-            content_type = "audio/ogg"
-        elif file_path.suffix.lower() == ".flac":
-            content_type = "audio/flac"
-
-        if not range_header or not range_header.startswith("bytes="):
-            return 200, {
-                "Content-Type": content_type,
-                "Content-Length": str(file_size),
-                "Accept-Ranges": "bytes",
-            }, file_path.read_bytes()
-
-        # Parse range like 'bytes=0-1000' or 'bytes=1000-'
-        try:
-            byte_range = range_header.split("=")[1].strip()
-            parts = byte_range.split("-")
-            start = int(parts[0]) if parts[0] else 0
-            end = int(parts[1]) if parts[1] else file_size - 1
-            if start >= file_size or end >= file_size or start > end:
-                return 416, {"Content-Range": f"bytes */{file_size}"}, b""
-
-            length = end - start + 1
-            with file_path.open("rb") as f:
-                f.seek(start)
-                chunk = f.read(length)
-
-            return 206, {
-                "Content-Type": content_type,
-                "Content-Range": f"bytes {start}-{end}/{file_size}",
-                "Content-Length": str(len(chunk)),
-                "Accept-Ranges": "bytes",
-            }, chunk
-        except Exception:
-            return 200, {
-                "Content-Type": content_type,
-                "Content-Length": str(file_size),
-                "Accept-Ranges": "bytes",
-            }, file_path.read_bytes()
+        """Byte-returning adapter for in-process callers; HTTP streams media."""
+        status, headers, start, length = describe_media(file_path, range_header)
+        with file_path.open("rb") as source:
+            source.seek(start)
+            return status, headers, source.read(length)

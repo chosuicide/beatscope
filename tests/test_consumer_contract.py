@@ -225,29 +225,73 @@ def test_export_manifest_and_agent_document_leak_nothing():
             assert key not in text, f"{name} leaks {key}"
 
 
-def test_agent_document_routes_the_agent():
+def test_agent_document_is_the_single_entry():
+    """AGENT.md routes the work: the flow, the cheap reading, the deliverable."""
     members, manifest = _unpacked_export()
     agent = members["AGENT.md"].decode("utf-8")
     assert len(agent.split()) <= AGENT_WORD_BUDGET
-    # Plan section 5: the routing anchors every Agent needs.
     for anchor in (
         "beatscope-package.json",
         manifest["functions"]["timing"],
         manifest["functions"]["response_events"],
         "audio.currentTime",
-        "frame number",
-        "re-analyse",
-        "seek",
-        "reduced-motion",
+        "frame / fps",
         "consumer-probe.js",
-        "instruments",
+        "BEATSCOPE.md",
         "SKILL.md",
+        "raw_time",
+        "Read this package cheaply",
+        "Work with the user",
+        "aspect ratio",
+        "Derive the response budget yourself",
+        "pick a number of onsets",
     ):
         assert anchor in agent, f"AGENT.md is missing {anchor!r}"
-    # The package states facts, not a task: it must not pre-decide the visual.
-    for forbidden in ("Build a new audio-reactive visual consumer", "getBeatScopeFrame", "visual-recipe"):
-        assert forbidden not in agent, f"AGENT.md still prescribes visual work: {forbidden!r}"
-    assert "Settle these with the user" in agent
+    # It states the flow, not a task and not the invariants: those live in
+    # BEATSCOPE.md, and an entry that restates them is the duplication this
+    # package was reviewed for.
+    for forbidden in (
+        "Build a new audio-reactive visual consumer",
+        "getBeatScopeFrame",
+        "visual-recipe",
+        "kick",
+        "snare",
+        "reduced-motion",
+        "re-analyse",
+    ):
+        assert forbidden not in agent, f"AGENT.md still carries {forbidden!r}"
+
+
+def test_documents_have_one_authority_per_topic():
+    """Each topic has exactly one owner; the others link instead of repeating."""
+    members, _ = _unpacked_export()
+    agent = members["AGENT.md"].decode("utf-8")
+    beats = members["BEATSCOPE.md"].decode("utf-8")
+    skill = members["SKILL.md"].decode("utf-8")
+    schema = members["references/schema.md"].decode("utf-8")
+
+    # The invariants live in BEATSCOPE.md, nowhere else.
+    for anchor in ("re-analyse", "reduced-motion", "kick", "snare", "raw_time", "quantised"):
+        assert anchor in beats, f"BEATSCOPE.md is missing {anchor!r}"
+    for doc, name in ((agent, "AGENT.md"), (skill, "SKILL.md")):
+        assert "kick" not in doc and "snare" not in doc, f"{name} restates the instrument rule"
+
+    # The flow lives in AGENT.md only.
+    for doc, name in ((beats, "BEATSCOPE.md"), (skill, "SKILL.md")):
+        assert "Work with the user" not in doc, f"{name} restates the collaboration flow"
+
+    # The API and the primitive live in SKILL.md; the inventory in README.md.
+    for anchor in ("getVisualState", "getResponseEvents", "budget", "measured"):
+        assert anchor in skill, f"SKILL.md is missing {anchor!r}"
+    readme = members["README.md"].decode("utf-8")
+    for anchor in ("Not in this package", "Authority", "in full"):
+        assert anchor in readme, f"README.md is missing {anchor!r}"
+
+    # The entry points at every authority so a reader can stop early.
+    for pointer in ("BEATSCOPE.md", "SKILL.md", "references/schema.md", "README.md"):
+        assert pointer in agent, f"AGENT.md does not point at {pointer}"
+    assert "AGENT.md" in beats and "AGENT.md" in skill, "reference documents must name the entry point"
+    assert "AGENT.md" in schema
 
 
 def test_probe_ships_in_package_and_stays_dependency_free():

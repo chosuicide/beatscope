@@ -260,7 +260,9 @@ function stubStageCanvas() {
   assert.match(markup, /id="seekRange"[^>]*aria-label="Seek audio"/);
 
   const appMarkup = await readFile(new URL('../beatscope/web/app/index.html', import.meta.url), 'utf-8');
-  assert.match(appMarkup, /<title>Beathi Canvas · BeatScope<\/title>/);
+  // /app/ now serves the automatic music-video studio; the spatial canvas
+  // stays reachable at /app/?canvas=1 from the same bundle.
+  assert.match(appMarkup, /<title>[^<]*Beathi[^<]*<\/title>/);
   assert.match(appMarkup, /<div id="root"><\/div>/);
 }
 

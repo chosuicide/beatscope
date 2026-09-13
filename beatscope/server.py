@@ -15,6 +15,7 @@ from .schema import load_rhythm_project
 from .web_api import WebApi, MAX_UPLOAD_BYTES
 from .exports import generate_rhythm_midi, generate_rhythm_csv, generate_codex_export
 from .response_relevance import build_response_relevance, canonical_response_relevance_bytes
+from .media_http import describe_media
 
 ROOT = Path(__file__).parent / "web"
 RUNTIME_ROOT = Path(__file__).parent / "runtime"
@@ -25,8 +26,53 @@ PROJECT_MANAGER = ProjectManager()
 JOB_MANAGER = JobManager(PROJECT_MANAGER)
 WEB_API = WebApi(PROJECT_MANAGER, JOB_MANAGER)
 
+from .mv_jobs import MovieJobs, renderer_tools
+MOVIE_JOBS = MovieJobs(PROJECT_MANAGER)
+
 
 class Handler(BaseHTTPRequestHandler):
+    def parse_request(self):
+        if not super().parse_request():
+            return False
+        host = urlparse('//' + self.headers.get('Host', '')).hostname
+        allowed = {'localhost', '127.0.0.1', '::1', self.server.server_address[0]}
+        if host and host not in allowed:
+            self.send_error(403, "Unrecognized local host")
+            return False
+        return True
+
+    def _same_origin(self):
+        origin = self.headers.get("Origin")
+        if origin and origin != 'http://' + self.headers.get("Host", ""):
+            self.close_connection = True
+            self._send(403, b'{"message":"Cross-origin write refused"}', "application/json")
+            return False
+        return True
+
+    def _send_media(self, target, extra=None):
+        status, headers, start, length = describe_media(target, self.headers.get('Range'))
+        headers.update(extra or {})
+        self.send_response(status)
+        for key, value in headers.items():
+            self.send_header(key, value)
+        self.end_headers()
+        if self.command == 'HEAD':
+            return
+        try:
+            with target.open('rb') as source:
+                source.seek(start)
+                while length:
+                    chunk = source.read(min(length, 1024 * 1024))
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+                    length -= len(chunk)
+        except (BrokenPipeError, ConnectionResetError):
+            pass  # A media seek or closed tab may abandon the previous request.
+
+    def do_HEAD(self):
+        self.do_GET()
+
     def _send(self, status: int, data: bytes, content_type: str, headers: dict[str, str] | None = None) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
@@ -36,12 +82,36 @@ class Handler(BaseHTTPRequestHandler):
                 if k.lower() not in ("content-type", "content-length"):
                     self.send_header(k, v)
         self.end_headers()
-        self.wfile.write(data)
+        if self.command != 'HEAD':
+            self.wfile.write(data)
 
     def do_GET(self) -> None:
         route = urlparse(self.path)
         path = route.path
         query = parse_qs(route.query)
+
+        if path == "/api/movies/capabilities":
+            tools = renderer_tools()
+            self._send(200, json.dumps({"available": tools["available"], "message": tools["message"]}).encode(), "application/json")
+            return
+        if path.startswith("/api/movies/"):
+            parts = path.strip("/").split("/")
+            job = MOVIE_JOBS.get(parts[2]) if len(parts) == 3 or (len(parts) == 4 and parts[3] == "video") else None
+            if not job:
+                self._send(404, b'{"message":"Movie not found"}', "application/json")
+                return
+            if len(parts) == 4 and parts[3] == "video":
+                target = MOVIE_JOBS.video(parts[2])
+                if not target:
+                    self._send(404, b'{"message":"Movie not ready"}', "application/json")
+                    return
+                headers = {"Content-Type": "video/mp4"}
+                if "download" in query:
+                    headers["Content-Disposition"] = 'attachment; filename="beathi-music-video.mp4"'
+                self._send_media(target, headers)
+                return
+            self._send(200, json.dumps(job, ensure_ascii=False).encode(), "application/json")
+            return
 
         # Legacy /api/project route
         if path == "/api/project":
@@ -122,9 +192,7 @@ class Handler(BaseHTTPRequestHandler):
                     else:
                         self._send(404, b"Project media not found", "text/plain")
                         return
-                status, resp_headers, body = WEB_API._serve_file_range(target, self.headers.get("Range"))
-                ct = resp_headers.get("Content-Type", "audio/wav")
-                self._send(status, body, ct, resp_headers)
+                self._send_media(target)
                 return
             # Fallback to latest project audio
             projects = PROJECT_MANAGER.list_projects()
@@ -132,15 +200,20 @@ class Handler(BaseHTTPRequestHandler):
                 latest_id = projects[-1].get("project_id")
                 audio_path = PROJECT_MANAGER.get_project_audio_path(latest_id)
                 if audio_path and audio_path.is_file():
-                    status, resp_headers, body = WEB_API._serve_file_range(audio_path, self.headers.get("Range"))
-                    ct = resp_headers.get("Content-Type", "audio/wav")
-                    self._send(status, body, ct, resp_headers)
+                    self._send_media(audio_path)
                     return
             self._send(404, b"No project configured", "text/plain")
             return
 
         # Modern REST API routes
         if path.startswith("/api/"):
+            parts = path.strip('/').split('/')
+            if len(parts) == 4 and parts[:2] == ['api', 'projects'] and parts[3] == 'audio':
+                valid_id = len(parts[2]) == 12 and all(c in '0123456789abcdef' for c in parts[2])
+                target = PROJECT_MANAGER.get_project_audio_path(parts[2]) if valid_id else None
+                if target and target.is_file():
+                    self._send_media(target)
+                    return
             headers_dict = {k: v for k, v in self.headers.items()}
             status, resp_headers, body = WEB_API.handle_get(path, query, headers_dict)
             ct = resp_headers.get("Content-Type", "application/json")
@@ -167,7 +240,13 @@ class Handler(BaseHTTPRequestHandler):
             ext = asset_file.suffix.lower()
             kind_map = {
                 ".html": "text/html; charset=utf-8",
+                # .mjs must be a JavaScript MIME or browsers refuse to import
+                # the shared template modules (mv-frame/mv-plan/mv-visual).
+                ".mjs": "text/javascript; charset=utf-8",
                 ".js": "text/javascript; charset=utf-8",
+                ".webp": "image/webp",
+                ".mp4": "video/mp4",
+                ".m4a": "audio/mp4",
                 ".css": "text/css; charset=utf-8",
                 ".json": "application/json; charset=utf-8",
                 ".svg": "image/svg+xml",
@@ -183,8 +262,35 @@ class Handler(BaseHTTPRequestHandler):
             self._send(404, b"Not found", "text/plain")
 
     def do_POST(self) -> None:
+        if not self._same_origin():
+            return
         route = urlparse(self.path)
         path = route.path
+
+        if path == "/api/movies":
+            if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
+                self._send(415, b'{"message":"JSON request required"}', "application/json")
+                return
+            size = self.headers.get("Content-Length", "0")
+            if not size.isdigit() or not 0 < int(size) <= 1024:
+                self._send(400, b'{"message":"Invalid request"}', "application/json")
+                return
+            try:
+                data = json.loads(self.rfile.read(int(size)))
+                if not isinstance(data, dict) or not isinstance(data.get("project_id"), str):
+                    raise ValueError("project_id required")
+                job = MOVIE_JOBS.submit(data["project_id"], seed=data.get("seed"))
+                self._send(202, json.dumps(job).encode(), "application/json")
+            except RuntimeError as exc:
+                self._send(409, json.dumps({"message": str(exc)}).encode(), "application/json")
+            except (ValueError, OSError) as exc:
+                self._send(422, json.dumps({"message": str(exc)}).encode(), "application/json")
+            return
+        if path.startswith("/api/movies/") and path.endswith("/cancel"):
+            job_id = path.strip("/").split("/")[2]
+            ok = MOVIE_JOBS.cancel(job_id)
+            self._send(200 if ok else 409, json.dumps({"cancelled": ok}).encode(), "application/json")
+            return
 
         # 1. Modern /api/jobs/analyze
         if path == "/api/jobs/analyze":
@@ -338,8 +444,22 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, b"Not found", "text/plain")
 
     def do_PUT(self) -> None:
+        if not self._same_origin():
+            return
         route = urlparse(self.path)
         path = route.path
+        if path.startswith("/api/projects/") and path.endswith("/composition"):
+            from .composition import MAX_COMPOSITION_BYTES
+
+            raw_size = self.headers.get("Content-Length", "")
+            if not raw_size.isdigit() or int(raw_size) > MAX_COMPOSITION_BYTES:
+                self.close_connection = True
+                self._send(413 if raw_size.isdigit() else 400, b'{"error":"composition/body-length"}', "application/json")
+                return
+            body = self.rfile.read(int(raw_size))
+            status, response_headers, response_body = WEB_API.handle_put_composition(path, body, dict(self.headers.items()))
+            self._send(status, response_body, "application/json", response_headers)
+            return
         if path.startswith("/api/projects/") and (path.endswith("/direction") or path.endswith("/workspace")):
             raw_size = self.headers.get("Content-Length", "0")
             size = int(raw_size) if raw_size.isdigit() else 0
@@ -352,6 +472,8 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, b"Not found", "text/plain")
 
     def do_DELETE(self) -> None:
+        if not self._same_origin():
+            return
         route = urlparse(self.path)
         query = parse_qs(route.query)
         status, resp_headers, body = WEB_API.handle_delete(route.path, query)

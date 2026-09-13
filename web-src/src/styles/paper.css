@@ -1,0 +1,53 @@
+/**
+ * The wall — the movie studio (`/`), which is the product.
+ *
+ * The supplied drawing is the surface itself, not a picture behind the
+ * interface: it is painted on the studio root with `background-attachment:
+ * fixed` and `cover`, and the chrome that used to paint its own paper tone
+ * (`.topbar`, `.mv-body`, `.mv-stage`, `.mv-rail`, `.card`) goes transparent so
+ * they read as windows onto that one continuous sheet — the marks run straight
+ * through a panel edge instead of restarting inside it.
+ *
+ * Instruments stay opaque on purpose: the video frame, and the cue-map plots
+ * (`.cm-stack`), keep their own plates so the charts and the film never sit
+ * directly on the drawing.
+ *
+ * Baked from the supplied PNG (1672x941) to 2048x1153 by
+ * build/bake-paper-wall.py; the source is build/paper-wall-src.png.
+ *
+ * Scope: the Beathi Canvas workspace (`?canvas`) and the new workspace
+ * (`?composition=1`) keep their own surfaces — this sheet is the movie
+ * studio's alone. To move it, edit the two rule sets below.
+ */
+body .mv-shell {
+  background-image: url('./paper-wall.webp');
+  background-image: image-set(url('./paper-wall.avif') type('image/avif'), url('./paper-wall.webp') type('image/webp'));
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+.mv-shell .topbar,
+.mv-shell .mv-body,
+.mv-shell .mv-stage,
+.mv-shell .mv-rail,
+.mv-shell .card {
+  background: transparent;
+}
+
+/* The analysis panel and the transport pill used to paint their own paper and
+   read as cards pasted over the sheet. They join the wall now; the two chart
+   plates keep a light wash so the waveform hairlines never sit on the drawing
+   itself. */
+.mv-shell .cm {
+  background: transparent;
+}
+
+.mv-shell .cm-stack {
+  background: color-mix(in srgb, var(--paper-0) 58%, transparent);
+}
+
+.mv-shell .mv-transport {
+  background: color-mix(in srgb, var(--paper-1) 62%, transparent);
+}
