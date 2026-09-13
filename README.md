@@ -50,6 +50,8 @@ The Studio is deliberately one screen rather than an editing timeline:
 
 The media element is the only playback clock. The film preview, playhead, structure list and both maps read that clock; seeking does not restart analysis or invent a second timeline.
 
+In a WebMCP-capable browser, the same Studio also becomes a bounded Director for an Agent. Seven tools can inspect the visible song, explain why the film reacts, control audition playback, start or cancel a render, and prepare the timing-package download. State-changing calls are visible in the interface and audition state can be restored; browsers without WebMCP keep the ordinary Studio experience.
+
 ## Why dense songs do not drive every frame
 
 A dense mix can contain many valid onsets. Reacting to all of them produces jitter even when every timestamp is correct. BeatScope keeps every raw event and adds an optional `response_relevance` ordering learned from licensed human-authored chart consensus.
@@ -98,6 +100,10 @@ One frozen handoff already drives three independent reference consumers:
 | [Open example](examples/canvas-particles) | [Open example](examples/threejs-geometry) | [Open example](examples/remotion-composition) |
 
 A separate fresh-context Codex run received only the frozen task and handoff, then produced the dependency-free Canvas work **Orbital Notation**. It passed browser play, seek, replay, deterministic-state and reduced-motion checks without source repair. [Run record](evaluations/agent-interoperability/runs/codex-canvas-2026-09-02.json) · [conformance table](evaluations/agent-interoperability/conformance.md)
+
+## Work with BeatScope from the browser
+
+In a WebMCP-capable browser the studio registers seven tools, so an Agent can inspect the loaded song, ask for a bounded set of original response timestamps, explain why the movie cuts where it does, audition a passage, start a seeded render, and prepare the timing package — without receiving the source audio or running a second analysis. Buttons and tools call the same functions; every page-changing call appears in a strip above the transport, with Restore after an audition. Ordinary browsers show nothing new. Everything runs on the user's machine, and response relevance is an ordering value, never a probability or a confidence. Contract, budgets and local verification: [docs/webmcp-studio.md](docs/webmcp-studio.md).
 
 ## MCP
 

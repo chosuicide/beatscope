@@ -16,7 +16,7 @@
  */
 import { createTrack, type RuntimeTrack } from '../../../beatscope/runtime/runtime.js';
 import { LIMITS } from './contracts.js';
-import { ToolError, failure, sanitizeLabel, sanitizeNumber, success } from './responses.js';
+import { ToolError, failure, fitPageToBudget, sanitizeLabel, sanitizeNumber, success } from './responses.js';
 import type { MovieRhythm } from '../movie/types.js';
 import type { ResponseRelevanceSidecar, StudioDirectorSnapshot, ToolResult } from './types.js';
 
@@ -197,12 +197,6 @@ function inRange(time: number, range: ResolvedRange): boolean {
   return time > range.start && time <= range.end;
 }
 
-function paginate<T>(items: T[], limit: number, offset: number) {
-  const page = items.slice(offset, offset + limit);
-  const next = offset + page.length;
-  return { page, has_more: next < items.length, next_offset: next < items.length ? next : null };
-}
-
 type EventRow = Record<string, unknown> & { kind: string; time: number };
 
 function sortRows(rows: EventRow[]): EventRow[] {
@@ -282,8 +276,7 @@ export function inspectTiming(snapshot: StudioDirectorSnapshot, input: InspectTi
     }
 
     const sorted = sortRows(rows);
-    const { page, has_more, next_offset } = paginate(sorted, limit, offset);
-    return success(
+    const envelope = (page: EventRow[], next: number, more: boolean, count: number) => success(
       tool,
       `${sorted.length} event(s) between ${sanitizeNumber(range.start)} s and ${sanitizeNumber(range.end)} s.`,
       {
@@ -294,13 +287,15 @@ export function inspectTiming(snapshot: StudioDirectorSnapshot, input: InspectTi
         end_bar: range.endBar,
         include: [...include].sort(),
         total: sorted.length,
-        count: page.length,
+        count,
         offset,
-        has_more,
-        next_offset,
+        has_more: more,
+        next_offset: more ? next : null,
         events: page,
       },
     );
+    const fitted = fitPageToBudget(sorted, offset, limit, envelope);
+    return envelope(fitted.page, fitted.nextOffset, fitted.hasMore, fitted.count) as ToolResult;
   } catch (error) {
     if (error instanceof ToolError) return failure(tool, error.code, error.message, error.nextAction);
     return failure(tool, 'internal_error', 'The timing query failed.', 'Report this to the user; the studio console has the details.');

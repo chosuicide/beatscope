@@ -50,6 +50,8 @@ Studio 刻意做成一个页面，而不是另一条剪辑时间线：
 
 媒体元素是唯一播放时钟。预览、播放头、结构列表和两张节奏图都读取它；Seek 不会重启分析，也不会偷偷产生第二套时间线。
 
+在支持 WebMCP 的浏览器中，同一个 Studio 也会成为 Agent 可调用、边界明确的 Director。七个工具可以检查当前歌曲、解释画面为何响应、控制试听、开始或取消渲染，并准备时序包下载。会改变状态的调用会在界面中留下可见反馈，试听状态也可恢复；不支持 WebMCP 的浏览器仍保持普通 Studio 体验。
+
 ## 密集歌曲为什么不会让每一帧都动
 
 密集混音里可能有很多有效 onset。即使每个时间戳都正确，让动画或剪辑响应全部事件仍会显得抽搐。BeatScope 保留所有原始事件，并增加可选的 `response_relevance` 排序；它来自有授权的人类谱面共识。
@@ -98,6 +100,10 @@ beatscope validate-consumer examples\remotion-composition --offline
 | [打开示例](examples/canvas-particles) | [打开示例](examples/threejs-geometry) | [打开示例](examples/remotion-composition) |
 
 另一次全新上下文 Codex 实测只拿到了冻结任务与交接包，随后独立生成零依赖 Canvas 作品 **Orbital Notation**。它通过了浏览器播放、Seek、重放、确定性状态和 reduced-motion 检查，源代码无需人工返修。[运行记录](evaluations/agent-interoperability/runs/codex-canvas-2026-09-02.json) · [符合性表格](evaluations/agent-interoperability/conformance.md)
+
+## 在浏览器里与工作室协作
+
+在支持 WebMCP 的浏览器里，工作室会注册七个工具：Agent 可以查看已加载的歌曲、请求一组有界的原始响应时刻、解释某个镜头为什么在这里切、试听一段、以指定种子开始渲染，并准备时序包——全程拿不到原始音频，也不会跑第二套分析。按钮和工具走同一批函数；每一次会改动页面的调用都会出现在传送条上方的窄条里，试听后可以 Restore。普通浏览器看不到任何新增界面。所有计算都留在用户本机；`response_relevance` 是排序值，绝不是概率或置信度。契约、限额与本地验证步骤见 [docs/webmcp-studio.md](docs/webmcp-studio.md)。
 
 ## MCP
 

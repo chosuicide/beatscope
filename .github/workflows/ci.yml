@@ -181,3 +181,31 @@ jobs:
 
       - name: Timing, cut plan and encoder failure contracts
         run: node --test tests/test_movie_plan.js tests/test_movie_safety.js
+
+      - name: Studio Director contracts, queries, actions, registration
+        run: node --test tests/test_studio_webmcp_contracts.js tests/test_studio_webmcp_queries.js tests/test_studio_webmcp_actions.js tests/test_studio_webmcp_registration.js
+
+      - name: Install locked browser dependencies
+        run: npm ci --prefix tests/browser --no-audit --no-fund
+
+      - name: Install pinned browser
+        working-directory: tests/browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Studio Director browser round trip
+        run: |
+          python tests/browser/studio_webmcp_server.py --port 8771 > build/studio-webmcp-server.json &
+          SERVER_PID=$!
+          sleep 3
+          node tests/browser/studio-webmcp-smoke.mjs http://127.0.0.1:8771
+          STATUS=$?
+          kill $SERVER_PID || true
+          exit $STATUS
+
+      - name: Upload Studio Director failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-webmcp-failure
+          path: build/studio-webmcp-server.json
+          retention-days: 7

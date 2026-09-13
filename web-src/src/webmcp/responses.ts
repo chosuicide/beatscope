@@ -116,3 +116,33 @@ export function resultCodeUnits(value: unknown): number {
 export function withinResultBudget(value: unknown): boolean {
   return resultCodeUnits(value) <= LIMITS.result_code_units;
 }
+
+/**
+ * Keep a paginated result inside the code-unit budget by shrinking the page,
+ * never by truncating an event (plan sections 4.2 and 9.2). `total`,
+ * `has_more` and `next_offset` stay honest, so the caller simply pages on.
+ */
+export function fitPageToBudget<T>(
+  rows: T[],
+  offset: number,
+  limit: number,
+  build: (page: T[], nextOffset: number, hasMore: boolean, count: number) => unknown,
+): { page: T[]; nextOffset: number; hasMore: boolean; count: number } {
+  const slice = (size: number) => {
+    const page = rows.slice(offset, offset + size);
+    const nextOffset = offset + size;
+    return { page, nextOffset, hasMore: nextOffset < rows.length, count: page.length };
+  };
+  const wanted = Math.max(0, Math.min(limit, Math.max(0, rows.length - offset)));
+  let candidate = slice(wanted);
+  let envelope = build(candidate.page, candidate.nextOffset, candidate.hasMore, candidate.count);
+  if (resultCodeUnits(envelope) <= LIMITS.result_code_units || wanted <= 1) return candidate;
+  const units = resultCodeUnits(envelope) || 1;
+  let size = Math.max(1, Math.min(wanted - 1, Math.floor(wanted * (LIMITS.result_code_units / units) * 0.95)));
+  for (;;) {
+    candidate = slice(size);
+    envelope = build(candidate.page, candidate.nextOffset, candidate.hasMore, candidate.count);
+    if (resultCodeUnits(envelope) <= LIMITS.result_code_units || size === 1) return candidate;
+    size = Math.max(1, size - Math.max(1, Math.floor(size * 0.1)));
+  }
+}
