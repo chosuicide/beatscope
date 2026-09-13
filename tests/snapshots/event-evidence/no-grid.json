@@ -1,0 +1,465 @@
+{
+  "schema": "beatscope-event-evidence-1",
+  "method": "multiview-local-evidence-v1",
+  "project_id": "a1b2c3d4e5f0",
+  "parameters": {
+    "local_radius_seconds": 2.0,
+    "local_scale_floor": 0.08,
+    "group_max_gap_seconds": 0.18,
+    "group_max_duration_seconds": 1.5,
+    "group_min_events": 3
+  },
+  "events": [
+    {
+      "onset_id": 1,
+      "local": {
+        "sample_count": 6,
+        "rank": {
+          "all": 0.166667,
+          "low": 0.75,
+          "mid": 0.083333,
+          "high": 0.166667
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.795918,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.625,
+          "mid": 0.1875,
+          "high": 0.1875
+        },
+        "focus": 0.161221,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 3.0,
+        "previous_gap_seconds": null,
+        "next_gap_seconds": 0.383,
+        "isolatedness": 0.383
+      },
+      "metric": null,
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 2,
+      "local": {
+        "sample_count": 7,
+        "rank": {
+          "all": 0.428571,
+          "low": 0.285714,
+          "mid": 0.928571,
+          "high": 0.357143
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 1.098361,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.1875,
+          "mid": 0.625,
+          "high": 0.1875
+        },
+        "focus": 0.161221,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 2.937474,
+        "previous_gap_seconds": 0.383,
+        "next_gap_seconds": 0.383,
+        "isolatedness": 0.383
+      },
+      "metric": null,
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 3,
+      "local": {
+        "sample_count": 8,
+        "rank": {
+          "all": 0.625,
+          "low": 0.4375,
+          "mid": 0.375,
+          "high": 0.9375
+        },
+        "contrast": {
+          "all": 0.3125,
+          "low": 0.0,
+          "mid": 0.0,
+          "high": 1.10219
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.1875,
+          "mid": 0.1875,
+          "high": 0.625
+        },
+        "focus": 0.161221,
+        "active_band_count": 1,
+        "dominant_band": "high"
+      },
+      "temporal": {
+        "events_per_second": 2.892263,
+        "previous_gap_seconds": 0.383,
+        "next_gap_seconds": 0.383,
+        "isolatedness": 0.383
+      },
+      "metric": null,
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 4,
+      "local": {
+        "sample_count": 9,
+        "rank": {
+          "all": 0.888889,
+          "low": 0.944444,
+          "mid": 0.611111,
+          "high": 0.555556
+        },
+        "contrast": {
+          "all": 1.0,
+          "low": 1.101266,
+          "mid": 0.042254,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.625,
+          "mid": 0.1875,
+          "high": 0.1875
+        },
+        "focus": 0.161221,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 2.85805,
+        "previous_gap_seconds": 0.383,
+        "next_gap_seconds": 0.383,
+        "isolatedness": 0.383
+      },
+      "metric": null,
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 5,
+      "local": {
+        "sample_count": 10,
+        "rank": {
+          "all": 0.15,
+          "low": 0.1,
+          "mid": 0.75,
+          "high": 0.1
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.826087,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.1875,
+          "mid": 0.625,
+          "high": 0.1875
+        },
+        "focus": 0.161221,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 2.831257,
+        "previous_gap_seconds": 0.383,
+        "next_gap_seconds": 0.318,
+        "isolatedness": 0.318
+      },
+      "metric": null,
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 6,
+      "local": {
+        "sample_count": 11,
+        "rank": {
+          "all": 0.409091,
+          "low": 0.272727,
+          "mid": 0.272727,
+          "high": 0.863636
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.0,
+          "high": 1.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.1875,
+          "mid": 0.1875,
+          "high": 0.625
+        },
+        "focus": 0.161221,
+        "active_band_count": 1,
+        "dominant_band": "high"
+      },
+      "temporal": {
+        "events_per_second": 2.857143,
+        "previous_gap_seconds": 0.318,
+        "next_gap_seconds": 0.383,
+        "isolatedness": 0.318
+      },
+      "metric": null,
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 7,
+      "local": {
+        "sample_count": 11,
+        "rank": {
+          "all": 0.590909,
+          "low": 0.863636,
+          "mid": 0.363636,
+          "high": 0.363636
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 1.0,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.625,
+          "mid": 0.1875,
+          "high": 0.1875
+        },
+        "focus": 0.161221,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 2.75,
+        "previous_gap_seconds": 0.383,
+        "next_gap_seconds": 0.383,
+        "isolatedness": 0.383
+      },
+      "metric": null,
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 8,
+      "local": {
+        "sample_count": 10,
+        "rank": {
+          "all": 0.85,
+          "low": 0.6,
+          "mid": 0.95,
+          "high": 0.5
+        },
+        "contrast": {
+          "all": 0.625,
+          "low": 0.019608,
+          "mid": 1.117647,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.1875,
+          "mid": 0.625,
+          "high": 0.1875
+        },
+        "focus": 0.161221,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 2.5,
+        "previous_gap_seconds": 0.383,
+        "next_gap_seconds": 0.383,
+        "isolatedness": 0.383
+      },
+      "metric": null,
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 9,
+      "local": {
+        "sample_count": 9,
+        "rank": {
+          "all": 0.111111,
+          "low": 0.111111,
+          "mid": 0.055556,
+          "high": 0.722222
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.0,
+          "high": 0.794118
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.1875,
+          "mid": 0.1875,
+          "high": 0.625
+        },
+        "focus": 0.161221,
+        "active_band_count": 1,
+        "dominant_band": "high"
+      },
+      "temporal": {
+        "events_per_second": 2.25,
+        "previous_gap_seconds": 0.383,
+        "next_gap_seconds": 0.383,
+        "isolatedness": 0.383
+      },
+      "metric": null,
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 10,
+      "local": {
+        "sample_count": 8,
+        "rank": {
+          "all": 0.375,
+          "low": 0.8125,
+          "mid": 0.25,
+          "high": 0.1875
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.956204,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.625,
+          "mid": 0.1875,
+          "high": 0.1875
+        },
+        "focus": 0.161221,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 2.0,
+        "previous_gap_seconds": 0.383,
+        "next_gap_seconds": 0.318,
+        "isolatedness": 0.318
+      },
+      "metric": null,
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 11,
+      "local": {
+        "sample_count": 7,
+        "rank": {
+          "all": 0.571429,
+          "low": 0.357143,
+          "mid": 0.785714,
+          "high": 0.285714
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.950617,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.1875,
+          "mid": 0.625,
+          "high": 0.1875
+        },
+        "focus": 0.161221,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 1.75,
+        "previous_gap_seconds": 0.318,
+        "next_gap_seconds": 0.383,
+        "isolatedness": 0.318
+      },
+      "metric": null,
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 12,
+      "local": {
+        "sample_count": 6,
+        "rank": {
+          "all": 0.833333,
+          "low": 0.5,
+          "mid": 0.583333,
+          "high": 0.916667
+        },
+        "contrast": {
+          "all": 0.625,
+          "low": 0.0,
+          "mid": 0.018634,
+          "high": 1.212766
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.1875,
+          "mid": 0.1875,
+          "high": 0.625
+        },
+        "focus": 0.161221,
+        "active_band_count": 1,
+        "dominant_band": "high"
+      },
+      "temporal": {
+        "events_per_second": 1.5,
+        "previous_gap_seconds": 0.383,
+        "next_gap_seconds": null,
+        "isolatedness": 0.383
+      },
+      "metric": null,
+      "structure": null,
+      "group_id": null
+    }
+  ],
+  "groups": [],
+  "diagnostics": {
+    "onset_count": 12,
+    "group_count": 0,
+    "beat_context_available": false,
+    "structure_context_available": false
+  }
+}

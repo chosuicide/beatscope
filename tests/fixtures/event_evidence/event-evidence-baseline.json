@@ -1,0 +1,97 @@
+{
+  "schema": "beatscope-event-evidence-baseline-1",
+  "generator_version": "event-evidence-fixtures-v1",
+  "match_tolerance_seconds": 0.05,
+  "note": "Characterization of current analysis behavior. Synthetic roles are not perceptual labels and accent membership is not asserted to be truth.",
+  "cases": {
+    "dense-low-foreground": {
+      "kind": "audio",
+      "raw_onset_count": 100,
+      "accent_count": 8,
+      "truth_event_count": 104,
+      "matched_truth_count": 100,
+      "precision_at_50ms": 1.0,
+      "recall_at_50ms": 0.961538,
+      "median_error_seconds": 0.0024,
+      "max_error_seconds": 0.0422,
+      "onsets_sha256": "1414d77136688025591efbf5bf8860150d5c14de5ed477f2f5ed5ac4a2fb13a0"
+    },
+    "dense-high-foreground": {
+      "kind": "audio",
+      "raw_onset_count": 71,
+      "accent_count": 15,
+      "truth_event_count": 72,
+      "matched_truth_count": 71,
+      "precision_at_50ms": 1.0,
+      "recall_at_50ms": 0.986111,
+      "median_error_seconds": 0.0015,
+      "max_error_seconds": 0.0058,
+      "onsets_sha256": "52429e8d27d866ffb201f66b9372af1c3617b3fb2237c7cbf72f5a4d94b6cc98"
+    },
+    "broadband-foreground": {
+      "kind": "audio",
+      "raw_onset_count": 37,
+      "accent_count": 6,
+      "truth_event_count": 50,
+      "matched_truth_count": 37,
+      "precision_at_50ms": 1.0,
+      "recall_at_50ms": 0.74,
+      "median_error_seconds": 0.0028,
+      "max_error_seconds": 0.0128,
+      "onsets_sha256": "81d0943f478be5e82365f06099cdc0f192b3b878554bd20558d35ee6566ebf02"
+    },
+    "accelerating-run": {
+      "kind": "audio",
+      "raw_onset_count": 7,
+      "accent_count": 1,
+      "truth_event_count": 7,
+      "matched_truth_count": 7,
+      "precision_at_50ms": 1.0,
+      "recall_at_50ms": 1.0,
+      "median_error_seconds": 0.0015,
+      "max_error_seconds": 0.0128,
+      "onsets_sha256": "0861b4f66fc909cf9ac7c87c1d48d3a17b9fc9580296f2e7d96b5621cd75ad1a"
+    },
+    "decelerating-run": {
+      "kind": "audio",
+      "raw_onset_count": 7,
+      "accent_count": 1,
+      "truth_event_count": 7,
+      "matched_truth_count": 7,
+      "precision_at_50ms": 1.0,
+      "recall_at_50ms": 1.0,
+      "median_error_seconds": 0.0019,
+      "max_error_seconds": 0.0128,
+      "onsets_sha256": "7445b15d0d11fc4bcca3b77ec747de05074d051fa3ba554b33438a2b98b1b4e7"
+    },
+    "offgrid": {
+      "kind": "audio",
+      "raw_onset_count": 10,
+      "accent_count": 7,
+      "truth_event_count": 10,
+      "matched_truth_count": 10,
+      "precision_at_50ms": 1.0,
+      "recall_at_50ms": 1.0,
+      "median_error_seconds": 0.00145,
+      "max_error_seconds": 0.0041,
+      "onsets_sha256": "27b389bd82df09e6c083ce6cc552b45b9c7f563d8129b6d7e69788e2062decb9"
+    },
+    "silence": {
+      "kind": "audio",
+      "raw_onset_count": 0,
+      "accent_count": 0,
+      "truth_event_count": 0,
+      "matched_truth_count": 0,
+      "precision_at_50ms": null,
+      "recall_at_50ms": null,
+      "median_error_seconds": null,
+      "max_error_seconds": null,
+      "onsets_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "no-grid": {
+      "kind": "project",
+      "onset_count": 12,
+      "onsets_sha256": "281f62ddd019a6cea9b2686c33ed33b15d48a04a4e954da897a8c200b69e6b53"
+    }
+  }
+}

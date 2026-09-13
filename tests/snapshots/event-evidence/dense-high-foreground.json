@@ -1,0 +1,3175 @@
+{
+  "schema": "beatscope-event-evidence-1",
+  "method": "multiview-local-evidence-v1",
+  "project_id": "f93283409b77",
+  "parameters": {
+    "local_radius_seconds": 2.0,
+    "local_scale_floor": 0.08,
+    "group_max_gap_seconds": 0.18,
+    "group_max_duration_seconds": 1.5,
+    "group_min_events": 3
+  },
+  "events": [
+    {
+      "onset_id": 1,
+      "local": {
+        "sample_count": 10,
+        "rank": {
+          "all": 0.55,
+          "low": 0.55,
+          "mid": 0.15,
+          "high": 0.15
+        },
+        "contrast": {
+          "all": 0.6528,
+          "low": 0.821402,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.918954,
+          "mid": 0.067216,
+          "high": 0.01383
+        },
+        "focus": 0.71023,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.985542,
+        "previous_gap_seconds": null,
+        "next_gap_seconds": 0.2438,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 0,
+        "beat_in_bar": 1,
+        "downbeat": true,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 2,
+      "local": {
+        "sample_count": 10,
+        "rank": {
+          "all": 0.45,
+          "low": 0.45,
+          "mid": 0.95,
+          "high": 0.55
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 1.003056,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.017353,
+          "mid": 0.968105,
+          "high": 0.014542
+        },
+        "focus": 0.8514,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.445235,
+        "previous_gap_seconds": 0.2438,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 0,
+        "beat_in_bar": 1,
+        "downbeat": true,
+        "offset_seconds": 0.2438,
+        "offset_ratio": 0.494122
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 3,
+      "local": {
+        "sample_count": 12,
+        "rank": {
+          "all": 0.875,
+          "low": 0.875,
+          "mid": 0.541667,
+          "high": 0.791667
+        },
+        "contrast": {
+          "all": 1.0,
+          "low": 1.0,
+          "mid": 0.000546,
+          "high": 0.0025
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.910332,
+          "mid": 0.075922,
+          "high": 0.013746
+        },
+        "focus": 0.690354,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.801536,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 1,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 4,
+      "local": {
+        "sample_count": 13,
+        "rank": {
+          "all": 0.192308,
+          "low": 0.423077,
+          "mid": 0.730769,
+          "high": 0.807692
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.9891,
+          "high": 0.000254
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.014732,
+          "mid": 0.97034,
+          "high": 0.014928
+        },
+        "focus": 0.859717,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.729336,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2497,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 1,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": 0.2496,
+        "offset_ratio": 0.505878
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 5,
+      "local": {
+        "sample_count": 14,
+        "rank": {
+          "all": 0.892857,
+          "low": 0.892857,
+          "mid": 0.464286,
+          "high": 0.607143
+        },
+        "contrast": {
+          "all": 1.0,
+          "low": 1.0,
+          "mid": 0.0,
+          "high": 0.000145
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.911244,
+          "mid": 0.075087,
+          "high": 0.013669
+        },
+        "focus": 0.692542,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.669001,
+        "previous_gap_seconds": 0.2497,
+        "next_gap_seconds": 0.0986,
+        "isolatedness": 0.0986
+      },
+      "metric": {
+        "beat_index": 2,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": 1
+    },
+    {
+      "onset_id": 6,
+      "local": {
+        "sample_count": 15,
+        "rank": {
+          "all": 0.1,
+          "low": 0.1,
+          "mid": 0.033333,
+          "high": 0.933333
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.0,
+          "high": 1.666441
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.0,
+          "mid": 0.0,
+          "high": 1.0
+        },
+        "focus": 1.0,
+        "active_band_count": 1,
+        "dominant_band": "high"
+      },
+      "temporal": {
+        "events_per_second": 4.84324,
+        "previous_gap_seconds": 0.0986,
+        "next_gap_seconds": 0.1568,
+        "isolatedness": 0.0986
+      },
+      "metric": {
+        "beat_index": 2,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": 0.0986,
+        "offset_ratio": 0.197476
+      },
+      "structure": null,
+      "group_id": 1
+    },
+    {
+      "onset_id": 7,
+      "local": {
+        "sample_count": 16,
+        "rank": {
+          "all": 0.03125,
+          "low": 0.09375,
+          "mid": 0.59375,
+          "high": 0.03125
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.98299,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.0,
+          "mid": 0.98657,
+          "high": 0.01343
+        },
+        "focus": 0.935169,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.917176,
+        "previous_gap_seconds": 0.1568,
+        "next_gap_seconds": 0.2438,
+        "isolatedness": 0.1568
+      },
+      "metric": {
+        "beat_index": 3,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": -0.2438,
+        "offset_ratio": -0.488381
+      },
+      "structure": null,
+      "group_id": 1
+    },
+    {
+      "onset_id": 8,
+      "local": {
+        "sample_count": 16,
+        "rank": {
+          "all": 0.90625,
+          "low": 0.90625,
+          "mid": 0.40625,
+          "high": 0.625
+        },
+        "contrast": {
+          "all": 1.0,
+          "low": 1.0,
+          "mid": 0.0,
+          "high": 0.000203
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.914327,
+          "mid": 0.071958,
+          "high": 0.013715
+        },
+        "focus": 0.69954,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.574435,
+        "previous_gap_seconds": 0.2438,
+        "next_gap_seconds": 0.2554,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 3,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 9,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.194444,
+          "low": 0.194444,
+          "mid": 0.694444,
+          "high": 0.138889
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.995093,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.003947,
+          "mid": 0.982434,
+          "high": 0.013619
+        },
+        "focus": 0.911006,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.796035,
+        "previous_gap_seconds": 0.2554,
+        "next_gap_seconds": 0.2438,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 4,
+        "beat_in_bar": 1,
+        "downbeat": true,
+        "offset_seconds": -0.2438,
+        "offset_ratio": -0.488381
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 10,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.75,
+          "low": 0.75,
+          "mid": 0.305556,
+          "high": 0.416667
+        },
+        "contrast": {
+          "all": 0.992071,
+          "low": 0.996441,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.918771,
+          "mid": 0.067583,
+          "high": 0.013646
+        },
+        "focus": 0.710062,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.50349,
+        "previous_gap_seconds": 0.2438,
+        "next_gap_seconds": 0.2554,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 4,
+        "beat_in_bar": 1,
+        "downbeat": true,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 11,
+      "local": {
+        "sample_count": 19,
+        "rank": {
+          "all": 0.368421,
+          "low": 0.105263,
+          "mid": 0.894737,
+          "high": 0.131579
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 1.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.0,
+          "mid": 0.986096,
+          "high": 0.013904
+        },
+        "focus": 0.933321,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.75,
+        "previous_gap_seconds": 0.2554,
+        "next_gap_seconds": 0.2438,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 5,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": -0.2438,
+        "offset_ratio": -0.488381
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 12,
+      "local": {
+        "sample_count": 19,
+        "rank": {
+          "all": 0.657895,
+          "low": 0.657895,
+          "mid": 0.236842,
+          "high": 0.263158
+        },
+        "contrast": {
+          "all": 0.980879,
+          "low": 0.991468,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.924569,
+          "mid": 0.061725,
+          "high": 0.013706
+        },
+        "focus": 0.723998,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.75,
+        "previous_gap_seconds": 0.2438,
+        "next_gap_seconds": 0.1219,
+        "isolatedness": 0.1219
+      },
+      "metric": {
+        "beat_index": 5,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": 2
+    },
+    {
+      "onset_id": 13,
+      "local": {
+        "sample_count": 19,
+        "rank": {
+          "all": 0.552632,
+          "low": 0.289474,
+          "mid": 0.078947,
+          "high": 0.921053
+        },
+        "contrast": {
+          "all": 0.004176,
+          "low": 0.0,
+          "mid": 0.0,
+          "high": 1.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.00935,
+          "mid": 0.016655,
+          "high": 0.973995
+        },
+        "focus": 0.874791,
+        "active_band_count": 1,
+        "dominant_band": "high"
+      },
+      "temporal": {
+        "events_per_second": 4.75,
+        "previous_gap_seconds": 0.1219,
+        "next_gap_seconds": 0.1336,
+        "isolatedness": 0.1219
+      },
+      "metric": {
+        "beat_index": 5,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": 0.1219,
+        "offset_ratio": 0.244191
+      },
+      "structure": null,
+      "group_id": 2
+    },
+    {
+      "onset_id": 14,
+      "local": {
+        "sample_count": 19,
+        "rank": {
+          "all": 0.473684,
+          "low": 0.394737,
+          "mid": 0.894737,
+          "high": 0.184211
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 1.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.010919,
+          "mid": 0.974944,
+          "high": 0.014137
+        },
+        "focus": 0.87778,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.75,
+        "previous_gap_seconds": 0.1336,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.1336
+      },
+      "metric": {
+        "beat_index": 6,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": -0.2496,
+        "offset_ratio": -0.49416
+      },
+      "structure": null,
+      "group_id": 2
+    },
+    {
+      "onset_id": 15,
+      "local": {
+        "sample_count": 19,
+        "rank": {
+          "all": 0.605263,
+          "low": 0.605263,
+          "mid": 0.184211,
+          "high": 0.526316
+        },
+        "contrast": {
+          "all": 0.978462,
+          "low": 0.990432,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.928832,
+          "mid": 0.057103,
+          "high": 0.014065
+        },
+        "focus": 0.734187,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.75,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 6,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 16,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.444444,
+          "low": 0.305556,
+          "mid": 0.888889,
+          "high": 0.277778
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 1.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.009566,
+          "mid": 0.976086,
+          "high": 0.014348
+        },
+        "focus": 0.88258,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 6,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": 0.2496,
+        "offset_ratio": 0.49416
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 17,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.75,
+          "low": 0.75,
+          "mid": 0.305556,
+          "high": 0.583333
+        },
+        "contrast": {
+          "all": 0.995595,
+          "low": 0.998061,
+          "mid": 0.0,
+          "high": 0.000169
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.917288,
+          "mid": 0.068927,
+          "high": 0.013785
+        },
+        "focus": 0.706345,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 7,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 18,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.333333,
+          "low": 0.416667,
+          "mid": 0.888889,
+          "high": 0.444444
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 1.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.015043,
+          "mid": 0.970497,
+          "high": 0.01446
+        },
+        "focus": 0.860319,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 7,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": 0.2496,
+        "offset_ratio": 0.5
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 19,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.916667,
+          "low": 0.916667,
+          "mid": 0.472222,
+          "high": 0.75
+        },
+        "contrast": {
+          "all": 1.0,
+          "low": 1.0,
+          "mid": 0.0,
+          "high": 0.000507
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.91166,
+          "mid": 0.074574,
+          "high": 0.013766
+        },
+        "focus": 0.693337,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.0697,
+        "isolatedness": 0.0697
+      },
+      "metric": {
+        "beat_index": 8,
+        "beat_in_bar": 1,
+        "downbeat": true,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": 3
+    },
+    {
+      "onset_id": 20,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.194444,
+          "low": 0.111111,
+          "mid": 0.083333,
+          "high": 0.944444
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.0,
+          "high": 3.331361
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.0,
+          "mid": 0.028843,
+          "high": 0.971157
+        },
+        "focus": 0.881033,
+        "active_band_count": 1,
+        "dominant_band": "high"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.0697,
+        "next_gap_seconds": 0.18,
+        "isolatedness": 0.0697
+      },
+      "metric": {
+        "beat_index": 8,
+        "beat_in_bar": 1,
+        "downbeat": true,
+        "offset_seconds": 0.0697,
+        "offset_ratio": 0.139623
+      },
+      "structure": null,
+      "group_id": 3
+    },
+    {
+      "onset_id": 21,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.138889,
+          "low": 0.472222,
+          "mid": 0.694444,
+          "high": 0.75
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.993895,
+          "high": 0.000507
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.017136,
+          "mid": 0.968162,
+          "high": 0.014702
+        },
+        "focus": 0.851589,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.18,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.18
+      },
+      "metric": {
+        "beat_index": 9,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": -0.2496,
+        "offset_ratio": -0.4999
+      },
+      "structure": null,
+      "group_id": 3
+    },
+    {
+      "onset_id": 22,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.916667,
+          "low": 0.916667,
+          "mid": 0.527778,
+          "high": 0.75
+        },
+        "contrast": {
+          "all": 1.0,
+          "low": 1.0,
+          "mid": 0.001036,
+          "high": 0.000507
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.910084,
+          "mid": 0.076174,
+          "high": 0.013742
+        },
+        "focus": 0.689798,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 9,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 23,
+      "local": {
+        "sample_count": 17,
+        "rank": {
+          "all": 0.029412,
+          "low": 0.5,
+          "mid": 0.558824,
+          "high": 0.911765
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.980247,
+          "high": 0.00375
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.022163,
+          "mid": 0.962931,
+          "high": 0.014906
+        },
+        "focus": 0.832974,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.25,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 9,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": 0.2496,
+        "offset_ratio": 0.4999
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 24,
+      "local": {
+        "sample_count": 17,
+        "rank": {
+          "all": 0.911765,
+          "low": 0.911765,
+          "mid": 0.382353,
+          "high": 0.617647
+        },
+        "contrast": {
+          "all": 1.0,
+          "low": 1.0,
+          "mid": 0.0,
+          "high": 0.00125
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.912658,
+          "mid": 0.073652,
+          "high": 0.01369
+        },
+        "focus": 0.695735,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.25,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2554,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 10,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 25,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.083333,
+          "low": 0.083333,
+          "mid": 0.638889,
+          "high": 0.027778
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.98888,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.0,
+          "mid": 0.986446,
+          "high": 0.013554
+        },
+        "focus": 0.934683,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2554,
+        "next_gap_seconds": 0.2438,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 11,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": -0.2438,
+        "offset_ratio": -0.488381
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 26,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.805556,
+          "low": 0.805556,
+          "mid": 0.361111,
+          "high": 0.444444
+        },
+        "contrast": {
+          "all": 0.996485,
+          "low": 0.998469,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.916139,
+          "mid": 0.07019,
+          "high": 0.013671
+        },
+        "focus": 0.70382,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2438,
+        "next_gap_seconds": 0.2554,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 11,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 27,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.305556,
+          "low": 0.083333,
+          "mid": 0.805556,
+          "high": 0.083333
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.999237,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.0,
+          "mid": 0.986184,
+          "high": 0.013816
+        },
+        "focus": 0.933662,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2554,
+        "next_gap_seconds": 0.2439,
+        "isolatedness": 0.2439
+      },
+      "metric": {
+        "beat_index": 12,
+        "beat_in_bar": 1,
+        "downbeat": true,
+        "offset_seconds": -0.2439,
+        "offset_ratio": -0.488484
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 28,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.666667,
+          "low": 0.666667,
+          "mid": 0.25,
+          "high": 0.333333
+        },
+        "contrast": {
+          "all": 0.987478,
+          "low": 0.994386,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.92126,
+          "mid": 0.06503,
+          "high": 0.01371
+        },
+        "focus": 0.715926,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2439,
+        "next_gap_seconds": 0.2554,
+        "isolatedness": 0.2439
+      },
+      "metric": {
+        "beat_index": 12,
+        "beat_in_bar": 1,
+        "downbeat": true,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 29,
+      "local": {
+        "sample_count": 17,
+        "rank": {
+          "all": 0.382353,
+          "low": 0.205882,
+          "mid": 0.911765,
+          "high": 0.147059
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 1.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.009859,
+          "mid": 0.976182,
+          "high": 0.013959
+        },
+        "focus": 0.882847,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.25,
+        "previous_gap_seconds": 0.2554,
+        "next_gap_seconds": 0.2438,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 13,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": -0.2438,
+        "offset_ratio": -0.488381
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 30,
+      "local": {
+        "sample_count": 17,
+        "rank": {
+          "all": 0.558824,
+          "low": 0.558824,
+          "mid": 0.088235,
+          "high": 0.235294
+        },
+        "contrast": {
+          "all": 0.973175,
+          "low": 0.987825,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.92762,
+          "mid": 0.058674,
+          "high": 0.013706
+        },
+        "focus": 0.731588,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.25,
+        "previous_gap_seconds": 0.2438,
+        "next_gap_seconds": 0.2554,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 13,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 31,
+      "local": {
+        "sample_count": 16,
+        "rank": {
+          "all": 0.46875,
+          "low": 0.15625,
+          "mid": 0.90625,
+          "high": 0.25
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 1.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.009663,
+          "mid": 0.976086,
+          "high": 0.014251
+        },
+        "focus": 0.882545,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.0,
+        "previous_gap_seconds": 0.2554,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 14,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": -0.2496,
+        "offset_ratio": -0.494257
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 32,
+      "local": {
+        "sample_count": 17,
+        "rank": {
+          "all": 0.647059,
+          "low": 0.647059,
+          "mid": 0.147059,
+          "high": 0.617647
+        },
+        "contrast": {
+          "all": 0.987467,
+          "low": 0.9944,
+          "mid": 0.0,
+          "high": 0.00125
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.922884,
+          "mid": 0.063196,
+          "high": 0.01392
+        },
+        "focus": 0.719574,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.25,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.1277,
+        "isolatedness": 0.1277
+      },
+      "metric": {
+        "beat_index": 14,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": 4
+    },
+    {
+      "onset_id": 33,
+      "local": {
+        "sample_count": 17,
+        "rank": {
+          "all": 0.323529,
+          "low": 0.323529,
+          "mid": 0.029412,
+          "high": 0.970588
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.0,
+          "high": 4.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.010115,
+          "mid": 0.017312,
+          "high": 0.972573
+        },
+        "focus": 0.869167,
+        "active_band_count": 1,
+        "dominant_band": "high"
+      },
+      "temporal": {
+        "events_per_second": 4.25,
+        "previous_gap_seconds": 0.1277,
+        "next_gap_seconds": 0.1219,
+        "isolatedness": 0.1219
+      },
+      "metric": {
+        "beat_index": 14,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": 0.1277,
+        "offset_ratio": 0.252871
+      },
+      "structure": null,
+      "group_id": 4
+    },
+    {
+      "onset_id": 34,
+      "local": {
+        "sample_count": 17,
+        "rank": {
+          "all": 0.441176,
+          "low": 0.441176,
+          "mid": 0.911765,
+          "high": 0.411765
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 1.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.015426,
+          "mid": 0.970215,
+          "high": 0.014359
+        },
+        "focus": 0.859256,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.25,
+        "previous_gap_seconds": 0.1219,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.1219
+      },
+      "metric": {
+        "beat_index": 14,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": 0.2496,
+        "offset_ratio": 0.494257
+      },
+      "structure": null,
+      "group_id": 4
+    },
+    {
+      "onset_id": 35,
+      "local": {
+        "sample_count": 17,
+        "rank": {
+          "all": 0.882353,
+          "low": 0.882353,
+          "mid": 0.382353,
+          "high": 0.823529
+        },
+        "contrast": {
+          "all": 1.0,
+          "low": 1.0,
+          "mid": 0.0,
+          "high": 0.0025
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.913826,
+          "mid": 0.072375,
+          "high": 0.013799
+        },
+        "focus": 0.698255,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.25,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2497,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 15,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 36,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.194444,
+          "low": 0.527778,
+          "mid": 0.75,
+          "high": 0.583333
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.001017,
+          "mid": 0.998473,
+          "high": 0.000169
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.017353,
+          "mid": 0.968105,
+          "high": 0.014542
+        },
+        "focus": 0.8514,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2497,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 16,
+        "beat_in_bar": 1,
+        "downbeat": true,
+        "offset_seconds": -0.2496,
+        "offset_ratio": -0.4999
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 37,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.888889,
+          "low": 0.888889,
+          "mid": 0.527778,
+          "high": 0.777778
+        },
+        "contrast": {
+          "all": 1.0,
+          "low": 1.0,
+          "mid": 0.000327,
+          "high": 0.000507
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.910498,
+          "mid": 0.075753,
+          "high": 0.013749
+        },
+        "focus": 0.690725,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 16,
+        "beat_in_bar": 1,
+        "downbeat": true,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 38,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.083333,
+          "low": 0.416667,
+          "mid": 0.638889,
+          "high": 0.777778
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.988442,
+          "high": 0.000507
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.014423,
+          "mid": 0.970761,
+          "high": 0.014816
+        },
+        "focus": 0.861325,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 17,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": -0.2496,
+        "offset_ratio": -0.5
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 39,
+      "local": {
+        "sample_count": 17,
+        "rank": {
+          "all": 0.882353,
+          "low": 0.882353,
+          "mid": 0.441176,
+          "high": 0.764706
+        },
+        "contrast": {
+          "all": 1.0,
+          "low": 1.0,
+          "mid": 0.0,
+          "high": 0.000254
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.910996,
+          "mid": 0.075248,
+          "high": 0.013756
+        },
+        "focus": 0.691841,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.25,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2554,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 17,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 40,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.027778,
+          "low": 0.055556,
+          "mid": 0.583333,
+          "high": 0.027778
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.98299,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.0,
+          "mid": 0.98657,
+          "high": 0.01343
+        },
+        "focus": 0.935169,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2554,
+        "next_gap_seconds": 0.2438,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 18,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": -0.2438,
+        "offset_ratio": -0.488381
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 41,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.888889,
+          "low": 0.888889,
+          "mid": 0.361111,
+          "high": 0.555556
+        },
+        "contrast": {
+          "all": 1.0,
+          "low": 1.0,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.914161,
+          "mid": 0.072127,
+          "high": 0.013712
+        },
+        "focus": 0.699157,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2438,
+        "next_gap_seconds": 0.2555,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 18,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 42,
+      "local": {
+        "sample_count": 17,
+        "rank": {
+          "all": 0.147059,
+          "low": 0.147059,
+          "mid": 0.676471,
+          "high": 0.088235
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.994001,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.002868,
+          "mid": 0.983485,
+          "high": 0.013647
+        },
+        "focus": 0.916467,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.25,
+        "previous_gap_seconds": 0.2555,
+        "next_gap_seconds": 0.2438,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 19,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": -0.2438,
+        "offset_ratio": -0.488284
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 43,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.694444,
+          "low": 0.694444,
+          "mid": 0.25,
+          "high": 0.388889
+        },
+        "contrast": {
+          "all": 0.992527,
+          "low": 0.996747,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.918371,
+          "mid": 0.067901,
+          "high": 0.013728
+        },
+        "focus": 0.708991,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2438,
+        "next_gap_seconds": 0.1567,
+        "isolatedness": 0.1567
+      },
+      "metric": {
+        "beat_index": 19,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": 5
+    },
+    {
+      "onset_id": 44,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.416667,
+          "low": 0.194444,
+          "mid": 0.027778,
+          "high": 0.944444
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.0,
+          "high": 3.332149
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.008294,
+          "mid": 0.015906,
+          "high": 0.9758
+        },
+        "focus": 0.882107,
+        "active_band_count": 1,
+        "dominant_band": "high"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.1567,
+        "next_gap_seconds": 0.0987,
+        "isolatedness": 0.0987
+      },
+      "metric": {
+        "beat_index": 19,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": 0.1567,
+        "offset_ratio": 0.313839
+      },
+      "structure": null,
+      "group_id": 5
+    },
+    {
+      "onset_id": 45,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.305556,
+          "low": 0.055556,
+          "mid": 0.888889,
+          "high": 0.194444
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 1.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.0,
+          "mid": 0.985999,
+          "high": 0.014001
+        },
+        "focus": 0.932944,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.0987,
+        "next_gap_seconds": 0.2438,
+        "isolatedness": 0.0987
+      },
+      "metric": {
+        "beat_index": 20,
+        "beat_in_bar": 1,
+        "downbeat": true,
+        "offset_seconds": -0.2438,
+        "offset_ratio": -0.488381
+      },
+      "structure": null,
+      "group_id": 5
+    },
+    {
+      "onset_id": 46,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.638889,
+          "low": 0.638889,
+          "mid": 0.194444,
+          "high": 0.333333
+        },
+        "contrast": {
+          "all": 0.981758,
+          "low": 0.991767,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.924159,
+          "mid": 0.062145,
+          "high": 0.013696
+        },
+        "focus": 0.723005,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2438,
+        "next_gap_seconds": 0.2554,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 20,
+        "beat_in_bar": 1,
+        "downbeat": true,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 47,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.5,
+          "low": 0.361111,
+          "mid": 0.888889,
+          "high": 0.25
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 1.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.012942,
+          "mid": 0.973046,
+          "high": 0.014012
+        },
+        "focus": 0.870156,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2554,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 21,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": -0.2496,
+        "offset_ratio": -0.494257
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 48,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.583333,
+          "low": 0.583333,
+          "mid": 0.138889,
+          "high": 0.611111
+        },
+        "contrast": {
+          "all": 0.977363,
+          "low": 0.989799,
+          "mid": 0.0,
+          "high": 0.000169
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.929665,
+          "mid": 0.056249,
+          "high": 0.014086
+        },
+        "focus": 0.736279,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 21,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 49,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.5,
+          "low": 0.25,
+          "mid": 0.888889,
+          "high": 0.333333
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 1.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.009566,
+          "mid": 0.976086,
+          "high": 0.014348
+        },
+        "focus": 0.88258,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2497,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 21,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": 0.2496,
+        "offset_ratio": 0.494257
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 50,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.75,
+          "low": 0.75,
+          "mid": 0.305556,
+          "high": 0.638889
+        },
+        "contrast": {
+          "all": 0.994725,
+          "low": 0.997654,
+          "mid": 0.0,
+          "high": 0.000338
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.917848,
+          "mid": 0.068353,
+          "high": 0.013799
+        },
+        "focus": 0.707647,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2497,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 22,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 51,
+      "local": {
+        "sample_count": 19,
+        "rank": {
+          "all": 0.342105,
+          "low": 0.447368,
+          "mid": 0.894737,
+          "high": 0.447368
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 1.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.014182,
+          "mid": 0.971345,
+          "high": 0.014473
+        },
+        "focus": 0.86356,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.75,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.1915,
+        "isolatedness": 0.1915
+      },
+      "metric": {
+        "beat_index": 22,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": 0.2496,
+        "offset_ratio": 0.4999
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 52,
+      "local": {
+        "sample_count": 19,
+        "rank": {
+          "all": 0.078947,
+          "low": 0.342105,
+          "mid": 0.131579,
+          "high": 0.921053
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.0,
+          "high": 1.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.010498,
+          "mid": 0.017496,
+          "high": 0.972006
+        },
+        "focus": 0.866907,
+        "active_band_count": 1,
+        "dominant_band": "high"
+      },
+      "temporal": {
+        "events_per_second": 4.75,
+        "previous_gap_seconds": 0.1915,
+        "next_gap_seconds": 0.0581,
+        "isolatedness": 0.0581
+      },
+      "metric": {
+        "beat_index": 23,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": -0.0581,
+        "offset_ratio": -0.116386
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 53,
+      "local": {
+        "sample_count": 19,
+        "rank": {
+          "all": 0.921053,
+          "low": 0.921053,
+          "mid": 0.5,
+          "high": 0.026316
+        },
+        "contrast": {
+          "all": 1.0,
+          "low": 1.0,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.924556,
+          "mid": 0.075444,
+          "high": 0.0
+        },
+        "focus": 0.756513,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.75,
+        "previous_gap_seconds": 0.0581,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.0581
+      },
+      "metric": {
+        "beat_index": 23,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 54,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.194444,
+          "low": 0.472222,
+          "mid": 0.694444,
+          "high": 0.777778
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.993895,
+          "high": 0.000676
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.017136,
+          "mid": 0.968162,
+          "high": 0.014702
+        },
+        "focus": 0.851589,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 23,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": 0.2496,
+        "offset_ratio": 0.5
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 55,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.916667,
+          "low": 0.916667,
+          "mid": 0.527778,
+          "high": 0.777778
+        },
+        "contrast": {
+          "all": 1.0,
+          "low": 1.0,
+          "mid": 0.001145,
+          "high": 0.000676
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.910084,
+          "mid": 0.076174,
+          "high": 0.013742
+        },
+        "focus": 0.689798,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 24,
+        "beat_in_bar": 1,
+        "downbeat": true,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 56,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.027778,
+          "low": 0.527778,
+          "mid": 0.583333,
+          "high": 0.861111
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.002193,
+          "mid": 0.982013,
+          "high": 0.001014
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.021458,
+          "mid": 0.963649,
+          "high": 0.014893
+        },
+        "focus": 0.835456,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 24,
+        "beat_in_bar": 1,
+        "downbeat": true,
+        "offset_seconds": 0.2496,
+        "offset_ratio": 0.5
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 57,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.916667,
+          "low": 0.916667,
+          "mid": 0.416667,
+          "high": 0.638889
+        },
+        "contrast": {
+          "all": 1.0,
+          "low": 1.0,
+          "mid": 0.0,
+          "high": 0.000338
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.912492,
+          "mid": 0.073821,
+          "high": 0.013687
+        },
+        "focus": 0.695358,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2555,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 25,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 58,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.138889,
+          "low": 0.055556,
+          "mid": 0.638889,
+          "high": 0.083333
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.988881,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.0,
+          "mid": 0.986446,
+          "high": 0.013554
+        },
+        "focus": 0.934683,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2555,
+        "next_gap_seconds": 0.2438,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 26,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": -0.2438,
+        "offset_ratio": -0.488284
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 59,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.805556,
+          "low": 0.805556,
+          "mid": 0.361111,
+          "high": 0.5
+        },
+        "contrast": {
+          "all": 0.996916,
+          "low": 0.998572,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.915895,
+          "mid": 0.070439,
+          "high": 0.013666
+        },
+        "focus": 0.703256,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.2438,
+        "next_gap_seconds": 0.1915,
+        "isolatedness": 0.1915
+      },
+      "metric": {
+        "beat_index": 26,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 60,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.527778,
+          "low": 0.194444,
+          "mid": 0.027778,
+          "high": 0.944444
+        },
+        "contrast": {
+          "all": 0.001872,
+          "low": 0.0,
+          "mid": 0.0,
+          "high": 3.330966
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.009349,
+          "mid": 0.016751,
+          "high": 0.9739
+        },
+        "focus": 0.87444,
+        "active_band_count": 1,
+        "dominant_band": "high"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.1915,
+        "next_gap_seconds": 0.0639,
+        "isolatedness": 0.0639
+      },
+      "metric": {
+        "beat_index": 26,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": 0.1915,
+        "offset_ratio": 0.383537
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 61,
+      "local": {
+        "sample_count": 18,
+        "rank": {
+          "all": 0.25,
+          "low": 0.055556,
+          "mid": 0.75,
+          "high": 0.138889
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.998256,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.0,
+          "mid": 0.986269,
+          "high": 0.013731
+        },
+        "focus": 0.933993,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.5,
+        "previous_gap_seconds": 0.0639,
+        "next_gap_seconds": 0.2438,
+        "isolatedness": 0.0639
+      },
+      "metric": {
+        "beat_index": 27,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": -0.2438,
+        "offset_ratio": -0.488381
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 62,
+      "local": {
+        "sample_count": 17,
+        "rank": {
+          "all": 0.676471,
+          "low": 0.676471,
+          "mid": 0.205882,
+          "high": 0.411765
+        },
+        "contrast": {
+          "all": 0.988082,
+          "low": 0.994684,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.920941,
+          "mid": 0.065358,
+          "high": 0.013701
+        },
+        "focus": 0.715169,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.25,
+        "previous_gap_seconds": 0.2438,
+        "next_gap_seconds": 0.2554,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 27,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 63,
+      "local": {
+        "sample_count": 17,
+        "rank": {
+          "all": 0.323529,
+          "low": 0.264706,
+          "mid": 0.911765,
+          "high": 0.147059
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 1.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.009859,
+          "mid": 0.976182,
+          "high": 0.013959
+        },
+        "focus": 0.882847,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.25,
+        "previous_gap_seconds": 0.2554,
+        "next_gap_seconds": 0.2438,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 28,
+        "beat_in_bar": 1,
+        "downbeat": true,
+        "offset_seconds": -0.2438,
+        "offset_ratio": -0.488381
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 64,
+      "local": {
+        "sample_count": 17,
+        "rank": {
+          "all": 0.558824,
+          "low": 0.558824,
+          "mid": 0.088235,
+          "high": 0.235294
+        },
+        "contrast": {
+          "all": 0.974178,
+          "low": 0.988345,
+          "mid": 0.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.927305,
+          "mid": 0.059,
+          "high": 0.013695
+        },
+        "focus": 0.730815,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.25,
+        "previous_gap_seconds": 0.2438,
+        "next_gap_seconds": 0.2554,
+        "isolatedness": 0.2438
+      },
+      "metric": {
+        "beat_index": 28,
+        "beat_in_bar": 1,
+        "downbeat": true,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 65,
+      "local": {
+        "sample_count": 15,
+        "rank": {
+          "all": 0.433333,
+          "low": 0.166667,
+          "mid": 0.9,
+          "high": 0.266667
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 1.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.007241,
+          "mid": 0.978473,
+          "high": 0.014286
+        },
+        "focus": 0.892894,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.00128,
+        "previous_gap_seconds": 0.2554,
+        "next_gap_seconds": 0.2497,
+        "isolatedness": 0.2497
+      },
+      "metric": {
+        "beat_index": 29,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": -0.2497,
+        "offset_ratio": -0.494358
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 66,
+      "local": {
+        "sample_count": 14,
+        "rank": {
+          "all": 0.678571,
+          "low": 0.678571,
+          "mid": 0.178571,
+          "high": 0.642857
+        },
+        "contrast": {
+          "all": 0.987476,
+          "low": 0.994422,
+          "mid": 0.0,
+          "high": 0.001875
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.923542,
+          "mid": 0.062523,
+          "high": 0.013935
+        },
+        "focus": 0.721161,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.001029,
+        "previous_gap_seconds": 0.2497,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 29,
+        "beat_in_bar": 2,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 67,
+      "local": {
+        "sample_count": 14,
+        "rank": {
+          "all": 0.392857,
+          "low": 0.464286,
+          "mid": 0.892857,
+          "high": 0.428571
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 1.0,
+          "high": 0.0
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.015426,
+          "mid": 0.970215,
+          "high": 0.014359
+        },
+        "focus": 0.859256,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 4.308355,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 30,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": -0.2496,
+        "offset_ratio": -0.5
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 68,
+      "local": {
+        "sample_count": 12,
+        "rank": {
+          "all": 0.916667,
+          "low": 0.916667,
+          "mid": 0.375,
+          "high": 0.791667
+        },
+        "contrast": {
+          "all": 1.001191,
+          "low": 1.000529,
+          "mid": 0.0,
+          "high": 0.0025
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.91416,
+          "mid": 0.072036,
+          "high": 0.013804
+        },
+        "focus": 0.699019,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 4.000133,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 30,
+        "beat_in_bar": 3,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 69,
+      "local": {
+        "sample_count": 11,
+        "rank": {
+          "all": 0.227273,
+          "low": 0.5,
+          "mid": 0.681818,
+          "high": 0.636364
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.12625,
+          "high": 0.0025
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.017909,
+          "mid": 0.96757,
+          "high": 0.014521
+        },
+        "focus": 0.849455,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 3.999564,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 31,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": -0.2496,
+        "offset_ratio": -0.5
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 70,
+      "local": {
+        "sample_count": 9,
+        "rank": {
+          "all": 0.888889,
+          "low": 0.888889,
+          "mid": 0.388889,
+          "high": 0.833333
+        },
+        "contrast": {
+          "all": 1.0,
+          "low": 1.0,
+          "mid": 0.0,
+          "high": 0.00125
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.910581,
+          "mid": 0.075669,
+          "high": 0.01375
+        },
+        "focus": 0.690911,
+        "active_band_count": 1,
+        "dominant_band": "low"
+      },
+      "temporal": {
+        "events_per_second": 3.598992,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": 0.2496,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 31,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": 0.0,
+        "offset_ratio": 0.0
+      },
+      "structure": null,
+      "group_id": null
+    },
+    {
+      "onset_id": 71,
+      "local": {
+        "sample_count": 9,
+        "rank": {
+          "all": 0.055556,
+          "low": 0.277778,
+          "mid": 0.5,
+          "high": 0.833333
+        },
+        "contrast": {
+          "all": 0.0,
+          "low": 0.0,
+          "mid": 0.0,
+          "high": 0.00125
+        }
+      },
+      "spectral": {
+        "share": {
+          "low": 0.014423,
+          "mid": 0.970761,
+          "high": 0.014816
+        },
+        "focus": 0.861325,
+        "active_band_count": 1,
+        "dominant_band": "mid"
+      },
+      "temporal": {
+        "events_per_second": 3.998045,
+        "previous_gap_seconds": 0.2496,
+        "next_gap_seconds": null,
+        "isolatedness": 0.2496
+      },
+      "metric": {
+        "beat_index": 31,
+        "beat_in_bar": 4,
+        "downbeat": false,
+        "offset_seconds": 0.2496,
+        "offset_ratio": 0.5
+      },
+      "structure": null,
+      "group_id": null
+    }
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "onset_ids": [
+        5,
+        6,
+        7
+      ],
+      "span_seconds": 0.2554,
+      "intervals_seconds": [
+        0.0986,
+        0.1568
+      ],
+      "interval_trend": 0.0582,
+      "density_hz": 7.830854,
+      "dominant_band_path": [
+        "low",
+        "high",
+        "mid"
+      ]
+    },
+    {
+      "id": 2,
+      "onset_ids": [
+        12,
+        13,
+        14
+      ],
+      "span_seconds": 0.2555,
+      "intervals_seconds": [
+        0.1219,
+        0.1336
+      ],
+      "interval_trend": 0.0117,
+      "density_hz": 7.827789,
+      "dominant_band_path": [
+        "low",
+        "high",
+        "mid"
+      ]
+    },
+    {
+      "id": 3,
+      "onset_ids": [
+        19,
+        20,
+        21
+      ],
+      "span_seconds": 0.2497,
+      "intervals_seconds": [
+        0.0697,
+        0.18
+      ],
+      "interval_trend": 0.1103,
+      "density_hz": 8.009612,
+      "dominant_band_path": [
+        "low",
+        "high",
+        "mid"
+      ]
+    },
+    {
+      "id": 4,
+      "onset_ids": [
+        32,
+        33,
+        34
+      ],
+      "span_seconds": 0.2496,
+      "intervals_seconds": [
+        0.1277,
+        0.1219
+      ],
+      "interval_trend": -0.0058,
+      "density_hz": 8.012821,
+      "dominant_band_path": [
+        "low",
+        "high",
+        "mid"
+      ]
+    },
+    {
+      "id": 5,
+      "onset_ids": [
+        43,
+        44,
+        45
+      ],
+      "span_seconds": 0.2554,
+      "intervals_seconds": [
+        0.1567,
+        0.0987
+      ],
+      "interval_trend": -0.058,
+      "density_hz": 7.830854,
+      "dominant_band_path": [
+        "low",
+        "high",
+        "mid"
+      ]
+    }
+  ],
+  "diagnostics": {
+    "onset_count": 71,
+    "group_count": 5,
+    "beat_context_available": true,
+    "structure_context_available": false
+  }
+}
