@@ -36,8 +36,28 @@ export interface ValidationResult {
 
 const TRANSITIONS = ['cut', 'dissolve', 'directional-wipe', 'split-reveal', 'hold-through'];
 const LAYER_KINDS = ['editorial-typography', 'graphic-field', 'media-slice'];
-const DRIVER_KINDS = ['ranked_onsets', 'beat_phase', 'energy_envelope'];
-const MOTION_KINDS = ['scale_pulse', 'translate_recoil', 'opacity_lift'];
+const DRIVER_KINDS = [
+  'ranked_onsets',
+  'beat_phase',
+  'downbeat_impulse',
+  'energy_envelope',
+  'structure_boundary',
+  'scene_phase',
+  'transition_phase',
+];
+const MOTION_KINDS = [
+  'scale_pulse',
+  'radial_expand',
+  'translate_recoil',
+  'translate_drift',
+  'rotate_recoil',
+  'crop_reveal',
+  'strip_offset',
+  'opacity_lift',
+  'opacity_fade',
+  'blur_focus',
+  'invert_palette',
+];
 const BLEND_MODES = ['normal', 'multiply', 'screen', 'difference', 'overlay'];
 const TRANSITION_REPR = "['cut', 'dissolve', 'directional-wipe', 'hold-through', 'split-reveal']";
 
@@ -82,7 +102,13 @@ function walkNonfinite(value: unknown, path: string, errors: string[]): void {
   }
 }
 
-function validateLayer(layer: DirectionLayer, label: string, errors: string[], notices: string[]): void {
+function validateLayer(
+  layer: DirectionLayer,
+  label: string,
+  errors: string[],
+  notices: string[],
+  assetIds?: Set<string>,
+): void {
   if (!isSlug(layer.id)) {
     errors.push(`direction/layer-id: ${label}.id must be a non-empty lowercase slug`);
   }
@@ -133,6 +159,12 @@ function validateLayer(layer: DirectionLayer, label: string, errors: string[], n
       }
     }
   }
+  if (assetIds) {
+    const src = (layer.props as Record<string, unknown> | undefined)?.src;
+    if (typeof src === 'string' && src.startsWith('asset:') && !assetIds.has(src.slice('asset:'.length))) {
+      errors.push(`direction/asset-missing: ${label}.props.src references '${src}' which is not in the project manifest`);
+    }
+  }
 }
 
 function validateDriver(driver: unknown, label: string, errors: string[], notices: string[]): void {
@@ -159,9 +191,13 @@ function validateDriver(driver: unknown, label: string, errors: string[], notice
     if (d.subdivision !== 1 && d.subdivision !== 2 && d.subdivision !== 4) {
       errors.push(`direction/driver: ${label}.driver.subdivision must be 1, 2 or 4`);
     }
-  } else if (d.band !== 'low' && d.band !== 'mid' && d.band !== 'high') {
-    errors.push(`direction/driver: ${label}.driver.band must be low, mid or high`);
+  } else if (d.kind === 'energy_envelope') {
+    if (d.band !== 'low' && d.band !== 'mid' && d.band !== 'high') {
+      errors.push(`direction/driver: ${label}.driver.band must be low, mid or high`);
+    }
   }
+  // downbeat_impulse / structure_boundary / scene_phase / transition_phase
+  // carry no extra fields; availability is decided at compile time.
 }
 
 function validateMotion(motion: unknown, label: string, errors: string[], notices: string[]): void {
@@ -182,7 +218,7 @@ function validateMotion(motion: unknown, label: string, errors: string[], notice
   if (!isFiniteNumber(m.amount)) {
     errors.push(`direction/motion: ${label}.motion.amount must be a finite number`);
   }
-  if (m.kind === 'translate_recoil') {
+  if (m.kind === 'translate_recoil' || m.kind === 'translate_drift') {
     if (!Array.isArray(m.axis) || m.axis.length !== 2 || !m.axis.every(isFiniteNumber)) {
       errors.push(`direction/motion: ${label}.motion.axis must be a pair of finite numbers`);
     }
@@ -216,7 +252,7 @@ function sceneTimeOk(scene: DirectionScene, label: string, errors: string[]): [n
   return [start, end];
 }
 
-export function validateDirection(doc: unknown): ValidationResult {
+export function validateDirection(doc: unknown, options: { assetIds?: Set<string> } = {}): ValidationResult {
   const errors: string[] = [];
   const notices: string[] = [];
   if (doc === null || typeof doc !== 'object' || Array.isArray(doc)) {
@@ -333,7 +369,7 @@ export function validateDirection(doc: unknown): ValidationResult {
         errors.push(`direction/scenes: ${llabel} must be an object`);
         return;
       }
-      validateLayer(layer, llabel, errors, notices);
+      validateLayer(layer, llabel, errors, notices, options.assetIds);
       if (typeof layer.id === 'string') {
         if (layerIds.has(layer.id)) {
           errors.push(`direction/layer-duplicate: ${llabel}.id '${layer.id}' is duplicated`);

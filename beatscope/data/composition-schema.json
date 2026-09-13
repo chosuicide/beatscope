@@ -1,0 +1,307 @@
+{
+  "type": "object",
+  "properties": {
+    "schema": {
+      "enum": [
+        "beatscope-composition-1"
+      ]
+    },
+    "project_id": {
+      "type": "string",
+      "maxLength": 12,
+      "pattern": "^[a-f0-9]{12}$"
+    },
+    "source_rhythm_sha256": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "artwork": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "number",
+          "minimum": 64,
+          "maximum": 4096
+        },
+        "height": {
+          "type": "number",
+          "minimum": 64,
+          "maximum": 4096
+        },
+        "color": {
+          "type": "string",
+          "maxLength": 7,
+          "pattern": "^#[a-fA-F0-9]{6}$"
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "color"
+      ],
+      "additionalProperties": false
+    },
+    "background": {
+      "type": "object",
+      "properties": {
+        "preset_id": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "mode": {
+          "enum": [
+            "solid",
+            "original-renderer"
+          ]
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "preset_id",
+        "mode",
+        "opacity"
+      ],
+      "additionalProperties": false
+    },
+    "objects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 80,
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "kind": {
+            "enum": [
+              "text",
+              "image",
+              "video"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "locked": {
+            "type": "boolean"
+          },
+          "opacity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "transform": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": -16384,
+                "maximum": 16384
+              },
+              "y": {
+                "type": "number",
+                "minimum": -16384,
+                "maximum": 16384
+              },
+              "width": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 16384
+              },
+              "height": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 16384
+              },
+              "rotation": {
+                "type": "number",
+                "minimum": -360,
+                "maximum": 360
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "width",
+              "height",
+              "rotation"
+            ],
+            "additionalProperties": false
+          },
+          "crop": {
+            "type": "object",
+            "properties": {
+              "left": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "top": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "right": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "bottom": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "left",
+              "top",
+              "right",
+              "bottom"
+            ],
+            "additionalProperties": false
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "font_size": {
+            "type": "number",
+            "minimum": 8,
+            "maximum": 512
+          },
+          "color": {
+            "type": "string",
+            "maxLength": 7,
+            "pattern": "^#[a-fA-F0-9]{6}$"
+          },
+          "asset_id": {
+            "type": "string",
+            "maxLength": 100,
+            "pattern": "^([a-zA-Z0-9-]+)?$"
+          },
+          "source_offset": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3600
+          },
+          "loop": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "visible",
+          "locked",
+          "opacity",
+          "transform",
+          "crop",
+          "text",
+          "font_size",
+          "color",
+          "asset_id",
+          "source_offset",
+          "loop"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 200
+    },
+    "responses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 80,
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "target_id": {
+            "type": "string",
+            "maxLength": 80,
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "driver": {
+            "enum": [
+              "ranked_onsets",
+              "beats"
+            ]
+          },
+          "band": {
+            "enum": [
+              "all",
+              "low",
+              "mid",
+              "high"
+            ]
+          },
+          "motion": {
+            "enum": [
+              "scale_pulse",
+              "opacity_dip"
+            ]
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "release": {
+            "type": "number",
+            "minimum": 0.04,
+            "maximum": 2
+          },
+          "min_gap": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2
+          }
+        },
+        "required": [
+          "id",
+          "target_id",
+          "driver",
+          "band",
+          "motion",
+          "amount",
+          "release",
+          "min_gap"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 200
+    },
+    "author_notes": {
+      "type": "string",
+      "maxLength": 5000
+    }
+  },
+  "required": [
+    "schema",
+    "project_id",
+    "source_rhythm_sha256",
+    "title",
+    "artwork",
+    "background",
+    "objects",
+    "responses",
+    "author_notes"
+  ],
+  "additionalProperties": false
+}

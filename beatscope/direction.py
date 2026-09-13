@@ -40,8 +40,28 @@ WORKSPACE_SCHEMA = "beathi-workspace-1"
 
 _TRANSITIONS = {"cut", "dissolve", "directional-wipe", "split-reveal", "hold-through"}
 _LAYER_KINDS = {"editorial-typography", "graphic-field", "media-slice"}
-_DRIVER_KINDS = {"ranked_onsets", "beat_phase", "energy_envelope"}
-_MOTION_KINDS = {"scale_pulse", "translate_recoil", "opacity_lift"}
+_DRIVER_KINDS = {
+    "ranked_onsets",
+    "beat_phase",
+    "downbeat_impulse",
+    "energy_envelope",
+    "structure_boundary",
+    "scene_phase",
+    "transition_phase",
+}
+_MOTION_KINDS = {
+    "scale_pulse",
+    "radial_expand",
+    "translate_recoil",
+    "translate_drift",
+    "rotate_recoil",
+    "crop_reveal",
+    "strip_offset",
+    "opacity_lift",
+    "opacity_fade",
+    "blur_focus",
+    "invert_palette",
+}
 _BLEND_MODES = {"normal", "multiply", "screen", "difference", "overlay"}
 _RATIOS = {
     "16:9": (1920, 1080),
@@ -127,7 +147,13 @@ def _scene_time_ok(scene: dict[str, Any], label: str, errors: list[str]) -> tupl
     return float(start), float(end)
 
 
-def _validate_layer(layer: dict[str, Any], label: str, errors: list[str], notices: list[str]) -> None:
+def _validate_layer(
+    layer: dict[str, Any],
+    label: str,
+    errors: list[str],
+    notices: list[str],
+    asset_ids: set[str] | None = None,
+) -> None:
     # Layer ids follow the slug charset rule without the scene- prefix.
     if not _slug_ok(layer.get("id")):
         errors.append(f"direction/layer-id: {label}.id must be a non-empty lowercase slug")
@@ -170,6 +196,13 @@ def _validate_layer(layer: dict[str, Any], label: str, errors: list[str], notice
             or not all(0.0 <= float(crop[k]) <= 1.0 for k in ("left", "top", "right", "bottom"))
         ):
             errors.append(f"direction/layer-transform: {label}.transform.crop must carry left/top/right/bottom within 0..1")
+    # asset references are validated against the project manifest when the
+    # caller provides one (§6.1: PUT validates asset references)
+    if asset_ids is not None:
+        props = layer.get("props")
+        src = props.get("src") if isinstance(props, dict) else None
+        if isinstance(src, str) and src.startswith("asset:") and src[len("asset:"):] not in asset_ids:
+            errors.append(f"direction/asset-missing: {label}.props.src references '{src}' which is not in the project manifest")
 
 
 def _validate_driver(driver: Any, label: str, errors: list[str], notices: list[str]) -> None:
@@ -189,9 +222,11 @@ def _validate_driver(driver: Any, label: str, errors: list[str], notices: list[s
     elif driver["kind"] == "beat_phase":
         if not _is_int(driver.get("subdivision")) or driver["subdivision"] not in (1, 2, 4):
             errors.append(f"direction/driver: {label}.driver.subdivision must be 1, 2 or 4")
-    else:  # energy_envelope
+    elif driver["kind"] == "energy_envelope":
         if driver.get("band") not in ("low", "mid", "high"):
             errors.append(f"direction/driver: {label}.driver.band must be low, mid or high")
+    # downbeat_impulse / structure_boundary / scene_phase / transition_phase
+    # carry no extra fields; availability is decided at compile time.
 
 
 def _validate_motion(motion: Any, label: str, errors: list[str], notices: list[str]) -> None:
@@ -206,7 +241,7 @@ def _validate_motion(motion: Any, label: str, errors: list[str], notices: list[s
             errors.append(f"direction/motion: {label}.motion.{field} must be a non-negative number")
     if not _finite(motion.get("amount")):
         errors.append(f"direction/motion: {label}.motion.amount must be a finite number")
-    if motion["kind"] == "translate_recoil":
+    if motion["kind"] in ("translate_recoil", "translate_drift"):
         axis = motion.get("axis")
         if (
             not isinstance(axis, list)
@@ -216,11 +251,13 @@ def _validate_motion(motion: Any, label: str, errors: list[str], notices: list[s
             errors.append(f"direction/motion: {label}.motion.axis must be a pair of finite numbers")
 
 
-def validate_direction(doc: Any) -> tuple[list[str], list[str]]:
+def validate_direction(doc: Any, asset_ids: set[str] | None = None) -> tuple[list[str], list[str]]:
     """Return ``(errors, notices)`` with stable ``direction/...`` codes.
 
     Errors mean the document is refused (save/export); notices mean an
-    unregistered-but-well-formed kind was preserved as authored.
+    unregistered-but-well-formed kind was preserved as authored. When
+    ``asset_ids`` is provided, ``asset:`` layer references are checked
+    against the project manifest (§6.1).
     """
     errors: list[str] = []
     notices: list[str] = []
@@ -321,7 +358,7 @@ def validate_direction(doc: Any) -> tuple[list[str], list[str]]:
             if not isinstance(layer, dict):
                 errors.append(f"direction/scenes: {llabel} must be an object")
                 continue
-            _validate_layer(layer, llabel, errors, notices)
+            _validate_layer(layer, llabel, errors, notices, asset_ids)
             lid = layer.get("id")
             if _is_string(lid):
                 if lid in layer_ids:

@@ -9,6 +9,12 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from .exports import generate_rhythm_midi, generate_rhythm_csv, generate_codex_export
+from .assets import (
+    AssetError,
+    AssetStore,
+    IMAGE_MAX_BYTES,
+    VIDEO_MAX_BYTES,
+)
 from .direction import (
     build_direction_document,
     canonical_direction_bytes,
@@ -27,6 +33,7 @@ from .visual_recipe import canonical_visual_bytes
 
 MAX_UPLOAD_BYTES = 500 * 1024 * 1024
 MAX_DIRECTION_BYTES = 8 * 1024 * 1024
+MAX_ASSET_BYTES = VIDEO_MAX_BYTES
 
 
 class WebApi:
@@ -146,10 +153,25 @@ class WebApi:
         ):
             return self._serve_workspace(parts[2], headers)
 
+        # 12. GET /api/projects/<id>/assets
+        if len(parts) == 4 and parts[0] == "api" and parts[1] == "projects" and parts[3] == "assets":
+            store = self._asset_store(parts[2])
+            if store is None:
+                return 404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}'
+            return 200, {"Content-Type": "application/json; charset=utf-8"}, json.dumps({
+                "assets": store.manifest(),
+                "budget_bytes": 500 * 1024 * 1024,
+                "used_bytes": store.total_bytes(),
+            }).encode("utf-8")
+
+        # 13. GET /api/projects/<id>/assets/<asset_id>
+        if len(parts) == 5 and parts[0] == "api" and parts[1] == "projects" and parts[3] == "assets":
+            return self._serve_asset(parts[2], parts[4])
+
         return 404, {"Content-Type": "text/plain"}, b"Not found"
 
-    def handle_delete(self, path: str) -> tuple[int, dict[str, str], bytes]:
-        """Handle DELETE /api/jobs/<job_id> cancellation."""
+    def handle_delete(self, path: str, query: dict[str, list[str]] | None = None) -> tuple[int, dict[str, str], bytes]:
+        """Handle DELETE /api/jobs/<job_id> and project asset deletion."""
         parts = [p for p in path.strip("/").split("/") if p]
         if len(parts) == 3 and parts[0] == "api" and parts[1] == "jobs":
             job_id = parts[2]
@@ -157,6 +179,8 @@ class WebApi:
             if cancelled:
                 return 200, {"Content-Type": "application/json"}, json.dumps({"status": "cancelled"}).encode()
             return 400, {"Content-Type": "application/json"}, json.dumps({"error": "Could not cancel job"}).encode()
+        if len(parts) == 5 and parts[0] == "api" and parts[1] == "projects" and parts[3] == "assets":
+            return self.handle_delete_asset(path, query or {})
         return 404, {"Content-Type": "text/plain"}, b"Not found"
 
     def handle_post_adjustments(self, path: str, body: bytes) -> tuple[int, dict[str, str], bytes]:
@@ -384,7 +408,7 @@ class WebApi:
                 "error": "direction/invalid",
                 "errors": ["direction/schema: document must be an object"],
             }).encode()
-        errors, _ = validate_direction(document)
+        errors, _ = validate_direction(document, self._asset_ids(project_id))
         rhythm = self.project_manager.get_project_rhythm(project_id)
         if document.get("project_id") != project_id:
             errors.append("direction/project-mismatch: project_id does not match route")
@@ -402,6 +426,101 @@ class WebApi:
             "status": "ok",
             "etag": direction_etag(canonical),
         }).encode()
+
+    def _asset_ids(self, project_id: str) -> set[str] | None:
+        """Manifest asset ids for reference validation, or None when the
+        project itself is unknown (validation is skipped in that case)."""
+        store = self._asset_store(project_id)
+        if store is None:
+            return None
+        return {entry["asset_id"] for entry in store.manifest()}
+
+    def _asset_store(self, project_id: str) -> AssetStore | None:
+        """Asset store for an existing project; None when the route is unknown."""
+        if len(project_id) != 12 or any(ch not in "0123456789abcdef" for ch in project_id):
+            return None
+        if self.project_manager.get_project_rhythm(project_id) is None:
+            return None
+        return AssetStore(self.project_manager.get_project_dir(project_id), project_id)
+
+    def _serve_asset(self, project_id: str, asset_id: str) -> tuple[int, dict[str, str], bytes]:
+        store = self._asset_store(project_id)
+        if store is None:
+            return 404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}'
+        found = store.get(asset_id)
+        if found is None:
+            return 404, {"Content-Type": "application/json"}, b'{"error":"Asset not found"}'
+        mime, data = found
+        return 200, {
+            "Content-Type": mime,
+            "Cache-Control": "private, max-age=31536000, immutable",
+        }, data
+
+    def handle_post_assets(
+        self, path: str, body: bytes, headers: dict[str, str]
+    ) -> tuple[int, dict[str, str], bytes]:
+        """POST /api/projects/<id>/assets — raw bytes, decoded-type validated."""
+        parts = [p for p in path.strip("/").split("/") if p]
+        if not (len(parts) == 4 and parts[0] == "api" and parts[1] == "projects" and parts[3] == "assets"):
+            return 404, {"Content-Type": "text/plain"}, b"Not found"
+        project_id = parts[2]
+        if len(body) > MAX_ASSET_BYTES:
+            return 413, {"Content-Type": "application/json"}, json.dumps({
+                "error": "asset/too-large",
+                "message": f"asset exceeds {MAX_ASSET_BYTES} bytes",
+            }).encode()
+        store = self._asset_store(project_id)
+        if store is None:
+            return 404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}'
+        raw_name = headers.get("X-Filename") or headers.get("x-filename") or "asset"
+        from urllib.parse import unquote
+
+        display_name = Path(unquote(raw_name)).name
+        try:
+            entry = store.add(display_name, body)
+        except AssetError as exc:
+            status = 413 if exc.code in ("asset/too-large", "asset/budget") else 422
+            return status, {"Content-Type": "application/json"}, json.dumps({
+                "error": exc.code,
+                "message": str(exc),
+            }).encode("utf-8")
+        return 201, {"Content-Type": "application/json; charset=utf-8"}, json.dumps({"asset": entry}).encode("utf-8")
+
+    def handle_delete_asset(
+        self, path: str, query: dict[str, list[str]]
+    ) -> tuple[int, dict[str, str], bytes]:
+        """DELETE /api/projects/<id>/assets/<asset_id>[?confirm=1].
+
+        Deleting an in-use asset requires explicit confirmation and reports
+        the exact scene/layer references so the client can convert them to
+        missing-asset placeholders in one undoable transaction (§6.2).
+        """
+        parts = [p for p in path.strip("/").split("/") if p]
+        if not (len(parts) == 5 and parts[0] == "api" and parts[1] == "projects" and parts[3] == "assets"):
+            return 404, {"Content-Type": "text/plain"}, b"Not found"
+        store = self._asset_store(parts[2])
+        if store is None:
+            return 404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}'
+        asset_id = parts[4]
+        if not store.get(asset_id):
+            return 404, {"Content-Type": "application/json"}, b'{"error":"Asset not found"}'
+        direction = None
+        body = self.project_manager.get_project_direction_bytes(parts[2])
+        if body is not None:
+            try:
+                direction = json.loads(body.decode("utf-8"))
+            except (UnicodeDecodeError, ValueError):
+                direction = None
+        in_use = AssetStore.referenced_by(direction, asset_id)
+        confirm = (query.get("confirm", ["0"])[0] or "0") not in ("0", "false", "")
+        if in_use and not confirm:
+            return 409, {"Content-Type": "application/json"}, json.dumps({
+                "error": "asset/in-use",
+                "message": "this asset is referenced by the direction document",
+                "in_use": in_use,
+            }).encode("utf-8")
+        store.delete(asset_id)
+        return 200, {"Content-Type": "application/json"}, json.dumps({"deleted": True, "in_use": in_use}).encode("utf-8")
 
     def _workspace_bytes(self, project_id: str) -> bytes | None:
         if len(project_id) != 12 or any(ch not in "0123456789abcdef" for ch in project_id):

@@ -13,12 +13,14 @@ import type { DirectionDocument, WorkspaceDocument } from '../direction/types';
 import { canonicalDirectionString, validateDirection } from '../direction/contract';
 import { demoDocument } from '../demo/document';
 import { demoRhythm, type DemoRhythm } from '../demo/rhythm';
+import { UNAVAILABLE_ASSETS } from '../media/client';
 
 const draftKey = (doc: DirectionDocument) => `beathi-direction-draft:${doc.project_id}:${doc.source_rhythm_sha256}:static`;
 const WORKSPACE_KEY = 'beathi-workspace:beyond-the-fog-01';
 
 export class StaticDemoServices implements BeatScopeServices {
   readonly mode = 'static-demo' as const;
+  readonly assets = UNAVAILABLE_ASSETS;
 
   private isShot(): boolean {
     return new URLSearchParams(window.location.search).has('shot');
@@ -28,22 +30,27 @@ export class StaticDemoServices implements BeatScopeServices {
     return [{ project_id: demoDocument.project_id, display_name: demoDocument.project_title }];
   }
 
-  async loadProject(_projectId: string): Promise<{ doc: DirectionDocument; rhythm: DemoRhythm | null; workspace: WorkspaceDocument | null }> {
-    if (this.isShot()) return { doc: demoDocument, rhythm: demoRhythm(), workspace: null };
+  async loadProject(_projectId: string): Promise<{
+    doc: DirectionDocument;
+    rhythm: DemoRhythm | null;
+    workspace: WorkspaceDocument | null;
+    relevance?: Map<string, number> | null;
+  }> {
+    if (this.isShot()) return { doc: demoDocument, rhythm: demoRhythm(), workspace: null, relevance: null };
     const key = draftKey(demoDocument);
     const raw = localStorage.getItem(key);
     if (raw) {
       try {
         const parsed = JSON.parse(raw) as DirectionDocument;
         const { errors } = validateDirection(parsed);
-        if (errors.length === 0) return { doc: parsed, rhythm: demoRhythm(), workspace: this.readWorkspace() };
+        if (errors.length === 0) return { doc: parsed, rhythm: demoRhythm(), workspace: this.readWorkspace(), relevance: null };
         // a draft outside the contract is stale or corrupted; drop it whole
       } catch {
         /* fall through to discard */
       }
       localStorage.removeItem(key);
     }
-    return { doc: demoDocument, rhythm: demoRhythm(), workspace: this.readWorkspace() };
+    return { doc: demoDocument, rhythm: demoRhythm(), workspace: this.readWorkspace(), relevance: null };
   }
 
   async submitAnalysis(): Promise<null> {

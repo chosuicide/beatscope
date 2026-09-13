@@ -243,7 +243,7 @@ For dense mixes, optional Beat This and Demucs inputs are available through `.[h
 
 ```powershell
 pytest -q
-node --test (Get-ChildItem tests\test_*.js | ForEach-Object FullName)
+npm run test:js
 beatscope validate-handoff examples\shared\fixture.beatscope --checkpoints examples\shared\checkpoints.json
 ```
 

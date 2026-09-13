@@ -38,6 +38,12 @@ export interface DemoOnset {
   strength: number;
 }
 
+export interface DemoEnergy {
+  fps: number;
+  start: number;
+  bands: { low: number[]; mid: number[]; high: number[] };
+}
+
 export interface DemoRhythm {
   project_id: string;
   duration: number;
@@ -45,7 +51,32 @@ export interface DemoRhythm {
   bar_seconds: number;
   beats: { time: number; bar: number; beat: number }[];
   onsets: DemoOnset[];
+  /** measured downbeats; empty when the project has no valid grid */
+  downbeats: number[];
+  /** measured energy envelopes; null when the project has no energy stream */
+  energy: DemoEnergy | null;
+  /** structural boundary times; empty when no structure was found */
+  boundaries: number[];
+  /** structure segments (bar/time spans); empty when none */
+  segments: { start_time: number; end_time: number }[];
 }
+
+/** Demo structural boundaries: the scene starts of the frozen document. */
+export const DEMO_BOUNDARY_BARS = [13, 27, 39, 53, 64, 76, 90, 99, 107];
+
+/** Demo segment spans (seconds) matching the frozen ten-scene table. */
+export const DEMO_SEGMENT_SPANS: Array<{ start_time: number; end_time: number }> = [
+  { start_time: 0, end_time: 24 },
+  { start_time: 24, end_time: 52 },
+  { start_time: 52, end_time: 76 },
+  { start_time: 76, end_time: 104 },
+  { start_time: 104, end_time: 126 },
+  { start_time: 126, end_time: 150 },
+  { start_time: 150, end_time: 178 },
+  { start_time: 178, end_time: 196 },
+  { start_time: 196, end_time: 212 },
+  { start_time: 212, end_time: 242 },
+];
 
 let cachedRhythm: DemoRhythm | null = null;
 
@@ -103,6 +134,7 @@ export function demoRhythm(): DemoRhythm {
     }
   }
   onsets.sort((a, b) => a.time - b.time || (a.id < b.id ? -1 : 1));
+  const downbeats = beats.filter((b) => b.beat === 1).map((b) => b.time);
   cachedRhythm = {
     project_id: DEMO_PROJECT_ID,
     duration: DEMO_DURATION,
@@ -110,8 +142,42 @@ export function demoRhythm(): DemoRhythm {
     bar_seconds: DEMO_BAR_SECONDS,
     beats,
     onsets,
+    downbeats,
+    energy: demoEnergy(),
+    boundaries: DEMO_BOUNDARY_BARS.map((bar) => (bar - 1) * DEMO_BAR_SECONDS),
+    segments: DEMO_SEGMENT_SPANS.map((s) => ({ ...s })),
   };
   return cachedRhythm;
+}
+
+/**
+ * Deterministic energy envelopes (10 Hz) generated from fixed-seed PRNGs.
+ * Energy is a slow occupancy signal — it must never trigger per-event
+ * explosions (§2.11), so the walk is smoothed and clamped.
+ */
+function demoEnergy(): DemoEnergy {
+  const fps = 10;
+  const count = Math.ceil(DEMO_DURATION * fps) + 1;
+  const band = (seed: number, base: number, drift: number): number[] => {
+    const rand = mulberry32(seed);
+    const out: number[] = [];
+    let value = base;
+    for (let i = 0; i < count; i++) {
+      value += (rand() - 0.5) * drift;
+      value = Math.max(0.02, Math.min(1, value));
+      out.push(Math.round(value * 10000) / 10000);
+    }
+    return out;
+  };
+  return {
+    fps,
+    start: 0,
+    bands: {
+      low: band(0x51a9e1, 0.55, 0.05),
+      mid: band(0x2c7b43, 0.4, 0.07),
+      high: band(0x7f0d2b, 0.3, 0.09),
+    },
+  };
 }
 
 /**

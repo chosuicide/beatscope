@@ -18,7 +18,15 @@ export {
   rotateBoardCommand,
   scaleBoardCommand,
   setLayerCropCommand,
+  setLayerSourceCommand,
+  markAssetMissingCommand,
   setResponseAmountCommand,
+  addResponseCommand,
+  removeResponseCommand,
+  insertResponseCommand,
+  setResponseDriverCommand,
+  setResponseMotionCommand,
+  assignResponseLayerCommand,
   toggleLayerVisibleCommand,
   toggleLayerLockedCommand,
   renameSceneCommand,
@@ -68,6 +76,8 @@ export interface AppState {
   boot: BootStatus;
   doc: DirectionDocument;
   rhythm: DemoRhythm;
+  /** v0.11 response relevance keyed by onset id (null when unavailable) */
+  relevance: Map<string, number> | null;
   layout: WorkspaceLayout;
   selection: { sceneId: string | null; layerId: string | null; responseId: string | null };
   camera: { x: number; y: number; zoom: number };
@@ -76,6 +86,8 @@ export interface AppState {
     playing: boolean;
     loopStart: number | null;
     loopEnd: number | null;
+    /** Explicitly keep one edit board live while playback moves elsewhere. */
+    pinnedSceneId: string | null;
   };
   coach: { visible: boolean; step: 1 | 2 | 3 };
   panels: { dockOpen: boolean; inspectorOpen: boolean; packageOpen: boolean };
@@ -91,7 +103,13 @@ export interface AppState {
 
 export type Action =
   | { type: 'boot'; status: BootStatus }
-  | { type: 'doc-loaded'; doc: DirectionDocument; rhythm?: DemoRhythm | null; workspace?: WorkspaceDocument | null }
+  | {
+      type: 'doc-loaded';
+      doc: DirectionDocument;
+      rhythm?: DemoRhythm | null;
+      workspace?: WorkspaceDocument | null;
+      relevance?: Map<string, number> | null;
+    }
   | { type: 'command'; command: DirectionCommand }
   | { type: 'undo' }
   | { type: 'redo' }
@@ -100,6 +118,7 @@ export type Action =
   | { type: 'transport-time'; time: number }
   | { type: 'transport-play'; playing: boolean }
   | { type: 'transport-loop'; start: number | null; end: number | null }
+  | { type: 'live-pin'; sceneId: string | null }
   | { type: 'coach'; visible?: boolean; step?: 1 | 2 | 3 }
   | { type: 'panels'; dockOpen?: boolean; inspectorOpen?: boolean; packageOpen?: boolean }
   | { type: 'language'; language: 'en' | 'zh-CN' }
@@ -127,10 +146,11 @@ export const initialAppState: AppState = {
   boot: 'booting',
   doc: demoDocument,
   rhythm: demoRhythm(),
+  relevance: null,
   layout: demoLayout,
   selection: { sceneId: null, layerId: null, responseId: null },
   camera: { x: 0, y: 0, zoom: 0.62 },
-  transport: { time: 12.4, playing: false, loopStart: null, loopEnd: null },
+  transport: { time: 12.4, playing: false, loopStart: null, loopEnd: null, pinnedSceneId: null },
   coach: { visible: true, step: 1 },
   panels: { dockOpen: true, inspectorOpen: false, packageOpen: false },
   saveState: 'saved',
@@ -151,9 +171,9 @@ export function reducer(state: AppState, action: Action, history: History): { st
       // across a project load (§3.6)
       return {
         state: action.workspace
-          ? { ...state, doc: action.doc, rhythm: action.rhythm ?? state.rhythm, layout: action.workspace.layout, camera: action.workspace.camera,
+          ? { ...state, doc: action.doc, rhythm: action.rhythm ?? state.rhythm, relevance: action.rhythm === null ? null : (action.relevance ?? null), layout: action.workspace.layout, camera: action.workspace.camera, transport: { ...state.transport, pinnedSceneId: null },
               selection: action.workspace.selection, panels: action.workspace.panels }
-          : { ...state, doc: action.doc, rhythm: action.rhythm ?? state.rhythm },
+          : { ...state, doc: action.doc, rhythm: action.rhythm ?? state.rhythm, relevance: action.rhythm === null ? null : (action.relevance ?? null), transport: { ...state.transport, pinnedSceneId: null } },
         history: { past: [], future: [] },
       };
     case 'command': {
@@ -191,6 +211,8 @@ export function reducer(state: AppState, action: Action, history: History): { st
       return { state: { ...state, transport: { ...state.transport, playing: action.playing } }, history };
     case 'transport-loop':
       return { state: { ...state, transport: { ...state.transport, loopStart: action.start, loopEnd: action.end } }, history };
+    case 'live-pin':
+      return { state: { ...state, transport: { ...state.transport, pinnedSceneId: action.sceneId } }, history };
     case 'coach':
       return {
         state: { ...state, coach: { visible: action.visible ?? state.coach.visible, step: action.step ?? state.coach.step } },

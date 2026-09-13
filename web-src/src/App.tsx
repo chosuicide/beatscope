@@ -19,6 +19,7 @@ import { CoachMark } from './components/CoachMark';
 import { Minimap } from './components/Minimap';
 import { Toasts, NoGl } from './components/Toasts';
 import { CanvasStage } from './canvas/CanvasStage';
+import { setAssetClient } from './media/runtime';
 import { translate } from './app/i18n';
 import { demoProposal } from './demo/proposal';
 import { fitAllCamera, focusCamera } from './demo/document';
@@ -66,20 +67,32 @@ export function App() {
       const svc = await detectServices();
       if (!alive) return;
       setServices(svc);
+      setAssetClient(svc.assets);
       dispatch({ type: 'boot', status: svc.mode === 'local-studio' ? 'loading-project' : 'recovering-draft' });
-      let loaded: { doc: DirectionDocument; rhythm?: import('./demo/rhythm').DemoRhythm | null; workspace?: WorkspaceDocument | null; recoveredDraft?: boolean } | null = null;
+      let loaded: {
+        doc: DirectionDocument;
+        rhythm?: import('./demo/rhythm').DemoRhythm | null;
+        workspace?: WorkspaceDocument | null;
+        recoveredDraft?: boolean;
+        relevance?: Map<string, number> | null;
+      } | null = null;
       let conflict = false;
       try {
         const projects = await svc.listProjects();
         const projectId = projects.at(-1)?.project_id ?? 'beyond-the-fog-01';
         loaded = await svc.loadProject(projectId);
+        // Existing project media must be decoded before the first Pixi board
+        // build. AssetStore is intentionally not React state; warming after
+        // doc-loaded would leave already-authored media boards stale until an
+        // unrelated edit forced a rebuild.
+        await svc.assets.warm().catch(() => {});
       } catch (err) {
         conflict = err instanceof DirectionConflictError;
       }
       if (!alive) return;
       if (loaded) {
         lastSavedDocRef.current = loaded.recoveredDraft ? null : loaded.doc;
-        dispatch({ type: 'doc-loaded', doc: loaded.doc, rhythm: loaded.rhythm, workspace: loaded.workspace });
+        dispatch({ type: 'doc-loaded', doc: loaded.doc, rhythm: loaded.rhythm, workspace: loaded.workspace, relevance: loaded.relevance ?? null });
         dispatch({ type: 'boot', status: svc.mode === 'local-studio' ? 'ready' : 'read-only-demo' });
       } else {
         dispatch({ type: 'boot', status: conflict ? 'conflict' : 'fatal' });

@@ -59,7 +59,8 @@ def test_canonical_number_rejects_non_finite():
 
 @pytest.mark.parametrize("case", CORPUS["doc_cases"], ids=lambda c: c["name"])
 def test_validator_matches_corpus(case):
-    errors, notices = validate_direction(case["doc"])
+    asset_ids = set(case["asset_ids"]) if "asset_ids" in case else None
+    errors, notices = validate_direction(case["doc"], asset_ids)
     assert _codes(errors) == case["expected_error_codes"]
     assert _codes(notices) == case["expected_notice_codes"]
 
@@ -81,7 +82,8 @@ def test_canonical_bytes_are_deterministic():
 def test_regenerated_corpus_matches_checked_in_fixture():
     """The checked-in corpus must correspond to the current module behavior."""
     for case in CORPUS["doc_cases"]:
-        errors, _ = validate_direction(case["doc"])
+        asset_ids = set(case["asset_ids"]) if "asset_ids" in case else None
+        errors, _ = validate_direction(case["doc"], asset_ids)
         assert _codes(errors) == case["expected_error_codes"], case["name"]
         if not errors:
             body = canonical_direction_bytes(case["doc"])

@@ -27,7 +27,8 @@ assert.throws(() => contract.canonicalNumber(Infinity), /non-finite/);
 // --- validator + canonical bytes per corpus case ---------------------------
 let validated = 0;
 for (const testCase of corpus.doc_cases) {
-  const { errors, notices } = contract.validateDirection(testCase.doc);
+  const options = testCase.asset_ids ? { assetIds: new Set(testCase.asset_ids) } : {};
+  const { errors, notices } = contract.validateDirection(testCase.doc, options);
   const codes = (messages) => messages.map((m) => m.split(': ', 1)[0]);
   assert.deepEqual(
     codes(errors),

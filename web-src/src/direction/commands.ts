@@ -15,6 +15,7 @@ import type {
   DirectionDocument,
   DirectionScene,
   DirectionLayer,
+  ResponseChain,
   WorkspaceLayout,
   LayerCrop,
 } from './types';
@@ -147,6 +148,78 @@ export function setLayerCropCommand(
   };
 }
 
+export function setLayerSourceCommand(
+  doc: DirectionDocument,
+  sceneId: string,
+  layerId: string,
+  to: string,
+): DirectionCommand {
+  const before = doc.scenes.find((s) => s.id === sceneId)?.layers.find((l) => l.id === layerId)?.props as
+    | Record<string, unknown>
+    | undefined;
+  const from = typeof before?.src === 'string' ? before.src : '';
+  return {
+    id: cmdId('src'),
+    label: 'Set layer source',
+    affectedSceneIds: [sceneId],
+    apply(state) {
+      const doc2 = cloneDoc(state.doc);
+      const layer = doc2.scenes.find((s) => s.id === sceneId)?.layers.find((l) => l.id === layerId);
+      if (layer) layer.props = { ...layer.props, src: to };
+      return { ...state, doc: doc2, saveState: 'offline' };
+    },
+    invert() {
+      return setLayerSourceCommand(doc, sceneId, layerId, from);
+    },
+  };
+}
+
+/**
+ * Detach every reference to a deleted project asset as one history entry.
+ * The tombstone source preserves the content id for diagnosis/replacement,
+ * while no longer claiming the bytes still exist in the project manifest.
+ */
+export function markAssetMissingCommand(doc: DirectionDocument, assetId: string): DirectionCommand {
+  const from = `asset:${assetId}`;
+  const to = `missing-asset:${assetId}`;
+  const affected = doc.scenes
+    .filter((scene) => scene.layers.some((layer) => (layer.props as Record<string, unknown>).src === from))
+    .map((scene) => scene.id);
+  return {
+    id: cmdId('asset-missing'),
+    label: 'Mark deleted asset missing',
+    affectedSceneIds: affected,
+    apply(state) {
+      const doc2 = cloneDoc(state.doc);
+      for (const scene of doc2.scenes) {
+        for (const layer of scene.layers) {
+          const props = layer.props as Record<string, unknown>;
+          if (props.src === from) layer.props = { ...props, src: to };
+        }
+      }
+      return { ...state, doc: doc2, saveState: 'offline' };
+    },
+    invert() {
+      return {
+        id: cmdId('asset-restore-ref'),
+        label: 'Restore deleted asset references',
+        affectedSceneIds: affected,
+        apply(state) {
+          const doc2 = cloneDoc(state.doc);
+          for (const scene of doc2.scenes) {
+            for (const layer of scene.layers) {
+              const props = layer.props as Record<string, unknown>;
+              if (props.src === to) layer.props = { ...props, src: from };
+            }
+          }
+          return { ...state, doc: doc2, saveState: 'offline' };
+        },
+        invert: () => markAssetMissingCommand(doc, assetId),
+      };
+    },
+  };
+}
+
 export function toggleLayerVisibleCommand(doc: DirectionDocument, sceneId: string, layerId: string): DirectionCommand {
   return {
     id: cmdId('vis'),
@@ -212,6 +285,161 @@ export function setResponseAmountCommand(doc: DirectionDocument, responseId: str
     },
     invert() {
       return setResponseAmountCommand(doc, responseId, to, from);
+    },
+  };
+}
+
+export function addResponseCommand(doc: DirectionDocument, sceneId: string, response: ResponseChain): DirectionCommand {
+  const chain: ResponseChain = {
+    ...response,
+    driver: { ...response.driver } as ResponseChain['driver'],
+    motion: { ...response.motion } as ResponseChain['motion'],
+  };
+  return {
+    id: cmdId('add-response'),
+    label: 'Add response chain',
+    affectedSceneIds: [sceneId],
+    apply(state) {
+      const doc2 = cloneDoc(state.doc);
+      const scene = doc2.scenes.find((s) => s.id === sceneId);
+      if (scene) scene.responses.push({ ...chain, driver: { ...chain.driver } as ResponseChain['driver'], motion: { ...chain.motion } as ResponseChain['motion'] });
+      return { ...state, doc: doc2, saveState: 'offline' };
+    },
+    invert() {
+      return removeResponseCommand(doc, sceneId, chain.id);
+    },
+  };
+}
+
+export function removeResponseCommand(doc: DirectionDocument, sceneId: string, responseId: string): DirectionCommand {
+  const scene = doc.scenes.find((s) => s.id === sceneId);
+  const index = scene ? scene.responses.findIndex((r) => r.id === responseId) : -1;
+  const removed = index >= 0 ? scene!.responses[index] : null;
+  return {
+    id: cmdId('remove-response'),
+    label: 'Remove response chain',
+    affectedSceneIds: [sceneId],
+    apply(state) {
+      const doc2 = cloneDoc(state.doc);
+      const target = doc2.scenes.find((s) => s.id === sceneId);
+      if (target) target.responses = target.responses.filter((r) => r.id !== responseId);
+      return { ...state, doc: doc2, saveState: 'offline' };
+    },
+    invert() {
+      if (!removed) return removeResponseCommand(doc, sceneId, responseId);
+      return insertResponseCommand(doc, sceneId, removed, index);
+    },
+  };
+}
+
+/** Re-insert a captured chain at its original position (undo of remove). */
+export function insertResponseCommand(
+  doc: DirectionDocument,
+  sceneId: string,
+  response: ResponseChain,
+  index: number,
+): DirectionCommand {
+  return {
+    id: cmdId('insert-response'),
+    label: 'Restore response chain',
+    affectedSceneIds: [sceneId],
+    apply(state) {
+      const doc2 = cloneDoc(state.doc);
+      const scene = doc2.scenes.find((s) => s.id === sceneId);
+      if (scene && !scene.responses.some((r) => r.id === response.id)) {
+        scene.responses.splice(Math.max(0, Math.min(index, scene.responses.length)), 0, {
+          ...response,
+          driver: { ...response.driver } as ResponseChain['driver'],
+          motion: { ...response.motion } as ResponseChain['motion'],
+        });
+      }
+      return { ...state, doc: doc2, saveState: 'offline' };
+    },
+    invert() {
+      return removeResponseCommand(doc, sceneId, response.id);
+    },
+  };
+}
+
+export function setResponseDriverCommand(
+  doc: DirectionDocument,
+  sceneId: string,
+  responseId: string,
+  to: ResponseChain['driver'],
+): DirectionCommand {
+  const before = doc.scenes
+    .find((s) => s.id === sceneId)
+    ?.responses.find((r) => r.id === responseId)?.driver;
+  const from = before ? ({ ...before } as ResponseChain['driver']) : null;
+  return {
+    id: cmdId('response-driver'),
+    label: 'Change response driver',
+    affectedSceneIds: [sceneId],
+    apply(state) {
+      const doc2 = cloneDoc(state.doc);
+      const chain = doc2.scenes.find((s) => s.id === sceneId)?.responses.find((r) => r.id === responseId);
+      // changing driver density never rewrites the motion (§5.3)
+      if (chain) chain.driver = { ...to } as ResponseChain['driver'];
+      return { ...state, doc: doc2, saveState: 'offline' };
+    },
+    invert() {
+      return from ? setResponseDriverCommand(doc, sceneId, responseId, from) : removeResponseCommand(doc, sceneId, responseId);
+    },
+  };
+}
+
+export function setResponseMotionCommand(
+  doc: DirectionDocument,
+  sceneId: string,
+  responseId: string,
+  to: ResponseChain['motion'],
+): DirectionCommand {
+  const before = doc.scenes
+    .find((s) => s.id === sceneId)
+    ?.responses.find((r) => r.id === responseId)?.motion;
+  const from = before ? ({ ...before } as ResponseChain['motion']) : null;
+  return {
+    id: cmdId('response-motion'),
+    label: 'Change response motion',
+    affectedSceneIds: [sceneId],
+    apply(state) {
+      const doc2 = cloneDoc(state.doc);
+      const chain = doc2.scenes.find((s) => s.id === sceneId)?.responses.find((r) => r.id === responseId);
+      // changing the motion never rewrites evidence selection (§5.3)
+      if (chain) chain.motion = { ...to } as ResponseChain['motion'];
+      return { ...state, doc: doc2, saveState: 'offline' };
+    },
+    invert() {
+      return from ? setResponseMotionCommand(doc, sceneId, responseId, from) : removeResponseCommand(doc, sceneId, responseId);
+    },
+  };
+}
+
+export function assignResponseLayerCommand(
+  doc: DirectionDocument,
+  sceneId: string,
+  responseId: string,
+  layerId: string,
+): DirectionCommand {
+  const before = doc.scenes
+    .find((s) => s.id === sceneId)
+    ?.responses.find((r) => r.id === responseId)?.target_layer_id;
+  const from = before ?? null;
+  return {
+    id: cmdId('response-layer'),
+    label: 'Assign response chain',
+    affectedSceneIds: [sceneId],
+    apply(state) {
+      const doc2 = cloneDoc(state.doc);
+      const scene = doc2.scenes.find((s) => s.id === sceneId);
+      const chain = scene?.responses.find((r) => r.id === responseId);
+      if (scene && chain && scene.layers.some((l) => l.id === layerId)) {
+        chain.target_layer_id = layerId;
+      }
+      return { ...state, doc: doc2, saveState: 'offline' };
+    },
+    invert() {
+      return from ? assignResponseLayerCommand(doc, sceneId, responseId, from) : removeResponseCommand(doc, sceneId, responseId);
     },
   };
 }

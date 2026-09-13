@@ -685,6 +685,64 @@
   color: var(--ink-1);
   letter-spacing: 0.02em;
 }
+.chip.drag {
+  cursor: grab;
+  user-select: none;
+  transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+.chip.drag:active {
+  cursor: grabbing;
+}
+.chip.drag.hot {
+  border-color: var(--accent);
+  background: var(--lilac-wash);
+  transform: translateY(-1px);
+}
+.chip.drag.armed {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--lilac-wash);
+}
+.chip.drag:focus-visible,
+.chain-target:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.chain-target {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+.chain-target.hot {
+  border-color: var(--accent);
+  background: var(--lilac-wash);
+}
+.chain-target .tm {
+  font-size: 12px;
+  font-weight: 560;
+  color: var(--ink-1);
+}
+.chain-remove {
+  margin-left: 6px;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.chain-remove:hover {
+  color: var(--destructive);
+}
+.chain-notice {
+  margin-top: 8px;
+  color: var(--destructive);
+}
 .chip.acc {
   border-color: rgba(117, 103, 232, 0.4);
   color: var(--accent);

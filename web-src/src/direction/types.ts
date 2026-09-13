@@ -56,12 +56,24 @@ export type DriverSpec =
       refractory_beats: number;
     }
   | { kind: 'beat_phase'; subdivision: 1 | 2 | 4 }
-  | { kind: 'energy_envelope'; band: 'low' | 'mid' | 'high' };
+  | { kind: 'downbeat_impulse' }
+  | { kind: 'energy_envelope'; band: 'low' | 'mid' | 'high' }
+  | { kind: 'structure_boundary' }
+  | { kind: 'scene_phase' }
+  | { kind: 'transition_phase' };
 
 export type MotionSpec =
   | { kind: 'scale_pulse'; amount: number; attack_seconds: number; release_seconds: number }
+  | { kind: 'radial_expand'; amount: number; attack_seconds: number; release_seconds: number }
   | { kind: 'translate_recoil'; axis: [number, number]; amount: number; attack_seconds: number; release_seconds: number }
-  | { kind: 'opacity_lift'; amount: number; attack_seconds: number; release_seconds: number };
+  | { kind: 'translate_drift'; axis: [number, number]; amount: number; attack_seconds: number; release_seconds: number }
+  | { kind: 'rotate_recoil'; amount: number; attack_seconds: number; release_seconds: number }
+  | { kind: 'crop_reveal'; amount: number; attack_seconds: number; release_seconds: number }
+  | { kind: 'strip_offset'; amount: number; attack_seconds: number; release_seconds: number }
+  | { kind: 'opacity_lift'; amount: number; attack_seconds: number; release_seconds: number }
+  | { kind: 'opacity_fade'; amount: number; attack_seconds: number; release_seconds: number }
+  | { kind: 'blur_focus'; amount: number; attack_seconds: number; release_seconds: number }
+  | { kind: 'invert_palette'; amount: number; attack_seconds: number; release_seconds: number };
 
 export interface ResponseChain {
   id: string;

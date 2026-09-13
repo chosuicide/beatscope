@@ -111,6 +111,12 @@ const scenes: DirectionScene[] = [
         driver: onsetsLow(4),
         motion: { kind: 'scale_pulse', amount: 0.035, attack_seconds: 0.025, release_seconds: 0.22 },
       }),
+      resp({
+        target_layer_id: 'lay-04',
+        label: 'Downbeat impulse → timecode fade',
+        driver: { kind: 'downbeat_impulse' },
+        motion: { kind: 'opacity_fade', amount: 0.22, attack_seconds: 0.02, release_seconds: 0.18 },
+      }),
     ],
   },
   {
@@ -150,9 +156,9 @@ const scenes: DirectionScene[] = [
       }),
       resp({
         target_layer_id: 'lay-06',
-        label: 'Mid onsets → photo opacity lift',
+        label: 'Mid onsets → photo focus breath',
         driver: { kind: 'ranked_onsets', band: 'mid', tier: 'secondary', max_events_per_bar: 2, refractory_beats: 1 },
-        motion: { kind: 'opacity_lift', amount: 0.08, attack_seconds: 0.05, release_seconds: 0.4 },
+        motion: { kind: 'blur_focus', amount: 1.6, attack_seconds: 0.05, release_seconds: 0.4 },
       }),
     ],
   },
@@ -184,6 +190,12 @@ const scenes: DirectionScene[] = [
         label: 'Mid onsets → Shot A drift',
         driver: { kind: 'ranked_onsets', band: 'mid', tier: 'secondary', max_events_per_bar: 2, refractory_beats: 1 },
         motion: { kind: 'translate_recoil', axis: [1, 0], amount: 0.03, attack_seconds: 0.03, release_seconds: 0.3 },
+      }),
+      resp({
+        target_layer_id: 'lay-15',
+        label: 'Structural boundary → cut tag shift',
+        driver: { kind: 'structure_boundary' },
+        motion: { kind: 'strip_offset', amount: 0.08, attack_seconds: 0.02, release_seconds: 0.3 },
       }),
     ],
   },
@@ -238,9 +250,9 @@ const scenes: DirectionScene[] = [
     responses: [
       resp({
         target_layer_id: 'lay-20',
-        label: 'High onsets → poster lift',
+        label: 'High onsets → poster invert',
         driver: { kind: 'ranked_onsets', band: 'high', tier: 'primary', max_events_per_bar: 6, refractory_beats: 0.7 },
-        motion: { kind: 'opacity_lift', amount: 0.1, attack_seconds: 0.02, release_seconds: 0.24 },
+        motion: { kind: 'invert_palette', amount: 1, attack_seconds: 0.02, release_seconds: 0.24 },
       }),
     ],
   },
@@ -283,9 +295,9 @@ const scenes: DirectionScene[] = [
     responses: [
       resp({
         target_layer_id: 'lay-27',
-        label: 'Mid onsets → halftone shimmer',
+        label: 'Mid onsets → halftone strip offset',
         driver: { kind: 'ranked_onsets', band: 'mid', tier: 'secondary', max_events_per_bar: 3, refractory_beats: 0.8 },
-        motion: { kind: 'opacity_lift', amount: 0.06, attack_seconds: 0.03, release_seconds: 0.28 },
+        motion: { kind: 'strip_offset', amount: 0.02, attack_seconds: 0.03, release_seconds: 0.28 },
       }),
     ],
   },

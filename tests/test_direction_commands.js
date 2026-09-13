@@ -380,4 +380,92 @@ const canonical = (doc) => contract.canonicalDirectionString(doc);
   assert.deepEqual(h.state.layout, pre.layout, 'composite undo restores the layout');
 }
 
-console.log('direction commands: split/merge/ratio/crop/lock/scale/move/layout round-trips agree with the contract');
+/* deleting one shared asset marks every reference in one undo step */
+{
+  const doc = makeDoc();
+  const assetId = 'ab'.repeat(32);
+  doc.scenes[0].layers[0].props.src = `asset:${assetId}`;
+  doc.scenes[1].layers[0].props.src = `asset:${assetId}`;
+  const h = makeHistory(makeState(doc));
+  h.commit(commands.markAssetMissingCommand(h.state.doc, assetId));
+  assert.equal(h.state.doc.scenes[0].layers[0].props.src, `missing-asset:${assetId}`);
+  assert.equal(h.state.doc.scenes[1].layers[0].props.src, `missing-asset:${assetId}`);
+  // A single undo must restore every affected reference, proving this is one
+  // history transaction rather than one command per layer.
+  h.undo();
+  assert.equal(h.state.doc.scenes[0].layers[0].props.src, `asset:${assetId}`);
+  assert.equal(h.state.doc.scenes[1].layers[0].props.src, `asset:${assetId}`);
+}
+
+
+/* ------------------------------------------------------------------ */
+/* response-chain commands (Round 3 magnetic chain edits)              */
+
+{
+  const doc = makeDoc();
+  const h = makeHistory(makeState(doc));
+  const pre = h.state;
+  const chain = {
+    id: 'response-99',
+    target_layer_id: 'lay-01',
+    label: 'High onsets → blur focus',
+    driver: { kind: 'ranked_onsets', band: 'high', tier: 'primary', max_events_per_bar: 3, refractory_beats: 0.4 },
+    motion: { kind: 'blur_focus', amount: 2, attack_seconds: 0.04, release_seconds: 0.3 },
+  };
+  h.commit(commands.addResponseCommand(h.state.doc, 'scene-01', chain));
+  assert.equal(h.state.doc.scenes[0].responses.length, 2, 'chain is appended');
+  assert.equal(h.state.doc.scenes[0].responses[1].id, 'response-99');
+  assertValid(h.state.doc, 'add response');
+  h.undo();
+  assert.equal(canonical(h.state.doc), canonical(pre.doc), 'undo restores the pre-chain bytes');
+  h.redo();
+  assert.equal(h.state.doc.scenes[0].responses[1].id, 'response-99', 'redo restores the chain');
+
+  // changing the driver never rewrites the motion (§5.3)
+  const motionBefore = JSON.stringify(h.state.doc.scenes[0].responses[1].motion);
+  h.commit(
+    commands.setResponseDriverCommand(h.state.doc, 'scene-01', 'response-99', {
+      kind: 'energy_envelope',
+      band: 'mid',
+    }),
+  );
+  assert.equal(JSON.stringify(h.state.doc.scenes[0].responses[1].motion), motionBefore, 'driver change keeps the motion');
+  assert.equal(h.state.doc.scenes[0].responses[1].driver.kind, 'energy_envelope');
+  h.undo();
+  assert.equal(h.state.doc.scenes[0].responses[1].driver.kind, 'ranked_onsets', 'driver change is reversible');
+
+  // changing the motion never rewrites evidence selection
+  const driverBefore = JSON.stringify(h.state.doc.scenes[0].responses[1].driver);
+  h.commit(
+    commands.setResponseMotionCommand(h.state.doc, 'scene-01', 'response-99', {
+      kind: 'invert_palette',
+      amount: 1,
+      attack_seconds: 0.01,
+      release_seconds: 0.12,
+    }),
+  );
+  assert.equal(JSON.stringify(h.state.doc.scenes[0].responses[1].driver), driverBefore, 'motion change keeps the driver');
+  h.undo();
+  assert.equal(h.state.doc.scenes[0].responses[1].motion.kind, 'blur_focus', 'motion change is reversible');
+
+  // assigning a chain to a layer that does not exist is refused
+  h.commit(commands.assignResponseLayerCommand(h.state.doc, 'scene-01', 'response-99', 'lay-missing'));
+  assert.equal(h.state.doc.scenes[0].responses[1].target_layer_id, 'lay-01', 'invalid assignment is refused');
+
+  // removal restores position on undo, and redo removes it again
+  h.commit(commands.removeResponseCommand(h.state.doc, 'scene-01', 'response-99'));
+  assert.equal(h.state.doc.scenes[0].responses.length, 1, 'chain removed');
+  h.undo();
+  assert.equal(h.state.doc.scenes[0].responses[1].id, 'response-99', 'undo re-inserts at the original index');
+  assertValid(h.state.doc, 'remove/insert response');
+  h.redo();
+  assert.equal(h.state.doc.scenes[0].responses.length, 1, 'redo removes it again');
+  h.undo();
+  const restored = canonical(h.state.doc);
+  assert.equal(h.state.doc.scenes[0].responses[1].id, 'response-99', 'chain is back after the second undo');
+  h.commit(commands.removeResponseCommand(h.state.doc, 'scene-01', 'response-99'));
+  h.undo();
+  assert.equal(canonical(h.state.doc), restored, 'remove/undo is byte-identical on repeat');
+}
+
+console.log('direction commands: split/merge/ratio/crop/lock/scale/move/layout/chain round-trips agree with the contract');

@@ -1,13 +1,21 @@
 /**
  * The single Pixi host: one WebGL renderer owns the composition viewport
- * (plan §4). All canvas content (boards, connectors, selection ring) lives in
- * this renderer; editor chrome stays in the React DOM layer.
+ * (plan §3.2). All canvas content (boards, connectors, selection ring) lives
+ * in this renderer; editor chrome stays in the React DOM layer.
+ *
+ * Round 3 Commit 1 adds live-board arbitration and the poster cache:
+ * exactly one board renders live; every inactive board shows a cached
+ * RenderTexture poster generated at its representative time. Posters are
+ * invalidated only for affected scenes and evicted LRU before the GPU budget.
  */
 import {
   Application,
   Container,
   Graphics,
+  Rectangle,
+  Sprite,
   Text,
+  Texture,
 } from 'pixi.js';
 import type {
   DirectionDocument,
@@ -15,21 +23,26 @@ import type {
   BoardBox,
   CameraState,
 } from '../direction/types';
-import type { DemoTextures } from './textures';
+import type { DemoTextures } from './textures.js';
+import type { DemoRhythm } from '../demo/rhythm';
 import {
   BOARD_HEAD,
   BOARD_FOOT,
   FIRST_RUN_ZOOM,
-} from '../demo/document';
+} from '../demo/document.js';
 import {
   buildBoard,
   applyOutputs,
   resetOutputs,
   BOARD_SCALE,
-} from './board-renderer';
-import type { BoardVisual } from './board-renderer';
-import type { SceneEvaluation } from '../motion/evaluate';
-import { clampZoom } from '../camera/camera';
+} from './board-renderer.js';
+import type { BoardVisual } from './board-renderer.js';
+import { PosterCache } from './poster-cache.js';
+import { NO_ASSETS, type AssetResolver } from '../systems/index.js';
+import { getDirectionState, sceneAtTime } from '../motion/evaluate.js';
+import { videoSourceTime } from '../motion/evaluate.js';
+import type { CompiledDirection, DirectionState } from '../motion/evaluate.js';
+import { clampZoom } from '../camera/camera.js';
 
 const STROKE_W = 1 / FIRST_RUN_ZOOM; // 1 screen px of chrome at first-run zoom
 
@@ -66,6 +79,7 @@ export interface CompositionSnapshot {
   camera: CameraState;
   firstRunMode: boolean;
   selectedSceneId: string | null;
+  liveSceneId: string | null;
   boards: Array<{ id: string; visible: boolean; x: number; y: number; w: number; h: number }>;
 }
 
@@ -74,6 +88,14 @@ export interface ProposalGhost {
   sceneId: string;
   rect: { x: number; y: number; w: number; h: number }; // fractions of the board body
   label: string;
+}
+
+export interface HostDocumentOptions {
+  rhythm?: DemoRhythm | null;
+  assets?: AssetResolver;
+  /** compiled evaluator; posters render its representative-time state */
+  compiled?: CompiledDirection | null;
+  reducedMotion?: boolean;
 }
 
 const ACCENT_HEX = 0x7567e8;
@@ -92,22 +114,29 @@ export class PixiHost {
   private world = new Container();
   private wires = new Container();
   private boardsLayer = new Container();
+  private posterLayer = new Container(); // cached posters for inactive boards
   private ghostLayer = new Container(); // world space: pending proposal ghosts
   private ringLayer = new Container(); // screen space, drawn above world
   private overlayLayer = new Container(); // screen space: guides, pills, brackets, annotation
   private snapLayer = new Container(); // screen space: live snap guides while dragging
 
   private boardVisuals = new Map<string, BoardVisual>();
+  private posterSprites = new Map<string, Sprite>();
+  private posterCache: PosterCache<Texture>;
   private sceneOrder: string[] = [];
   private layoutBoxes = new Map<string, BoardBox>();
   private doc: DirectionDocument | null = null;
   private textures: DemoTextures | null = null;
+  private assets: AssetResolver = NO_ASSETS;
+  private compiled: CompiledDirection | null = null;
+  private reducedMotion = false;
   private liveSceneId: string | null = null;
   private selectedSceneId: string | null = null;
   private selectedLayerId: string | null = null;
   private proposalItems: ProposalGhost[] | null = null;
   private firstRunMode = false;
   private focusIsolation = false;
+  private hoverSceneId: string | null = null;
   private camera: CameraState = { x: 0, y: 0, zoom: FIRST_RUN_ZOOM };
   private zoomBand = { connectors: 'solid', lod: 'full' as LodMode, shadows: true };
   private destroyed = false;
@@ -119,6 +148,10 @@ export class PixiHost {
 
   constructor(events: PixiHostEvents) {
     this.events = events;
+    this.posterCache = new PosterCache<Texture>({
+      create: (sceneId) => this.renderPoster(sceneId, 'representative'),
+      destroy: (texture) => texture.destroy(true),
+    });
   }
 
   async init(canvas: HTMLCanvasElement, width: number, height: number): Promise<void> {
@@ -140,7 +173,7 @@ export class PixiHost {
     app.ticker.stop();
     this.app = app;
     canvas.addEventListener('webglcontextlost', this.contextLostHandler);
-    this.world.addChild(this.wires, this.boardsLayer, this.ghostLayer);
+    this.world.addChild(this.wires, this.posterLayer, this.boardsLayer, this.ghostLayer);
     app.stage.addChild(this.world, this.overlayLayer, this.ringLayer, this.snapLayer);
     this.applyCamera(this.camera);
   }
@@ -149,36 +182,170 @@ export class PixiHost {
     this.app?.renderer.resize(width, height);
   }
 
-  setDocument(doc: DirectionDocument, layout: WorkspaceLayout, textures: DemoTextures): void {
+  setDocument(
+    doc: DirectionDocument,
+    layout: WorkspaceLayout,
+    textures: DemoTextures,
+    options: HostDocumentOptions = {},
+  ): void {
     this.doc = doc;
     this.textures = textures;
+    if (options.assets) this.assets = options.assets;
+    if (options.compiled !== undefined) this.compiled = options.compiled;
+    if (options.reducedMotion !== undefined) this.reducedMotion = options.reducedMotion;
     this.layoutBoxes.clear();
     for (const [id, box] of Object.entries(layout.boards)) {
       this.layoutBoxes.set(id, { ...box });
     }
-    this.rebuild();
+    this.syncBoards();
   }
 
-  private rebuild(): void {
-    if (!this.doc || !this.textures || !this.app) return;
-    this.boardsLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
-    this.boardVisuals.clear();
+  /** Per-scene signature: content + box. Unchanged scenes keep their visual. */
+  private sceneSignature(sceneId: string): string {
+    const scene = this.doc?.scenes.find((s) => s.id === sceneId);
+    const box = this.layoutBoxes.get(sceneId);
+    if (!scene || !box) return '';
+    return JSON.stringify([scene, box, this.doc?.theme ?? {}, this.assets.cacheKey?.() ?? '']);
+  }
 
+  private signatures = new Map<string, string>();
+
+  /**
+   * Rebuild only boards whose content or box changed; posters invalidate for
+   * exactly those scenes (§3.2 "invalidate only posters affected by the
+   * edited scene, theme or asset").
+   */
+  private syncBoards(): void {
+    if (!this.doc || !this.textures || !this.app) return;
     const scenes = [...this.doc.scenes].sort((a, b) => a.start_time - b.start_time);
     this.sceneOrder = scenes.map((s) => s.id);
+    const nextSignatures = new Map<string, string>();
+    const invalidated: string[] = [];
+
     for (const scene of scenes) {
       const box = this.layoutBoxes.get(scene.id);
       if (!box) continue;
-      const visual = buildBoard(scene, box, this.textures, scene.id === this.liveSceneId);
-      if (scene.id === this.liveSceneId) this.overlayBorder(visual, true);
+      const signature = this.sceneSignature(scene.id);
+      nextSignatures.set(scene.id, signature);
+      const live = scene.id === this.liveSceneId;
+      const previous = this.signatures.get(scene.id);
+      const existing = this.boardVisuals.get(scene.id);
+      if (existing && previous === signature && existing.liveTag.visible === live) continue;
+
+      if (existing) {
+        this.borderOverlays.get(scene.id)?.destroy();
+        this.borderOverlays.delete(scene.id);
+        existing.container.destroy({ children: true });
+        this.boardVisuals.delete(scene.id);
+      }
+      const sprite = this.posterSprites.get(scene.id);
+      if (sprite) {
+        sprite.destroy();
+        this.posterSprites.delete(scene.id);
+      }
+      const visual = buildBoard(scene, box, this.textures, live, this.assets);
+      if (live) this.overlayBorder(visual, true);
       this.boardsLayer.addChild(visual.container);
       this.boardVisuals.set(scene.id, visual);
+      invalidated.push(scene.id);
     }
+
+    // drop visuals for scenes that no longer exist
+    for (const [id, visual] of [...this.boardVisuals]) {
+      if (nextSignatures.has(id)) continue;
+      this.borderOverlays.get(id)?.destroy();
+      this.borderOverlays.delete(id);
+      visual.container.destroy({ children: true });
+      this.boardVisuals.delete(id);
+      const sprite = this.posterSprites.get(id);
+      if (sprite) {
+        sprite.destroy();
+        this.posterSprites.delete(id);
+      }
+      this.posterCache.invalidate([id]);
+    }
+
+    this.signatures = nextSignatures;
+    this.posterCache.invalidate(invalidated);
     this.updateBoardVisibility();
     this.drawWires();
     this.drawRing();
     this.drawGhost();
     this.applyLod(lodForZoom(this.camera.zoom));
+  }
+
+  /** Poster key: scene content identity + poster kind. */
+  private posterKey(sceneId: string, kind: 'representative' | 'hover'): string {
+    const scene = this.doc?.scenes.find((s) => s.id === sceneId);
+    if (!scene) return 'missing';
+    const at = kind === 'hover' ? 'hover' : 'rep';
+    return `${at}:${scene.start_time}:${scene.end_time}:${scene.layers.length}:${scene.responses.length}`;
+  }
+
+  /** Render one board to a RenderTexture at a representative or hover time. */
+  private renderPoster(sceneId: string, kind: 'representative' | 'hover'): { texture: Texture; width: number; height: number } | null {
+    const app = this.app;
+    const visual = this.boardVisuals.get(sceneId);
+    const box = this.layoutBoxes.get(sceneId);
+    const scene = this.doc?.scenes.find((s) => s.id === sceneId);
+    if (!app || !visual || !box || !scene) return null;
+
+    const boardW = box.w / BOARD_SCALE;
+    const bodyH = box.bodyH / BOARD_SCALE;
+    const fullH = BOARD_HEAD + bodyH + BOARD_FOOT;
+    const savedPosition = { x: visual.container.x, y: visual.container.y };
+    const savedRotation = visual.container.rotation;
+    const savedScale = { x: visual.container.scale.x, y: visual.container.scale.y };
+    try {
+      // A representative poster is deterministic: the scene midpoint with
+      // the authored responses evaluated at that exact time.
+      const at = kind === 'hover' && this.hoverAt !== null
+        ? this.hoverAt
+        : scene.start_time + (scene.end_time - scene.start_time) * 0.5;
+      if (this.compiled) {
+        const state = getDirectionState(this.compiled, at, { reducedMotion: this.reducedMotion });
+        applyOutputs(visual, state.layers);
+      }
+      visual.container.position.set(0, 0);
+      visual.container.rotation = 0;
+      visual.container.scale.set(BOARD_SCALE);
+      const texture = app.renderer.generateTexture({
+        target: visual.container,
+        frame: new Rectangle(0, 0, boardW, fullH),
+        resolution: 2,
+        antialias: true,
+      });
+      return { texture, width: boardW * 2, height: fullH * 2 };
+    } catch {
+      return null;
+    } finally {
+      resetOutputs(visual);
+      visual.container.position.set(savedPosition.x, savedPosition.y);
+      visual.container.rotation = savedRotation;
+      visual.container.scale.set(savedScale.x, savedScale.y);
+    }
+  }
+
+  private hoverAt: number | null = null;
+
+  /** Display or clear the poster sprite for one board. */
+  private syncPoster(sceneId: string): void {
+    const visual = this.boardVisuals.get(sceneId);
+    const box = this.layoutBoxes.get(sceneId);
+    if (!visual || !box) return;
+    let sprite = this.posterSprites.get(sceneId);
+    if (!sprite) {
+      sprite = new Sprite(Texture.EMPTY);
+      sprite.eventMode = 'none';
+      this.posterLayer.addChild(sprite);
+      this.posterSprites.set(sceneId, sprite);
+    }
+    const key = this.posterKey(sceneId, this.hoverSceneId === sceneId ? 'hover' : 'representative');
+    const texture = this.posterCache.ensure(sceneId, key);
+    if (texture) sprite.texture = texture;
+    sprite.position.set(box.x, box.y);
+    sprite.rotation = (box.rotation * Math.PI) / 180;
+    sprite.scale.set(BOARD_SCALE);
   }
 
   setLiveScene(sceneId: string | null): void {
@@ -196,6 +363,44 @@ export class PixiHost {
       v.liveTag.visible = true;
       this.overlayBorder(v, true);
     }
+    this.updateBoardVisibility();
+    this.applyLod(lodForZoom(this.camera.zoom));
+  }
+
+  /** One poster checkpoint on hover; never a continuous loop (§3.2). */
+  setHoverScene(sceneId: string | null, time: number | null = null): void {
+    if (sceneId === this.hoverSceneId) {
+      if (sceneId && time !== null && this.hoverAt !== time) {
+        this.hoverAt = time;
+        this.posterCache.invalidate([sceneId]);
+        this.syncPoster(sceneId);
+        this.updateBoardVisibility();
+      }
+      return;
+    }
+    const previous = this.hoverSceneId;
+    this.hoverSceneId = sceneId;
+    this.hoverAt = time;
+    if (previous) {
+      this.posterCache.invalidate([previous]);
+      this.syncPoster(previous);
+    }
+    if (sceneId) {
+      this.posterCache.invalidate([sceneId]);
+      this.syncPoster(sceneId);
+    }
+    this.updateBoardVisibility();
+  }
+
+  /** Invalidate posters for edited scenes only (§3.2). */
+  invalidatePosters(sceneIds: Iterable<string>): void {
+    const affected = [...sceneIds];
+    this.posterCache.invalidate(affected);
+    for (const sceneId of affected) this.syncPoster(sceneId);
+  }
+
+  posterStats(): { count: number; bytes: number; budgetBytes: number } {
+    return this.posterCache.stats;
   }
 
   private borderOverlays = new Map<string, Graphics>();
@@ -221,11 +426,26 @@ export class PixiHost {
   }
 
   /** Push evaluated response outputs onto the live board. */
-  updateLive(evaluation: SceneEvaluation): void {
+  updateLive(evaluation: DirectionState): void {
     const v = this.boardVisuals.get(evaluation.scene.id);
-    if (!v) return;
+    if (!v || evaluation.scene.id !== this.liveSceneId) return;
+    for (const layer of evaluation.scene.layers) {
+      if (layer.kind !== 'media-slice') continue;
+      const props = layer.props as Record<string, unknown>;
+      const src = typeof props.src === 'string' ? props.src : '';
+      const duration = this.assets.mediaDuration?.(src) ?? null;
+      if (!(duration && duration > 0)) continue;
+      const offset = Number.isFinite(Number(props.source_offset_seconds)) ? Number(props.source_offset_seconds) : 0;
+      const authoredLoop = Number.isFinite(Number(props.loop_duration_seconds)) && Number(props.loop_duration_seconds) > 0
+        ? Math.min(duration, Number(props.loop_duration_seconds))
+        : duration;
+      const looping = props.loop !== false;
+      const sourceTime = videoSourceTime(evaluation.time, evaluation.scene.start_time, offset, authoredLoop, looping);
+      this.assets.seekMedia?.(src, sourceTime);
+    }
     const changed = [...evaluation.layers.values()].some(
-      (o) => o.scale !== 1 || o.translate.x !== 0 || o.translate.y !== 0 || o.opacity !== 1,
+      (o) => o.scale !== 1 || o.translate.x !== 0 || o.translate.y !== 0 || o.opacity !== 1 ||
+        o.rotation !== 0 || o.crop !== 0 || o.strip !== 0 || o.blur !== 0 || o.invert !== 0,
     );
     if (!changed) {
       resetOutputs(v);
@@ -263,14 +483,35 @@ export class PixiHost {
     this.drawWires();
   }
 
+  /** Base visibility before live/poster arbitration. */
+  private boardVisible(sceneId: string, index: number): boolean {
+    if (this.focusIsolation) return sceneId === this.selectedSceneId;
+    return !this.firstRunMode || index < 5;
+  }
+
   private updateBoardVisibility(): void {
     for (let i = 0; i < this.sceneOrder.length; i++) {
       const id = this.sceneOrder[i];
       const v = this.boardVisuals.get(id);
       if (!v) continue;
-      v.container.visible = this.focusIsolation
-        ? id === this.selectedSceneId
-        : !this.firstRunMode || i < 5;
+      const visible = this.boardVisible(id, i);
+      const live = id === this.liveSceneId;
+      const lod = lodForZoom(this.camera.zoom);
+      const sprite = this.posterSprites.get(id);
+      if (!visible) {
+        v.container.visible = false;
+        if (sprite) sprite.visible = false;
+        continue;
+      }
+      if (live || lod === 'silhouette') {
+        v.container.visible = true;
+        if (sprite) sprite.visible = false;
+      } else {
+        this.syncPoster(id);
+        v.container.visible = false;
+        const poster = this.posterSprites.get(id);
+        if (poster) poster.visible = true;
+      }
     }
   }
 
@@ -284,12 +525,15 @@ export class PixiHost {
       camera: { ...this.camera },
       firstRunMode: this.firstRunMode,
       selectedSceneId: this.selectedSceneId,
+      liveSceneId: this.liveSceneId,
       boards: this.sceneOrder.map((id) => {
         const box = this.layoutBoxes.get(id)!;
         const v = this.boardVisuals.get(id);
+        const poster = this.posterSprites.get(id);
+        const visible = (v?.container.visible ?? false) || (poster?.visible ?? false);
         return {
           id,
-          visible: v?.container.visible ?? false,
+          visible,
           x: box.x * this.camera.zoom + this.camera.x,
           y: box.y * this.camera.zoom + this.camera.y,
           w: box.w * this.camera.zoom,
@@ -326,13 +570,16 @@ export class PixiHost {
       for (const v of this.boardVisuals.values()) v.shadow.visible = shadows;
       this.drawWires();
     }
+    this.updateBoardVisibility();
   }
 
   private applyLod(mode: LodMode): void {
-    for (const v of this.boardVisuals.values()) {
+    for (const [id, v] of this.boardVisuals) {
       const silhouette = mode === 'silhouette';
       v.artContainer.visible = !silhouette;
       v.foot.visible = !silhouette;
+      const sprite = this.posterSprites.get(id);
+      if (sprite) sprite.visible = sprite.visible && !silhouette;
     }
   }
 
@@ -344,6 +591,11 @@ export class PixiHost {
     v.box = { ...box };
     v.container.position.set(box.x, box.y);
     v.container.rotation = (box.rotation * Math.PI) / 180;
+    const sprite = this.posterSprites.get(sceneId);
+    if (sprite) {
+      sprite.position.set(box.x, box.y);
+      sprite.rotation = (box.rotation * Math.PI) / 180;
+    }
     const overlay = this.borderOverlays.get(sceneId);
     if (overlay) {
       overlay.destroy();
@@ -723,10 +975,12 @@ export class PixiHost {
     this.destroyed = true;
     const canvas = this.app?.canvas;
     if (canvas) canvas.removeEventListener('webglcontextlost', this.contextLostHandler);
+    this.posterCache.clear();
+    this.posterSprites.clear();
     // keep the view element: React owns the canvas (StrictMode remounts reuse it)
     this.app?.destroy(false, { children: true });
     this.app = null;
   }
 }
 
-export { clampZoom, BOARD_SCALE };
+export { clampZoom, BOARD_SCALE, sceneAtTime };

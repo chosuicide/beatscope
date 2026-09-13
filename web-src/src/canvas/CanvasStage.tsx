@@ -10,8 +10,16 @@ import type { BoardBox, DirectionDocument, WorkspaceLayout } from '../direction/
 import { loadDemoTextures } from '../render/textures';
 import { PixiHost } from '../render/pixi-host';
 import type { ProposalGhost } from '../render/pixi-host';
+import { arbitrateLiveBoard } from '../render/arbitration';
+import { assetStore } from '../media/store';
 import { zoomAtPointer, clampZoom } from '../camera/camera';
-import { sceneAtTime, evaluateScene } from '../motion/evaluate';
+import {
+  compileDirection,
+  getDirectionState,
+  prefersReducedMotion,
+  observeReducedMotion,
+  type CompiledDirection,
+} from '../motion/evaluate';
 import { focusCamera } from '../demo/document';
 import { translate } from '../app/i18n';
 
@@ -29,6 +37,10 @@ export function CanvasStage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const hostRef = useRef<PixiHost | null>(null);
   const dragRef = useRef<DragState | null>(null);
+  const hoverRef = useRef<string | null>(null);
+  const compiledRef = useRef<CompiledDirection | null>(null);
+  const compiledFromRef = useRef<{ doc: unknown; rhythm: unknown } | null>(null);
+  const reducedMotionRef = useRef(false);
   const animRef = useRef<{ from: { x: number; y: number; zoom: number }; to: { x: number; y: number; zoom: number }; t: number } | null>(null);
   const { getState, dispatch, state } = useStore();
   // frame D candidate preview: "After" (ghost overlays) is the default view
@@ -89,8 +101,14 @@ export function CanvasStage() {
       win.__beathiStatus = 'textures';
       const tex = await loadDemoTextures();
       win.__beathiStatus = 'setDocument';
+      reducedMotionRef.current = prefersReducedMotion();
       try {
-        host.setDocument(state.doc, state.layout, tex);
+        host.setDocument(state.doc, state.layout, tex, {
+          rhythm: state.rhythm,
+          assets: assetStore,
+          compiled: compileDirection(state.doc, state.rhythm, { relevance: state.relevance }),
+          reducedMotion: reducedMotionRef.current,
+        });
       } catch (e) {
         win.__beathiErr = 'setDocument: ' + String(e);
         return;
@@ -107,6 +125,8 @@ export function CanvasStage() {
       // commits the same box afterwards.)
       let lastDoc: DirectionDocument | null = null;
       let lastLayout: WorkspaceLayout | null = null;
+      let lastRhythm: typeof state.rhythm | null = null;
+      let lastRelevance: typeof state.relevance | undefined;
 
       // per-frame sync: camera, live-board arbitration, evaluation, render
       let lastTs = performance.now();
@@ -120,10 +140,27 @@ export function CanvasStage() {
         const h = hostRef.current;
         const s = getState();
 
-        if (s.doc !== lastDoc || s.layout !== lastLayout) {
+        if (
+          s.doc !== lastDoc ||
+          s.layout !== lastLayout ||
+          s.rhythm !== lastRhythm ||
+          s.relevance !== lastRelevance
+        ) {
+          const docChanged = s.doc !== lastDoc || s.rhythm !== lastRhythm || s.relevance !== lastRelevance;
           lastDoc = s.doc;
           lastLayout = s.layout;
-          h.setDocument(s.doc, s.layout, tex);
+          lastRhythm = s.rhythm;
+          lastRelevance = s.relevance;
+          if (docChanged || !compiledRef.current) {
+            compiledRef.current = compileDirection(s.doc, s.rhythm, { relevance: s.relevance });
+            compiledFromRef.current = { doc: s.doc, rhythm: s.rhythm };
+          }
+          h.setDocument(s.doc, s.layout, tex, {
+            rhythm: s.rhythm,
+            assets: assetStore,
+            compiled: compiledRef.current,
+            reducedMotion: reducedMotionRef.current,
+          });
         }
 
         h.setFirstRunMode(s.coach.visible && s.selection.sceneId === null);
@@ -165,10 +202,22 @@ export function CanvasStage() {
         } else {
           h.setProposalPreview(null);
         }
-        const liveScene = sceneAtTime(s.doc, s.transport.time);
-        h.setLiveScene(liveScene ? liveScene.id : null);
-        if (liveScene) {
-          h.updateLive(evaluateScene(liveScene, s.transport.time, s.rhythm));
+        // live-board arbitration (§3.2): selected board while editing, the
+        // chronological board during playback, one explicit pin wins.
+        const compiled = compiledRef.current;
+        const state = compiled
+          ? getDirectionState(compiled, s.transport.time, { reducedMotion: reducedMotionRef.current })
+          : null;
+        const liveScene = state ? state.scene : null;
+        const live = arbitrateLiveBoard({
+          selectedSceneId: s.selection.sceneId,
+          pinnedSceneId: s.transport.pinnedSceneId,
+          currentSceneId: liveScene ? liveScene.id : null,
+          playing: s.transport.playing,
+        });
+        h.setLiveScene(live);
+        if (state && live === state.scene.id) {
+          h.updateLive(state);
         }
         h.render();
         if (shotMode) win.__beathiComposition = h.compositionSnapshot();
@@ -258,8 +307,18 @@ export function CanvasStage() {
   const onPointerMove = (e: React.PointerEvent) => {
     const host = hostRef.current;
     const drag = dragRef.current;
-    if (!host || !drag) return;
+    if (!host) return;
     const p = localPoint(e.nativeEvent);
+    if (!drag) {
+      // one poster checkpoint on hover; never a second live loop (§3.2)
+      const world = host.toWorld(p.x, p.y);
+      const sceneId = host.sceneAtWorld(world.x, world.y);
+      if (sceneId !== hoverRef.current) {
+        hoverRef.current = sceneId;
+        host.setHoverScene(sceneId, getState().transport.time);
+      }
+      return;
+    }
     const world = host.toWorld(p.x, p.y);
     const box: BoardBox = {
       x: world.x - drag.grabDX,
@@ -272,6 +331,12 @@ export function CanvasStage() {
     const { box: snapped, gx, gy } = host.snapBoxWithGuides(drag.sceneId, box);
     host.moveBoard(drag.sceneId, snapped);
     host.showSnapGuides(gx, gy);
+  };
+
+  const onPointerLeave = () => {
+    const host = hostRef.current;
+    hoverRef.current = null;
+    host?.setHoverScene(null);
   };
 
   const onPointerUp = () => {
@@ -302,6 +367,14 @@ export function CanvasStage() {
     };
   };
 
+  useEffect(
+    () =>
+      observeReducedMotion((reduced) => {
+        reducedMotionRef.current = reduced;
+      }),
+    [],
+  );
+
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ sceneId: string }>).detail;
@@ -327,6 +400,7 @@ export function CanvasStage() {
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onPointerLeave={onPointerLeave}
     >
       <canvas ref={canvasRef} />
       <div className="grain" aria-hidden="true" />

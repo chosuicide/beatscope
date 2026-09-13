@@ -4,6 +4,7 @@
  */
 import type { DirectionDocument, WorkspaceDocument } from '../direction/types';
 import type { DemoRhythm } from '../demo/rhythm';
+import type { AssetClient } from '../media/client';
 
 export interface ProjectSummary {
   project_id: string;
@@ -17,8 +18,17 @@ export interface AnalysisJob {
 
 export interface BeatScopeServices {
   readonly mode: 'local-studio' | 'static-demo';
+  /** Project media capabilities; `available: false` removes the affordance. */
+  readonly assets: AssetClient;
   listProjects(): Promise<ProjectSummary[]>;
-  loadProject(projectId: string): Promise<{ doc: DirectionDocument; rhythm: DemoRhythm | null; workspace: WorkspaceDocument | null; recoveredDraft?: boolean }>;
+  loadProject(projectId: string): Promise<{
+    doc: DirectionDocument;
+    rhythm: DemoRhythm | null;
+    workspace: WorkspaceDocument | null;
+    recoveredDraft?: boolean;
+    /** v0.11 response-relevance sidecar keyed by onset id; null when absent */
+    relevance?: Map<string, number> | null;
+  }>;
   submitAnalysis(file: File): Promise<AnalysisJob | null>;
   cancelAnalysis(jobId: string): Promise<boolean>;
   audioUrlFor(projectId: string): string | null;

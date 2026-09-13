@@ -15,6 +15,7 @@ import type { DirectionDocument, WorkspaceDocument } from '../direction/types';
 import { canonicalDirectionBytes, validateDirection } from '../direction/contract';
 import { DirectionConflictError } from './conflict';
 import type { DemoRhythm } from '../demo/rhythm';
+import { LocalStudioAssetClient, type AssetClient } from '../media/client';
 
 function adaptRhythm(raw: any): DemoRhythm {
   const bpm = Number(raw?.tempo?.global_bpm) || 120;
@@ -26,9 +27,35 @@ function adaptRhythm(raw: any): DemoRhythm {
     const band = bands.reduce((best, key) => Number(o?.bands?.[key] ?? 0) > Number(o?.bands?.[best] ?? 0) ? key : best, 'low' as typeof bands[number]);
     return { id: String(o.id), time: Number(o.time), band, strength: Number(o.strength ?? o?.bands?.[band] ?? 0) };
   }) : [];
+  const downbeats = Array.isArray(raw?.beats)
+    ? raw.beats.filter((b: any) => b.downbeat === true || Number(b.beat_in_bar ?? b.beat) === 1).map((b: any) => Number(b.time))
+    : [];
+  const rawEnergy = raw?.energy;
+  const energy =
+    rawEnergy && Array.isArray(rawEnergy?.bands?.low) && Array.isArray(rawEnergy?.bands?.mid) && Array.isArray(rawEnergy?.bands?.high)
+      ? {
+          fps: Number(rawEnergy.fps) || 20,
+          start: Number(rawEnergy.start) || 0,
+          bands: {
+            low: rawEnergy.bands.low.map(Number),
+            mid: rawEnergy.bands.mid.map(Number),
+            high: rawEnergy.bands.high.map(Number),
+          },
+        }
+      : null;
+  const patterns = raw?.patterns ?? {};
+  const boundaries = Array.isArray(patterns.boundaries)
+    ? patterns.boundaries.filter((b: any) => Number.isFinite(Number(b?.time))).map((b: any) => Number(b.time))
+    : [];
+  const segments = Array.isArray(patterns.segments)
+    ? patterns.segments
+        .filter((s: any) => Number.isFinite(Number(s?.start_time)) && Number.isFinite(Number(s?.end_time)))
+        .map((s: any) => ({ start_time: Number(s.start_time), end_time: Number(s.end_time) }))
+    : [];
   return {
     project_id: String(raw.project_id), duration: Number(raw?.source?.duration ?? 0), bpm,
     bar_seconds: 60 / bpm * Number(raw?.meter?.numerator ?? 4), beats, onsets,
+    downbeats, energy, boundaries, segments,
   };
 }
 
@@ -39,6 +66,15 @@ export class LocalStudioServices implements BeatScopeServices {
   private directionEtag: string | null = null;
   private workspaceEtag: string | null = null;
   private activeDraftKey: string | null = null;
+  private assetClient: LocalStudioAssetClient | null = null;
+
+  /** Lazily bound to the first project that loads (plan §6.1). */
+  get assets(): AssetClient {
+    if (!this.assetClient) {
+      this.assetClient = new LocalStudioAssetClient(this.audioProjectId ?? this.directionProjectId ?? '');
+    }
+    return this.assetClient;
+  }
 
   async listProjects(): Promise<ProjectSummary[]> {
     const res = await fetch('/api/projects');
@@ -47,16 +83,47 @@ export class LocalStudioServices implements BeatScopeServices {
     return body.projects ?? [];
   }
 
-  async loadProject(projectId: string): Promise<{ doc: DirectionDocument; rhythm: DemoRhythm | null; workspace: WorkspaceDocument | null; recoveredDraft?: boolean }> {
+  async loadProject(projectId: string): Promise<{
+    doc: DirectionDocument;
+    rhythm: DemoRhythm | null;
+    workspace: WorkspaceDocument | null;
+    recoveredDraft?: boolean;
+    relevance?: Map<string, number> | null;
+  }> {
     const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}`);
     if (!res.ok) throw new Error(`project ${projectId} not found`);
     const rawRhythm = await res.json(); // Rhythm IR is validated on the Python side
     this.audioProjectId = projectId;
+    this.assetClient = new LocalStudioAssetClient(projectId);
     let doc = await this.fetchDirection(projectId);
     const draft = this.readDraft();
     if (draft) doc = draft;
     const workspace = await this.fetchWorkspace(projectId);
-    return { doc, rhythm: adaptRhythm(rawRhythm), workspace, recoveredDraft: draft !== null };
+    const relevance = await this.fetchRelevance(projectId);
+    return { doc, rhythm: adaptRhythm(rawRhythm), workspace, recoveredDraft: draft !== null, relevance };
+  }
+
+  /**
+   * v0.11 response relevance (plan §4.4/§4.7): read-only evidence used to
+   * rank the budget. The model is never retrained and no timestamp changes;
+   * a missing sidecar falls back to measured strength inside the evaluator.
+   */
+  private async fetchRelevance(projectId: string): Promise<Map<string, number> | null> {
+    try {
+      const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/response-relevance`);
+      if (!res.ok) return null;
+      const body = (await res.json()) as { events?: Array<{ onset_id?: unknown; response_relevance?: unknown }> };
+      if (!Array.isArray(body.events)) return null;
+      const map = new Map<string, number>();
+      for (const row of body.events) {
+        const id = Number(row?.onset_id);
+        const value = Number(row?.response_relevance);
+        if (Number.isFinite(id) && Number.isFinite(value)) map.set(String(id), value);
+      }
+      return map.size > 0 ? map : null;
+    } catch {
+      return null;
+    }
   }
 
   private async fetchDirection(projectId: string): Promise<DirectionDocument> {

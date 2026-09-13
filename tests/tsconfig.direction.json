@@ -19,6 +19,20 @@
     "../web-src/src/direction/layout.ts",
     "../web-src/src/direction/commands.ts",
     "../web-src/src/demo/rhythm.ts",
-    "../web-src/src/demo/document.ts"
+    "../web-src/src/demo/document.ts",
+    "../web-src/src/systems/registry.ts",
+    "../web-src/src/systems/index.ts",
+    "../web-src/src/render/scale.ts",
+    "../web-src/src/render/textures.ts",
+    "../web-src/src/render/poster-cache.ts",
+    "../web-src/src/render/arbitration.ts",
+    "../web-src/src/motion/types.ts",
+    "../web-src/src/motion/search.ts",
+    "../web-src/src/motion/noise.ts",
+    "../web-src/src/motion/drivers.ts",
+    "../web-src/src/motion/operators.ts",
+    "../web-src/src/motion/reduced-motion.ts",
+    "../web-src/src/motion/compile.ts",
+    "../web-src/src/motion/evaluate.ts"
   ]
 }

@@ -15,12 +15,18 @@ import {
   rotateBoardCommand,
   scaleBoardCommand,
   setLayerCropCommand,
+  setLayerSourceCommand,
+  markAssetMissingCommand,
   splitSceneCommand,
   mergeSceneCommand,
   renameSceneCommand,
   setPrimaryRatioCommand,
 } from '../direction/commands';
 import { translate } from '../app/i18n';
+import { ResponseStrip } from './ResponseStrip';
+import { operatorFor } from '../motion/evaluate';
+import { assetClient } from '../media/runtime';
+import { assetStore } from '../media/store';
 import type { ResponseChain, DirectionLayer } from '../direction/types';
 
 const TIER: Record<string, string> = { primary: 'T1', secondary: 'T2', tertiary: 'T3' };
@@ -99,10 +105,16 @@ function triggerChips(r: ResponseChain): Array<{ label: string; acc: boolean }> 
       { label: `subdivision ${d.subdivision}`, acc: false },
     ];
   }
-  return [
-    { label: 'energy', acc: true },
-    { label: `band ${d.band}`, acc: false },
-  ];
+  if (d.kind === 'energy_envelope') {
+    return [
+      { label: 'energy', acc: true },
+      { label: `band ${d.band}`, acc: false },
+    ];
+  }
+  if (d.kind === 'downbeat_impulse') return [{ label: 'downbeat', acc: true }];
+  if (d.kind === 'structure_boundary') return [{ label: 'structure', acc: true }];
+  if (d.kind === 'scene_phase') return [{ label: 'scene phase', acc: true }];
+  return [{ label: 'transition phase', acc: true }];
 }
 
 export function Inspector() {
@@ -282,6 +294,20 @@ export function Inspector() {
           </div>
           <div className="trow2" style={{ marginTop: 8 }}>
             <button
+              className={`tbtn${state.transport.pinnedSceneId === scene.id ? ' on' : ''}`}
+              aria-pressed={state.transport.pinnedSceneId === scene.id}
+              onClick={() =>
+                dispatch({
+                  type: 'live-pin',
+                  sceneId: state.transport.pinnedSceneId === scene.id ? null : scene.id,
+                })
+              }
+            >
+              {state.transport.pinnedSceneId === scene.id
+                ? t('inspector.action.unpinLive')
+                : t('inspector.action.pinLive')}
+            </button>
+            <button
               className="tbtn"
               style={{ color: 'var(--accent)' }}
               disabled={!canSplit}
@@ -317,6 +343,8 @@ export function Inspector() {
           </div>
         </div>
       )}
+
+      {layer && <ResponseStrip scene={scene} layer={layer} />}
 
       {layer && (
         <div className="isec">
@@ -365,6 +393,98 @@ export function Inspector() {
         </div>
       )}
 
+      {layer && layer.kind === 'media-slice' && (
+        <div className="isec">
+          <h3>{t('inspector.section.asset')}</h3>
+          {(() => {
+            const src = String((layer.props as Record<string, unknown>).src ?? '');
+            const isAsset = src.startsWith('asset:');
+            const isMissingAsset = src.startsWith('missing-asset:');
+            const assetId = isAsset ? src.slice('asset:'.length) : isMissingAsset ? src.slice('missing-asset:'.length) : '';
+            const entry = isAsset ? assetStore.entry(assetId) : null;
+            const missing = isMissingAsset || (isAsset && assetStore.missingAsset(src));
+            const client = assetClient();
+            return (
+              <>
+                <div className="irow">
+                  <span className="ilab">{t('inspector.label.source')}</span>
+                  <span className="iin" title={src}>
+                    {entry ? entry.display_name : src.split('/').pop() || src}
+                  </span>
+                </div>
+                {entry && (
+                  <div className="irow">
+                    <span className="ilab">{t('inspector.label.media')}</span>
+                    <span className="iin">
+                      {`${entry.kind} · ${entry.mime}${entry.width ? ` · ${entry.width}×${entry.height}` : ''}${
+                        entry.duration ? ` · ${entry.duration.toFixed(1)}s` : ''
+                      }`}
+                    </span>
+                  </div>
+                )}
+                {missing && (
+                  <p className="note" style={{ color: 'var(--destructive)' }}>
+                    {t('inspector.note.missingAsset')}
+                  </p>
+                )}
+                {client.available && (
+                  <div className="trow2" style={{ marginTop: 8 }}>
+                    <label className="tbtn" style={{ color: 'var(--accent)', cursor: 'pointer' }}>
+                      {entry ? t('inspector.action.replaceAsset') : t('inspector.action.addAsset')}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,video/mp4,video/webm"
+                        style={{ display: 'none' }}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = '';
+                          if (!file) return;
+                          try {
+                            const asset = await client.upload(file);
+                            dispatch({
+                              type: 'command',
+                              command: setLayerSourceCommand(state.doc, scene.id, layer.id, `asset:${asset.asset_id}`),
+                            });
+                          } catch (err) {
+                            dispatch({ type: 'toast', text: String(err) });
+                          }
+                        }}
+                      />
+                    </label>
+                    {isAsset && entry && (
+                      <button
+                        className="tbtn"
+                        style={{ color: 'var(--destructive)' }}
+                        onClick={async () => {
+                          try {
+                            const first = await client.remove(assetId, false);
+                            if (!first.deleted && first.inUse.length > 0) {
+                              const ok = window.confirm(
+                                t('inspector.confirm.deleteAsset', { n: first.inUse.length }),
+                              );
+                              if (!ok) return;
+                              const removed = await client.remove(assetId, true);
+                              if (removed.deleted) {
+                                dispatch({ type: 'command', command: markAssetMissingCommand(state.doc, assetId) });
+                              }
+                            }
+                            dispatch({ type: 'toast', text: t('inspector.toast.assetDeleted') });
+                          } catch (err) {
+                            dispatch({ type: 'toast', text: String(err) });
+                          }
+                        }}
+                      >
+                        {t('inspector.action.deleteAsset')}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      )}
+
       <div className="isec">
         <h3>{t('inspector.section.responses')}</h3>
         {scene.responses.map((r) => {
@@ -404,7 +524,7 @@ export function Inspector() {
                   </div>
                   <div className="irow">
                     <span className="ilab">{t('inspector.label.operator')}</span>
-                    <span className="iin">{OPERATOR[r.motion.kind]}</span>
+                    <span className="iin">{operatorFor(r.motion.kind)?.label ?? OPERATOR[r.motion.kind] ?? r.motion.kind}</span>
                   </div>
                   {!unavailable && (
                     <div className="irow">

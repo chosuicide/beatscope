@@ -244,6 +244,39 @@ class Handler(BaseHTTPRequestHandler):
             self._send(status, body_bytes, resp_headers.get("Content-Type", "application/json"))
             return
 
+        # 2b. POST /api/projects/<id>/assets (raw media bytes, bounded)
+        if path.startswith("/api/projects/") and path.endswith("/assets"):
+            raw_size = self.headers.get("Content-Length")
+            if raw_size is None:
+                self._send(411, b"Content-Length required", "text/plain")
+                return
+            try:
+                size = int(raw_size)
+            except ValueError:
+                self._send(400, b"Invalid Content-Length", "text/plain")
+                return
+            if size <= 0:
+                self._send(400, json.dumps({"error": "asset/empty"}).encode(), "application/json")
+                return
+            from .web_api import MAX_ASSET_BYTES
+
+            if size > MAX_ASSET_BYTES:
+                self._send(413, json.dumps({"error": "asset/too-large"}).encode(), "application/json")
+                return
+            body = b""
+            remaining = size
+            while remaining:
+                chunk = self.rfile.read(min(1024 * 1024, remaining))
+                if not chunk:
+                    self._send(400, json.dumps({"error": "asset/truncated"}).encode(), "application/json")
+                    return
+                body += chunk
+                remaining -= len(chunk)
+            headers_dict = {k: v for k, v in self.headers.items()}
+            status, resp_headers, body_bytes = WEB_API.handle_post_assets(path, body, headers_dict)
+            self._send(status, body_bytes, resp_headers.get("Content-Type", "application/json"))
+            return
+
         # 3. Legacy /api/midi
         if path == "/api/midi":
             raw_size = self.headers.get("Content-Length")
@@ -320,7 +353,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_DELETE(self) -> None:
         route = urlparse(self.path)
-        status, resp_headers, body = WEB_API.handle_delete(route.path)
+        query = parse_qs(route.query)
+        status, resp_headers, body = WEB_API.handle_delete(route.path, query)
         self._send(status, body, resp_headers.get("Content-Type", "application/json"))
 
     def log_message(self, fmt: str, *args: object) -> None:

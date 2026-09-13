@@ -115,8 +115,17 @@ def ranked_response(layer_id: str = "lay-title-01") -> dict[str, Any]:
     }
 
 
-def doc_case(name: str, doc: Any, error_codes: list[str], notice_codes: list[str]) -> dict[str, Any]:
-    return {"name": name, "doc": doc, "expected_error_codes": error_codes, "expected_notice_codes": notice_codes}
+def doc_case(
+    name: str,
+    doc: Any,
+    error_codes: list[str],
+    notice_codes: list[str],
+    asset_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    case: dict[str, Any] = {"name": name, "doc": doc, "expected_error_codes": error_codes, "expected_notice_codes": notice_codes}
+    if asset_ids is not None:
+        case["asset_ids"] = asset_ids
+    return case
 
 
 def build_doc_cases() -> list[dict[str, Any]]:
@@ -321,6 +330,83 @@ def build_doc_cases() -> list[dict[str, Any]]:
     doc = [1, 2, 3]
     cases.append(doc_case("not-an-object", doc, ["direction/schema"], []))
 
+    # 24. every Round 3 driver and motion operator is a registered kind
+    doc = base_doc()
+    s = doc["scenes"][0]
+    layer = full_layer()
+    s["layers"].append(layer)
+    drivers = [
+        {"kind": "downbeat_impulse"},
+        {"kind": "structure_boundary"},
+        {"kind": "scene_phase"},
+        {"kind": "transition_phase"},
+        {"kind": "energy_envelope", "band": "high"},
+    ]
+    motions = [
+        {"kind": "radial_expand", "amount": 0.04, "attack_seconds": 0.02, "release_seconds": 0.2},
+        {"kind": "translate_drift", "axis": [0.0, 1.0], "amount": 0.02, "attack_seconds": 0.05, "release_seconds": 0.3},
+        {"kind": "rotate_recoil", "amount": 1.5, "attack_seconds": 0.02, "release_seconds": 0.25},
+        {"kind": "crop_reveal", "amount": 0.05, "attack_seconds": 0.03, "release_seconds": 0.3},
+        {"kind": "invert_palette", "amount": 1.0, "attack_seconds": 0.01, "release_seconds": 0.12},
+    ]
+    for index, (driver, motion) in enumerate(zip(drivers, motions)):
+        s["responses"].append(
+            {
+                "id": f"resp-ext-{index + 1:02d}",
+                "target_layer_id": layer["id"],
+                "label": f"Extended {index + 1}",
+                "driver": driver,
+                "motion": motion,
+            }
+        )
+    s["responses"].append(
+        {
+            "id": "resp-ext-06",
+            "target_layer_id": layer["id"],
+            "label": "Strip offset",
+            "driver": {"kind": "scene_phase"},
+            "motion": {"kind": "strip_offset", "amount": 0.03, "attack_seconds": 0.02, "release_seconds": 0.2},
+        }
+    )
+    s["responses"].append(
+        {
+            "id": "resp-ext-07",
+            "target_layer_id": layer["id"],
+            "label": "Blur focus",
+            "driver": {"kind": "transition_phase"},
+            "motion": {"kind": "blur_focus", "amount": 2.5, "attack_seconds": 0.05, "release_seconds": 0.35},
+        }
+    )
+    s["responses"].append(
+        {
+            "id": "resp-ext-08",
+            "target_layer_id": layer["id"],
+            "label": "Opacity fade",
+            "driver": {"kind": "downbeat_impulse"},
+            "motion": {"kind": "opacity_fade", "amount": 0.2, "attack_seconds": 0.04, "release_seconds": 0.4},
+        }
+    )
+    cases.append(doc_case("extended-registry-valid", doc, [], []))
+
+    # asset references are checked only when the caller supplies a manifest
+    asset_id = "ab" * 32
+
+    doc = base_doc()
+    s = doc["scenes"][0]
+    layer = full_layer()
+    layer["kind"] = "media-slice"
+    layer["props"] = {"src": f"asset:{asset_id}", "full": True}
+    s["layers"].append(layer)
+    cases.append(doc_case("asset-reference-valid", doc, [], [], asset_ids=[asset_id]))
+
+    doc = base_doc()
+    s = doc["scenes"][0]
+    layer = full_layer()
+    layer["kind"] = "media-slice"
+    layer["props"] = {"src": f"asset:{asset_id}", "full": True}
+    s["layers"].append(layer)
+    cases.append(doc_case("asset-reference-missing", doc, ["direction/asset-missing"], [], asset_ids=[]))
+
     return cases
 
 
@@ -328,7 +414,8 @@ def main() -> None:
     cases = build_doc_cases()
     for case in cases:
         doc = case["doc"]
-        errors, notices = validate_direction(doc)
+        asset_ids = set(case["asset_ids"]) if "asset_ids" in case else None
+        errors, notices = validate_direction(doc, asset_ids)
         if not errors:
             body = canonical_direction_bytes(doc)
             case["canonical"] = body.decode("utf-8")

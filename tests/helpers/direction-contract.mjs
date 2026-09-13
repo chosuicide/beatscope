@@ -8,7 +8,8 @@
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const TESTS_DIR = new URL('../', import.meta.url);
@@ -17,17 +18,25 @@ const TSC = fileURLToPath(new URL('../web-src/node_modules/typescript/bin/tsc', 
 const OUTPUT = new URL('.generated/direction/contract.js', TESTS_DIR).href;
 const LOCK = fileURLToPath(new URL('.generated/direction.lock', TESTS_DIR));
 const MARKER = fileURLToPath(new URL('.generated/direction.sha256', TESTS_DIR));
-const INPUTS = [
-  TSCONFIG,
-  fileURLToPath(new URL('../web-src/src/direction/contract.ts', TESTS_DIR)),
-  fileURLToPath(new URL('../web-src/src/direction/types.ts', TESTS_DIR)),
-  fileURLToPath(new URL('../web-src/src/direction/commands.ts', TESTS_DIR)),
-  fileURLToPath(new URL('../web-src/src/direction/layout.ts', TESTS_DIR)),
-];
+const SOURCE_ROOT = fileURLToPath(new URL('../web-src/src/', TESTS_DIR));
+const INCLUDED_DIRS = ['direction', 'demo', 'systems', 'render', 'motion'];
+
+function sourceInputs() {
+  const files = [TSCONFIG];
+  const visit = (path) => {
+    for (const name of readdirSync(path).sort()) {
+      const child = join(path, name);
+      if (statSync(child).isDirectory()) visit(child);
+      else if (/\.tsx?$/.test(name)) files.push(child);
+    }
+  };
+  for (const dir of INCLUDED_DIRS) visit(join(SOURCE_ROOT, dir));
+  return files;
+}
 
 function inputHash() {
   const hash = createHash('sha256');
-  for (const path of INPUTS) hash.update(readFileSync(path));
+  for (const path of sourceInputs()) hash.update(readFileSync(path));
   return hash.digest('hex');
 }
 

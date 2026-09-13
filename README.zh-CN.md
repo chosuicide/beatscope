@@ -240,7 +240,7 @@ beatscope benchmark
 
 ```powershell
 pytest -q
-node --test (Get-ChildItem tests\test_*.js | ForEach-Object FullName)
+npm run test:js
 beatscope validate-handoff examples\shared\fixture.beatscope --checkpoints examples\shared\checkpoints.json
 ```
 
