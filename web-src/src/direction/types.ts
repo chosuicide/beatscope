@@ -1,10 +1,8 @@
 /**
- * First-cut types for the `beatscope-direction-1` document (v0.12 plan §4).
- * Round 2 replaces the validators with the full canonical contract; the
- * shapes here already follow the plan's registry/anchor/response rules so
- * the Commit 2 demo document is forward-compatible.
+ * Types for the `beatscope-direction-1` document.
+ * These shapes follow the canonical registry, anchor and response rules.
  *
- * Determinism rules (§4.6): no wall-clock in musical evaluation; scene
+ * Determinism rules: no wall-clock in musical evaluation; scene
  * anchors resolve to exact media times; envelopes evaluate around each
  * event's original measured timestamp.
  */

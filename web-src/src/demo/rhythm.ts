@@ -5,7 +5,7 @@
  * generated from a fixed-seed PRNG (never Math.random), so the same build
  * always yields the same evidence. Energy envelopes are intentionally absent
  * so energy-driven response chains surface their honest "unavailable" state
- * (plan §2.3 — never fabricate data).
+ * The demo never fabricates unavailable musical data.
  *
  * Musical facts (must stay consistent with the frozen references):
  * BPM 120, 4/4, bar = 2.0 s, duration 242 s (121 bars, 04:02).

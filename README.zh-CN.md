@@ -164,7 +164,7 @@ beatscope-mcp
 
 响应排序器另有封存测试集：23 首歌曲、144 张有授权的 StepMania 谱面，来源在开发阶段完全隔离。相对只看 onset strength 的基线，成对一致率提升 `0.0238`、NDCG@10 提升 `0.2983`、预算内召回提升 `0.0847`；成对提升的 95% bootstrap 区间为 `[0.0146, 0.0336]`。它衡量的是与游戏谱面式人类共识的一致程度，不是普适“音乐重要性”。
 
-结构另有十种编排 benchmark。CI 在 Windows、Ubuntu、Python 3.10 与 3.12 上运行，并会重放固定浏览器消费者和 Remotion 证据，但不会联系远程 Agent。
+结构另有十种编排 benchmark。常规 CI 只保留三道相互独立的门：Ubuntu 全量契约、Windows Python 3.10 重点兼容性，以及真实浏览器中的 Studio/WebMCP 往返。Windows 便携版仍会在每次发布前单独完成分析与视频渲染冒烟。
 
 </details>
 

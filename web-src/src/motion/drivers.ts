@@ -1,5 +1,5 @@
 /**
- * Driver registry (plan §4.4). Drivers turn measured evidence into a
+ * Driver registry. Drivers turn measured evidence into a
  * queryable stream for one scene. Nothing here creates, moves or quantizes
  * an event: ranked onsets keep their exact measured timestamps and the
  * selection budget is applied at compile time (§4.7).

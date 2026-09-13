@@ -1,5 +1,5 @@
 /**
- * Seeded presentation noise (plan §4.6): a pure function of stable identity
+ * Seeded presentation noise: a pure function of stable identity
  * plus an explicitly quantized presentation sample index. Never Math.random,
  * never wall-clock — the same identity and sample always yield the same value.
  */

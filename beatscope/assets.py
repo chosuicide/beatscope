@@ -1,6 +1,6 @@
 """Project media assets: content-addressed storage with a canonical manifest.
 
-Round 3 Commit 1 (v0.12 plan §6.2). Rules enforced here:
+Rules enforced here:
 
 - images: PNG / JPEG / WebP, at most 25 MiB each;
 - video: MP4 / WebM, at most 100 MiB and 60 seconds each;

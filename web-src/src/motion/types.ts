@@ -1,5 +1,5 @@
 /**
- * Motion engine types (plan §4.4-§4.8).
+ * Motion engine types.
  *
  * Outputs are presentation values derived from authored bases; the evaluator
  * never mutates the direction document and never serializes editor state.

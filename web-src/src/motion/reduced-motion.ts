@@ -1,5 +1,5 @@
 /**
- * Reduced-motion mapping (plan §4.4/§11). The preference is observed live
+ * Reduced-motion mapping. The preference is observed live
  * and only scales the preview output: edit meaning (opacity, crop reveal,
  * palette inversion) is preserved, aggressive movement is suppressed. The
  * saved direction document is never altered.

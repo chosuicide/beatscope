@@ -1,6 +1,6 @@
 """`beatscope-direction-1` — the canonical scene/layer direction document.
 
-Round 2 Commit 1 contract (v0.12 plan §4 / §10.1):
+Contract guarantees:
 
 - ``validate_direction`` returns ``(errors, notices)`` with STABLE error
   codes. Unknown layer/driver/motion kinds are preserved and reported as

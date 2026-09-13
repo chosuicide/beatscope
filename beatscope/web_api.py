@@ -272,7 +272,7 @@ class WebApi:
     def _serve_direction(
         self, project_id: str, headers: dict[str, str]
     ) -> tuple[int, dict[str, str], bytes]:
-        """Serve the project direction document (plan Round 2 Commit 1).
+        """Serve the canonical project direction document.
 
         The body is the stored canonical byte-for-byte document; a first
         GET derives the initial scenes from the Rhythm IR, persists the

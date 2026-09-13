@@ -164,7 +164,7 @@ The audio regression suite contains 11 synthetic cases with frozen ground truth,
 
 The response ranker has a sealed holdout of 23 songs and 144 licensed StepMania charts from a source excluded from development. Against raw onset strength it improves pairwise agreement by `0.0238`, NDCG@10 by `0.2983` and recall-at-budget by `0.0847`; the pairwise-gain 95% bootstrap interval is `[0.0146, 0.0336]`. This measures agreement with gameplay-oriented chart consensus, not universal musical importance.
 
-Structure has a separate ten-arrangement benchmark. CI runs on Windows and Ubuntu with Python 3.10 and 3.12, and replays pinned browser-consumer and Remotion evidence without contacting remote agents.
+Structure has a separate ten-arrangement benchmark. Routine CI keeps three independent gates: the full contract suite on Ubuntu, a focused Python 3.10 compatibility pass on Windows, and a real-browser Studio/WebMCP round trip. The portable Windows application still receives its own analysis-and-render smoke test before every release.
 
 </details>
 

@@ -1,5 +1,5 @@
 /**
- * Deterministic workspace board geometry (Round 2 Commit 2).
+ * Deterministic workspace board geometry.
  *
  * The demo's hand-authored layout stays the override for the bundled
  * "Beyond the Fog" wall; any scene without a board slot — server-derived
@@ -75,7 +75,7 @@ export function boardFullHeight(box: BoardBox): number {
   return BOARD_HEAD + box.bodyH + BOARD_FOOT;
 }
 
-/** Composition geometry per supported primary ratio (plan §4.1). */
+/** Composition geometry for each supported primary ratio. */
 export const RATIO_SIZES: Record<'16:9' | '9:16' | '1:1', { width: number; height: number }> = {
   '16:9': { width: 1920, height: 1080 },
   '9:16': { width: 1080, height: 1920 },

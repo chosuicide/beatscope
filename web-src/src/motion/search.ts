@@ -1,5 +1,5 @@
 /**
- * Binary search helpers for the compiled evaluator (plan §4.6: never scan
+ * Binary search helpers for the compiled evaluator (never scan
  * every onset per frame, use binary search for scene, event and boundary
  * windows).
  */

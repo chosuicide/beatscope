@@ -1,5 +1,5 @@
 /**
- * Motion operator registry (plan §4.4/§4.8). Every operator declares one
+ * Motion operator registry. Every operator declares one
  * combine mode and one channel; overlapping responses accumulate with
  * bounded, deterministic rules — additive sums then clamps, multiplicative
  * multiplies deltas around 1, max keeps the strongest influence, boolean

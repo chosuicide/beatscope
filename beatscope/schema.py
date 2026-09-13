@@ -402,7 +402,7 @@ def validate_rhythm_v3(data: dict[str, Any]) -> list[str]:
 
 
 def validate_rhythm_v4(data: dict[str, Any]) -> list[str]:
-    """Validate a v4 rhythm project, including nested field semantics (plan §22)."""
+    """Validate a v4 rhythm project, including nested field semantics."""
     errors: list[str] = []
     if not isinstance(data, dict):
         return ["Root must be a JSON object"]

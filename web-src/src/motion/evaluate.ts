@@ -1,5 +1,5 @@
 /**
- * Public motion facade (plan §4.6). The compiled evaluator lives in
+ * Public motion facade. The compiled evaluator lives in
  * compile.ts; this module re-exports the registries and keeps the small
  * scene lookup helper every consumer already uses.
  */

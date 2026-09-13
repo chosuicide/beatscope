@@ -1,5 +1,5 @@
 /**
- * Deterministic compiled evaluator (plan §4.6/§4.7).
+ * Deterministic compiled evaluator.
  *
  * `compileDirection` resolves anchors, builds binary-searchable driver
  * indexes and applies the response budget once. `getDirectionState(time)`

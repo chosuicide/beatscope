@@ -3,7 +3,7 @@ import { defineConfig } from 'vite';
 import { readFileSync } from 'node:fs';
 
 // Build output is emitted into the Python-packaged static directory under
-// web/app (plan §3.4); web/app is the only page the server serves. Base stays
+// web/app; web/app is the only page the server serves. Base stays
 // relative so the same build works when served at /app/ and from any subpath.
 export default defineConfig({
   base: './',

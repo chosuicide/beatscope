@@ -1,5 +1,5 @@
 /**
- * Direction commands (plan §3.6): pure factories that turn one edit into
+ * Direction commands: pure factories that turn one edit into
  * one undo transaction. `apply` returns the next editor state from the
  * state it is handed; `invert` rebuilds the pre-state from its closure —
  * the store pre-binds `invert` with the pre-apply state at commit time,

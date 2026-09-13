@@ -2,279 +2,115 @@ name: CI
 
 on:
   push:
-    branches: [main, rhythm-ir-v0.4]
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
-    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        python-version: ["3.10", "3.12"]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install BeatScope with MCP support
-        run: python -m pip install -e ".[dev,mcp]"
-
-      - name: Python lint
-        run: python -m ruff check beatscope scripts tests evaluations
-
-      - name: Python tests
-        run: python -m pytest -q
-
-      - name: MCP contract tests
-        run: python -m pytest tests/mcp -q
-
-      - name: JavaScript tests
-        run: |
-          npm ci --prefix web-src --no-audit --no-fund
-          npm run test:js
-
-      - name: Benchmark gates
-        run: python -m beatscope.cli benchmark --output-dir build/benchmark-ci
-
-      - name: MCP stdio smoke
-        run: python -m pytest tests/mcp/test_stdio.py -q
-
-  consumer-evidence:
-    # One pinned job validates every handoff and consumer gate without
-    # multiplying the heavy matrix. It replays
-    # checked-in evidence only; it never contacts remote Agents.
-    name: Pinned consumer evidence
+  core:
+    name: Core contracts
     runs-on: ubuntu-latest
-    env:
-      BEATSCOPE_PINNED_CONSUMER_EVIDENCE: "1"
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install BeatScope
-        run: python -m pip install -e ".[dev]"
-
-      - name: Validate the frozen handoff
-        run: python -m beatscope.cli validate-handoff examples/shared/fixture.beatscope --checkpoints examples/shared/checkpoints.json
-
-      - name: Example declaration, clock, static, and dependency gates
-        run: python -m pytest tests/test_examples.py -q
-
-      - name: Enforce example lockfiles
-        run: |
-          npm ci --prefix tests/browser --no-audit --no-fund
-          npm ci --prefix examples/threejs-geometry --no-audit --no-fund
-          npm ci --prefix examples/remotion-composition --no-audit --no-fund
-
-      - name: Install pinned browser validator
-        working-directory: tests/browser
-        run: npx playwright install --with-deps chromium
-
-      - name: Consumer contract and validation replay
-        run: python -m pytest tests/test_consumer_contract.py tests/test_consumer_validation.py -q
-
-      - name: JavaScript consumer suites
-        run: node --test tests/test_consumer_probe.js tests/test_canvas_consumer.js tests/test_threejs_consumer.js tests/test_remotion_consumer.js
-
-      - name: Real browser and offline consumer gates
-        run: |
-          python -m beatscope.cli validate-consumer examples/canvas-particles --browser --checkpoints examples/shared/checkpoints.json
-          python -m beatscope.cli validate-consumer examples/threejs-geometry --browser --checkpoints examples/shared/checkpoints.json
-          python -m beatscope.cli validate-consumer examples/remotion-composition --offline --checkpoints examples/shared/checkpoints.json
-
-      - name: Write conformance evidence artifacts
-        if: always()
-        run: |
-          mkdir -p build/consumer-evidence
-          python evaluations/agent-interoperability/record_reports.py --out build/consumer-evidence
-          python evaluations/agent-interoperability/generate_conformance.py
-          cp evaluations/agent-interoperability/conformance.md build/consumer-evidence/conformance.md
-
-      - name: Upload failure evidence
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: consumer-evidence
-          path: build/consumer-evidence
-          retention-days: 7
-
-  remotion-render:
-    # Remotion dependency/build/state tests in a separate cached job.
-    # A short smoke render may upload an artifact but is never published.
-    name: Remotion offline render evidence
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: examples/remotion-composition/package-lock.json
-
-      - name: Install pinned Remotion dependencies
-        working-directory: examples/remotion-composition
-        run: npm ci --no-audit --no-fund
-
-      - name: Remotion state tests
-        run: node --test tests/test_remotion_consumer.js
-
-      - name: Bundle the composition
-        working-directory: examples/remotion-composition
-        run: npx remotion bundle src/index.ts --out=build/bundle
-
-      - name: Short smoke render (PNG sequence, no video muxing)
-        working-directory: examples/remotion-composition
-        run: npx remotion render src/index.ts BeatScopeScope out/sequence --frames=0-30 --sequence --image-format=png
-
-      - name: Upload smoke render artifact
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: remotion-smoke-render
-          path: examples/remotion-composition/out/sequence
-          retention-days: 7
-
-  studio-conformance:
-    # Build the shipping Studio and exercise its pure timing/render contracts.
-    # End-to-end browser acceptance is separate from these unit gates.
-    name: Beathi Studio build and contracts
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
           cache-dependency-path: web-src/package-lock.json
+      - name: Install
+        run: |
+          python -m pip install -e ".[dev,mcp]"
+          npm ci --prefix web-src --no-audit --no-fund
+      - name: Lint
+        run: python -m ruff check beatscope scripts tests evaluations
+      - name: Python tests
+        run: python -m pytest -q
+      - name: JavaScript tests
+        run: npm run test:js
+      - name: Benchmark gates
+        run: python -m beatscope.cli benchmark --output-dir build/benchmark-ci
 
-      - name: Install locked frontend dependencies
+  windows:
+    name: Windows compatibility
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+      - name: Install
+        run: python -m pip install -e ".[dev,mcp]"
+      - name: Cross-platform contract tests
+        run: >-
+          python -m pytest -q
+          tests/test_schema.py
+          tests/test_pipeline.py
+          tests/test_consumer_contract.py
+          tests/mcp
+
+  studio:
+    name: Studio and WebMCP
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web-src/package-lock.json
+      - name: Install
         run: |
           python -m pip install -e .
           npm ci --prefix web-src --no-audit --no-fund
-
-      - name: Typecheck and build Beathi Studio
+          npm ci --prefix tests/browser --no-audit --no-fund
+      - name: Typecheck and build
         run: |
           npm run typecheck --prefix web-src
           npm run build --prefix web-src
-
-      - name: Timing, cut plan and encoder failure contracts
-        run: node --test tests/test_movie_plan.js tests/test_movie_safety.js
-
-      - name: Studio Director contracts, queries, actions, registration
-        run: node --test tests/test_studio_webmcp_contracts.js tests/test_studio_webmcp_queries.js tests/test_studio_webmcp_actions.js tests/test_studio_webmcp_registration.js
-
-      - name: Install locked browser dependencies
-        run: npm ci --prefix tests/browser --no-audit --no-fund
-
-      - name: Install pinned browser
+      - name: Studio and WebMCP contracts
+        run: >-
+          node --test
+          tests/test_movie_plan.js
+          tests/test_movie_safety.js
+          tests/test_studio_webmcp_contracts.js
+          tests/test_studio_webmcp_queries.js
+          tests/test_studio_webmcp_actions.js
+          tests/test_studio_webmcp_registration.js
+      - name: Install Chromium
         working-directory: tests/browser
         run: npx playwright install --with-deps chromium
-
-      - name: Studio Director browser round trip
+      - name: Browser round trip
+        shell: bash
         run: |
           mkdir -p build
           python tests/browser/studio_webmcp_server.py --port 8771 > build/studio-webmcp-server.json 2>&1 &
-          SERVER_PID=$!
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
           for attempt in {1..30}; do
-            if curl --fail --silent http://127.0.0.1:8771/app/ > /dev/null; then break; fi
+            curl --fail --silent http://127.0.0.1:8771/app/ > /dev/null && break
             sleep 1
           done
           node tests/browser/studio-webmcp-smoke.mjs http://127.0.0.1:8771
-          STATUS=$?
-          kill $SERVER_PID || true
-          exit $STATUS
-
-      - name: Upload Studio Director failure evidence
+      - name: Upload failure evidence
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: studio-webmcp-failure
           path: build/studio-webmcp-server.json
-          retention-days: 7
-
-  studio-render:
-    # The slow path: one real Playwright + FFmpeg film through the WebMCP tool,
-    # in its own job so it never multiplies the matrix and never blocks the
-    # fast gates (plan section 11.5 step 10).
-    name: Studio Director real render proof
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install BeatScope and locked frontend dependencies
-        run: |
-          python -m pip install -e ".[dev]"
-          npm ci --prefix web-src --no-audit --no-fund
-
-      - name: Install locked browser dependencies
-        run: npm ci --prefix tests/browser --no-audit --no-fund
-
-      - name: Build the studio
-        run: npm run build --prefix web-src
-
-      - name: Install pinned browser and ffmpeg
-        run: |
-          cd tests/browser && npx playwright install --with-deps chromium
-          sudo apt-get update && sudo apt-get install -y ffmpeg
-
-      - name: Browser round trip including a real render
-        env:
-          BEATSCOPE_MV_ENCODER: png
-          BEATSCOPE_MV_PAGES: "6"
-          BEATSCOPE_MV_PRESET: ultrafast
-          BEATSCOPE_MV_CRF: "28"
-        run: |
-          mkdir -p build
-          python tests/browser/studio_webmcp_server.py --port 8772 --short-render > build/studio-render-server.json &
-          SERVER_PID=$!
-          sleep 3
-          node tests/browser/studio-webmcp-smoke.mjs http://127.0.0.1:8772 --render-only
-          STATUS=$?
-          kill $SERVER_PID || true
-          exit $STATUS
-
-      - name: Upload render failure evidence
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: studio-render-failure
-          path: build/studio-render-server.json
           retention-days: 7

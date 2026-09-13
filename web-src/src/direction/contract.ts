@@ -1,5 +1,5 @@
 /**
- * TypeScript mirror of `beatscope/direction.py` (plan Round 2 Commit 1).
+ * TypeScript mirror of `beatscope/direction.py`.
  *
  * The Python module is the normative implementation; this file re-states the
  * two halves the browser needs — validation with stable `direction/...`
