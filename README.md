@@ -3,207 +3,109 @@
 English | [简体中文](README.zh-CN.md)
 
 [![CI](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml/badge.svg)](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.12.0-c65032)](https://github.com/chosuicide/beatscope/releases)
+[![Version](https://img.shields.io/badge/version-0.12.0-c65032)](https://github.com/chosuicide/beatscope/releases/tag/v0.12.0)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
-**Turn one song into a beat-synchronised film and a timing package a coding agent can verify.**
+**Turn a song into a beat-synchronised film — or give its timing to a coding agent.**
 
-BeatScope measures beats, raw transients, multiband energy, tempo changes and recurring structure. Beathi Studio uses those measurements to preview and render a deterministic music video. The same facts can leave the Studio as a self-checking `.beatscope` package or be queried over MCP.
+BeatScope listens for beats, real transients, energy changes, tempo changes and repeated sections. Beathi Studio turns those measurements into a movie preview and a reusable timing package. Everything runs locally; your audio is not uploaded.
 
-It does not guess kick, snare or 808 labels, and it never moves a real event onto a cleaner-looking grid.
+[![Watch the BeatScope product tour](docs/demo/beathi-studio.png)](https://github.com/chosuicide/beatscope/releases/download/v0.12.0/beatscope-v0.12.0-product-tour.mp4)
 
-![Beathi Studio playing a deterministic film while the timing maps follow the same media clock](docs/demo/beathi-studio.gif)
+**[▶ Watch the 57-second product tour](https://github.com/chosuicide/beatscope/releases/download/v0.12.0/beatscope-v0.12.0-product-tour.mp4)**
+
+## What you do
+
+1. Upload a WAV, FLAC, MP3, OGG or M4A file.
+2. Check the film preview, song structure and rhythm map.
+3. Render a video, export MIDI/CSV, or give the `.beatscope` package to a coding agent.
+
+![Beathi Studio playing a film while the rhythm maps follow the same audio clock](docs/demo/beathi-studio.gif)
 
 ## Download and run
 
-**Windows:** download `Beathi-Studio-v0.12.0-windows-x64.zip` from the [v0.12.0 release](https://github.com/chosuicide/beatscope/releases/tag/v0.12.0), extract it, then double-click **Beathi Studio.exe**. The portable build includes the analyser and movie toolchain; it opens a local Studio in your browser and keeps audio on the machine.
+### Windows
 
-**Python 3.10+:** download the wheel from the latest GitHub Release, or install from source, then open the Studio:
+Download **[Beathi Studio v0.12.0](https://github.com/chosuicide/beatscope/releases/download/v0.12.0/Beathi-Studio-v0.12.0-windows-x64.zip)**, extract it, then double-click **Beathi Studio.exe**. The portable package already includes the analyser, browser and FFmpeg.
+
+### Python 3.10+
+
+Download the wheel from the [v0.12.0 release](https://github.com/chosuicide/beatscope/releases/tag/v0.12.0), then run:
 
 ```powershell
 pip install beatscope-0.12.0-py3-none-any.whl
 beatscope serve --open
 ```
 
-For contributors:
+## Two useful outputs
+
+### A film you can watch
+
+The built-in template gives you an immediate music-video preview and can render an MP4. The preview, playhead and rhythm maps all follow the same audio clock, so seeking does not restart the analysis.
+
+### Timing a coding agent can use
+
+![A coding agent turns BeatScope timing and a visual reference into a different film](docs/demo/agent-to-film.webp)
+
+Export the `.beatscope` package, then give it to an agent together with your footage, images or references. The package contains measured timing—not a fixed visual style—so the agent can build something new without guessing where the music hits.
+
+```text
+your song
+   ↓
+BeatScope measures the timing
+   ↓
+.beatscope package + your media + your idea
+   ↓
+coding agent creates the visual
+```
+
+## What BeatScope measures
+
+![Whole-song structure and eight-bar rhythm detail](docs/demo/beathi-analysis-map.png)
+
+- beats, bars and tempo changes;
+- original onset timestamps—the sound is never moved onto a prettier grid;
+- LOW / MID / HIGH energy;
+- neutral repeated sections such as A / B / A′;
+- optional response ordering for dense songs, so consumers do not react to everything.
+
+BeatScope does **not** pretend to know that a sound is a kick, snare or 808. It reports evidence and lets the renderer decide what to do with it.
+
+<details>
+<summary><strong>What is inside the Agent package?</strong></summary>
+
+The package includes `rhythm-map.json`, MIDI and CSV views, a deterministic JavaScript runtime, a self-checking probe, member hashes, and short Agent instructions. It does not include the source audio, a visual template or a pre-written creative task.
+
+`response_relevance` only ranks existing onsets. It is not a probability, confidence score or claim about musical truth; no onset is created, deleted or moved.
+
+</details>
+
+## For developers
 
 ```powershell
 git clone https://github.com/chosuicide/beatscope.git
 cd beatscope
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -e ".[dev]"
+pip install -e ".[dev,mcp]"
 beatscope serve --open
 ```
 
-Open `http://127.0.0.1:8765`, choose a WAV, FLAC, MP3, OGG or M4A file, and let the local analyser finish. You can then:
+BeatScope also provides:
 
-1. play the built-in film preview;
-2. inspect the whole-song structure and eight-bar cue map;
-3. render an MP4 when the local browser and FFmpeg support it; or
-4. export timing data for a DAW or coding agent.
+- a local stdio MCP server for analysis and bounded timing queries;
+- seven browser WebMCP tools inside Beathi Studio;
+- deterministic runtime helpers for browser workers and offline renderers;
+- reference consumers for Canvas, Three.js and Remotion.
 
-Analysis, preview and rendering stay on the machine; request-scoped temporary files are removed after processing. MP4 rendering uses the bundled browser worker and FFmpeg in the Windows build; source installs can check their setup with `beatscope doctor`.
+Read more: [movie renderer](docs/local-movie.md) · [MCP](docs/mcp.md) · [WebMCP](docs/webmcp-studio.md) · [Agent Skill](skills/beatscope-visualizer/SKILL.md)
 
-## One timing package, another visual language
+## Honest limits
 
-![A coding Agent turns BeatScope timing facts and a visual reference into Dirt / Cold / Rings](docs/demo/agent-to-film.webp)
-
-The built-in template is an immediate preview, not a ceiling. Give a coding Agent the exported timing package, describe the piece you want, and share whatever footage, images or visual references you have. The package teaches the Agent to verify the measurements first and ask for missing creative inputs instead of inventing them. **Dirt / Cold / Rings** is one such result: the cuts and reactions use BeatScope timestamps, while the visual system belongs to the new work. The full showcase MP4 is attached to the v0.12.0 release.
-
-## What the Studio shows
-
-![The current Beathi Studio with structure, live preview, exports and the cue map](docs/demo/beathi-studio.png)
-
-The Studio is deliberately one screen rather than an editing timeline:
-
-- **Structure** — neutral A / B / A′ recurrence families. They are navigation, not invented Verse/Chorus labels.
-- **Live preview** — the current `VOXEL INTERFERENCE` template, driven by measured timestamps and one deterministic seed.
-- **Film** — an on-demand 1080×1080, 30 fps render of the same plan used by the preview.
-- **Data export** — the timing package, MIDI and CSV. Source audio is not bundled.
-- **Analysis dock** — a full-song overview and an eight-bar map for impact, scale, flow, flash/bloom and motion cues.
-
-![Full-song structure and eight-bar rhythm detail from the same analysed track](docs/demo/beathi-analysis-map.png)
-
-The media element is the only playback clock. The film preview, playhead, structure list and both maps read that clock; seeking does not restart analysis or invent a second timeline.
-
-## Why dense songs do not drive every frame
-
-A dense mix can contain many valid onsets. Reacting to all of them produces jitter even when every timestamp is correct. BeatScope keeps every raw event and adds an optional `response_relevance` ordering learned from licensed human-authored chart consensus.
-
-The consumer spends a count, not a magic threshold:
-
-```js
-const selection = track.responseBetween(startTime, endTime, 12);
-// 12 existing onsets, returned in chronological order.
-// response_relevance is ordering only: not probability or confidence.
-```
-
-No onset is created, deleted, quantised or moved. If the sidecar is absent, the runtime says it used chronological fallback instead of pretending a model was available.
-
-## The Agent handoff
-
-The exported package carries measurements and their executable timing contract. It deliberately carries no style, scene timeline, template, source audio or pre-written task: the receiving agent should still ask what the user wants to make and what media is available.
-
-```text
-project.beatscope/
-├── beatscope-package.json     entry points, capabilities and member hashes
-├── rhythm-map.json            authoritative measured facts
-├── response-relevance.json    ordering over existing onset ids
-├── rhythm.mid / rhythm.csv    DAW and tabular views of the same facts
-├── visual-state.js            getVisualState() + getResponseEvents()
-├── beatscope-runtime.js       deterministic, DOM-free timing runtime
-├── consumer-probe.js          dependency-free self-check
-├── worker-example.js          module Worker adapter
-├── AGENT.md / BEATSCOPE.md    reading order and timing invariants
-├── SKILL.md / references/     instructions and schema
-└── LICENSE
-```
-
-```powershell
-beatscope validate-handoff path\to\project.beatscope --checkpoints checkpoints.json
-beatscope validate-consumer examples\canvas-particles --browser
-beatscope validate-consumer examples\remotion-composition --offline
-```
-
-One frozen handoff already drives three independent reference consumers:
-
-| Canvas 2D | Three.js | Remotion |
-| --- | --- | --- |
-| ![Warm monochrome signal print](docs/demo/consumer-canvas.png) | ![Suspended braided geometry](docs/demo/consumer-threejs.png) | ![Black, white and red editorial frame](docs/demo/consumer-remotion.png) |
-| Zero-build browser study | Pinned `three@0.169.0` sculpture | Deterministic offline composition |
-| [Open example](examples/canvas-particles) | [Open example](examples/threejs-geometry) | [Open example](examples/remotion-composition) |
-
-A separate fresh-context Codex run received only the frozen task and handoff, then produced the dependency-free Canvas work **Orbital Notation**. It passed browser play, seek, replay, deterministic-state and reduced-motion checks without source repair. [Run record](evaluations/agent-interoperability/runs/codex-canvas-2026-09-02.json) · [conformance table](evaluations/agent-interoperability/conformance.md)
-
-## Work with BeatScope from the browser
-
-In a WebMCP-capable browser the studio registers seven tools, so an Agent can inspect the loaded song, ask for a bounded set of original response timestamps, explain why the movie cuts where it does, audition a passage, start a seeded render, and prepare the timing package — without receiving the source audio or running a second analysis. Buttons and tools call the same functions; every page-changing call appears in a strip above the transport, with Restore after an audition. Ordinary browsers show nothing new. Everything runs on the user's machine, and response relevance is an ordering value, never a probability or a confidence. Contract, budgets and local verification: [docs/webmcp-studio.md](docs/webmcp-studio.md).
-
-## MCP
-
-```powershell
-pip install -e ".[mcp]"
-beatscope-mcp
-```
-
-The local stdio server exposes six stable tools:
-
-| Tool | Purpose |
-| --- | --- |
-| `beatscope_list_projects` | List cached analyses |
-| `beatscope_get_project` | Read timing, provenance and structure summaries |
-| `beatscope_analyze_audio` | Analyse local audio with progress and cancellation |
-| `beatscope_get_visual_state` | Resolve measured facts at one instant |
-| `beatscope_get_events` | Query a bounded window and optionally spend a response budget |
-| `beatscope_export_package` | Write a handoff package atomically |
-
-Allowed paths are restricted by `BEATSCOPE_ALLOWED_ROOTS`. See [docs/mcp.md](docs/mcp.md) for the full contract and client configuration.
-
-## Data path
-
-```text
-local audio
-   └─ measurement
-      ├─ exact beats + tempo segments
-      ├─ raw onsets + LOW / MID / HIGH energy
-      ├─ optional ordering over those same onsets
-      └─ neutral structure + boundaries
-          ├─ Beathi preview and MP4 render
-          ├─ full-song and eight-bar maps
-          ├─ MIDI / CSV / .beatscope export
-          └─ runtime and MCP queries
-```
-
-The analyser produces facts. Consumers choose presentation. That separation is why an interactive player, an offline renderer and a coding agent can resolve the same musical instant without sharing a renderer.
-
-<details>
-<summary><strong>Evidence and benchmark boundaries</strong></summary>
-
-The audio regression suite contains 11 synthetic cases with frozen ground truth, including dense, sparse, off-grid, abrupt and gradual tempo changes, silence and an octave trap. The abrupt-change case currently reaches beat F1 `1.00`, with `0.185 / 0.325 BPM` segment errors and a `0.01 s` change-point error. These fixtures prevent regressions; they are not a blanket real-world MIR accuracy claim.
-
-The response ranker has a sealed holdout of 23 songs and 144 licensed StepMania charts from a source excluded from development. Against raw onset strength it improves pairwise agreement by `0.0238`, NDCG@10 by `0.2983` and recall-at-budget by `0.0847`; the pairwise-gain 95% bootstrap interval is `[0.0146, 0.0336]`. This measures agreement with gameplay-oriented chart consensus, not universal musical importance.
-
-Structure has a separate ten-arrangement benchmark. Routine CI keeps three independent gates: the full contract suite on Ubuntu, a focused Python 3.10 compatibility pass on Windows, and a real-browser Studio/WebMCP round trip. The portable Windows application still receives its own analysis-and-render smoke test before every release.
-
-</details>
-
-## Commands and documentation
-
-```powershell
-beatscope serve
-beatscope analyze song.wav
-beatscope doctor
-beatscope benchmark
-beatscope benchmark-structure
-```
-
-- [Local Studio and movie renderer](docs/local-movie.md)
-- [Studio design and failure contracts](docs/design/movie-studio.md)
-- [MCP server](docs/mcp.md)
-- [Frozen cross-Agent task](evaluations/agent-interoperability/TASK.md)
-- [Repository Skill](skills/beatscope-visualizer/SKILL.md)
-
-Development gates:
-
-```powershell
-pytest -q
-npm run test:js
-npm run check:web-deps
-npm run typecheck --prefix web-src
-npm run build --prefix web-src
-```
-
-## Limits
-
-- BeatScope supplies deterministic timing, not finished art direction.
-- Structure families describe recurrence, not emotion, lyrics or song-section names.
-- The analyser reports transient and band evidence, not instrument identity.
-- `response_relevance` is an ordering value, not probability, confidence or musical truth.
+- The current Studio ships one built-in film template.
+- Structure labels describe repetition, not Verse/Chorus or emotion.
+- Real-world beat, tempo and structure evaluation still needs broader public benchmarks.
 - MP3 support requires local libsndfile support or FFmpeg.
-- Long, gradual or ambiguous arrangements may honestly resolve to one segment.
-- The built-in Studio currently ships one film template; the timing package is intentionally renderer-independent.
-- Beat/tempo/structure accuracy is still guarded mainly by synthetic fixtures. Broader public real-music evaluation remains future work.
 
 ## License
 
