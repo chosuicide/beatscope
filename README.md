@@ -10,7 +10,7 @@ English | [简体中文](README.zh-CN.md)
 
 BeatScope listens for beats, real transients, energy changes, tempo changes and repeated sections. Beathi Studio turns those measurements into a movie preview and a reusable timing package. Everything runs locally; your audio is not uploaded.
 
-[![Watch the BeatScope product tour](docs/demo/beathi-studio.png)](https://github.com/chosuicide/beatscope/releases/download/v0.12.0/beatscope-v0.12.0-product-tour.mp4)
+[![Watch the BeatScope product tour](docs/demo/product-tour-loop.webp)](https://github.com/chosuicide/beatscope/releases/download/v0.12.0/beatscope-v0.12.0-product-tour.mp4)
 
 **[▶ Watch the 57-second product tour](https://github.com/chosuicide/beatscope/releases/download/v0.12.0/beatscope-v0.12.0-product-tour.mp4)**
 

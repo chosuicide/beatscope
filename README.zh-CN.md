@@ -10,7 +10,7 @@
 
 BeatScope 会测量拍点、真实瞬态、能量变化、速度变化和重复段落。Beathi Studio 用这些数据生成影片预览，也能导出一份可复用的时序包。所有处理都在本机完成，音频不会上传。
 
-[![观看 BeatScope 产品演示](docs/demo/beathi-studio.png)](https://github.com/chosuicide/beatscope/releases/download/v0.12.0/beatscope-v0.12.0-product-tour.mp4)
+[![观看 BeatScope 产品演示](docs/demo/product-tour-loop.webp)](https://github.com/chosuicide/beatscope/releases/download/v0.12.0/beatscope-v0.12.0-product-tour.mp4)
 
 **[▶ 观看 57 秒产品演示](https://github.com/chosuicide/beatscope/releases/download/v0.12.0/beatscope-v0.12.0-product-tour.mp4)**
 
