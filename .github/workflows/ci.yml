@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # Reused by the release workflow as its pre-publish gate; the tag push that
+  # triggers a release calls this workflow with the tag's own commit.
+  workflow_call:
 
 permissions:
   contents: read
@@ -100,6 +103,7 @@ jobs:
           node --test
           tests/test_movie_plan.js
           tests/test_movie_safety.js
+          tests/test_studio_session.js
           tests/test_studio_webmcp_contracts.js
           tests/test_studio_webmcp_queries.js
           tests/test_studio_webmcp_actions.js

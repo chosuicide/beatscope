@@ -21,7 +21,9 @@ ENERGY_BANDS = ("all", "low", "mid", "high")
 
 def compress_energy(novelty: dict[str, np.ndarray], sr: int, hop: int) -> dict:
     """Serialize the novelty curves as the v3 energy section."""
-    fps = int(round(1.0 / (hop / sr))) if sr > 0 and hop > 0 else 100
+    # Keep the exact frame rate: energy frame i covers time i*hop/sr, so a
+    # rounded integer fps drifts ~0.46 s by the 5-minute mark (44100/256).
+    fps = sr / hop if sr > 0 and hop > 0 else 100.0
     return {
         "fps": fps,
         "start": 0.0,

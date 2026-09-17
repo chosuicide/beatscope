@@ -383,7 +383,7 @@
     }
   ],
   "energy": {
-    "fps": 172,
+    "fps": 172.2656,
     "start": 0.0,
     "bands": {
       "all": {
@@ -601,7 +601,7 @@
           "opening",
           "ending"
         ],
-        "mean_energy": 0.0428,
+        "mean_energy": 0.0434,
         "id": "segment-001",
         "index": 0,
         "display_label": "A"

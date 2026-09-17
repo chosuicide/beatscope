@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "beatscope"
-version = "0.12.0"
+version = "0.12.1"
 description = "Local music timing analysis, deterministic video preview, and portable Agent handoffs"
 readme = "README.md"
 license = { file = "LICENSE" }

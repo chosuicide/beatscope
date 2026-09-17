@@ -46,9 +46,9 @@ def analyze_rhythm(
     # 4. Song structure analysis
     overview = analyze_song_structure(onsets, grid_res.beats, grid_res.bars, subdivision=subdivision)
 
-    # 5. Energy compression
+    # 5. Energy compression (exact frame rate; see lightweight.compress_energy)
     dt = hop / sr
-    fps = int(round(1.0 / dt)) if dt > 0 else 100
+    fps = sr / hop if dt > 0 else 100.0
     energy_data = {
         "fps": fps,
         "start": 0.0,

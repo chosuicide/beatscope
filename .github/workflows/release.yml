@@ -8,7 +8,26 @@ permissions:
   contents: write
 
 jobs:
+  version:
+    name: Validate release versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Require the tag to match shipped versions
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: python scripts/check_release_version.py --tag "$RELEASE_TAG"
+
+  # The release is a gate, not a parallel path: the same-commit CI must have
+  # passed before any artifact is built or published.
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   python-package:
+    needs: [ci, version]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -27,6 +46,7 @@ jobs:
           path: dist/*
 
   windows-portable:
+    needs: [ci, version]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
@@ -46,6 +66,14 @@ jobs:
         run: |
           npm ci --prefix web-src --no-audit --no-fund
           npm run build --prefix web-src
+      - name: Derive the version from the tag
+        id: version
+        shell: pwsh
+        run: |
+          # One version source: the tag. A name that does not match the tag
+          # would ship a zip whose filename lies about its contents.
+          $version = $env:GITHUB_REF_NAME -replace '^v', ''
+          "version=$version" >> $env:GITHUB_OUTPUT
       - name: Build portable Studio
         shell: pwsh
         run: |
@@ -115,20 +143,24 @@ jobs:
           }
       - name: Archive and checksum
         shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          Compress-Archive -Path "dist/Beathi Studio/*" -DestinationPath "dist/Beathi-Studio-v0.12.0-windows-x64.zip"
-          (Get-FileHash "dist/Beathi-Studio-v0.12.0-windows-x64.zip" -Algorithm SHA256).Hash.ToLower() + "  Beathi-Studio-v0.12.0-windows-x64.zip" | Set-Content "dist/Beathi-Studio-v0.12.0-windows-x64.zip.sha256" -NoNewline
+          $version = $env:VERSION
+          Compress-Archive -Path "dist/Beathi Studio/*" -DestinationPath "dist/Beathi-Studio-v$version-windows-x64.zip"
+          (Get-FileHash "dist/Beathi-Studio-v$version-windows-x64.zip" -Algorithm SHA256).Hash.ToLower() + "  Beathi-Studio-v$version-windows-x64.zip" | Set-Content "dist/Beathi-Studio-v$version-windows-x64.zip.sha256" -NoNewline
       - uses: actions/upload-artifact@v7
         with:
           name: windows-portable
           path: |
-            dist/Beathi-Studio-v0.12.0-windows-x64.zip
-            dist/Beathi-Studio-v0.12.0-windows-x64.zip.sha256
+            dist/Beathi-Studio-v${{ steps.version.outputs.version }}-windows-x64.zip
+            dist/Beathi-Studio-v${{ steps.version.outputs.version }}-windows-x64.zip.sha256
 
   publish:
     needs: [python-package, windows-portable]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
       - uses: actions/download-artifact@v8
         with:
           path: release-assets

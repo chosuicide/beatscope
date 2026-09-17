@@ -595,8 +595,8 @@ def validate_rhythm_v4(data: dict[str, Any]) -> list[str]:
     if not isinstance(energy, dict):
         errors.append("energy must be an object")
     else:
-        if not isinstance(energy.get("fps"), (int, float)) or energy["fps"] <= 0:
-            errors.append("energy.fps must be a positive number")
+        if not _finite_number(energy.get("fps")) or energy["fps"] <= 0:
+            errors.append("energy.fps must be a positive finite number")
         bands = energy.get("bands")
         if not isinstance(bands, dict):
             errors.append("energy.bands must be an object")
@@ -606,6 +606,9 @@ def validate_rhythm_v4(data: dict[str, Any]) -> list[str]:
                 arr = bands.get(b_name)
                 if not isinstance(arr, list):
                     errors.append(f"energy.bands.{b_name} must be an array")
+                    break
+                if not all(_finite_number(v) and 0.0 <= v <= 1.0 for v in arr):
+                    errors.append(f"energy.bands.{b_name} values must be finite numbers in 0..1")
                     break
                 lengths.add(len(arr))
             else:

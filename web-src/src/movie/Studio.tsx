@@ -14,23 +14,24 @@ import { MovieTransport } from './MovieTransport';
 import { CueMap } from './CueMap';
 import type { MovieRhythm } from './types';
 import { createMusicGrid } from '../../../beatscope/web/music-grid.mjs';
+import { applyJobToSession, lastFilmUrl, trackJob } from '../../../beatscope/web/studio-session.mjs';
 import type { AgentActivity, ExportResult, MovieActionResult, ResponseRelevanceSidecar, StudioDirectorPort, StudioDirectorSnapshot, StudioStage } from '../webmcp/types.js';
 import { installStudioWebMCP, type DirectorStatus } from '../webmcp/register.js';
 import { LANGS, setLang, t, useCopy, useLang } from './copy';
 import './studio.css';
 
 type Job = { id: string; state: string; progress: number; message: string; project_id?: string; video_url?: string; error?: string; seed?: number };
-type Session = { name: string; projectId?: string; analysisId?: string; movieId?: string; seed?: number };
+type Session = { name: string; projectId?: string; analysisId?: string; movieId?: string; seed?: number; videoUrl?: string; videoJobId?: string; job?: Job | null };
 const key = 'beathi.movie.session.1';
-const wait = () => new Promise((resolve) => setTimeout(resolve, 1000));
 const mmss = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 const TEMPLATE = { name: 'VOXEL INTERFERENCE', version: 'voxel-phrase-2' };
 
 async function request(url: string, init?: RequestInit) {
   const response = await fetch(url, init);
   const text = await response.text();
-  let data; try { data = JSON.parse(text); } catch { throw Error(t().errorService); }
-  if (!response.ok) throw Error(data.message || data.error || t().errorRequest(response.status));
+  let data; try { data = JSON.parse(text); }
+  catch { throw Object.assign(Error(t().errorService), { status: response.status }); }
+  if (!response.ok) throw Object.assign(Error(data.message || data.error || t().errorRequest(response.status)), { status: response.status });
   return data;
 }
 function remember(session: Session) { try { localStorage.setItem(key, JSON.stringify(session)); } catch { /* session still works without persistence */ } }
@@ -70,7 +71,12 @@ export default function MovieStudio() {
   const canRender = Boolean(rhythm && session.projectId && capability?.available) && !busy;
   const grid = useMemo(() => createMusicGrid(rhythm), [rhythm]);
   const duration = Number(rhythm?.source?.duration ?? 0);
-  const hasFilm = stage === 'complete' && Boolean(job?.video_url);
+  /* The film slot comes from the session kernel: it survives regeneration
+     failures and cancellations, and only a newer completed job replaces it.
+     While a job runs the stage shows the live preview again; the finished
+     film stays in the rail and returns to the stage once tracking ends. */
+  const filmUrl = lastFilmUrl(session);
+  const hasFilm = filmUrl != null && !busy;
   const segments = rhythm?.patterns?.segments ?? [];
   const bpm = Number(rhythm?.tempo?.global_bpm ?? 0);
   const save = (next: Session) => { sessionRef.current = next; setSession(next); remember(next); };
@@ -174,11 +180,14 @@ export default function MovieStudio() {
     return () => { cancelAnimationFrame(raf); window.clearInterval(fallback); };
   }, [follow, duration, grid, hasFilm]);
 
-  // Re-sync after async preview initialization (including a paused seek).
+  // Re-sync after async preview initialization (including a paused seek), and
+  // surface preview build errors in the main error banner instead of losing
+  // them inside the iframe.
   useEffect(() => {
     const receive = (event: MessageEvent) => {
       if (event.origin !== location.origin || event.source !== preview.current?.contentWindow) return;
       if (event.data?.type === 'ready') sendPreview({ type: 't', value: player()?.currentTime ?? 0 });
+      if (event.data?.type === 'error') setError(copy.previewFailed);
     };
     window.addEventListener('message', receive);
     return () => window.removeEventListener('message', receive);
@@ -219,21 +228,25 @@ export default function MovieStudio() {
   }
   async function movieLoop(id: string, token: number) {
     setStage('rendering');
-    for (;;) {
-      const next: Job = await request(`/api/movies/${id}`); if (token !== generation.current) return;
-      setJob(next);
-      sendSeed(next.seed);
-      if (next.state === 'complete') {
-        // hand the clock over to the film: one player at a time
-        audio.current?.pause();
-        setTime(0); setPlaying(false);
-        setStage('complete');
-        return;
-      }
-      if (next.state === 'cancelled') { save({ ...sessionRef.current, movieId: undefined }); setStage('preview'); return; }
-      if (next.state === 'failed') { setStage('failed'); setError(next.message); return; }
-      await wait(); if (token !== generation.current) return;
-    }
+    await trackJob({
+      read: () => request(`/api/movies/${id}`),
+      isCurrent: () => token === generation.current,
+      accept: async (next: Job) => {
+        setJob(next);
+        save(applyJobToSession(sessionRef.current, next));
+        sendSeed(next.seed);
+        if (next.state === 'complete') {
+          // hand the clock over to the film: one player at a time
+          audio.current?.pause();
+          setTime(0); setPlaying(false);
+          setStage('complete');
+          return true;
+        }
+        if (next.state === 'cancelled') { save({ ...sessionRef.current, movieId: undefined }); setStage('preview'); return true; }
+        if (next.state === 'failed') { setStage('failed'); setError(next.message); return true; }
+        return false;
+      },
+    });
   }
   async function submitMovie(id: string, token: number, seed?: number): Promise<Job> {
     const next: Job = await request('/api/movies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_id: id, seed: seed ?? sessionRef.current.seed ?? 1 }) });
@@ -257,8 +270,17 @@ export default function MovieStudio() {
     const token = ++generation.current;
     setStage('rendering'); setJob(null);
     startedRef.current = Date.now();
-    const next = await submitMovie(id, token, seed);
-    void movieLoop(next.id, token);
+    let next: Job;
+    try { next = await submitMovie(id, token, seed); }
+    catch (e) {
+      if (token === generation.current) { setStage('failed'); setError(String(e)); }
+      throw e;
+    }
+    if (token === generation.current) {
+      void movieLoop(next.id, token).catch((e) => {
+        if (token === generation.current) { setStage('failed'); setError(String(e)); }
+      });
+    }
     return { action: 'start', job: { id: next.id, state: next.state, progress: Number(next.progress ?? 0), video_ready: Boolean(next.video_url) }, seed: sessionRef.current.seed ?? null };
   }
   async function cancelMovieRender(): Promise<void> {
@@ -266,19 +288,22 @@ export default function MovieStudio() {
   }
   async function analysisLoop(id: string, token: number) {
     setStage('analyzing');
-    for (;;) {
-      const next: Job = await request(`/api/jobs/${id}`); if (token !== generation.current) return;
-      setJob(next);
-      if (next.state === 'complete' && next.project_id) {
-        // rendering is on demand: analysis only unlocks the live preview
-        save({ ...sessionRef.current, projectId: next.project_id, analysisId: undefined, movieId: undefined });
-        await loadRhythm(next.project_id, token); if (token !== generation.current) return;
-        setStage('preview');
-        return;
-      }
-      if (['failed', 'cancelled'].includes(next.state)) { setStage(next.state); if (next.state === 'failed') setError(next.error || next.message); return; }
-      await wait(); if (token !== generation.current) return;
-    }
+    await trackJob({
+      read: () => request(`/api/jobs/${id}`),
+      isCurrent: () => token === generation.current,
+      accept: async (next: Job) => {
+        setJob(next);
+        if (next.state === 'complete' && next.project_id) {
+          // rendering is on demand: analysis only unlocks the live preview
+          save({ ...sessionRef.current, projectId: next.project_id, analysisId: undefined, movieId: undefined });
+          await loadRhythm(next.project_id, token); if (token !== generation.current) return true;
+          setStage('preview');
+          return true;
+        }
+        if (['failed', 'cancelled'].includes(next.state)) { setStage(next.state); if (next.state === 'failed') setError(next.error || next.message); return true; }
+        return false;
+      },
+    });
   }
   useEffect(() => {
     document.title = t().docTitle;
@@ -289,7 +314,10 @@ export default function MovieStudio() {
     if (saved && typeof saved.name === 'string') {
       save(saved);
       void (async () => {
-        if (saved!.projectId) await loadRhythm(saved!.projectId, token);
+        if (saved!.projectId) {
+          try { await loadRhythm(saved!.projectId, token); }
+          catch (e) { if (token === generation.current) setError(String(e)); }
+        }
         if (token !== generation.current) return;
         if (saved!.movieId) { startedRef.current = Date.now(); await movieLoop(saved!.movieId, token); }
         else if (saved!.analysisId) await analysisLoop(saved!.analysisId, token);
@@ -519,7 +547,7 @@ export default function MovieStudio() {
             {hasFilm ? (
               <video
                 ref={video}
-                src={job?.video_url}
+                src={filmUrl}
                 playsInline
                 preload="metadata"
                 onPlay={() => setPlaying(true)}
@@ -613,12 +641,12 @@ export default function MovieStudio() {
             </div>
             <div className="rail-cap" style={{ marginTop: 6 }}>{copy.filmExport}</div>
             <a
-              className={`btn-line wide${hasFilm ? '' : ' off'}`}
-              href={hasFilm ? `${job?.video_url}?download=1` : undefined}
+              className={`btn-line wide${filmUrl ? '' : ' off'}`}
+              href={filmUrl ? `${filmUrl}?download=1` : undefined}
               download
-              aria-disabled={!hasFilm}
+              aria-disabled={!filmUrl}
             >
-              {hasFilm ? copy.filmReady : copy.filmMissing}
+              {filmUrl ? copy.filmReady : copy.filmMissing}
             </a>
           </section>
 
@@ -648,6 +676,7 @@ export default function MovieStudio() {
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={() => setPlaying(false)}
+        onError={() => { if (session.projectId) setError(copy.previewFailed); }}
       />
     </div>
   );
