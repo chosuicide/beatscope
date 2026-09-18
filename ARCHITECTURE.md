@@ -20,9 +20,17 @@ working in the visible studio.
 - `beatscope/web/composition-runtime.mjs` and the composition model under
   `web-src/src/composition|direction|motion` — the "*Export for Agent*" artwork
   path and its tests still use them (`beatscope/composition_export.py`).
-- `beatscope/web/reflected-response-study.mjs` — a research study with its own
-  test, kept as a record; nothing in the product calls it.
+- `tests/reflected-response-study.mjs` — a research study with its own test,
+  kept as a record; nothing in the product calls it, so it lives with the test
+  rather than in the package.
 - `docs/design/movie-studio.md` — the frozen contract of the studio's UI.
+
+## Research code, outside the package
+
+`research/` holds corpus construction and labelling (`chart_labels.py`). It
+imports from `beatscope`, never the other way around, and it is not packaged:
+the wheel installs the product, and the scripts that need these modules insert
+the repo root on `sys.path` themselves.
 
 ## Authority, so nobody has to guess
 

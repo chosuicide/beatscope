@@ -22,7 +22,7 @@ import numpy as np  # noqa: E402
 
 from beatscope import event_ranker as er  # noqa: E402
 from beatscope import event_ranker_boost as boost  # noqa: E402
-from beatscope.chart_labels import (  # noqa: E402
+from research.chart_labels import (  # noqa: E402
     MIN_DEV_CHARTS,
     MIN_DEV_SONGS,
     MIN_DEV_SOURCES,

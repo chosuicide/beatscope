@@ -1,6 +1,6 @@
 /** Local experiment: martin / Butterchurn material, BeatScope action ownership.
  * Controls are seek-safe. Feedback pixels are NOT history-independent. */
-import { compileComposition } from './composition-runtime.mjs';
+import { compileComposition } from '../beatscope/web/composition-runtime.mjs';
 export const STUDY_PRESET = 'martin - reflections on black tiles';
 export function compileReflectedResponse(rhythm, relevance, { gap = .38, release = .32, amount = .8 } = {}) {
   const doc = { project_id: rhythm.project_id, source_rhythm_sha256: rhythm.source.sha256,

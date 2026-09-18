@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { compileReflectedResponse, createReflectedPreset, STUDY_PRESET } from '../beatscope/web/reflected-response-study.mjs';
+import { compileReflectedResponse, createReflectedPreset, STUDY_PRESET } from './reflected-response-study.mjs';
 const require = createRequire(import.meta.url);
 const original = require('../web-src/node_modules/butterchurn-presets').getPresets()[STUDY_PRESET];
 const rhythm = { project_id: 'song', source: { sha256: 'source' }, onsets: [

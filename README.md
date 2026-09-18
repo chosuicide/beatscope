@@ -96,7 +96,9 @@ BeatScope also provides:
 - a local stdio MCP server for analysis and bounded timing queries;
 - seven browser WebMCP tools inside Beathi Studio;
 - deterministic runtime helpers for browser workers and offline renderers;
-- reference consumers for Canvas, Three.js and Remotion.
+- reference consumers for Canvas, Three.js and Remotion;
+- `beatscope validate-handoff <package.zip>` and `beatscope validate-consumer <package.zip>`,
+  which check an exported package against the consumer contract before you build on it.
 
 Read more: [movie renderer](docs/local-movie.md) · [MCP](docs/mcp.md) · [WebMCP](docs/webmcp-studio.md) · [Agent Skill](skills/beatscope-visualizer/SKILL.md)
 

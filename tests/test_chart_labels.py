@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-import beatscope.chart_labels as cl
-from beatscope.chart_labels import (
+import research.chart_labels as cl
+from research.chart_labels import (
     CHART_CONTRACT,
     CODE_ALIGNMENT_MATCH_RATE_TOO_LOW,
     CODE_MALFORMED_CHART,

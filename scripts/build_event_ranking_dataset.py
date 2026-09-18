@@ -30,8 +30,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from beatscope import chart_labels as cl  # noqa: E402
-from beatscope.chart_labels import ChartLabelError  # noqa: E402
+from research import chart_labels as cl  # noqa: E402
+from research.chart_labels import ChartLabelError  # noqa: E402
 
 CORPUS_SCHEMA = "beatscope-ranking-corpus-local-1"
 MANIFEST_SCHEMA = "beatscope-response-ranking-manifest-1"

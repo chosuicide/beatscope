@@ -6,7 +6,7 @@ Deterministic pairwise chart-consensus response ranker (v0.11 Round 2).
 A dormant module: it learns one narrow ordering - which of two detected
 onsets from the same song is more consistently retained by human-authored
 rhythm charts across difficulty densities - from the weak labels built by
-``chart_labels.py``, using Round 1 event evidence as the only features.
+``research/chart_labels.py``, using Round 1 event evidence as the only features.
 
 Boundaries (v0.11 Round 2 plan sections 1, 13, 14):
 

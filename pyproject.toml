@@ -34,8 +34,18 @@ beatscope-mcp = "beatscope.mcp.server:main"
 include = ["beatscope*"]
 
 [tool.setuptools.package-data]
+# Explicit names rather than a web/*.mjs glob: a research module that happens to
+# sit beside the runtime must not be packaged just because it shares an
+# extension. Files git tracks inside the package (mv-visual.js, the .d.mts
+# declarations) come along through include_package_data; the entries here are
+# the pages and modules the server and the renderer load at runtime.
 beatscope = [
-  "web/*.html", "web/*.mjs",
+  "web/composition-preview.html", "web/composition-preview.mjs",
+  "web/composition-probe.mjs", "web/composition-runtime.mjs",
+  "web/movie-preview.html", "web/mv-render.html",
+  "web/music-grid.mjs", "web/studio-session.mjs",
+  "web/mv-encode.mjs", "web/mv-frame.mjs", "web/mv-io.mjs",
+  "web/mv-plan.mjs", "web/mv-worker.mjs",
   "web/app/*.html", "web/app/*.webp", "web/app/assets/*", "web/app/fonts/*",
   "runtime/*.js", "runtime/*.mjs",
   "agent_skill/*.md", "agent_skill/references/*.md",

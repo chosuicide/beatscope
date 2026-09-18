@@ -443,7 +443,7 @@ def test_consumed_manifest_excludes_test_songs(tmp_path_factory: pytest.TempPath
 
 def test_builder_refuses_consumed_artifact_rebuild(tmp_path_factory: pytest.TempPathFactory,
                                                    monkeypatch: pytest.MonkeyPatch) -> None:
-    import beatscope.chart_labels as cl
+    import research.chart_labels as cl
     from scripts.build_event_ranking_dataset import build_dataset
 
     root = tmp_path_factory.mktemp("denylist-corpus")
