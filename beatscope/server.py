@@ -14,7 +14,6 @@ from .exports import generate_codex_export, generate_rhythm_csv, generate_rhythm
 from .jobs import JobManager
 from .media_http import describe_media
 from .midi import build_midi
-from .pipeline import analyze_track
 from .project import ProjectManager
 from .response_relevance import build_response_relevance, canonical_response_relevance_bytes
 from .schema import load_rhythm_project
@@ -333,6 +332,7 @@ class Handler(BaseHTTPRequestHandler):
 
             temp_handle = tempfile.NamedTemporaryFile(prefix=".beatscope-upload-", suffix=suffix, delete=False)
             temp_path = Path(temp_handle.name)
+            submitted = False
             try:
                 with temp_handle:
                     remaining = size
@@ -349,10 +349,15 @@ class Handler(BaseHTTPRequestHandler):
                 config = {"subdivision": subdiv, "separation": "auto"}
 
                 job = JOB_MANAGER.submit_analysis(temp_path, filename, config)
+                submitted = True
                 self._send(200, json.dumps({"job_id": job.id}).encode("utf-8"), "application/json; charset=utf-8")
                 return
             except Exception as exc:
-                temp_path.unlink(missing_ok=True)
+                # Once the job owns the upload, only the job may delete it: a
+                # client that disconnects before reading the response must not
+                # take the file out from under the running analysis.
+                if not submitted:
+                    temp_path.unlink(missing_ok=True)
                 self._send(400, json.dumps({"error": str(exc)}).encode(), "application/json")
                 return
 
@@ -418,43 +423,11 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(400, json.dumps({"error": str(exc)}).encode(), "application/json")
             return
 
-        # 4. Legacy /api/analyze
-        if path == "/api/analyze":
-            raw_size = self.headers.get("Content-Length")
-            if raw_size is None:
-                self._send(411, b"Content-Length required", "text/plain")
-                return
-            try:
-                size = int(raw_size)
-            except ValueError:
-                self._send(400, b"Invalid Content-Length", "text/plain")
-                return
-            if size <= 0:
-                self._send(400, b"Audio upload is empty", "text/plain")
-                return
-            if size > MAX_UPLOAD_BYTES:
-                self._send(413, b"Audio upload is too large", "text/plain")
-                return
-            filename = Path(self.headers.get("X-Filename", "audio")).name
-            suffix = Path(filename).suffix[:12] or ".audio"
-            temp_handle = tempfile.NamedTemporaryFile(prefix=".beatscope-", suffix=suffix, delete=False)
-            temp = Path(temp_handle.name)
-            try:
-                with temp_handle:
-                    remaining = size
-                    while remaining:
-                        chunk = self.rfile.read(min(1024 * 1024, remaining))
-                        if not chunk:
-                            raise ValueError("Upload ended before Content-Length")
-                        temp_handle.write(chunk)
-                        remaining -= len(chunk)
-                result = analyze_track(temp, display_name=filename)
-                self._send(200, json.dumps(result).encode("utf-8"), "application/json; charset=utf-8")
-            except Exception as exc:
-                self._send(400, json.dumps({"error": str(exc)}).encode(), "application/json")
-            finally:
-                temp.unlink(missing_ok=True)
-            return
+        # 4. The synchronous /api/analyze route was removed in v0.12.1: it ran a
+        # full analysis inside the handler thread and answered with the finished
+        # document, so a request occupied a thread for minutes with no progress
+        # and nothing to cancel. Uploads go through /api/jobs/analyze, which
+        # queues a job and returns its id (tests/test_server.py pins the 404).
 
         self._send(404, b"Not found", "text/plain")
 

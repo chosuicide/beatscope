@@ -18,10 +18,11 @@ def running_server():
 
 
 def test_upload_rejects_missing_length():
+    """The upload guard runs before anything is read off the socket."""
     server, thread = running_server()
     try:
         conn = http.client.HTTPConnection(*server.server_address)
-        conn.putrequest('POST', '/api/analyze')
+        conn.putrequest('POST', '/api/jobs/analyze')
         conn.endheaders()
         response = conn.getresponse()
         assert response.status == 411
@@ -35,8 +36,29 @@ def test_upload_rejects_oversized_length():
     server, thread = running_server()
     try:
         conn = http.client.HTTPConnection(*server.server_address)
-        conn.request('POST', '/api/analyze', body=b'', headers={'Content-Length': str(MAX_UPLOAD_BYTES + 1)})
+        conn.request('POST', '/api/jobs/analyze', body=b'', headers={'Content-Length': str(MAX_UPLOAD_BYTES + 1)})
         assert conn.getresponse().status == 413
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
+def test_sync_analyze_route_is_gone():
+    """`POST /api/analyze` ran a whole analysis inside the handler thread.
+
+    It answered with the finished rhythm document and bypassed the job queue,
+    so there was no progress and nothing to cancel while it held the thread.
+    Uploads go through /api/jobs/analyze, and the synchronous route is gone.
+    """
+    server, thread = running_server()
+    try:
+        conn = http.client.HTTPConnection(*server.server_address)
+        conn.request('POST', '/api/analyze', body=b'\x00' * 16,
+                     headers={'Content-Length': '16', 'X-Filename': 'song.wav'})
+        response = conn.getresponse()
+        assert response.status == 404
+        response.read()
     finally:
         server.shutdown()
         server.server_close()
