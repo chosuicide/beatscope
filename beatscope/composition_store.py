@@ -8,8 +8,21 @@ from threading import RLock
 from .composition import MAX_COMPOSITION_BYTES, composition_bytes, new_composition, validate_composition
 from .project import _atomic_write_bytes
 
-# Serialize the entire compare-and-replace, including lazy creation, across API instances.
+# Serialize the entire compare-and-replace, including lazy creation, across API
+# instances. Callers that mutate the same sidecars outside composition_request
+# take the lock through composition_lock() rather than importing it.
 _LOCK = RLock()
+
+
+def composition_lock() -> RLock:
+    """The lock that serializes composition and asset mutations."""
+    return _LOCK
+
+
+def locked_composition_request(manager, project_id, body=None, if_match=None, asset_ids=None):
+    """composition_request under the lock, for read-modify-write callers."""
+    with _LOCK:
+        return composition_request(manager, project_id, body, if_match, asset_ids)
 
 
 def composition_request(manager, project_id, body=None, if_match=None, asset_ids=None):

@@ -16,7 +16,6 @@ import os
 import sys
 import tempfile
 import wave
-from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -73,9 +72,9 @@ def main() -> int:
 
     sys.path.insert(0, str(REPO))
     from beatscope.mv_jobs import renderer_tools  # noqa: E402
-    from beatscope.server import Handler  # noqa: E402  (born after the cwd change)
+    from beatscope.server import BeatScopeServer, ServerContext  # noqa: E402  (born after the cwd change)
 
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
+    server = BeatScopeServer.with_context(("127.0.0.1", args.port), ServerContext.create())
     print(json.dumps({
         "port": server.server_address[1],
         "project_id": PROJECT_ID,

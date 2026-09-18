@@ -5,15 +5,14 @@ import tempfile
 import threading
 import time
 import wave
-from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 import beatscope.server as server_module
-from beatscope.server import MAX_UPLOAD_BYTES, Handler
+from beatscope.server import MAX_UPLOAD_BYTES, BeatScopeServer, ServerContext
 
 
 def running_server():
-    server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+    server = BeatScopeServer.with_context(('127.0.0.1', 0), ServerContext.create())
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     return server, thread
@@ -282,3 +281,34 @@ def test_startup_sweeps_stale_uploads_and_leaves_the_rest(monkeypatch, tmp_path)
     assert not stale.exists()
     assert fresh.exists(), "an upload from a running instance must survive"
     assert foreign.exists(), "only BeatScope's own prefixes are swept"
+
+
+def test_handlers_serve_from_the_context_not_a_global(tmp_path):
+    """The services live on the server, so a fake manager is enough to test it.
+
+    Before ServerContext, changing what a handler served meant patching a
+    module-level singleton; now the server is handed exactly what it should use.
+    """
+
+    class FakeProjects:
+        # The real ProjectManager creates its cache root; MovieJobs expects one.
+        cache_root = tmp_path / "cache"
+        cache_root.mkdir()
+
+        def list_projects(self):
+            return [{"project_id": "0a1b2c3d4e5f", "display_name": "fake.wav"}]
+
+    server = BeatScopeServer.with_context(("127.0.0.1", 0), ServerContext.create(FakeProjects()))
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        conn = http.client.HTTPConnection(*server.server_address)
+        conn.request("GET", "/api/projects")
+        response = conn.getresponse()
+        assert response.status == 200
+        projects = json.loads(response.read().decode())["projects"]
+        assert [p["display_name"] for p in projects] == ["fake.wav"]
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)

@@ -6,6 +6,7 @@ import tempfile
 import threading
 import time
 import webbrowser
+from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import cast
@@ -15,6 +16,7 @@ from .exports import generate_codex_export, generate_rhythm_csv, generate_rhythm
 from .jobs import JobManager
 from .media_http import describe_media
 from .midi import build_midi
+from .mv_jobs import MovieJobs, renderer_tools
 from .project import ProjectManager
 from .response_relevance import build_response_relevance, canonical_response_relevance_bytes
 from .schema import load_rhythm_project
@@ -25,18 +27,50 @@ RUNTIME_ROOT = Path(__file__).parent / "runtime"
 PROJECT_FILE: Path | None = None
 PROJECT_MAP: dict | None = None
 
-PROJECT_MANAGER = ProjectManager()
-JOB_MANAGER = JobManager(PROJECT_MANAGER)
-WEB_API = WebApi(PROJECT_MANAGER, JOB_MANAGER)
+@dataclass
+class ServerContext:
+    """The services one server instance serves from.
 
-# Deliberately below the managers: mv_jobs imports this module's peers, and
-# hoisting it to the top creates an import cycle.
-from .mv_jobs import MovieJobs, renderer_tools  # noqa: E402
+    Built by ``create()`` in production and by tests that want a fake manager,
+    so nothing has to patch a module global to change what a handler uses.
+    """
 
-MOVIE_JOBS = MovieJobs(PROJECT_MANAGER)
+    project_manager: ProjectManager
+    job_manager: JobManager
+    web_api: WebApi
+    movie_jobs: MovieJobs
+
+    @classmethod
+    def create(cls, project_manager: ProjectManager | None = None) -> "ServerContext":
+        """The default wiring: one project manager shared by every service."""
+        manager = project_manager or ProjectManager()
+        job_manager = JobManager(manager)
+        return cls(
+            project_manager=manager,
+            job_manager=job_manager,
+            web_api=WebApi(manager, job_manager),
+            movie_jobs=MovieJobs(manager),
+        )
+
+
+class BeatScopeServer(ThreadingHTTPServer):
+    """ThreadingHTTPServer that carries the context its handlers read."""
+
+    ctx: ServerContext
+
+    @classmethod
+    def with_context(cls, address: tuple[str, int], ctx: ServerContext) -> "BeatScopeServer":
+        server = cls(address, Handler)
+        server.ctx = ctx
+        return server
 
 
 class Handler(BaseHTTPRequestHandler):
+    @property
+    def ctx(self) -> ServerContext:
+        """The services for this server instance, set when it was built."""
+        return cast(BeatScopeServer, self.server).ctx
+
     def parse_request(self):
         if not super().parse_request():
             return False
@@ -106,12 +140,12 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path.startswith("/api/movies/"):
             parts = path.strip("/").split("/")
-            job = MOVIE_JOBS.get(parts[2]) if len(parts) == 3 or (len(parts) == 4 and parts[3] == "video") else None
+            job = self.ctx.movie_jobs.get(parts[2]) if len(parts) == 3 or (len(parts) == 4 and parts[3] == "video") else None
             if not job:
                 self._send(404, b'{"message":"Movie not found"}', "application/json")
                 return
             if len(parts) == 4 and parts[3] == "video":
-                target = MOVIE_JOBS.video(parts[2])
+                target = self.ctx.movie_jobs.video(parts[2])
                 if not target:
                     self._send(404, b'{"message":"Movie not ready"}', "application/json")
                     return
@@ -129,12 +163,12 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, json.dumps(PROJECT_MAP, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
                 return
             # If a project is loaded in project_manager, return it
-            projects = PROJECT_MANAGER.list_projects()
+            projects = self.ctx.project_manager.list_projects()
             if projects:
                 latest_id = projects[-1].get("project_id")
                 # A project entry without an id is not addressable; fall through
                 # to the 404 rather than asking the manager for None.
-                rhythm = PROJECT_MANAGER.get_project_rhythm(latest_id) if isinstance(latest_id, str) else None
+                rhythm = self.ctx.project_manager.get_project_rhythm(latest_id) if isinstance(latest_id, str) else None
                 if rhythm:
                     self._send(200, json.dumps(rhythm, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
                     return
@@ -144,11 +178,11 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/project/response-relevance":
             rhythm = PROJECT_MAP
             if rhythm is None:
-                projects = PROJECT_MANAGER.list_projects()
+                projects = self.ctx.project_manager.list_projects()
                 if projects:
                     latest_id = projects[-1].get("project_id")
                     if isinstance(latest_id, str):
-                        rhythm = PROJECT_MANAGER.get_project_rhythm(latest_id)
+                        rhythm = self.ctx.project_manager.get_project_rhythm(latest_id)
             if rhythm is None:
                 self._send(404, b"No project configured", "text/plain")
                 return
@@ -209,10 +243,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_media(target)
                 return
             # Fallback to latest project audio
-            projects = PROJECT_MANAGER.list_projects()
+            projects = self.ctx.project_manager.list_projects()
             if projects:
                 latest_id = projects[-1].get("project_id")
-                audio_path = PROJECT_MANAGER.get_project_audio_path(latest_id) if isinstance(latest_id, str) else None
+                audio_path = self.ctx.project_manager.get_project_audio_path(latest_id) if isinstance(latest_id, str) else None
                 if audio_path and audio_path.is_file():
                     self._send_media(audio_path)
                     return
@@ -224,12 +258,12 @@ class Handler(BaseHTTPRequestHandler):
             parts = path.strip('/').split('/')
             if len(parts) == 4 and parts[:2] == ['api', 'projects'] and parts[3] == 'audio':
                 valid_id = len(parts[2]) == 12 and all(c in '0123456789abcdef' for c in parts[2])
-                target = PROJECT_MANAGER.get_project_audio_path(parts[2]) if valid_id else None
+                target = self.ctx.project_manager.get_project_audio_path(parts[2]) if valid_id else None
                 if target and target.is_file():
                     self._send_media(target)
                     return
             headers_dict = {k: v for k, v in self.headers.items()}
-            status, resp_headers, body = WEB_API.handle_get(path, query, headers_dict)
+            status, resp_headers, body = self.ctx.web_api.handle_get(path, query, headers_dict)
             ct = resp_headers.get("Content-Type", "application/json")
             self._send(status, body, ct, resp_headers)
             return
@@ -294,7 +328,7 @@ class Handler(BaseHTTPRequestHandler):
                 data = json.loads(self.rfile.read(int(declared_size)))
                 if not isinstance(data, dict) or not isinstance(data.get("project_id"), str):
                     raise ValueError("project_id required")
-                job = MOVIE_JOBS.submit(data["project_id"], seed=data.get("seed"))
+                job = self.ctx.movie_jobs.submit(data["project_id"], seed=data.get("seed"))
                 self._send(202, json.dumps(job).encode(), "application/json")
             except RuntimeError as exc:
                 self._send(409, json.dumps({"message": str(exc)}).encode(), "application/json")
@@ -303,7 +337,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path.startswith("/api/movies/") and path.endswith("/cancel"):
             job_id = path.strip("/").split("/")[2]
-            ok = MOVIE_JOBS.cancel(job_id)
+            ok = self.ctx.movie_jobs.cancel(job_id)
             self._send(200 if ok else 409, json.dumps({"cancelled": ok}).encode(), "application/json")
             return
 
@@ -349,7 +383,7 @@ class Handler(BaseHTTPRequestHandler):
                 subdiv = int(query.get("subdivision", [16])[0])
                 config = {"subdivision": subdiv, "separation": "auto"}
 
-                job = JOB_MANAGER.submit_analysis(temp_path, filename, config)
+                job = self.ctx.job_manager.submit_analysis(temp_path, filename, config)
                 submitted = True
                 self._send(200, json.dumps({"job_id": job.id}).encode("utf-8"), "application/json; charset=utf-8")
                 return
@@ -367,7 +401,7 @@ class Handler(BaseHTTPRequestHandler):
             raw_size = self.headers.get("Content-Length", "0")
             size = int(raw_size) if raw_size.isdigit() else 0
             body = self.rfile.read(size) if size else b"{}"
-            status, resp_headers, body_bytes = WEB_API.handle_post_adjustments(path, body)
+            status, resp_headers, body_bytes = self.ctx.web_api.handle_post_adjustments(path, body)
             self._send(status, body_bytes, resp_headers.get("Content-Type", "application/json"))
             return
 
@@ -400,7 +434,7 @@ class Handler(BaseHTTPRequestHandler):
                 body += chunk
                 remaining -= len(chunk)
             headers_dict = {k: v for k, v in self.headers.items()}
-            status, resp_headers, body_bytes = WEB_API.handle_post_assets(path, body, headers_dict)
+            status, resp_headers, body_bytes = self.ctx.web_api.handle_post_assets(path, body, headers_dict)
             self._send(status, body_bytes, resp_headers.get("Content-Type", "application/json"))
             return
 
@@ -446,7 +480,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(413 if raw_size.isdigit() else 400, b'{"error":"composition/body-length"}', "application/json")
                 return
             body = self.rfile.read(int(raw_size))
-            status, response_headers, response_body = WEB_API.handle_put_composition(path, body, dict(self.headers.items()))
+            status, response_headers, response_body = self.ctx.web_api.handle_put_composition(path, body, dict(self.headers.items()))
             self._send(status, response_body, "application/json", response_headers)
             return
         if path.startswith("/api/projects/") and (path.endswith("/direction") or path.endswith("/workspace")):
@@ -454,7 +488,7 @@ class Handler(BaseHTTPRequestHandler):
             size = int(raw_size) if raw_size.isdigit() else 0
             body = self.rfile.read(size) if size else b""
             headers_dict = {k: v for k, v in self.headers.items()}
-            handler = WEB_API.handle_put_workspace if path.endswith("/workspace") else WEB_API.handle_put_direction
+            handler = self.ctx.web_api.handle_put_workspace if path.endswith("/workspace") else self.ctx.web_api.handle_put_direction
             status, resp_headers, body_bytes = handler(path, body, headers_dict)
             self._send(status, body_bytes, resp_headers.get("Content-Type", "application/json"), resp_headers)
             return
@@ -465,7 +499,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         route = urlparse(self.path)
         query = parse_qs(route.query)
-        status, resp_headers, body = WEB_API.handle_delete(route.path, query)
+        status, resp_headers, body = self.ctx.web_api.handle_delete(route.path, query)
         self._send(status, body, resp_headers.get("Content-Type", "application/json"))
 
     def log_message(self, fmt: str, *args: object) -> None:
@@ -511,7 +545,7 @@ def serve(
     if project:
         PROJECT_FILE = Path(project).resolve()
         PROJECT_MAP = load_rhythm_project(PROJECT_FILE)
-    server = ThreadingHTTPServer((host, port), Handler)
+    server = BeatScopeServer.with_context((host, port), ServerContext.create())
     actual_port = server.server_address[1]
     url = f"http://{host}:{actual_port}"
     print(f"BeatScope running at {url}")

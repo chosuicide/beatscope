@@ -10,8 +10,7 @@ from .assets import (
     AssetError,
     AssetStore,
 )
-from .composition_store import _LOCK as COMPOSITION_LOCK
-from .composition_store import composition_request
+from .composition_store import composition_lock, composition_request, locked_composition_request
 from .direction import (
     build_direction_document,
     canonical_direction_bytes,
@@ -27,10 +26,36 @@ from .jobs import JobManager
 from .media_http import describe_media
 from .project import ProjectManager
 from .response_relevance import build_response_relevance, canonical_response_relevance_bytes
+from .routing import Route, match_route
 
 MAX_UPLOAD_BYTES = 500 * 1024 * 1024
 MAX_DIRECTION_BYTES = 8 * 1024 * 1024
 MAX_ASSET_BYTES = VIDEO_MAX_BYTES
+
+# Declared once, matched by the tiny router in beatscope.routing. A ':name'
+# segment captures one path segment; the table is read in order, and because a
+# pattern must match the segment count exactly, no entry can shadow another.
+GET_ROUTES: list[Route] = [
+    ("GET", ("api", "projects", ":id", "composition"), "_get_composition"),
+    ("GET", ("api", "projects", ":id", "export", "composition.zip"), "_get_composition_export"),
+    ("GET", ("api", "jobs", ":id"), "_get_job"),
+    ("GET", ("api", "projects",), "_get_projects"),
+    ("GET", ("api", "projects", ":id"), "_get_project"),
+    ("GET", ("api", "projects", ":id", "audio"), "_get_audio"),
+    ("GET", ("api", "projects", ":id", "export", "rhythm.mid"), "_get_midi"),
+    ("GET", ("api", "projects", ":id", "export", "rhythm.csv"), "_get_csv"),
+    ("GET", ("api", "projects", ":id", "export", "codex.zip"), "_get_codex_export"),
+    ("GET", ("api", "projects", ":id", "response-relevance"), "_get_response_relevance"),
+    ("GET", ("api", "projects", ":id", "direction"), "_get_direction"),
+    ("GET", ("api", "projects", ":id", "workspace"), "_get_workspace"),
+    ("GET", ("api", "projects", ":id", "assets"), "_get_assets"),
+    ("GET", ("api", "projects", ":id", "assets", ":asset_id"), "_get_asset"),
+]
+
+DELETE_ROUTES: list[Route] = [
+    ("DELETE", ("api", "jobs", ":id"), "_delete_job"),
+    ("DELETE", ("api", "projects", ":id", "assets", ":asset_id"), "_delete_asset"),
+]
 
 
 class WebApi:
@@ -43,154 +68,137 @@ class WebApi:
     def handle_get(self, path: str, query: dict[str, list[str]], headers: dict[str, str]) -> tuple[int, dict[str, str], bytes]:
         """Handle GET requests. Returns (status_code, headers_dict, body_bytes)."""
         parts = [p for p in path.strip("/").split("/") if p]
+        # A malformed project id is answered before any project route runs; the
+        # handlers below may then assume a well-formed id.
         if len(parts) >= 3 and parts[:2] == ["api", "projects"] and (len(parts[2]) != 12 or any(c not in "0123456789abcdef" for c in parts[2])):
             return 404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}'
 
-        if len(parts) == 4 and parts[:2] == ["api", "projects"] and parts[3] == "composition":
-            return composition_request(self.project_manager, parts[2])
-        if len(parts) == 5 and parts[:2] == ["api", "projects"] and parts[3:] == ["export", "composition.zip"]:
-            from .composition_export import composition_archive
+        handler, params = match_route(GET_ROUTES, "GET", parts)
+        if handler is None:
+            return 404, {"Content-Type": "text/plain"}, b"Not found"
+        return getattr(self, handler)(params, query, headers)
 
-            status, version_headers, document_bytes = composition_request(self.project_manager, parts[2])
-            if status != 200:
-                return status, version_headers, document_bytes
-            expected = headers.get("If-Match") or headers.get("if-match")
-            if expected and expected != version_headers["ETag"]:
-                return 409, version_headers, b'{"error":"composition/export-version-changed"}'
-            # composition_request above already answered 404 for an unknown
-            # project, so the store exists here; without this guard a missing
-            # store would surface as an AttributeError inside composition_archive
-            # and escape as a 500.
-            store = self._asset_store(parts[2])
-            if store is None:
-                return 404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}'
-            try:
-                archive = composition_archive(json.loads(document_bytes), self.project_manager.get_project_rhythm(parts[2]), store)
-            except (ValueError, OSError) as exc:
-                return 422, {"Content-Type": "application/json"}, json.dumps({"error": "composition/export-failed", "message": str(exc)}).encode()
-            return 200, {"Content-Type": "application/zip", "Content-Disposition": 'attachment; filename="beatscope-composition.zip"'}, archive
+    # --- GET handlers, one per entry in GET_ROUTES --------------------------
 
-        # 1. GET /api/jobs/<job_id>
-        if len(parts) == 3 and parts[0] == "api" and parts[1] == "jobs":
-            job_id = parts[2]
-            job = self.job_manager.get_job(job_id)
-            if not job:
-                return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Job not found"}).encode()
-            return 200, {"Content-Type": "application/json; charset=utf-8"}, json.dumps(job.to_dict()).encode()
+    def _get_composition(self, params, query, headers) -> tuple[int, dict[str, str], bytes]:
+        return composition_request(self.project_manager, params["id"])
 
-        # 2. GET /api/projects
-        if len(parts) == 2 and parts[0] == "api" and parts[1] == "projects":
-            projects = self.project_manager.list_projects()
-            return 200, {"Content-Type": "application/json; charset=utf-8"}, json.dumps({"projects": projects}).encode()
+    def _get_composition_export(self, params, query, headers) -> tuple[int, dict[str, str], bytes]:
+        from .composition_export import composition_archive
 
-        # 3. GET /api/projects/<id>
-        if len(parts) == 3 and parts[0] == "api" and parts[1] == "projects":
-            project_id = parts[2]
-            rhythm = self.project_manager.get_project_rhythm(project_id)
-            if not rhythm:
-                return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Project not found"}).encode()
-            return 200, {"Content-Type": "application/json; charset=utf-8"}, json.dumps(rhythm).encode()
+        status, version_headers, document_bytes = composition_request(self.project_manager, params["id"])
+        if status != 200:
+            return status, version_headers, document_bytes
+        expected = headers.get("If-Match") or headers.get("if-match")
+        if expected and expected != version_headers["ETag"]:
+            return 409, version_headers, b'{"error":"composition/export-version-changed"}'
+        # composition_request above already answered 404 for an unknown project,
+        # so the store exists here; without this guard a missing store would
+        # surface as an AttributeError inside composition_archive and escape as
+        # a 500.
+        store = self._asset_store(params["id"])
+        if store is None:
+            return 404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}'
+        try:
+            archive = composition_archive(json.loads(document_bytes), self.project_manager.get_project_rhythm(params["id"]), store)
+        except (ValueError, OSError) as exc:
+            return 422, {"Content-Type": "application/json"}, json.dumps({"error": "composition/export-failed", "message": str(exc)}).encode()
+        return 200, {"Content-Type": "application/zip", "Content-Disposition": 'attachment; filename="beatscope-composition.zip"'}, archive
 
-        # 4. GET /api/projects/<id>/audio
-        if len(parts) == 4 and parts[0] == "api" and parts[1] == "projects" and parts[3] == "audio":
-            project_id = parts[2]
-            # The resolver owns the source.audio fallback, so a missing answer
-            # here means the project has no audio at all.
-            audio_path = self.project_manager.get_project_audio_path(project_id)
-            if not audio_path:
-                return 404, {"Content-Type": "text/plain"}, b"Audio file not found"
-            return self._serve_file_range(audio_path, headers.get("Range") or headers.get("range"))
+    def _get_job(self, params, query, headers) -> tuple[int, dict[str, str], bytes]:
+        job = self.job_manager.get_job(params["id"])
+        if not job:
+            return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Job not found"}).encode()
+        return 200, {"Content-Type": "application/json; charset=utf-8"}, json.dumps(job.to_dict()).encode()
 
-        # 5. GET /api/projects/<id>/export/rhythm.mid
-        if len(parts) == 5 and parts[0] == "api" and parts[1] == "projects" and parts[3] == "export" and parts[4] == "rhythm.mid":
-            project_id = parts[2]
-            rhythm = self.project_manager.get_project_rhythm(project_id)
-            if not rhythm:
-                return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Project not found"}).encode()
-            subdivision = int(query.get("subdivision", [16])[0])
-            midi_bytes = generate_rhythm_midi(rhythm, subdivision=subdivision)
-            return 200, {"Content-Type": "audio/midi", "Content-Disposition": f'attachment; filename="{project_id}.rhythm.mid"'}, midi_bytes
+    def _get_projects(self, params, query, headers) -> tuple[int, dict[str, str], bytes]:
+        projects = self.project_manager.list_projects()
+        return 200, {"Content-Type": "application/json; charset=utf-8"}, json.dumps({"projects": projects}).encode()
 
-        # 6. GET /api/projects/<id>/export/rhythm.csv
-        if len(parts) == 5 and parts[0] == "api" and parts[1] == "projects" and parts[3] == "export" and parts[4] == "rhythm.csv":
-            project_id = parts[2]
-            rhythm = self.project_manager.get_project_rhythm(project_id)
-            if not rhythm:
-                return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Project not found"}).encode()
-            subdivision = int(query.get("subdivision", [16])[0])
-            csv_str = generate_rhythm_csv(rhythm, subdivision=subdivision)
-            return 200, {"Content-Type": "text/csv; charset=utf-8", "Content-Disposition": f'attachment; filename="{project_id}.rhythm.csv"'}, csv_str.encode("utf-8")
+    def _get_project(self, params, query, headers) -> tuple[int, dict[str, str], bytes]:
+        project_id = params["id"]
+        rhythm = self.project_manager.get_project_rhythm(project_id)
+        if not rhythm:
+            return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Project not found"}).encode()
+        return 200, {"Content-Type": "application/json; charset=utf-8"}, json.dumps(rhythm).encode()
 
-        # 7. GET /api/projects/<id>/export/codex.zip
-        if len(parts) == 5 and parts[0] == "api" and parts[1] == "projects" and parts[3] == "export" and parts[4] == "codex.zip":
-            project_id = parts[2]
-            rhythm = self.project_manager.get_project_rhythm(project_id)
-            if not rhythm:
-                return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Project not found"}).encode()
-            # The handoff carries timing facts only; the visual layer is the
-            # consumer decision, so nothing is compiled into the package here.
-            archive = generate_codex_export(rhythm)
-            return 200, {
-                "Content-Type": "application/zip",
-                "Content-Disposition": f'attachment; filename="{project_id}.beatscope-codex.zip"',
-            }, archive
+    def _get_audio(self, params, query, headers) -> tuple[int, dict[str, str], bytes]:
+        # The resolver owns the source.audio fallback, so a missing answer here
+        # means the project has no audio at all.
+        audio_path = self.project_manager.get_project_audio_path(params["id"])
+        if not audio_path:
+            return 404, {"Content-Type": "text/plain"}, b"Audio file not found"
+        return self._serve_file_range(audio_path, headers.get("Range") or headers.get("range"))
 
-        # 8. GET /api/projects/<id>/response-relevance
-        if (
-            len(parts) == 4
-            and parts[0] == "api"
-            and parts[1] == "projects"
-            and parts[3] == "response-relevance"
-        ):
-            return self._serve_response_relevance(parts[2], headers)
+    def _get_midi(self, params, query, headers) -> tuple[int, dict[str, str], bytes]:
+        project_id = params["id"]
+        rhythm = self.project_manager.get_project_rhythm(project_id)
+        if not rhythm:
+            return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Project not found"}).encode()
+        subdivision = int(query.get("subdivision", [16])[0])
+        midi_bytes = generate_rhythm_midi(rhythm, subdivision=subdivision)
+        return 200, {"Content-Type": "audio/midi", "Content-Disposition": f'attachment; filename="{project_id}.rhythm.mid"'}, midi_bytes
 
-        # 9. GET /api/projects/<id>/direction
-        if (
-            len(parts) == 4
-            and parts[0] == "api"
-            and parts[1] == "projects"
-            and parts[3] == "direction"
-        ):
-            return self._serve_direction(parts[2], headers)
+    def _get_csv(self, params, query, headers) -> tuple[int, dict[str, str], bytes]:
+        project_id = params["id"]
+        rhythm = self.project_manager.get_project_rhythm(project_id)
+        if not rhythm:
+            return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Project not found"}).encode()
+        subdivision = int(query.get("subdivision", [16])[0])
+        csv_str = generate_rhythm_csv(rhythm, subdivision=subdivision)
+        return 200, {"Content-Type": "text/csv; charset=utf-8", "Content-Disposition": f'attachment; filename="{project_id}.rhythm.csv"'}, csv_str.encode("utf-8")
 
-        # 10. GET /api/projects/<id>/workspace
-        if (
-            len(parts) == 4
-            and parts[0] == "api"
-            and parts[1] == "projects"
-            and parts[3] == "workspace"
-        ):
-            return self._serve_workspace(parts[2], headers)
+    def _get_codex_export(self, params, query, headers) -> tuple[int, dict[str, str], bytes]:
+        project_id = params["id"]
+        rhythm = self.project_manager.get_project_rhythm(project_id)
+        if not rhythm:
+            return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Project not found"}).encode()
+        # The handoff carries timing facts only; the visual layer is the
+        # consumer decision, so nothing is compiled into the package here.
+        archive = generate_codex_export(rhythm)
+        return 200, {
+            "Content-Type": "application/zip",
+            "Content-Disposition": f'attachment; filename="{project_id}.beatscope-codex.zip"',
+        }, archive
 
-        # 11. GET /api/projects/<id>/assets
-        if len(parts) == 4 and parts[0] == "api" and parts[1] == "projects" and parts[3] == "assets":
-            store = self._asset_store(parts[2])
-            if store is None:
-                return 404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}'
-            return 200, {"Content-Type": "application/json; charset=utf-8"}, json.dumps({
-                "assets": store.manifest(),
-                "budget_bytes": 500 * 1024 * 1024,
-                "used_bytes": store.total_bytes(),
-            }).encode("utf-8")
+    def _get_response_relevance(self, params, query, headers) -> tuple[int, dict[str, str], bytes]:
+        return self._serve_response_relevance(params["id"], headers)
 
-        # 12. GET /api/projects/<id>/assets/<asset_id>
-        if len(parts) == 5 and parts[0] == "api" and parts[1] == "projects" and parts[3] == "assets":
-            return self._serve_asset(parts[2], parts[4])
+    def _get_direction(self, params, query, headers) -> tuple[int, dict[str, str], bytes]:
+        return self._serve_direction(params["id"], headers)
 
-        return 404, {"Content-Type": "text/plain"}, b"Not found"
+    def _get_workspace(self, params, query, headers) -> tuple[int, dict[str, str], bytes]:
+        return self._serve_workspace(params["id"], headers)
+
+    def _get_assets(self, params, query, headers) -> tuple[int, dict[str, str], bytes]:
+        store = self._asset_store(params["id"])
+        if store is None:
+            return 404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}'
+        return 200, {"Content-Type": "application/json; charset=utf-8"}, json.dumps({
+            "assets": store.manifest(),
+            "budget_bytes": 500 * 1024 * 1024,
+            "used_bytes": store.total_bytes(),
+        }).encode("utf-8")
+
+    def _get_asset(self, params, query, headers) -> tuple[int, dict[str, str], bytes]:
+        return self._serve_asset(params["id"], params["asset_id"])
 
     def handle_delete(self, path: str, query: dict[str, list[str]] | None = None) -> tuple[int, dict[str, str], bytes]:
         """Handle DELETE /api/jobs/<job_id> and project asset deletion."""
         parts = [p for p in path.strip("/").split("/") if p]
-        if len(parts) == 3 and parts[0] == "api" and parts[1] == "jobs":
-            job_id = parts[2]
-            cancelled = self.job_manager.cancel_job(job_id)
-            if cancelled:
-                return 200, {"Content-Type": "application/json"}, json.dumps({"status": "cancelled"}).encode()
-            return 400, {"Content-Type": "application/json"}, json.dumps({"error": "Could not cancel job"}).encode()
-        if len(parts) == 5 and parts[0] == "api" and parts[1] == "projects" and parts[3] == "assets":
-            return self.handle_delete_asset(path, query or {})
-        return 404, {"Content-Type": "text/plain"}, b"Not found"
+        handler, params = match_route(DELETE_ROUTES, "DELETE", parts)
+        if handler is None:
+            return 404, {"Content-Type": "text/plain"}, b"Not found"
+        return getattr(self, handler)(params, query or {})
+
+    def _delete_job(self, params, query) -> tuple[int, dict[str, str], bytes]:
+        cancelled = self.job_manager.cancel_job(params["id"])
+        if cancelled:
+            return 200, {"Content-Type": "application/json"}, json.dumps({"status": "cancelled"}).encode()
+        return 400, {"Content-Type": "application/json"}, json.dumps({"error": "Could not cancel job"}).encode()
+
+    def _delete_asset(self, params, query) -> tuple[int, dict[str, str], bytes]:
+        return self.handle_delete_asset(f"/api/projects/{params['id']}/assets/{params['asset_id']}", query)
 
     def handle_post_adjustments(self, path: str, body: bytes) -> tuple[int, dict[str, str], bytes]:
         """Handle POST /api/projects/<id>/adjustments."""
@@ -405,11 +413,10 @@ class WebApi:
         parts = path.strip("/").split("/")
         if len(parts) != 4 or parts[:2] != ["api", "projects"] or parts[3] != "composition":
             return 404, {"Content-Type": "text/plain"}, b"Not found"
-        with COMPOSITION_LOCK:
-            return composition_request(
-                self.project_manager, parts[2], body,
-                headers.get("If-Match") or headers.get("if-match"), self._asset_ids(parts[2]),
-            )
+        return locked_composition_request(
+            self.project_manager, parts[2], body,
+            headers.get("If-Match") or headers.get("if-match"), self._asset_ids(parts[2]),
+        )
 
     def _asset_ids(self, project_id: str) -> set[str] | None:
         """Manifest asset ids for reference validation, or None when the
@@ -473,7 +480,7 @@ class WebApi:
     def handle_delete_asset(
         self, path: str, query: dict[str, list[str]]
     ) -> tuple[int, dict[str, str], bytes]:
-        with COMPOSITION_LOCK:
+        with composition_lock():
             return self._delete_asset_locked(path, query)
 
     def _delete_asset_locked(

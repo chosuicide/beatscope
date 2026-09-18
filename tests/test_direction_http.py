@@ -10,12 +10,10 @@ import copy
 import http.client
 import json
 import threading
-from http.server import ThreadingHTTPServer
 from pathlib import Path
 
-import beatscope.server as server_module
 from beatscope.project import ProjectManager
-from beatscope.web_api import WebApi
+from beatscope.server import BeatScopeServer, ServerContext
 
 ROOT = Path(__file__).resolve().parents[1]
 ABA_RHYTHM = json.loads((ROOT / "tests" / "fixtures" / "structure" / "aba.rhythm.json").read_text(encoding="utf-8"))
@@ -27,9 +25,9 @@ WORKSPACE_URL = f"/api/projects/{PROJECT_ID}/workspace"
 class DirectionServer:
     def __init__(self, tmp_path):
         self.project_manager = ProjectManager(cache_root=tmp_path / "cache")
-        self._original_api = server_module.WEB_API
-        server_module.WEB_API = WebApi(self.project_manager)
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), server_module.Handler)
+        # The server carries its own services, so this test needs no global swap.
+        ctx = ServerContext.create(self.project_manager)
+        self.server = BeatScopeServer.with_context(("127.0.0.1", 0), ctx)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
 
@@ -43,7 +41,6 @@ class DirectionServer:
             conn.close()
 
     def close(self):
-        server_module.WEB_API = self._original_api
         self.server.shutdown()
         self.server.server_close()
         self.thread.join(timeout=2)
