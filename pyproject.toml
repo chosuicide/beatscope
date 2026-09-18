@@ -86,6 +86,12 @@ ignore = ["E501", "E701", "E702"]
 # where it counts - the separate CI job that installs and runs the suite on
 # 3.10 - rather than by telling mypy about an older stdlib.
 python_version = "3.12"
+# Checked as Linux because that is where the CI gate runs, and the two views are
+# not the same: ctypes.windll type-checks on a Windows machine and fails on
+# Linux, so a local run that used the host platform would pass a change CI then
+# rejects. Platform-specific code is expected to reach for its API through
+# getattr (see beatscope/desktop.py) rather than to be checked on one OS only.
+platform = "linux"
 # librosa, soundfile and friends ship no stubs; their imports are Any by design.
 ignore_missing_imports = true
 # Bodies of unannotated functions are still checked - the point of this gate is

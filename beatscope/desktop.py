@@ -16,12 +16,18 @@ def main() -> int:
         open_browser = os.environ.get("BEATSCOPE_NO_BROWSER") != "1"
         serve("127.0.0.1", port, open_browser=open_browser)
     except Exception as exc:  # pragma: no cover - desktop-only last resort
-        ctypes.windll.user32.MessageBoxW(
-            0,
-            f"Beathi Studio could not start.\n\n{exc}",
-            "Beathi Studio",
-            0x10,
-        )
+        # windll is Windows-only, and this entry point belongs to the portable
+        # Windows build. Reaching for it through getattr keeps the module
+        # importable and type-checkable on the other platforms the test suite
+        # and CI run on, where a failed start simply exits with code 1.
+        windll = getattr(ctypes, "windll", None)
+        if windll is not None:
+            windll.user32.MessageBoxW(
+                0,
+                f"Beathi Studio could not start.\n\n{exc}",
+                "Beathi Studio",
+                0x10,
+            )
         return 1
     return 0
 
