@@ -100,3 +100,19 @@ def test_release_builds_depend_on_version_gate():
     assert "actions/checkout@" in version_job
     assert 'run: python scripts/check_release_version.py --tag "$RELEASE_TAG"' in version_job
     assert "RELEASE_TAG: ${{ github.ref_name }}" in version_job
+
+
+def test_readme_version_statements_match_the_project():
+    """The badges and the install line state the current version.
+
+    Both READMEs are checked. Release URLs are deliberately not: the product
+    tour video was attached to v0.12.0 by hand and no later release carries it,
+    so pointing that link at a newer tag would break it. Only the statements
+    that must track the current version are asserted.
+    """
+    version = read_versions(ROOT)["pyproject.toml"]
+    for name in ("README.md", "README.zh-CN.md"):
+        readme = (ROOT / name).read_text(encoding="utf-8")
+        assert f"badge/version-{version}-" in readme, f"{name}: version badge is stale"
+        assert f"releases/tag/v{version})" in readme, f"{name}: release link is stale"
+        assert f"beatscope-{version}-py3-none-any.whl" in readme, f"{name}: wheel name is stale"

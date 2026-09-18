@@ -3,7 +3,7 @@
 English | [简体中文](README.zh-CN.md)
 
 [![CI](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml/badge.svg)](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.12.0-c65032)](https://github.com/chosuicide/beatscope/releases/tag/v0.12.0)
+[![Version](https://img.shields.io/badge/version-0.12.1-c65032)](https://github.com/chosuicide/beatscope/releases/tag/v0.12.1)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
 **Turn a song into a beat-synchronised film — or give its timing to a coding agent.**
@@ -26,14 +26,14 @@ BeatScope listens for beats, real transients, energy changes, tempo changes and 
 
 ### Windows
 
-Download **[Beathi Studio v0.12.0](https://github.com/chosuicide/beatscope/releases/download/v0.12.0/Beathi-Studio-v0.12.0-windows-x64.zip)**, extract it, then double-click **Beathi Studio.exe**. The portable package already includes the analyser, browser and FFmpeg.
+Download **[Beathi Studio v0.12.1](https://github.com/chosuicide/beatscope/releases/download/v0.12.1/Beathi-Studio-v0.12.1-windows-x64.zip)**, extract it, then double-click **Beathi Studio.exe**. The portable package already includes the analyser, browser and FFmpeg.
 
 ### Python 3.10+
 
-Download the wheel from the [v0.12.0 release](https://github.com/chosuicide/beatscope/releases/tag/v0.12.0), then run:
+Download the wheel from the [v0.12.1 release](https://github.com/chosuicide/beatscope/releases/tag/v0.12.1), then run:
 
 ```powershell
-pip install beatscope-0.12.0-py3-none-any.whl
+pip install beatscope-0.12.1-py3-none-any.whl
 beatscope serve --open
 ```
 
