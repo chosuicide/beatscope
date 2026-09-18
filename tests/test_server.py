@@ -1,5 +1,7 @@
 import http.client
 import json
+import os
+import tempfile
 import threading
 import time
 import wave
@@ -254,3 +256,29 @@ def test_response_relevance_route_unknown_project_is_404(tmp_path):
     status, _, body = api.handle_get('/api/projects/missing/response-relevance', {}, {})
     assert status == 404
     assert json.loads(body.decode('utf-8')) == {'error': 'Project not found'}
+
+
+def test_startup_sweeps_stale_uploads_and_leaves_the_rest(monkeypatch, tmp_path):
+    """A crashed run leaves uploads behind; the next start clears the old ones.
+
+    The age limit is what makes this safe to run at startup: another instance's
+    in-flight upload is minutes old, and files from other applications are not
+    ours to delete.
+    """
+    from beatscope.server import TEMP_FILE_MAX_AGE_SECONDS, sweep_stale_temp_files
+
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+    stale = tmp_path / ".beatscope-upload-stale"
+    fresh = tmp_path / ".beatscope-upload-fresh"
+    foreign = tmp_path / "another-application-file"
+    for path in (stale, fresh, foreign):
+        path.write_bytes(b"x")
+    old = time.time() - TEMP_FILE_MAX_AGE_SECONDS - 60
+    os.utime(stale, (old, old))
+
+    removed = sweep_stale_temp_files()
+
+    assert removed == 1
+    assert not stale.exists()
+    assert fresh.exists(), "an upload from a running instance must survive"
+    assert foreign.exists(), "only BeatScope's own prefixes are swept"

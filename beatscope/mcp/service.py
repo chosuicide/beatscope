@@ -13,7 +13,6 @@ import hashlib
 import io
 import json
 import os
-import shutil
 import sys
 import threading
 import zipfile
@@ -248,17 +247,11 @@ class BeatScopeService:
             raise AnalysisFailed("Analyzer produced an invalid project: " + "; ".join(errors[:5]))
 
         def persist() -> None:
-            project_dir = self.projects.save_project(
+            # save_project copies the audio in and records it relative to the
+            # project directory, so nothing here rewrites project.json.
+            self.projects.save_project(
                 project_id, audio_path, rhythm, cache_config, cache_key,
             )
-            audio_dst = project_dir / "source.audio"
-            if not audio_dst.is_file():
-                shutil.copy2(audio_path, audio_dst)
-            meta_file = project_dir / "project.json"
-            if meta_file.is_file():
-                meta = json.loads(meta_file.read_text(encoding="utf-8"))
-                meta["audio_path"] = str(audio_dst.resolve())
-                meta_file.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
 
         await anyio.to_thread.run_sync(persist)
         if progress is not None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import tempfile
 import threading
+import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -471,6 +472,33 @@ class Handler(BaseHTTPRequestHandler):
         return
 
 
+# Uploads are written to the system temp directory and deleted when the job
+# that owns them finishes. A crash or a kill leaves them behind, so a start
+# sweeps the ones nobody can still be using.
+TEMP_FILE_PREFIXES = (".beatscope-upload-", ".beatscope-")
+TEMP_FILE_MAX_AGE_SECONDS = 24 * 60 * 60
+
+
+def sweep_stale_temp_files(max_age_seconds: int = TEMP_FILE_MAX_AGE_SECONDS) -> int:
+    """Delete this process family's temp files older than ``max_age_seconds``.
+
+    Only the prefixes BeatScope writes are touched. The age limit rather than
+    "delete everything at startup" is what keeps a second instance's in-flight
+    uploads safe: those files are minutes old, not days.
+    """
+    now = time.time()
+    removed = 0
+    for prefix in TEMP_FILE_PREFIXES:
+        for path in Path(tempfile.gettempdir()).glob(prefix + "*"):
+            try:
+                if now - path.stat().st_mtime > max_age_seconds:
+                    path.unlink()
+                    removed += 1
+            except OSError:
+                pass  # in use by a running instance, or already gone
+    return removed
+
+
 def serve(
     host: str = "127.0.0.1",
     port: int = 8765,
@@ -479,6 +507,7 @@ def serve(
     open_browser: bool = False,
 ) -> None:
     global PROJECT_FILE, PROJECT_MAP
+    sweep_stale_temp_files()
     if project:
         PROJECT_FILE = Path(project).resolve()
         PROJECT_MAP = load_rhythm_project(PROJECT_FILE)

@@ -1,4 +1,5 @@
 import json
+import shutil
 from copy import deepcopy
 
 import pytest
@@ -154,3 +155,86 @@ def test_project_manager_preserves_and_activates_config_variants(tmp_path):
     cached32 = pm.find_cached_rhythm(sha, key32)
     assert cached32["analysis"]["warnings"] == ["variant-32"]
     assert pm.get_project_rhythm(project_id)["analysis"]["warnings"] == ["variant-32"]
+
+
+def _sample_rhythm(project_id: str, sha: str, display_name: str = "song.wav") -> dict:
+    """The smallest rhythm document save_project accepts."""
+    return {
+        "schema_version": "4.0",
+        "project_id": project_id,
+        "source": {"display_name": display_name, "duration": 10.0, "sample_rate": 44100, "channels": 2, "sha256": sha},
+        "analysis": {
+            "backend": "test",
+            "pipeline_version": "0.4.0",
+            "created_at": "2026-08-25T00:00:00Z",
+            "warnings": [],
+            "separation_used": False,
+            "provenance": {"beats": {"method": "test-beats"}, "onsets": {"method": "test-onsets"}},
+        },
+        "tempo": {"global_bpm": 120.0, "segments": [{"start": 0.0, "end": 10.0, "bpm": 120.0, "method": "test", "score": None}]},
+        "meter": {"numerator": 4, "denominator": 4},
+        "grid": {"origin": 0.0, "default_subdivision": 16, "bars": 5},
+        "beats": [],
+        "onsets": [],
+        "energy": {"fps": 100, "start": 0.0, "bands": {"all": [], "low": [], "mid": [], "high": []}},
+        "patterns": {"method": "bar-rhythm-cosine-v1", "bars": []},
+        "cues": {"accent": [], "impact": [], "scale": [], "flow": [], "flash": [], "bloom": []},
+        "exports": {},
+    }
+
+
+def _saved_project(tmp_path, name: str = "song.wav"):
+    """Save one project and return (manager, project_id, project_dir)."""
+    pm = ProjectManager(cache_root=tmp_path / "cache")
+    audio = tmp_path / name
+    audio.write_bytes(b"RIFF dummy wav data")
+    sha = content_hash(audio)
+    project_id = sha[:12]
+    p_dir = pm.save_project(project_id, audio, _sample_rhythm(project_id, sha, name), {"subdivision": 16}, compute_cache_key(sha, {"subdivision": 16}))
+    return pm, project_id, p_dir
+
+
+def test_project_audio_path_is_relative_and_survives_a_moved_cache(tmp_path):
+    """The stored audio path is relative, so relocating the cache keeps working."""
+    pm, project_id, p_dir = _saved_project(tmp_path)
+
+    meta = json.loads((p_dir / "project.json").read_text(encoding="utf-8"))
+    assert meta["audio_path"] == "source.audio", "an absolute path would not survive a move"
+    assert pm.get_project_audio_path(project_id) == p_dir / "source.audio"
+
+    moved_root = tmp_path / "elsewhere"
+    shutil.move(str(tmp_path / "cache"), str(moved_root))
+
+    moved = ProjectManager(cache_root=moved_root)
+    found = moved.get_project_audio_path(project_id)
+    assert found is not None and found.is_file()
+    assert found == moved_root / "projects" / project_id / "source.audio"
+
+
+def test_project_audio_path_reads_legacy_absolute_paths(tmp_path):
+    """A project written before the change keeps working, and degrades safely."""
+    pm, project_id, p_dir = _saved_project(tmp_path)
+    meta_file = p_dir / "project.json"
+    elsewhere = tmp_path / "original-location.wav"
+    elsewhere.write_bytes(b"RIFF the original upload")
+
+    # A stored absolute path that still resolves is honoured.
+    meta = json.loads(meta_file.read_text(encoding="utf-8"))
+    meta["audio_path"] = str(elsewhere)
+    meta_file.write_text(json.dumps(meta), encoding="utf-8")
+    assert pm.get_project_audio_path(project_id) == elsewhere
+
+    # One that no longer resolves falls back to the copy beside the project.
+    meta["audio_path"] = str(tmp_path / "gone" / "original-location.wav")
+    meta_file.write_text(json.dumps(meta), encoding="utf-8")
+    assert pm.get_project_audio_path(project_id) == p_dir / "source.audio"
+
+
+def test_project_without_audio_anywhere_resolves_to_none(tmp_path):
+    pm, project_id, p_dir = _saved_project(tmp_path)
+    (p_dir / "source.audio").unlink()
+    meta_file = p_dir / "project.json"
+    meta = json.loads(meta_file.read_text(encoding="utf-8"))
+    meta["audio_path"] = "missing.audio"
+    meta_file.write_text(json.dumps(meta), encoding="utf-8")
+    assert pm.get_project_audio_path(project_id) is None

@@ -9,8 +9,6 @@ fields are only touched through the locked methods on ``Job`` below.
 from __future__ import annotations
 
 import datetime
-import json
-import shutil
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -228,20 +226,12 @@ class JobManager:
                 cancelled=job.cancel_event.is_set,
             )
 
-            # Save project to disk cache and copy audio for playback
+            # Save project to disk cache; save_project also copies the audio in
+            # and records it relative to the project directory.
             job.update(stage="serialize", progress=0.98, message=msg("job.serializing"))
-            p_dir = self.project_manager.save_project(
+            self.project_manager.save_project(
                 rhythm["project_id"], temp_audio_path, rhythm, cfg.to_dict(), cache_key,
             )
-            audio_dst = p_dir / "source.audio"
-            if not audio_dst.is_file():
-                shutil.copy2(temp_audio_path, audio_dst)
-
-            p_json_file = p_dir / "project.json"
-            if p_json_file.is_file():
-                p_meta = json.loads(p_json_file.read_text(encoding="utf-8"))
-                p_meta["audio_path"] = str(audio_dst.resolve())
-                p_json_file.write_text(json.dumps(p_meta, indent=2, ensure_ascii=False), encoding="utf-8")
 
             job.mark_complete(message=msg("job.complete"))
 

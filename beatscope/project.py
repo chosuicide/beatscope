@@ -5,6 +5,7 @@ import contextlib
 import hashlib
 import json
 import os
+import shutil
 import tempfile
 import time
 from pathlib import Path
@@ -14,6 +15,9 @@ from .schema import ANALYZER_VERSION, SCHEMA_VERSION, normalize_rhythm, validate
 
 DIRECTION_FILENAME = "direction.json"
 WORKSPACE_FILENAME = "workspace.json"
+# The project's own copy of the uploaded audio; project.json stores this name
+# rather than a path so the cache can be moved.
+AUDIO_FILENAME = "source.audio"
 
 _ATOMIC_REPLACE_ATTEMPTS = 10
 _ATOMIC_REPLACE_DELAY_SECONDS = 0.01
@@ -165,7 +169,12 @@ class ProjectManager:
         config: dict[str, Any],
         cache_key: str,
     ) -> Path:
-        """Validate and save the active project plus its config-specific variant."""
+        """Validate and save the active project plus its config-specific variant.
+
+        The audio is copied beside the project as ``source.audio`` and the
+        stored path is relative to the project directory, so a cache that is
+        moved or restored keeps resolving.
+        """
         errors = validate_rhythm_v4(rhythm_data)
         if errors:
             raise ValueError("Cannot save invalid Rhythm Project v4: " + "; ".join(errors))
@@ -175,10 +184,14 @@ class ProjectManager:
         (p_dir / "exports").mkdir(exist_ok=True)
         (p_dir / "logs").mkdir(exist_ok=True)
 
-        # 1. project.json (contains private local path)
+        audio_dst = p_dir / AUDIO_FILENAME
+        if not audio_dst.is_file():
+            shutil.copy2(audio_path, audio_dst)
+
+        # 1. project.json
         project_meta = {
             "project_id": project_id[:12],
-            "audio_path": str(audio_path.resolve()),
+            "audio_path": AUDIO_FILENAME,
             "display_name": audio_path.name,
             "created_at": rhythm_data.get("analysis", {}).get("created_at"),
             "cache_key": cache_key,
@@ -216,17 +229,29 @@ class ProjectManager:
         return None
 
     def get_project_audio_path(self, project_id: str) -> Path | None:
+        """Resolve the project's audio, wherever the cache currently lives.
+
+        The stored value is relative to the project directory. A project written
+        before that change holds an absolute path, which is honoured while it
+        still resolves; either way the copy every project carries beside its
+        rhythm is the fallback, so the answer does not depend on the old path.
+        """
         p_dir = self.get_project_dir(project_id)
         meta_file = p_dir / "project.json"
         if meta_file.is_file():
             try:
                 meta = json.loads(meta_file.read_text(encoding="utf-8"))
-                p = Path(meta.get("audio_path", ""))
-                if p.is_file():
-                    return p
+                stored = str(meta.get("audio_path", "") or "")
+                if stored:
+                    candidate = Path(stored)
+                    if not candidate.is_absolute():
+                        candidate = p_dir / candidate
+                    if candidate.is_file():
+                        return candidate
             except Exception:
                 pass
-        return None
+        fallback = p_dir / AUDIO_FILENAME
+        return fallback if fallback.is_file() else None
 
     def save_adjustments(self, project_id: str, adjustments: dict[str, Any]) -> None:
         p_dir = self.get_project_dir(project_id)

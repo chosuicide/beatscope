@@ -94,14 +94,11 @@ class WebApi:
         # 4. GET /api/projects/<id>/audio
         if len(parts) == 4 and parts[0] == "api" and parts[1] == "projects" and parts[3] == "audio":
             project_id = parts[2]
+            # The resolver owns the source.audio fallback, so a missing answer
+            # here means the project has no audio at all.
             audio_path = self.project_manager.get_project_audio_path(project_id)
-            if not audio_path or not audio_path.is_file():
-                # Check source.audio inside project dir
-                fallback = self.project_manager.get_project_dir(project_id) / "source.audio"
-                if fallback.is_file():
-                    audio_path = fallback
-                else:
-                    return 404, {"Content-Type": "text/plain"}, b"Audio file not found"
+            if not audio_path:
+                return 404, {"Content-Type": "text/plain"}, b"Audio file not found"
             return self._serve_file_range(audio_path, headers.get("Range") or headers.get("range"))
 
         # 5. GET /api/projects/<id>/export/rhythm.mid
