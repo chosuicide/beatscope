@@ -10,6 +10,8 @@ from typing import Any
 
 import numpy as np
 
+from .messages import msg
+
 try:
     import soundfile as sf
 except ImportError:
@@ -32,7 +34,7 @@ def _load_audio(path: str | Path) -> tuple[np.ndarray, int]:
     except (wave.Error, EOFError, OSError) as wave_error:
         ffmpeg = shutil.which("ffmpeg")
         if not ffmpeg:
-            raise ValueError("无法读取此音频；MP3/非 WAV 格式需要安装 FFmpeg 并确保 ffmpeg 在 PATH 中") from wave_error
+            raise ValueError(msg("error.unreadable-audio")) from wave_error
         try:
             converted = subprocess.run(
                 [ffmpeg, "-v", "error", "-i", str(filename), "-f", "f32le", "-ac", "1", "-ar", "44100", "pipe:1"],
@@ -40,7 +42,7 @@ def _load_audio(path: str | Path) -> tuple[np.ndarray, int]:
             )
         except (OSError, subprocess.SubprocessError) as exc:
             detail = exc.stderr.decode(errors="replace").strip() if isinstance(exc, subprocess.CalledProcessError) else str(exc)
-            raise ValueError(f"FFmpeg 无法解码音频: {detail}") from exc
+            raise ValueError(msg("error.ffmpeg-decode", detail=detail)) from exc
         return np.frombuffer(converted.stdout, dtype="<f4").astype(np.float32), 44100
     if width == 2: data = np.frombuffer(raw, dtype="<i2").astype(np.float32) / 32768.0
     elif width == 1: data = (np.frombuffer(raw, dtype=np.uint8).astype(np.float32) - 128) / 128.0

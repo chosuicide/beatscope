@@ -11,6 +11,7 @@ import pytest
 
 from beatscope import jobs as jobs_module
 from beatscope.jobs import JobManager
+from beatscope.messages import msg
 from beatscope.pipeline import AnalysisCancelled
 from beatscope.project import ProjectManager
 
@@ -106,30 +107,30 @@ def test_cancel_the_pipeline_honours_stays_cancelled(manager, upload, monkeypatc
     job = manager.submit_analysis(upload, "clip.wav", CONFIG)
     _drain(manager)
     assert job.to_dict()["state"] == "cancelled"
-    assert job.to_dict()["message"] == "分析已取消"
+    assert job.to_dict()["message"] == msg("job.cancelled")
     assert manager.cancel_job(job.id) is False
 
 
 def test_a_finished_job_is_frozen_and_progress_never_goes_backwards(manager):
     job = manager.create_job()
-    assert job.update(stage="decode", progress=0.9, message="正在读取音频并计算哈希...") is True
+    assert job.update(stage="decode", progress=0.9, message=msg("job.decoding")) is True
     # A report is not a request: a smaller number is ignored, not applied.
     assert job.update(progress=0.2) is True
     assert job.to_dict()["progress"] == 0.9
 
-    job.mark_complete(message="分析完成")
-    assert job.update(stage="serialize", progress=0.5, message="生成并缓存项目数据...") is False
+    job.mark_complete(message=msg("job.complete"))
+    assert job.update(stage="serialize", progress=0.5, message=msg("job.serializing")) is False
     assert job.update(state="running") is False
     snapshot = job.to_dict()
     assert snapshot["state"] == "complete"
     assert snapshot["stage"] == "complete"
     assert snapshot["progress"] == 1.0
-    assert snapshot["message"] == "分析完成"
+    assert snapshot["message"] == msg("job.complete")
 
 
 def test_terminal_jobs_are_evicted_and_live_ones_are_kept(manager):
     for _ in range(250):
-        manager.create_job().mark_complete(message="分析完成")
+        manager.create_job().mark_complete(message=msg("job.complete"))
 
     live = manager.create_job()
 
@@ -159,8 +160,8 @@ def test_job_ids_are_unique_and_a_waiting_job_reports_its_place(manager, upload,
     assert len({first.id, second.id, third.id}) == 3
     assert all(len(job.id) == 12 and job.id.isalnum() for job in (first, second, third))
     # The count includes the waiting job itself, so "第 1 位" runs next.
-    assert "第 1 位" in second.to_dict()["message"]
-    assert "第 2 位" in third.to_dict()["message"]
+    assert second.to_dict()["message"] == msg("job.queued-position", position=1)
+    assert third.to_dict()["message"] == msg("job.queued-position", position=2)
 
     release.set()
     _drain(manager)

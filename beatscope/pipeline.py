@@ -21,6 +21,7 @@ from .backends import (
     noop_progress,
 )
 from .backends.base import CancelCallback, ProgressCallback
+from .messages import msg
 from .models import AnalysisConfig
 from .project import content_hash
 from .schema import (
@@ -295,16 +296,16 @@ def analyze_track(
     evidence = backend.analyze(source_path, cfg, progress_cb, cancelled or never_cancelled)
 
     check_cancelled(cancelled)
-    progress_cb("structure", 0.86, "聚合小节特征...")
-    progress_cb("structure", 0.90, "计算段落边界与重复关系...")
+    progress_cb("structure", 0.86, msg("stage.structure-aggregate"))
+    progress_cb("structure", 0.90, msg("stage.structure-boundaries"))
     project = build_rhythm_project(source_path, sha256, cfg, backend, evidence, display_name)
 
-    progress_cb("validate", 0.96, "校验 Rhythm IR...")
+    progress_cb("validate", 0.96, msg("stage.validate"))
     errors = validate_rhythm_v4(project)
     if errors:
         raise InvalidRhythmProject(errors)
 
-    progress_cb("serialize", 0.98, "生成项目数据...")
+    progress_cb("serialize", 0.98, msg("stage.serialize"))
     return project
 
 

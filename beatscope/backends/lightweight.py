@@ -13,6 +13,7 @@ from ..features import (
     estimate_tempo_from_novelty,
     extract_onsets,
 )
+from ..messages import msg
 from ..models import AnalysisConfig
 from ..tempo_tracking import TRACKING_PARAMETERS, number_beats, track_tempo_and_beats
 
@@ -54,11 +55,11 @@ class LightweightBackend:
         cancelled: CancelCallback,
     ) -> AnalysisEvidence:
         check_cancelled(cancelled)
-        progress("decode", 0.10, "读取音频...")
+        progress("decode", 0.10, msg("stage.decode"))
         y, sr, duration, channels, warnings = load_analysis_audio(audio_path, target_sr=config.sample_rate)
 
         check_cancelled(cancelled)
-        progress("beatgrid", 0.60, "追踪局部速度与拍点...")
+        progress("beatgrid", 0.60, msg("stage.beatgrid"))
         hop = config.hop_length
         times, novelty = compute_multiband_novelty(y, sr=sr, hop=hop, n_fft=config.n_fft)
 
@@ -89,7 +90,7 @@ class LightweightBackend:
             warnings.append("Insufficient rhythmic evidence; no tracked beats emitted")
 
         check_cancelled(cancelled)
-        progress("features", 0.75, "提取多频段瞬态能量...")
+        progress("features", 0.75, msg("stage.features"))
         onsets = extract_onsets(times, novelty, sr=sr, hop=hop, bpm=result.global_bpm)
 
         check_cancelled(cancelled)

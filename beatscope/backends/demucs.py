@@ -16,6 +16,7 @@ from ..backends.base import (
     check_cancelled,
 )
 from ..backends.lightweight import LightweightBackend
+from ..messages import msg
 from ..models import AnalysisConfig
 
 DEFAULT_STEMS_DIR = Path(".beatscope-cache") / "stems"
@@ -47,7 +48,7 @@ class DemucsBackend:
         cancelled: CancelCallback,
     ) -> AnalysisEvidence:
         check_cancelled(cancelled)
-        progress("separate", 0.30, "运行 Demucs 分离...")
+        progress("separate", 0.30, msg("stage.separate"))
         from ..separation import run_demucs
 
         stems = run_demucs(audio_path, self.stems_dir, self.model, self.device)

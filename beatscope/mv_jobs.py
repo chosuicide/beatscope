@@ -11,6 +11,7 @@ import sys
 import threading
 from pathlib import Path
 
+from .messages import msg
 from .project import _atomic_write_bytes
 from .response_relevance import build_response_relevance
 
@@ -37,7 +38,7 @@ def renderer_tools() -> dict:
         ffmpeg = str(portable_root / "ffmpeg.exe")
     available = bool(node and ffmpeg and module and Path(module).is_file())
     return {"available": available, "node": node, "ffmpeg": ffmpeg, "module": module,
-            "message": "" if available else "本地渲染器未配置：需要 Node、FFmpeg 和 Playwright。请按 docs/local-movie.md 配置。"}
+            "message": "" if available else msg("movie.renderer-unavailable")}
 
 
 class MovieJobs:
@@ -69,7 +70,7 @@ class MovieJobs:
                     or job.get("state") not in {"queued", "running", "failed", "cancelled", "complete"}):
                 return None
             if job["state"] in ("queued", "running"):
-                job.update(state="failed", message="服务已重启，请重新生成。")
+                job.update(state="failed", message=msg("movie.restarted"))
                 self._save(job)
             return job
 
@@ -77,30 +78,30 @@ class MovieJobs:
         if seed is not None and (type(seed) is not int or not 0 <= seed < 2**24):
             raise ValueError("seed must be an integer from 0 to 16777215")
         if not re.fullmatch(r"[0-9a-f]{12}", project_id):
-            raise ValueError("无效的项目编号")
+            raise ValueError(msg("movie.invalid-project"))
         tools = renderer_tools()
         if not tools["available"]:
             raise ValueError(tools["message"])
         rhythm = self.projects.get_project_rhythm(project_id)
         if rhythm is None:
-            raise ValueError("歌曲分析不存在")
+            raise ValueError(msg("movie.missing-analysis"))
         duration = rhythm.get("source", {}).get("duration", 0)
         if not isinstance(duration, (int, float)) or not 0 < duration <= 600:
-            raise ValueError("首版支持最长 10 分钟的歌曲。")
+            raise ValueError(msg("movie.too-long"))
         audio = self.projects.get_project_audio_path(project_id)
         if not audio or not audio.is_file():
-            raise ValueError("找不到原始音频，请重新上传。")
+            raise ValueError(msg("movie.missing-audio"))
         with self.lock:
             if self.active:
                 active = self.jobs[self.active]
                 if active["project_id"] == project_id and (seed is None or active["seed"] == seed):
                     return dict(active)
-                raise RuntimeError("另一个视频正在生成，请等待或先取消。")
+                raise RuntimeError(msg("movie.busy"))
             job_id = secrets.token_hex(12)
             directory = self.root / job_id
             directory.mkdir()
             job = {"id": job_id, "project_id": project_id, "seed": secrets.randbits(24) if seed is None else seed,
-                   "state": "queued", "progress": 0, "message": "准备音乐数据", "duration": duration}
+                   "state": "queued", "progress": 0, "message": msg("movie.preparing"), "duration": duration}
             self.jobs[job_id] = job
             self.active = job_id
             self._save(job)
@@ -113,7 +114,7 @@ class MovieJobs:
             if not job or job["state"] not in ("queued", "running"):
                 return False
             (self.root / job_id / "cancel").touch()
-            job["message"] = "正在停止生成"
+            job["message"] = msg("movie.stopping")
             self._save(job)
             return True
 
@@ -134,7 +135,7 @@ class MovieJobs:
             env = dict(os.environ, BEATSCOPE_PLAYWRIGHT_MODULE=tools["module"], BEATSCOPE_FFMPEG=tools["ffmpeg"],
                        BEATSCOPE_RENDER_PARENT_PID=str(os.getpid()))
             with self.lock:
-                job.update(state="running", message="逐帧渲染视频")
+                job.update(state="running", message=msg("movie.rendering"))
                 self._save(job)
             with (directory / "render.log").open("w", encoding="utf-8") as log:
                 process = subprocess.Popen([tools["node"], str(WEB / "mv-worker.mjs"), str(directory)],
@@ -153,13 +154,13 @@ class MovieJobs:
             if (directory / "cancel").exists():
                 raise ValueError("cancelled")
             if code != 0 or not (directory / "movie.mp4").is_file():
-                raise ValueError("渲染未完成。请检查本地浏览器／FFmpeg；详情见缓存任务目录 render.log。")
+                raise ValueError(msg("movie.render-incomplete"))
             with self.lock:
-                job.update(state="complete", progress=1, message="视频已生成", video_url=f"/api/movies/{job_id}/video")
+                job.update(state="complete", progress=1, message=msg("movie.complete"), video_url=f"/api/movies/{job_id}/video")
         except Exception as exc:
             with self.lock:
                 cancelled = (directory / "cancel").exists()
-                job.update(state="cancelled" if cancelled else "failed", message="生成已取消" if cancelled else str(exc))
+                job.update(state="cancelled" if cancelled else "failed", message=msg("movie.cancelled") if cancelled else str(exc))
         finally:
             if process and process.poll() is None:
                 process.terminate()

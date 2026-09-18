@@ -10,6 +10,7 @@ from ..backends.base import AnalysisEvidence, CancelCallback, ProgressCallback, 
 from ..backends.lightweight import compress_energy
 from ..beatgrid import estimate_bpm, parse_beat_this
 from ..features import compute_multiband_novelty, extract_onsets
+from ..messages import msg
 from ..models import AnalysisConfig
 from ..tempo_tracking import build_tempo_segments_from_beats
 
@@ -38,14 +39,14 @@ class BeatThisBackend:
         cancelled: CancelCallback,
     ) -> AnalysisEvidence:
         check_cancelled(cancelled)
-        progress("decode", 0.10, "读取鼓组音轨...")
+        progress("decode", 0.10, msg("stage.drum-decode"))
         y, sr, duration, _analysis_channels, warnings = load_analysis_audio(
             self.drums_path or audio_path, target_sr=config.sample_rate,
         )
         source_channels = probe_audio_channels(audio_path)
 
         check_cancelled(cancelled)
-        progress("beatgrid", 0.60, "解析 Beat This 拍点...")
+        progress("beatgrid", 0.60, msg("stage.drum-beatgrid"))
         beats = parse_beat_this(self.beat_file)
         marker_times = [b["time"] for b in beats]
         bpm, tempo_score, _estimator_variable = estimate_bpm(marker_times)
@@ -66,7 +67,7 @@ class BeatThisBackend:
         bars = max(1, int(np.ceil(max(0.0, max_time - origin) / bar_seconds)))
 
         check_cancelled(cancelled)
-        progress("features", 0.75, "提取多频段瞬态能量...")
+        progress("features", 0.75, msg("stage.features"))
         hop = config.hop_length
         times, novelty = compute_multiband_novelty(y, sr=sr, hop=hop, n_fft=config.n_fft)
         onsets = extract_onsets(times, novelty, sr=sr, hop=hop, bpm=bpm)

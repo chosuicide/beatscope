@@ -12,6 +12,7 @@ from typing import Any
 import numpy as np
 
 from .analysis import _event_grid, _midi_name
+from .messages import msg
 
 try:
     import librosa
@@ -21,7 +22,7 @@ except ImportError as exc:  # pragma: no cover
     _LIBROSA_ERROR = exc
 
 def _require_librosa() -> Any:
-    if librosa is None: raise RuntimeError("高质量 stem pipeline 需要 librosa；请安装可选依赖") from _LIBROSA_ERROR
+    if librosa is None: raise RuntimeError(msg("error.librosa-missing")) from _LIBROSA_ERROR
     return librosa
 
 def _bass_notes(y: np.ndarray, sr: int) -> list[dict[str, Any]]:

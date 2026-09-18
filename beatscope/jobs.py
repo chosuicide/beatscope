@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
+from .messages import msg
 from .models import AnalysisConfig
 from .pipeline import AnalysisCancelled, analyze_track
 from .project import ProjectManager, compute_cache_key, content_hash
@@ -36,7 +37,7 @@ class Job:
     state: JobState = "queued"
     stage: str = "init"
     progress: float = 0.0
-    message: str = "任务已排队"
+    message: str = msg("job.queued")
     error: str | None = None
     project_id: str | None = None
     created_at: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
@@ -103,7 +104,7 @@ class Job:
                 return False
             self.cancel_event.set()
             self.state = "cancelled"
-            self.message = "分析已取消"
+            self.message = msg("job.cancelled")
             return True
 
     def to_dict(self) -> dict[str, Any]:
@@ -175,11 +176,11 @@ class JobManager:
         self.executor.submit(self._run_analysis, job, temp_audio_path, original_filename, cfg)
         # The single worker may already have picked this job up; only one that
         # is still waiting is told where it sits. The count includes this job,
-        # so "第 1 位" means it runs next.
+        # so position 1 means it runs next.
         with self.lock:
             waiting = sum(1 for queued in self.jobs.values() if queued.state == "queued")
         if job.to_dict()["state"] == "queued":
-            job.update(message=f"已排队（第 {waiting} 位）")
+            job.update(message=msg("job.queued-position", position=waiting))
         return job
 
     def _run_analysis(
@@ -193,11 +194,11 @@ class JobManager:
             if job.cancel_event.is_set():
                 # Cancelled while queued: nothing has run, and the upload is
                 # removed in the finally block below.
-                job.update(state="cancelled", stage="cancelled", message="分析已取消")
+                job.update(state="cancelled", stage="cancelled", message=msg("job.cancelled"))
                 return
 
             started = job.update(
-                state="running", stage="decode", progress=0.05, message="正在读取音频并计算哈希..."
+                state="running", stage="decode", progress=0.05, message=msg("job.decoding")
             )
             if not started:
                 # A cancel landed between the check above and this write, so the
@@ -213,7 +214,7 @@ class JobManager:
             # Fast path: content-addressed disk cache
             cached_rhythm = self.project_manager.find_cached_rhythm(sha256, cache_key)
             if cached_rhythm is not None:
-                job.mark_complete(message="命中文档缓存，直接加载")
+                job.mark_complete(message=msg("job.cache-hit"))
                 return
 
             def update_progress(stage: str, value: float, message: str) -> None:
@@ -228,7 +229,7 @@ class JobManager:
             )
 
             # Save project to disk cache and copy audio for playback
-            job.update(stage="serialize", progress=0.98, message="生成并缓存项目数据...")
+            job.update(stage="serialize", progress=0.98, message=msg("job.serializing"))
             p_dir = self.project_manager.save_project(
                 rhythm["project_id"], temp_audio_path, rhythm, cfg.to_dict(), cache_key,
             )
@@ -242,12 +243,12 @@ class JobManager:
                 p_meta["audio_path"] = str(audio_dst.resolve())
                 p_json_file.write_text(json.dumps(p_meta, indent=2, ensure_ascii=False), encoding="utf-8")
 
-            job.mark_complete(message="分析完成")
+            job.mark_complete(message=msg("job.complete"))
 
         except AnalysisCancelled:
-            job.update(state="cancelled", stage="cancelled", message="分析已取消")
+            job.update(state="cancelled", stage="cancelled", message=msg("job.cancelled"))
         except Exception as exc:
-            job.update(state="failed", error=str(exc), message=f"分析失败: {exc}")
+            job.update(state="failed", error=str(exc), message=msg("job.failed", error=exc))
         finally:
             # Delete upload temp file
             temp_audio_path.unlink(missing_ok=True)
