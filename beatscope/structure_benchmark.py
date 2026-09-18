@@ -239,7 +239,7 @@ def evaluate_structure_case(
 
 # ---------------------------------------------------------------- runner
 
-def load_structure_fixtures(fixtures_dir: str | Path | None = None) -> dict[str, dict[str, Any]]:
+def load_structure_fixtures(fixtures_dir: str | Path | None = None) -> dict[str, Any]:
     """Generate fixtures and verify the committed truth manifest bytes."""
     repo_root = _REPO_ROOT
     if str(repo_root) not in sys.path:

@@ -7,6 +7,7 @@ import threading
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import cast
 from urllib.parse import parse_qs, urlparse
 
 from .exports import generate_codex_export, generate_rhythm_csv, generate_rhythm_midi
@@ -40,7 +41,11 @@ class Handler(BaseHTTPRequestHandler):
         if not super().parse_request():
             return False
         host = urlparse('//' + self.headers.get('Host', '')).hostname
-        allowed = {'localhost', '127.0.0.1', '::1', self.server.server_address[0]}
+        # BaseHTTPRequestHandler.server is typed as the BaseServer base class,
+        # whose server_address is loose; this handler is only ever mounted on a
+        # ThreadingHTTPServer, where it is the (host, port) pair we bound.
+        bound = cast(ThreadingHTTPServer, self.server).server_address
+        allowed = {'localhost', '127.0.0.1', '::1', bound[0]}
         if host and host not in allowed:
             self.send_error(403, "Unrecognized local host")
             return False
@@ -127,7 +132,9 @@ class Handler(BaseHTTPRequestHandler):
             projects = PROJECT_MANAGER.list_projects()
             if projects:
                 latest_id = projects[-1].get("project_id")
-                rhythm = PROJECT_MANAGER.get_project_rhythm(latest_id)
+                # A project entry without an id is not addressable; fall through
+                # to the 404 rather than asking the manager for None.
+                rhythm = PROJECT_MANAGER.get_project_rhythm(latest_id) if isinstance(latest_id, str) else None
                 if rhythm:
                     self._send(200, json.dumps(rhythm, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
                     return
@@ -139,7 +146,9 @@ class Handler(BaseHTTPRequestHandler):
             if rhythm is None:
                 projects = PROJECT_MANAGER.list_projects()
                 if projects:
-                    rhythm = PROJECT_MANAGER.get_project_rhythm(projects[-1].get("project_id"))
+                    latest_id = projects[-1].get("project_id")
+                    if isinstance(latest_id, str):
+                        rhythm = PROJECT_MANAGER.get_project_rhythm(latest_id)
             if rhythm is None:
                 self._send(404, b"No project configured", "text/plain")
                 return
@@ -203,7 +212,7 @@ class Handler(BaseHTTPRequestHandler):
             projects = PROJECT_MANAGER.list_projects()
             if projects:
                 latest_id = projects[-1].get("project_id")
-                audio_path = PROJECT_MANAGER.get_project_audio_path(latest_id)
+                audio_path = PROJECT_MANAGER.get_project_audio_path(latest_id) if isinstance(latest_id, str) else None
                 if audio_path and audio_path.is_file():
                     self._send_media(audio_path)
                     return
@@ -275,12 +284,14 @@ class Handler(BaseHTTPRequestHandler):
             if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
                 self._send(415, b'{"message":"JSON request required"}', "application/json")
                 return
-            size = self.headers.get("Content-Length", "0")
-            if not size.isdigit() or not 0 < int(size) <= 1024:
+            # Kept as the raw header text: this is the only block that needs the
+            # declared size, every other route below works with a parsed int.
+            declared_size = self.headers.get("Content-Length", "0")
+            if not declared_size.isdigit() or not 0 < int(declared_size) <= 1024:
                 self._send(400, b'{"message":"Invalid request"}', "application/json")
                 return
             try:
-                data = json.loads(self.rfile.read(int(size)))
+                data = json.loads(self.rfile.read(int(declared_size)))
                 if not isinstance(data, dict) or not isinstance(data.get("project_id"), str):
                     raise ValueError("project_id required")
                 job = MOVIE_JOBS.submit(data["project_id"], seed=data.get("seed"))

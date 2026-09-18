@@ -385,7 +385,8 @@ def _integrity_check(manifest: dict[str, Any] | None, members: Mapping[str, byte
         errors.append("integrity:algorithm-must-be-sha256")
         declared_members: Mapping[str, Any] = {}
     else:
-        declared_members = declared.get("members") if isinstance(declared.get("members"), dict) else {}
+        members_raw = declared.get("members")
+        declared_members = members_raw if isinstance(members_raw, dict) else {}
     actual_names = {name for name in members if name != MANIFEST_MEMBER}
     declared_names = set(declared_members)
     for name in sorted(actual_names - declared_names):
@@ -732,9 +733,8 @@ def validate_handoff(
     checks.append(_visual_layer_check(manifest, members))
     checks.append(_executable_trust_check(manifest, members))
 
-    checkpoints_file = Path(checkpoints) if checkpoints is not None else target.parent / "checkpoints.json"
-    if not checkpoints_file.is_file():
-        checkpoints_file = None
+    candidate_checkpoints = Path(checkpoints) if checkpoints is not None else target.parent / "checkpoints.json"
+    checkpoints_file = candidate_checkpoints if candidate_checkpoints.is_file() else None
 
     # JavaScript runs only after path safety, manifest, integrity, and the
     # executable-template trust boundary all pass. Integrity alone is only

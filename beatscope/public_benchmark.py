@@ -12,7 +12,7 @@ import statistics
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Iterator
 
 import numpy as np
 
@@ -273,6 +273,7 @@ def run_public_benchmark(
                     "error": f"{type(exc).__name__}: {exc}",
                 }
 
+        outcomes: Iterator[tuple[dict[str, Any] | None, dict[str, str] | None]]
         if workers == 1:
             outcomes = map(evaluate_track, selected)
         else:

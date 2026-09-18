@@ -69,7 +69,7 @@ def run_doctor() -> int:
     # 4. Librosa
     try:
         import librosa
-        print(f" [PASS] librosa: {librosa.__version__}")
+        print(f" [PASS] librosa: {getattr(librosa, '__version__', 'unknown')}")
     except Exception:
         print(" [WARN] librosa: not installed (required for high-quality / Demucs pipelines)")
 

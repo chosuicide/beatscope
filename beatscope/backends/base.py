@@ -8,9 +8,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Protocol
+from typing import TYPE_CHECKING, Any, Callable, Protocol
 
 import numpy as np
+
+if TYPE_CHECKING:  # models imports this module's callbacks, so keep the edge one-way
+    from ..models import AnalysisConfig
 
 ProgressCallback = Callable[[str, float, str], None]
 CancelCallback = Callable[[], bool]
@@ -55,7 +58,7 @@ class AnalyzerBackend(Protocol):
     def analyze(
         self,
         audio_path: Path,
-        config: "AnalysisConfig",  # noqa: F821 - imported lazily to avoid cycles
+        config: AnalysisConfig,
         progress: ProgressCallback,
         cancelled: CancelCallback,
     ) -> AnalysisEvidence:

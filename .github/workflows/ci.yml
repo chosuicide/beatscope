@@ -41,6 +41,8 @@ jobs:
           npm run build --prefix web-src
       - name: Lint
         run: python -m ruff check beatscope scripts tests evaluations
+      - name: Type check
+        run: python -m mypy beatscope
       - name: Python tests
         run: python -m pytest -q
       - name: JavaScript tests

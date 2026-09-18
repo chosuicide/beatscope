@@ -54,7 +54,12 @@ def _schema_json() -> str:
     return (resources.files("beatscope.mcp") / "data" / "schema_v4.json").read_text(encoding="utf-8")
 
 
-def _service(ctx: Context) -> BeatScopeService:
+def _service(ctx: Context | None) -> BeatScopeService:
+    # The SDK injects the context for any Context-annotated parameter, so None
+    # only happens when a tool is invoked outside that path; say so instead of
+    # letting an AttributeError escape.
+    if ctx is None:
+        raise ToolError("BeatScope MCP context is unavailable for this call.")
     state = ctx.request_context.lifespan_context
     service = state.get("service") if isinstance(state, dict) else None
     if service is None:
@@ -132,7 +137,7 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
         description="Project summary without energy arrays or private paths.",
         mime_type="application/json",
     )
-    def project_manifest(project_id: str, ctx: Context = None) -> str:
+    def project_manifest(project_id: str, ctx: Context | None = None) -> str:
         try:
             result = _service(ctx).get_project(GetProjectInput(project_id=project_id, detail="summary"))
         except (BeatScopeMCPError, ValidationError) as exc:
@@ -145,7 +150,7 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
         description="Complete schema v4 rhythm project JSON.",
         mime_type="application/json",
     )
-    def project_rhythm(project_id: str, ctx: Context = None) -> str:
+    def project_rhythm(project_id: str, ctx: Context | None = None) -> str:
         try:
             rhythm = _service(ctx).load_validated_rhythm(project_id)
         except BeatScopeMCPError as exc:
@@ -164,7 +169,7 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
         annotations=_read_only("List BeatScope projects"),
     )
     async def beatscope_list_projects(
-        ctx: Context = None,
+        ctx: Context | None = None,
         query: str | None = None,
         backend: str | None = None,
         limit: int = 20,
@@ -172,7 +177,10 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
     ) -> dict:
         return _call(
             lambda: _service(ctx).list_projects(
-                ListProjectsInput(query=query, backend=backend, limit=limit, offset=offset)
+                # The tool advertises plain strings and the model validates the
+                # allowed values; narrowing the annotation here would change the
+                # agent-facing input schema (see tests/mcp/snapshots/tools.json).
+                ListProjectsInput(query=query, backend=backend, limit=limit, offset=offset)  # type: ignore[arg-type]
             )
         )
 
@@ -191,13 +199,15 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
         annotations=_read_only("Read a BeatScope project"),
     )
     async def beatscope_get_project(
-        ctx: Context = None,
+        ctx: Context | None = None,
         project_id: str = "",
         detail: str = "summary",
     ) -> dict:
         return _call(
             lambda: _service(ctx).get_project(
-                GetProjectInput(project_id=project_id, detail=detail)
+                # Same as list_projects: the model validates 'summary'/'timing'/'full'
+                # and reports the allowed set, so the tool keeps advertising a string.
+                GetProjectInput(project_id=project_id, detail=detail)  # type: ignore[arg-type]
             )
         )
 
@@ -216,7 +226,7 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
         annotations=_read_only("Read BeatScope visual state"),
     )
     async def beatscope_get_visual_state(
-        ctx: Context = None,
+        ctx: Context | None = None,
         project_id: str = "",
         time: float = 0.0,
     ) -> dict:
@@ -242,7 +252,7 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
         annotations=_read_only("Read BeatScope events"),
     )
     async def beatscope_get_events(
-        ctx: Context = None,
+        ctx: Context | None = None,
         project_id: str = "",
         start: float = 0.0,
         end: float = 0.0,
@@ -286,7 +296,7 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
         ),
     )
     async def beatscope_analyze_audio(
-        ctx: Context = None,
+        ctx: Context | None = None,
         audio_path: str = "",
         backend: str = "lightweight",
         subdivision: int = 16,
@@ -297,6 +307,8 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
         service = _service(ctx)
 
         async def report(value: float, message: str | None = None) -> None:
+            if ctx is None:
+                return  # the SDK injects the context; without one there is no progress channel
             try:
                 await ctx.report_progress(value, 1.0, message)
             except Exception:
@@ -306,8 +318,8 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
             lambda: service.analyze_audio(
                 AnalyzeAudioInput(
                     audio_path=audio_path,
-                    backend=backend,
-                    subdivision=subdivision,
+                    backend=backend,  # type: ignore[arg-type]  # validated by the model, not the tool schema
+                    subdivision=subdivision,  # type: ignore[arg-type]  # same: 16/32 is the model's rule
                     beat_file=beat_file,
                     drums_path=drums_path,
                     force=force,
@@ -335,7 +347,7 @@ def create_server(settings: MCPSettings | None = None) -> MCPServer:
         ),
     )
     async def beatscope_export_package(
-        ctx: Context = None,
+        ctx: Context | None = None,
         project_id: str = "",
         destination: str = "",
         overwrite: bool = False,

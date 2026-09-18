@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Literal, cast
 
 from .errors import PathNotAllowed
 
@@ -23,6 +23,12 @@ NODE_ENV = "BEATSCOPE_MCP_NODE"
 MAX_RESPONSE_CHARS_ENV = "BEATSCOPE_MCP_MAX_RESPONSE_CHARS"
 LOG_LEVEL_ENV = "BEATSCOPE_MCP_LOG_LEVEL"
 
+# The MCP server's log_level parameter is a Literal, so the environment value is
+# validated here: a typo should stop the server at startup with a message that
+# names the variable, not surface later as an SDK validation error.
+LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
 # The web upload path enforces the same ceiling; MCP inputs must not become a
 # loophole around it.
 try:
@@ -35,6 +41,15 @@ _ROOT_HELP = (
     "BEATSCOPE_ALLOWED_ROOTS and restart the MCP server, or copy the file into "
     "an already allowed directory."
 )
+
+
+def _parse_log_level(raw: str) -> LogLevel:
+    """Validate the environment log level; a typo stops the server at startup."""
+    level = raw.upper()
+    if level not in LOG_LEVELS:
+        allowed = ", ".join(LOG_LEVELS)
+        raise ValueError(f"{LOG_LEVEL_ENV} must be one of {allowed}; got {raw!r}")
+    return cast(LogLevel, level)
 
 
 def _parse_roots(raw: str) -> tuple[Path, ...]:
@@ -54,7 +69,7 @@ class MCPSettings:
     allowed_roots: tuple[Path, ...]
     node_command: str
     max_response_chars: int
-    log_level: str
+    log_level: LogLevel
 
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> "MCPSettings":
@@ -69,7 +84,7 @@ class MCPSettings:
             allowed_roots=_parse_roots(raw_roots) or (Path.cwd().resolve(),),
             node_command=environment.get(NODE_ENV, "node"),
             max_response_chars=max(1000, max_chars),
-            log_level=environment.get(LOG_LEVEL_ENV, "WARNING").upper(),
+            log_level=_parse_log_level(environment.get(LOG_LEVEL_ENV, "WARNING")),
         )
 
 

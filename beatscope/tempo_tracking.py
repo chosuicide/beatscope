@@ -187,7 +187,7 @@ def _dedupe_candidates(
 ) -> list[TempoCandidate]:
     """Collapse candidates that share a BPM: higher score wins, then origin
     rank (a measured peak beats an octave variant), then prior distance."""
-    by_bpm: dict[int, TempoCandidate] = {}
+    by_bpm: dict[float, TempoCandidate] = {}
     for cand in candidates:
         key = round(cand.bpm, 6)
         bucket = by_bpm.get(key)
@@ -356,8 +356,8 @@ def _select_path_with_cap(
     prior_bpm: float,
     *,
     enforce_cap: bool,
-) -> tuple[list[float], list[int]]:
-    """Viterbi over log-BPM candidates; returns (final costs, backlinks)."""
+) -> tuple[list[float], list[list[int]]]:
+    """Viterbi over log-BPM candidates; returns (final costs, backlinks per step)."""
     n = len(windows)
     costs = [
         PRIOR_WEIGHT * _prior_distance(c.bpm, prior_bpm) - c.emission_score
@@ -389,7 +389,7 @@ def _select_path_with_cap(
                     cand.bpm,
                 )
                 if (
-                    best_j < 0
+                    best_key is None
                     or total < best_total - 1e-12
                     or (total <= best_total + 1e-12 and key < best_key)
                 ):

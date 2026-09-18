@@ -18,7 +18,7 @@ import sys
 import threading
 import zipfile
 from pathlib import Path
-from typing import Any, Awaitable, Callable
+from typing import Any, Callable, Coroutine
 
 import anyio
 
@@ -173,7 +173,7 @@ class BeatScopeService:
     async def analyze_audio(
         self,
         request: AnalyzeAudioInput,
-        progress: Callable[[float, str | None], Awaitable[None]] | None = None,
+        progress: Callable[[float, str | None], Coroutine[Any, Any, None]] | None = None,
     ) -> dict[str, Any]:
         """Analyze audio into a validated project with multi-config caching.
 
@@ -212,7 +212,7 @@ class BeatScopeService:
 
         cancel_event = threading.Event()
 
-        def pipeline_progress(stage: str, value: float, message: str) -> None:
+        def pipeline_progress(stage: str, value: float, message: str | None) -> None:
             if progress is None or cancel_event.is_set():
                 return
             try:

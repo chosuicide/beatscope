@@ -16,7 +16,8 @@ except ImportError:
 try:
     import librosa
 except ImportError:
-    librosa = None
+    # See features.py: None is the documented "not installed" state.
+    librosa = None  # type: ignore[assignment]
 
 
 MAX_AUDIO_BYTES = 500 * 1024 * 1024

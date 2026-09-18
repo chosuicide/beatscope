@@ -7,7 +7,7 @@ import json
 import math
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 SCHEMA_VERSION = "4.0"
 V3_SCHEMA_VERSION = "3.0"
@@ -32,6 +32,16 @@ FORBIDDEN_V4_KEYS = ("kick", "snare", "hihat", "bass_808", "confidence")
 _PROJECT_ID_RE = re.compile(r"^[0-9a-f]{12}$")
 
 
+def _as_dict(value: Any) -> dict[str, Any]:
+    """Return the value when it is a JSON object, otherwise an empty object.
+
+    Migrations read nested documents whose shape is only known at runtime, so
+    every level needs the same "object or nothing" guard; typing it here keeps
+    the callers free of repeated isinstance ternaries.
+    """
+    return value if isinstance(value, dict) else {}
+
+
 def _find_forbidden_keys(value: Any, path: str, errors: list[str]) -> None:
     """Recursively collect forbidden dict keys; lists of scalars are skipped."""
     if isinstance(value, dict):
@@ -45,8 +55,12 @@ def _find_forbidden_keys(value: Any, path: str, errors: list[str]) -> None:
                 _find_forbidden_keys(item, f"{path}[{idx}]", errors)
 
 
-def _finite_number(value: Any) -> bool:
-    """True for a real, non-boolean, finite number."""
+def _finite_number(value: Any) -> TypeGuard[int | float]:
+    """True for a real, non-boolean, finite number.
+
+    Declared as a type guard so callers can use the value as a number after the
+    check: the validation below is exactly a runtime type predicate.
+    """
     return (
         isinstance(value, (int, float))
         and not isinstance(value, bool)
@@ -820,7 +834,7 @@ def migrate_v3_to_v4(v3_data: dict[str, Any], project_id: str | None = None) -> 
     if not isinstance(v3_data, dict):
         raise UnsupportedSchemaVersion("v3 document must be a JSON object")
 
-    src = v3_data.get("source") if isinstance(v3_data.get("source"), dict) else {}
+    src = _as_dict(v3_data.get("source"))
     duration = float(src.get("duration", 0.0) or 0.0)
     sha256 = src.get("sha256", "")
     if not isinstance(sha256, str):
@@ -834,9 +848,9 @@ def migrate_v3_to_v4(v3_data: dict[str, Any], project_id: str | None = None) -> 
             seed = f"{src.get('display_name')}:{duration}:{sha256}"
             project_id = hashlib.sha256(seed.encode("utf-8")).hexdigest()[:12]
 
-    v3_analysis = v3_data.get("analysis") if isinstance(v3_data.get("analysis"), dict) else {}
-    v3_tempo = v3_data.get("tempo") if isinstance(v3_data.get("tempo"), dict) else {}
-    v3_grid = v3_data.get("grid") if isinstance(v3_data.get("grid"), dict) else {}
+    v3_analysis = _as_dict(v3_data.get("analysis"))
+    v3_tempo = _as_dict(v3_data.get("tempo"))
+    v3_grid = _as_dict(v3_data.get("grid"))
 
     meter_raw = v3_grid.get("time_signature", [4, 4])
     numerator, denominator = 4, 4
@@ -902,7 +916,7 @@ def migrate_v3_to_v4(v3_data: dict[str, Any], project_id: str | None = None) -> 
         onset_id = int(onset.get("id", len(v4_onsets) + 1))
         raw_time = float(onset.get("raw_time", onset.get("time", 0.0)) or 0.0)
         strength = min(max(float(onset.get("strength", 0.0) or 0.0), 0.0), 1.0)
-        bands_raw = onset.get("bands") if isinstance(onset.get("bands"), dict) else {}
+        bands_raw = _as_dict(onset.get("bands"))
         entry: dict[str, Any] = {
             "id": onset_id,
             "time": round(raw_time, 4),
@@ -925,9 +939,9 @@ def migrate_v3_to_v4(v3_data: dict[str, Any], project_id: str | None = None) -> 
     except (TypeError, ValueError):
         bpm = 120.0
 
-    v3_provenance = v3_analysis.get("provenance") if isinstance(v3_analysis.get("provenance"), dict) else {}
-    beats_prov = v3_provenance.get("beats") if isinstance(v3_provenance.get("beats"), dict) else {}
-    onsets_prov = v3_provenance.get("onsets") if isinstance(v3_provenance.get("onsets"), dict) else {}
+    v3_provenance = _as_dict(v3_analysis.get("provenance"))
+    beats_prov = _as_dict(v3_provenance.get("beats"))
+    onsets_prov = _as_dict(v3_provenance.get("onsets"))
     overview = v3_data.get("overview")
     pattern_bars = [item for item in overview if isinstance(item, dict) and isinstance(item.get("bar"), int)] if isinstance(overview, list) else []
 
@@ -981,7 +995,7 @@ def migrate_v3_to_v4(v3_data: dict[str, Any], project_id: str | None = None) -> 
             "flash": [],
             "bloom": [],
         },
-        "exports": v3_data.get("exports", {}) if isinstance(v3_data.get("exports"), dict) else {},
+        "exports": _as_dict(v3_data.get("exports")),
     }
 
 

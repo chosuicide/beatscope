@@ -319,7 +319,9 @@ def _rhythm_base_rows(
     if beats:
         for onset in onsets:
             try:
-                raw = float(onset.get("raw_time", onset.get("time")))
+                # Any JSON value may sit here; float() raises for the rest and
+                # the except below skips that onset.
+                raw = float(onset.get("raw_time", onset.get("time")))  # type: ignore[arg-type]
                 placed = quantize_to_beat_grid(raw, beats, subdivision=subdivision)
             except (KeyError, TypeError, ValueError):
                 continue

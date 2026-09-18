@@ -112,13 +112,13 @@ def _estimate_bass_notes(audio: np.ndarray, rate: int) -> list[dict[str, Any]]:
         peak = int(np.argmax(band)); frequency = float(freqs[mask][peak]); midi = int(round(69 + 12 * np.log2(frequency / 440.0)))
         pitches.append(midi); confidences.append(float(band[peak] / (band.sum() + 1e-8)))
     notes: list[dict[str, Any]] = []; start = None; current = None; values: list[float] = []
-    for i, midi in enumerate(pitches + [None]):
-        if midi != current:
+    for i, pitch in enumerate(pitches + [None]):
+        if pitch != current:
             if current is not None and start is not None:
                 end = min(len(audio) / rate, i * hop / rate)
                 notes.append({"start": round(start, 4), "end": round(end, 4), "duration": round(max(0.0, end - start), 4), "midi": current, "note": _midi_name(current), "velocity": int(min(127, max(1, round(127 * min(1.0, float(np.mean(values)) * 3))))), "confidence": round(float(np.mean(values)), 3)})
-            start = i * hop / rate if midi is not None else None; current = midi; values = []
-        if midi is not None: values.append(confidences[i])
+            start = i * hop / rate if pitch is not None else None; current = pitch; values = []
+        if pitch is not None: values.append(confidences[i])
     return notes
 
 def _midi_name(midi: int) -> str:

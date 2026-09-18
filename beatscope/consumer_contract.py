@@ -30,7 +30,7 @@ import hashlib
 import json
 import math
 import re
-from typing import Any, Mapping
+from typing import Any, Mapping, TypeGuard
 
 MANIFEST_SCHEMA = "beatscope-package-1"
 CHECKPOINT_SCHEMA = "beatscope-consumer-checkpoints-1"
@@ -130,7 +130,8 @@ def _forbidden_key_violations(value: Any, path: str) -> list[str]:
     return violations
 
 
-def _finite_number(value: Any) -> bool:
+def _finite_number(value: Any) -> TypeGuard[int | float]:
+    """True for a real, non-boolean, finite number."""
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value))
 
 

@@ -24,7 +24,9 @@ import numpy as np
 try:  # the repo checkout puts ``tests/`` itself on sys.path
     from tests.fixtures.generate_audio import float_to_pcm16
 except ImportError:  # pragma: no cover - conftest-style imports
-    from fixtures.generate_audio import float_to_pcm16
+    # Same symbol, second location: mypy reports the pair as a redefinition
+    # unless the import is ignored here.
+    from fixtures.generate_audio import float_to_pcm16  # type: ignore[no-redef]
 
 GENERATOR_VERSION = "structure-fixtures-v1"
 TRUTH_SCHEMA = "beatscope-structure-truth-1"

@@ -27,7 +27,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from typing import Any
+from typing import Any, TypeGuard
 
 import numpy as np
 
@@ -811,7 +811,8 @@ def canonical_boost_model_bytes(model: dict[str, Any]) -> bytes:
     return encoded
 
 
-def _finite_number(value: Any) -> bool:
+def _finite_number(value: Any) -> TypeGuard[int | float]:
+    """True for a real, non-boolean, finite number."""
     return (isinstance(value, (int, float)) and not isinstance(value, bool)
             and math.isfinite(float(value)))
 

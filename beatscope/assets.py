@@ -254,23 +254,23 @@ def sniff_asset(data: bytes) -> dict[str, Any]:
         width, height = _webp_info(data)
         return {"kind": "image", "mime": "image/webp", "extension": "webp", "width": width, "height": height, "duration": None}
     if len(data) >= 12 and data[4:8] == b"ftyp":
-        duration, width, height = _mp4_duration(data)
+        duration, video_width, video_height = _mp4_duration(data)
         return {
             "kind": "video",
             "mime": "video/mp4",
             "extension": "mp4",
-            "width": width,
-            "height": height,
+            "width": video_width,
+            "height": video_height,
             "duration": duration,
         }
     if data[:4] == b"\x1aE\xdf\xa3":
-        duration, width, height = _webm_info(data)
+        duration, video_width, video_height = _webm_info(data)
         return {
             "kind": "video",
             "mime": "video/webm",
             "extension": "webm",
-            "width": width,
-            "height": height,
+            "width": video_width,
+            "height": video_height,
             "duration": duration,
         }
     raise AssetError("asset/unsupported-type", "unsupported media type")

@@ -140,6 +140,7 @@ class MovieJobs:
                 process = subprocess.Popen([tools["node"], str(WEB / "mv-worker.mjs"), str(directory)],
                     stdout=subprocess.PIPE, stderr=log, text=True, encoding="utf-8", env=env,
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                assert process.stdout is not None  # stdout=PIPE above
                 for line in process.stdout:
                     try:
                         update = json.loads(line)

@@ -32,7 +32,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from typing import Any
+from typing import Any, TypeGuard
 
 DIRECTION_SCHEMA = "beatscope-direction-1"
 DIRECTION_DOC_VERSION = "0.12.0"
@@ -79,15 +79,18 @@ _TIME_EPSILON = 1e-3
 # validation
 
 
-def _is_int(value: Any) -> bool:
+def _is_int(value: Any) -> TypeGuard[int]:
+    """True for an integer that is not a bool; a type guard for callers."""
     return isinstance(value, int) and not isinstance(value, bool)
 
 
-def _is_string(value: Any) -> bool:
+def _is_string(value: Any) -> TypeGuard[str]:
+    """True for a string; a type guard so callers can use the value as str."""
     return isinstance(value, str)
 
 
-def _finite(value: Any) -> bool:
+def _finite(value: Any) -> TypeGuard[int | float]:
+    """True for a real, non-boolean, finite number; a type guard for callers."""
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value))
 
 
@@ -115,7 +118,8 @@ def _slug_ok(value: Any) -> bool:
     return value == value.lower()
 
 
-def _scene_id_ok(scene_id: Any) -> bool:
+def _scene_id_ok(scene_id: Any) -> TypeGuard[str]:
+    """True for a 'scene-<lowercase-slug>' id; a type guard for callers."""
     return _is_string(scene_id) and scene_id.startswith("scene-") and len(scene_id) > 6 and _slug_ok(scene_id[len("scene-"):])
 
 
@@ -179,7 +183,9 @@ def _validate_layer(
         errors.append(f"direction/layer-transform: {label}.transform must be an object")
     else:
         x, y, w, h = transform.get("x"), transform.get("y"), transform.get("w"), transform.get("h")
-        if not all(_finite(v) for v in (x, y, w, h)):
+        # Written as an and-chain rather than all(...) so the four names are
+        # narrowed in the else branch below.
+        if not (_finite(x) and _finite(y) and _finite(w) and _finite(h)):
             errors.append(f"direction/layer-transform: {label}.transform.x/.y/.w/.h must be finite numbers")
         else:
             if not 0.0 <= float(x) <= 1.0 or not 0.0 <= float(y) <= 1.0:
@@ -188,7 +194,9 @@ def _validate_layer(
                 errors.append(f"direction/layer-transform: {label}.transform.w/.h must be positive")
         if not _finite(transform.get("rotation")):
             errors.append(f"direction/layer-transform: {label}.transform.rotation must be finite")
-    if "crop" in layer.get("transform", {}):
+    # isinstance repeated here because the narrowing from the block above does
+    # not survive the else branch.
+    if isinstance(transform, dict) and "crop" in transform:
         crop = transform.get("crop")
         if (
             not isinstance(crop, dict)

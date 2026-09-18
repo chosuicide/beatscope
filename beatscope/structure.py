@@ -128,7 +128,9 @@ def _onset_time(onset: dict[str, Any]) -> float | None:
     if value is None:
         value = onset.get("time")
     try:
-        return float(value)
+        # The except clause is the type guard: any JSON value is allowed here
+        # and a non-number falls through to None.
+        return float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError):
         return None
 

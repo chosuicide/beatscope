@@ -60,9 +60,14 @@ def segment_energy_summary(rhythm: dict[str, Any]) -> list[dict[str, Any]]:
     ):
         return []
 
-    series = {name: bands.get(name) for name in ("low", "mid", "high")}
-    if any(not isinstance(values, list) for values in series.values()):
-        return []
+    # Narrowed one band at a time so the frame arithmetic below is checked
+    # against lists rather than against the untyped JSON values.
+    series: dict[str, list[Any]] = {}
+    for name in ("low", "mid", "high"):
+        values = bands.get(name)
+        if not isinstance(values, list):
+            return []
+        series[name] = values
     frame_count = min(len(values) for values in series.values())
     if frame_count <= 0:
         return []
@@ -133,11 +138,11 @@ def project_summary(
             family = segment.get("family") if isinstance(segment, dict) else None
             if isinstance(family, str) and family not in families:
                 families.append(family)
-        labels = [
-            segment.get("display_label")
-            for segment in segments
-            if isinstance(segment, dict) and isinstance(segment.get("display_label"), str)
-        ]
+        labels: list[str] = []
+        for segment in segments:
+            label = segment.get("display_label") if isinstance(segment, dict) else None
+            if isinstance(label, str):
+                labels.append(label)
         structure = {
             "segment_count": len(segments),
             "families": families,

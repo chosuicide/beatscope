@@ -12,6 +12,17 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 BACKENDS = Literal["lightweight", "beat-this", "demucs"]
 PROJECT_ID_PATTERN = r"^[0-9a-f]{12}$"
 CUE_TYPES = Literal["accent", "impact", "scale", "flow", "flash", "bloom"]
+IncludeItem = Literal["beats", "onsets", "cues", "patterns", "segments", "boundaries"]
+
+
+# Named factories instead of inline lambdas so the default sets carry the same
+# Literal types as the fields they fill.
+def _default_include() -> set[IncludeItem]:
+    return {"beats", "onsets", "cues"}
+
+
+def _default_cue_types() -> set[CUE_TYPES]:
+    return {"accent", "impact", "scale", "flow", "flash", "bloom"}
 
 
 class StrictModel(BaseModel):
@@ -66,14 +77,8 @@ class EventsInput(StrictModel):
     # transitions are deliberately absent: the handoff carries measured timing
     # facts only, so the server must not offer a scene layer the package no
     # longer ships.
-    include: set[Literal[
-        "beats", "onsets", "cues", "patterns", "segments", "boundaries",
-    ]] = Field(
-        default_factory=lambda: {"beats", "onsets", "cues"}
-    )
-    cue_types: set[CUE_TYPES] = Field(
-        default_factory=lambda: {"accent", "impact", "scale", "flow", "flash", "bloom"}
-    )
+    include: set[IncludeItem] = Field(default_factory=_default_include)
+    cue_types: set[CUE_TYPES] = Field(default_factory=_default_cue_types)
     limit: int = Field(default=100, ge=1, le=500)
     offset: int = Field(default=0, ge=0)
     response_budget: int | None = Field(default=None, ge=1, le=500)

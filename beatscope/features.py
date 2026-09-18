@@ -8,7 +8,9 @@ import numpy as np
 try:
     import librosa
 except ImportError as exc:  # pragma: no cover
-    librosa = None
+    # The import failing is the signal; _require_librosa() turns it into an error
+    # at the call site, so a None module here is the intended shape.
+    librosa = None  # type: ignore[assignment]
     _LIBROSA_ERROR = exc
 
 

@@ -16,7 +16,8 @@ from .analysis import _event_grid, _midi_name
 try:
     import librosa
 except ImportError as exc:  # pragma: no cover
-    librosa = None
+    # See features.py: None is the documented "not installed" state.
+    librosa = None  # type: ignore[assignment]
     _LIBROSA_ERROR = exc
 
 def _require_librosa() -> Any:
@@ -56,11 +57,11 @@ def _drum_events(y: np.ndarray, sr: int, bpm: float, origin: float) -> dict[str,
     onset_frames = lib.onset.onset_detect(onset_envelope=onset_env, sr=sr, hop_length=hop, units="frames", backtrack=False, pre_max=12, post_max=12, pre_avg=24, post_avg=24, delta=0.15, wait=8)
     stft = np.abs(lib.stft(y, n_fft=n_fft, hop_length=hop, center=True)); freqs = lib.fft_frequencies(sr=sr, n_fft=n_fft)
     masks = ((20, 160), (160, 4000), (4000, min(16000, sr / 2)))
-    bands = []
+    band_rows = []
     for low, high in masks:
-        mask = (freqs >= low) & (freqs < high); bands.append(np.mean(stft[mask], axis=0) if mask.any() else np.zeros(stft.shape[1]))
-    bands = np.asarray(bands); peak_norm = onset_env / max(float(np.percentile(onset_env, 95)), 1e-8)
-    events = {"bass_808": [], "kick": [], "snare": [], "hihat": []}
+        mask = (freqs >= low) & (freqs < high); band_rows.append(np.mean(stft[mask], axis=0) if mask.any() else np.zeros(stft.shape[1]))
+    bands = np.asarray(band_rows); peak_norm = onset_env / max(float(np.percentile(onset_env, 95)), 1e-8)
+    events: dict[str, list[dict[str, Any]]] = {"bass_808": [], "kick": [], "snare": [], "hihat": []}
     for frame in onset_frames:
         if frame >= bands.shape[1]: continue
         scores = np.maximum(0, bands[:, frame]); total = float(scores.sum()) + 1e-8; ratios = scores / total; strength = min(1.0, max(0.05, float(peak_norm[min(frame, len(peak_norm) - 1)])))

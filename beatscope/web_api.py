@@ -57,8 +57,15 @@ class WebApi:
             expected = headers.get("If-Match") or headers.get("if-match")
             if expected and expected != version_headers["ETag"]:
                 return 409, version_headers, b'{"error":"composition/export-version-changed"}'
+            # composition_request above already answered 404 for an unknown
+            # project, so the store exists here; without this guard a missing
+            # store would surface as an AttributeError inside composition_archive
+            # and escape as a 500.
+            store = self._asset_store(parts[2])
+            if store is None:
+                return 404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}'
             try:
-                archive = composition_archive(json.loads(document_bytes), self.project_manager.get_project_rhythm(parts[2]), self._asset_store(parts[2]))
+                archive = composition_archive(json.loads(document_bytes), self.project_manager.get_project_rhythm(parts[2]), store)
             except (ValueError, OSError) as exc:
                 return 422, {"Content-Type": "application/json"}, json.dumps({"error": "composition/export-failed", "message": str(exc)}).encode()
             return 200, {"Content-Type": "application/zip", "Content-Disposition": 'attachment; filename="beatscope-composition.zip"'}, archive
@@ -229,18 +236,19 @@ class WebApi:
 
     def _direction_bytes_or_error(
         self, project_id: str
-    ) -> tuple[bytes, str | None] | tuple[None, None] | tuple[None, tuple[int, dict[str, str], bytes]]:
+    ) -> tuple[bytes | None, str | None, tuple[int, dict[str, str], bytes] | None]:
         """Stored direction bytes, deriving + persisting them when absent.
 
-        Returns ``(bytes, derived_mode)`` on success, ``(None, None)`` when
-        the project does not exist, or ``(None, error_response)`` when the
-        stored/derivable document is unusable.
+        The three slots are independent - ``(body, derived_mode, error_response)``
+        - so callers check the error first and then use the other two without
+        casting. Exactly one of ``body`` and ``error_response`` is set, and
+        ``derived_mode`` is only meaningful alongside a body.
         """
         if len(project_id) != 12 or any(ch not in "0123456789abcdef" for ch in project_id):
-            return None, (404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}')
+            return None, None, (404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}')
         rhythm = self.project_manager.get_project_rhythm(project_id)
         if rhythm is None:
-            return None, (
+            return None, None, (
                 404,
                 {"Content-Type": "application/json"},
                 json.dumps({"error": "Project not found"}).encode(),
@@ -252,7 +260,7 @@ class WebApi:
                 document = build_direction_document(rhythm, scenes)
                 body = canonical_direction_bytes(document)
             except (KeyError, TypeError, ValueError) as exc:
-                return None, (
+                return None, None, (
                     422,
                     {"Content-Type": "application/json"},
                     json.dumps({
@@ -261,8 +269,8 @@ class WebApi:
                     }).encode(),
                 )
             self.project_manager.save_project_direction_bytes(project_id, body)
-            return body, mode
-        return body, None
+            return body, mode, None
+        return body, None, None
 
     def _serve_direction(
         self, project_id: str, headers: dict[str, str]
@@ -276,13 +284,10 @@ class WebApi:
         answers 304. A stored document that no longer validates still
         carries its ETag so clients can reconcile via If-Match PUT.
         """
-        result = self._direction_bytes_or_error(project_id)
-        body = result[0]
-        if body is None:
-            error = result[1]
-            assert error is not None
+        body, derived_mode, error = self._direction_bytes_or_error(project_id)
+        if error is not None:
             return error
-        derived_mode = result[1]
+        assert body is not None
 
         try:
             document = json.loads(body.decode("utf-8"))
@@ -343,11 +348,8 @@ class WebApi:
                 "message": f"direction document exceeds {MAX_DIRECTION_BYTES} bytes",
             }).encode()
 
-        result = self._direction_bytes_or_error(project_id)
-        current_bytes = result[0]
-        if current_bytes is None and result[1] is not None:
-            error = result[1]
-            assert error is not None
+        current_bytes, _, error = self._direction_bytes_or_error(project_id)
+        if error is not None:
             return error
         current_etag = direction_etag(current_bytes or b"")
 
