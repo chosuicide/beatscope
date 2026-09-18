@@ -301,7 +301,7 @@ def _stepmania_markers(rows: list[tuple[float, str]], timing: dict[str, Any], *,
                     f"{chart_label}: timing maps a note before audio start",
                 )
             markers.append(round6(seconds))
-    if any(later < earlier for earlier, later in zip(markers, markers[1:])):
+    if any(later < earlier for earlier, later in zip(markers, markers[1:], strict=False)):
         raise ChartLabelError(CODE_UNSUPPORTED_TIMING_FEATURE, f"{chart_label}: non-monotone audio-time mapping")
     return markers
 
@@ -314,7 +314,7 @@ def _timing_from_tags(tags: dict[str, str], where: str) -> dict[str, Any]:
         raise ChartLabelError(CODE_UNSUPPORTED_TIMING_FEATURE, f"{where}: negative BPM beat")
     if bpm_segments[0][0] != 0.0:
         raise ChartLabelError(CODE_MALFORMED_CHART, f"{where}: BPM timeline must start at beat 0")
-    if any(later <= earlier for earlier, later in zip(bpm_segments, bpm_segments[1:])):
+    if any(later <= earlier for earlier, later in zip(bpm_segments, bpm_segments[1:], strict=False)):
         raise ChartLabelError(CODE_MALFORMED_CHART, f"{where}: BPM change beats must strictly increase")
     if any(bpm <= 0.0 for _, bpm in bpm_segments):
         raise ChartLabelError(CODE_UNSUPPORTED_TIMING_FEATURE, f"{where}: non-positive BPM")
@@ -688,7 +688,7 @@ def coincident_onset_clusters(onset_times: list[float], onset_ids: list[int]) ->
     """Temporary label-only clusters of onsets within 1 ms (plan section 10.1)."""
     clusters: list[dict[str, Any]] = []
     previous_time: float | None = None
-    for time_value, onset_id in zip(onset_times, onset_ids):
+    for time_value, onset_id in zip(onset_times, onset_ids, strict=True):
         if clusters and previous_time is not None \
                 and time_value - previous_time <= COINCIDENT_ONSET_TOLERANCE_SECONDS:
             clusters[-1]["onset_ids"].append(onset_id)
@@ -775,7 +775,7 @@ def align_chart_to_clusters(markers: list[float], clusters: list[dict[str, Any]]
             ambiguous_components += 1
         negative_count, _total_error, onset_sequence, marker_sequence = dp[0][0]
         # The sequences store global cluster/marker indices already.
-        for cluster_index, marker_index in zip(onset_sequence, marker_sequence):
+        for cluster_index, marker_index in zip(onset_sequence, marker_sequence, strict=True):
             residual = round6(abs(cluster_times[cluster_index] - markers[marker_index]))
             matches.append((marker_index, cluster_index, residual))
     matches.sort()
@@ -984,12 +984,12 @@ def assign_splits(song_groups: list[dict[str, Any]],
     by_family: dict[str, list[float]] = {}
     for audio_sha256, density in density_by_song.items():
         by_family.setdefault(family_by_song[audio_sha256], []).append(density)
-    for family, values in by_family.items():
+    for family in by_family:
         ordered_songs = sorted(
             (density, audio_sha256) for audio_sha256, density in density_by_song.items()
             if family_by_song[audio_sha256] == family
         )
-        for rank, (density, audio_sha256) in enumerate(ordered_songs):
+        for rank, (_density, audio_sha256) in enumerate(ordered_songs):
             if len(ordered_songs) < 6:
                 # Too few songs in this family for meaningful density strata.
                 tertile_by_song[audio_sha256] = 0

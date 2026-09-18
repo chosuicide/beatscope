@@ -18,7 +18,9 @@ def _track(events: list[tuple[int, int, bytes]], name: str = "") -> bytes:
     body = bytearray()
     if name: encoded = name.encode("ascii", errors="replace")[:127]; body += b"\x00\xff\x03" + _varlen(len(encoded)) + encoded
     previous = 0
-    for tick, order, message in sorted(events, key=lambda item: (item[0], item[1])):
+    # The order field is not read here, but it is the tie-breaker in the sort
+    # key, so events sharing a tick keep their intended sequence.
+    for tick, _order, message in sorted(events, key=lambda item: (item[0], item[1])):
         body += _varlen(tick - previous) + message; previous = tick
     body += b"\x00\xff\x2f\x00"
     return b"MTrk" + struct.pack(">I", len(body)) + body

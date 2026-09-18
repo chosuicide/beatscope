@@ -744,7 +744,7 @@ def repair_beat_continuity(
         result.append(frame)
 
     unrepairable_gaps = 0
-    for left, right in zip(result, result[1:]):
+    for left, right in zip(result, result[1:], strict=False):
         expected = float(period_curve[left])
         if expected > 0 and right - left > MISSING_MAX_RATIO * expected:
             unrepairable_gaps += 1

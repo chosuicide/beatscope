@@ -72,7 +72,7 @@ def test_truth_spans_tile_every_case():
         segments = truth["segments"]
         assert segments[0]["start_bar"] == 1, name
         assert segments[-1]["end_bar"] == truth["bars"], name
-        for before, after in zip(segments, segments[1:]):
+        for before, after in zip(segments, segments[1:], strict=False):
             assert after["start_bar"] == before["end_bar"] + 1, name
         boundary_bars = [b["bar"] for b in truth["boundaries"]]
         assert boundary_bars == [s["start_bar"] for s in segments[1:]], name

@@ -55,8 +55,15 @@ extend-exclude = ["build"]
 [tool.ruff.lint]
 # Start with correctness rules so existing style debt does not hide real failures.
 # Broader formatting/style adoption can then happen in reviewable, isolated changes.
-select = ["E4", "E7", "E9", "F", "I"]
+select = ["E", "F", "W", "I", "B"]
+# E501 is exempted because this repository deliberately writes compact single-line
+# payload literals - analysis result dicts, MIDI event rows, benchmark fixtures.
+# ~170 lines exceed the 120 column limit and the tail runs past 600 characters;
+# wrapping them by hand would reformat every payload diff without making any of
+# them easier to read. Length discipline needs a formatter pass (ruff format),
+# which is a separate, much larger decision than this lint gate.
+#
 # E701/E702 (multiple statements on one line) are a deliberate house style in
 # this repository: compact one-liners keep short guards and test setup readable.
 # They are exempted as a style decision, not because they are hard to fix.
-ignore = ["E701", "E702"]
+ignore = ["E501", "E701", "E702"]

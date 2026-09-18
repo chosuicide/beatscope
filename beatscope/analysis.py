@@ -142,7 +142,7 @@ def analyze_audio(path: str | Path) -> dict[str, Any]:
         anchor = float(times[onsets[0]]) if len(onsets) else 0.0; grid_origin = anchor
         beats = [round(anchor + i * beat_step, 4) for i in range(max(0, int((duration - anchor) / beat_step) + 1)) if anchor + i * beat_step <= duration]
     labels = ("bass_808", "kick", "snare", "hihat"); event_bands = (0, 0, 2, 3); events: dict[str, list[dict[str, Any]]] = {label: [] for label in labels}
-    for label, band in zip(labels, event_bands):
+    for label, band in zip(labels, event_bands, strict=True):
         signal = np.maximum(np.diff(energy[:, band], prepend=energy[:1, band]), 0) if len(energy) else np.zeros(0)
         threshold = max(0.08, float(np.percentile(signal, 72))) if len(signal) else 0
         peaks = _peak_indices(signal, threshold, max(1, int((0.08 if label == "hihat" else 0.12) * rate / hop)))
@@ -150,7 +150,7 @@ def analyze_audio(path: str | Path) -> dict[str, Any]:
             confidence = min(1.0, max(0.05, float(signal[index] / (threshold + 1e-8))))
             events[label].append(_event_grid({"time": round(float(times[index]), 4), "confidence": round(confidence, 3)}, bpm, grid_origin, 16))
     names = ("low", "low_mid", "mid", "high")
-    frames = [{"time": round(float(t), 4), **{n: round(float(v), 4) for n, v in zip(names, row)}} for t, row in zip(times, energy)]
+    frames = [{"time": round(float(t), 4), **{n: round(float(v), 4) for n, v in zip(names, row, strict=True)}} for t, row in zip(times, energy, strict=True)]
     bass_notes = _estimate_bass_notes(audio, rate)
     return {"version": "1.0", "source": {"file": Path(path).name, "sample_rate": rate, "channels": 1, "duration": duration}, "tempo": {"bpm": bpm, "beats": beats}, "grid": {"time_signature": "4/4", "subdivision": 16, "bars": max(1, int(np.ceil(max(0.0, duration - grid_origin) / (beat_step * 4)))) if duration and bpm else 0, "origin": round(grid_origin, 4), "step_duration": round(beat_step / 4, 6) if bpm else 0.0}, "energy": {"bands": list(names), "frames": frames}, "events": events, "bass_notes": bass_notes, "analysis": {"method": "spectral-flux-band-candidates+fft-bass", "editable": True, "separation": None}}
 

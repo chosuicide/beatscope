@@ -240,7 +240,7 @@ def analyze_project(wav_path: Path) -> dict[str, Any]:
     boundaries = [float(seg["end_time"]) for seg in segments[:-1]]
     expected = _expected_boundaries()
     assert len(boundaries) >= 2, f"need two structural boundaries, found {boundaries}"
-    for found, want in zip(boundaries, expected):
+    for found, want in zip(boundaries, expected, strict=True):
         assert abs(found - want) < 0.75, f"boundary {found} is not near the arranged {want}"
     return project
 

@@ -245,7 +245,13 @@ def run_public_benchmark(
         rows: list[dict[str, Any]] = []
         failures: list[dict[str, str]] = []
 
-        def evaluate_track(track: BenchmarkTrack) -> tuple[dict[str, Any] | None, dict[str, str] | None]:
+        # The estimator is bound as a default so this closure owns its copy of
+        # the loop variable: the map below is consumed inside the same
+        # iteration today, but a deferred consumer would otherwise evaluate
+        # every track with the last estimator in the loop.
+        def evaluate_track(
+            track: BenchmarkTrack, estimator: Estimator = estimator
+        ) -> tuple[dict[str, Any] | None, dict[str, str] | None]:
             try:
                 reference, reference_downbeats = read_ballroom_annotation(track.annotation_path)
                 estimated, estimated_downbeats = estimator(track.audio_path)
@@ -323,7 +329,8 @@ def report_markdown(report: dict[str, Any]) -> str:
     for name, system in report["systems"].items():
         aggregate = system["aggregate"]
 
-        def value(key: str) -> str:
+        # Bound per iteration for the same reason as evaluate_track above.
+        def value(key: str, aggregate: dict[str, dict[str, float]] = aggregate) -> str:
             return f"{aggregate[key]['mean']:.3f}" if key in aggregate else "—"
 
         lines.append(

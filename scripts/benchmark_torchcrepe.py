@@ -97,7 +97,7 @@ def main() -> None:
     unique, counts = np.unique(midi_frames, return_counts=True)
     top_pitches = [
         {"midi": int(note), "note": midi_name(int(note)), "frames": int(count)}
-        for note, count in sorted(zip(unique, counts), key=lambda item: item[1], reverse=True)[:10]
+        for note, count in sorted(zip(unique, counts, strict=True), key=lambda item: item[1], reverse=True)[:10]
     ]
     result = {
         "backend": "torchcrepe-0.0.24/full",

@@ -349,7 +349,7 @@ def build_doc_cases() -> list[dict[str, Any]]:
         {"kind": "crop_reveal", "amount": 0.05, "attack_seconds": 0.03, "release_seconds": 0.3},
         {"kind": "invert_palette", "amount": 1.0, "attack_seconds": 0.01, "release_seconds": 0.12},
     ]
-    for index, (driver, motion) in enumerate(zip(drivers, motions)):
+    for index, (driver, motion) in enumerate(zip(drivers, motions, strict=True)):
         s["responses"].append(
             {
                 "id": f"resp-ext-{index + 1:02d}",

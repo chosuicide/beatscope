@@ -306,7 +306,7 @@ def test_downbeat_rotation_changes_only_copied_metric_fields():
     rotated = rotate_downbeats(GRID, 2)
     original = build_event_evidence(make_project([make_onset(1, 1.0)], beats=GRID))
     rotated_bundle = build_event_evidence(make_project([make_onset(1, 1.0)], beats=rotated))
-    for left, right in zip(original["events"], rotated_bundle["events"]):
+    for left, right in zip(original["events"], rotated_bundle["events"], strict=True):
         for field in ("beat_index", "offset_seconds", "offset_ratio"):
             assert left["metric"][field] == right["metric"][field]
         assert left["metric"]["beat_in_bar"] != right["metric"]["beat_in_bar"]
@@ -745,7 +745,7 @@ def _compare_event_evidence(actual, expected) -> None:
                 compare(left[key], right[key], f"{path}.{key}", relaxed)
         elif isinstance(left, list):
             assert len(left) == len(right), path
-            for index, (item, other) in enumerate(zip(left, right)):
+            for index, (item, other) in enumerate(zip(left, right, strict=True)):
                 compare(item, other, f"{path}[{index}]", float_abs)
         elif isinstance(left, float):
             assert left == pytest.approx(right, abs=float_abs), f"{path} (abs={float_abs:g})"

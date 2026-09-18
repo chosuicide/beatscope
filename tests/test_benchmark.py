@@ -224,7 +224,7 @@ def test_fixture_truth_invariants(tmp_path):
     for name, item in fixtures.items():
         truth = item["truth"]
         beats = [float(t) for t in truth["beats"]]
-        assert all(b2 > b1 for b1, b2 in zip(beats, beats[1:])), name
+        assert all(b2 > b1 for b1, b2 in zip(beats, beats[1:], strict=False)), name
         assert all(0.0 <= t < truth["duration"] for t in beats), name
 
         beat_in_bar = truth["beat_in_bar"]
@@ -236,7 +236,7 @@ def test_fixture_truth_invariants(tmp_path):
         if segments:
             assert segments[0]["start"] == 0.0, name
             assert segments[-1]["end"] == truth["duration"], name
-            for left, right in zip(segments, segments[1:]):
+            for left, right in zip(segments, segments[1:], strict=False):
                 assert left["end"] == right["start"], name
 
         with wave.open(str(item["audio"]), "rb") as handle:
@@ -266,11 +266,11 @@ def test_variable_tempo_truth_curves(tmp_path):
     assert drift["tempo_curve"][0]["bpm"] == 100.0
     assert drift["tempo_curve"][-1]["bpm"] == pytest.approx(100.0 + 40.0 * (23.5 / 24.0), abs=0.01)
     # Recurrence under a rising curve: intervals must shrink overall.
-    intervals = [b - a for a, b in zip(drift["beats"], drift["beats"][1:])]
+    intervals = [b - a for a, b in zip(drift["beats"], drift["beats"][1:], strict=False)]
     assert intervals[-1] < intervals[0]
 
     micro = fixtures["micro-drift"]["truth"]
-    micro_intervals = [b - a for a, b in zip(micro["beats"], micro["beats"][1:])]
+    micro_intervals = [b - a for a, b in zip(micro["beats"], micro["beats"][1:], strict=False)]
     assert max(micro_intervals) - min(micro_intervals) < 0.05  # tiny wiggle only
 
     trap = fixtures["octave-trap"]["truth"]

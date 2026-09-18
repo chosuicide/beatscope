@@ -454,7 +454,7 @@ def score_events(events: list[dict[str, Any]], groups: list[dict[str, Any]],
     relevances = 0.5 * (1.0 + np.tanh(0.5 * values))
     return [
         {"onset_id": int(event["onset_id"]), "response_relevance": _round6(float(relevance))}
-        for event, relevance in zip(events, relevances)
+        for event, relevance in zip(events, relevances, strict=True)
     ]
 
 
@@ -850,7 +850,7 @@ def boost_score_rows(events: list[dict[str, Any]], groups: list[dict[str, Any]],
     relevances = 0.5 * (1.0 + np.tanh(0.5 * scores))
     return [
         {"onset_id": int(event["onset_id"]), "response_relevance": _round6(float(relevance))}
-        for event, relevance in zip(events, relevances)
+        for event, relevance in zip(events, relevances, strict=True)
     ]
 
 

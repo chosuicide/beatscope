@@ -379,7 +379,7 @@ def segment_similarity(
         return 0.0
     if sum(score < FAMILY_DUAL_DISSENT_THRESHOLD for score in agreements) >= FAMILY_DUAL_DISSENT_COUNT:
         return 0.0
-    log_sum = sum(w * np.log(max(s, 1e-6)) for s, w in zip(agreements, weights))
+    log_sum = sum(w * np.log(max(s, 1e-6)) for s, w in zip(agreements, weights, strict=True))
     total = sum(weights)
     if total <= 0.0:
         return 0.0

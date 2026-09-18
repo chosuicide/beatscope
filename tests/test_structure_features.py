@@ -61,7 +61,7 @@ def test_bar_spans_from_consecutive_downbeats():
     assert spans[3].end_time == 8.0
     # Frame ranges are strictly increasing and track the audio clock.
     assert spans[0].start_frame == 0
-    for first, second in zip(spans, spans[1:]):
+    for first, second in zip(spans, spans[1:], strict=False):
         assert first.end_frame <= second.start_frame + 1
         assert first.start_frame < first.end_frame
 

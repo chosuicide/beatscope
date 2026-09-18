@@ -584,7 +584,7 @@ def test_development_split_allocates_within_source_strata_without_test():
     for sha, split in assignments.items():
         per_source.setdefault(source_by_song[sha], {}).setdefault(split, 0)
         per_source[source_by_song[sha]][split] += 1
-    for source, counts in per_source.items():
+    for counts in per_source.values():
         assert counts.get("validation", 0) >= 1
         assert counts.get("train", 0) >= 3
 

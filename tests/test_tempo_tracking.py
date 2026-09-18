@@ -456,7 +456,7 @@ def test_build_tempo_segments_drift_keeps_merge_invariant():
     beats = variable_grid_times(bpm_at, 24.0)
     segments = build_tempo_segments_from_beats(beats, 24.0, method="m")
     assert len(segments) >= 2
-    for left, right in zip(segments, segments[1:]):
+    for left, right in zip(segments, segments[1:], strict=False):
         assert left["end"] == right["start"]
         # The re-merge pass must leave no near-identical neighbors behind.
         assert abs(math.log2(right["bpm"] / left["bpm"])) >= SEGMENT_MERGE_LOG2 - 1e-9
@@ -478,7 +478,7 @@ def test_track_constant_tempo_end_to_end():
         novelty, SAMPLE_RATE, HOP, global_prior_bpm=None, duration=24.0
     )
     assert len(res.beat_times) == len(beats)
-    for got, want in zip(res.beat_times, beats):
+    for got, want in zip(res.beat_times, beats, strict=True):
         assert got == pytest.approx(want, abs=0.01)
     assert res.global_bpm == pytest.approx(120.0, abs=0.5)
     assert len(res.tempo_segments) == 1

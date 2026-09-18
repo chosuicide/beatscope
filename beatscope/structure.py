@@ -91,10 +91,10 @@ def analyze_song_structure(
             parts_per_beat = subdivision // 4
             last_beat_steps = range(3 * parts_per_beat, 4 * parts_per_beat)
             first_beats_steps = range(0, 3 * parts_per_beat)
-            
+
             last_beat_energy = max([float(o.get("strength", 0.0)) for o in ons if o.get("step_in_bar", 1) - 1 in last_beat_steps] or [0.0])
             first_beats_energy = np.mean([float(o.get("strength", 0.0)) for o in ons if o.get("step_in_bar", 1) - 1 in first_beats_steps] or [0.0])
-            
+
             is_fill = (last_beat_energy > max(0.20, float(first_beats_energy) * 1.6))
 
             # Match or create centroid

@@ -190,7 +190,7 @@ def _count_interval_octave_errors(
         return 0
     truth_index = {round(t, 6): i for i, t in enumerate(truth_beats)}
     count = 0
-    for (ref_a, pred_a), (ref_b, pred_b) in zip(pairs, pairs[1:]):
+    for (ref_a, pred_a), (ref_b, pred_b) in zip(pairs, pairs[1:], strict=False):
         idx_a = truth_index.get(round(ref_a, 6))
         idx_b = truth_index.get(round(ref_b, 6))
         if idx_a is None or idx_b != idx_a + 1:
@@ -213,7 +213,8 @@ def _evaluate_seams(
     so a wrong prediction can never define its own exam (tempo plan 20.2).
     """
     truth_beats = [float(t) for t in truth.get("beats", [])]
-    truth_bib = {round(t, 6): int(v) for t, v in zip(truth_beats, truth.get("beat_in_bar", []))}
+    # beat_in_bar is optional in the annotation schema; a missing field degrades to an empty map.
+    truth_bib = {round(t, 6): int(v) for t, v in zip(truth_beats, truth.get("beat_in_bar", []), strict=False)}
     predicted_times = [float(b["time"]) for b in project.get("beats", [])]
     predicted_bib = {
         round(float(b["time"]), 6): int(b.get("beat_in_bar", 0))
@@ -273,7 +274,8 @@ def _evaluate_downbeats(truth: dict[str, Any], project: dict[str, Any]) -> dict[
 def _beat_in_bar_accuracy(
     truth: dict[str, Any], pairs: list[tuple[float, float]], project: dict[str, Any]
 ) -> float | None:
-    truth_bib = {round(t, 6): int(v) for t, v in zip(truth.get("beats", []), truth.get("beat_in_bar", []))}
+    # beat_in_bar is optional in the annotation schema; a missing field degrades to an empty map.
+    truth_bib = {round(t, 6): int(v) for t, v in zip(truth.get("beats", []), truth.get("beat_in_bar", []), strict=False)}
     predicted_bib = {
         round(float(b["time"]), 6): int(b.get("beat_in_bar", 0))
         for b in project.get("beats", [])

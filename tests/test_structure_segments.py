@@ -154,7 +154,7 @@ def _segments_from_spans(spans: list[BarSpan], cuts: list[int]) -> list[dict]:
             "end_bar": spans[end - 1].bar,
             "bar_count": end - start,
         }
-        for start, end in zip(cuts, cuts[1:])
+        for start, end in zip(cuts, cuts[1:], strict=False)
     ]
 
 

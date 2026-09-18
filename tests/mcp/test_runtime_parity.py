@@ -155,7 +155,7 @@ async def test_runtime_bridge_matches_direct_runtime_across_seam(tmp_path: Path)
     fixture = tmp_path / "variable.rhythm.json"
     fixture.write_text(VARIABLE_FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
     direct = _direct_states(fixture, VARIABLE_TIMES)
-    expected = dict(zip(VARIABLE_TIMES, direct))
+    expected = dict(zip(VARIABLE_TIMES, direct, strict=True))
 
     bridge = RuntimeBridge()
     await bridge.start()
@@ -173,7 +173,7 @@ async def test_runtime_bridge_matches_direct_runtime_across_seam(tmp_path: Path)
     finally:
         await bridge.close()
 
-    assert dict(zip(VARIABLE_TIMES, states)) == expected
+    assert dict(zip(VARIABLE_TIMES, states, strict=True)) == expected
 
 
 def test_variable_parity_times_cover_the_change_point():

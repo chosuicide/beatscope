@@ -115,7 +115,7 @@ def density_tertile_split(songs: dict) -> tuple[set[str], set[str]]:
 def pair_slice_accuracy(per_song_pair_metrics: dict[str, dict[str, float]], songs: dict,
                         weights: np.ndarray, normalization: dict, predicate) -> float:
     values = []
-    for sha, song in songs.items():
+    for song in songs.values():
         if song["meta"] is None or not song["pairs"]:
             continue
         feature_map = song_feature_map(song)

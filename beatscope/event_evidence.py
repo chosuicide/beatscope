@@ -605,7 +605,7 @@ def build_event_evidence(project: dict[str, Any]) -> dict[str, Any]:
         })
 
     groups, group_ids = _group_views(times, ids, dominant_bands)
-    for event, group_id in zip(events, group_ids):
+    for event, group_id in zip(events, group_ids, strict=True):
         event["group_id"] = group_id
 
     bundle = {

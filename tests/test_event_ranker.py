@@ -78,7 +78,7 @@ def test_feature_order_is_the_frozen_plan_list():
 
 def test_feature_transform_boundaries_are_pinned():
     event = make_event(1, contrast_all=1.0)
-    vector = dict(zip(er.FEATURE_ORDER, er.extract_features(event, [], 0.75)))
+    vector = dict(zip(er.FEATURE_ORDER, er.extract_features(event, [], 0.75), strict=True))
     assert vector["spectral_active_band_count_scaled"] == pytest.approx(2 / 3)
     assert vector["temporal_log_events_per_second"] == pytest.approx(math.log1p(2.5))
     assert vector["temporal_previous_gap_clipped"] == pytest.approx(0.4 / 2.0)
@@ -92,7 +92,7 @@ def test_feature_transform_boundaries_are_pinned():
 def test_missing_context_uses_masks_not_fabricated_values():
     event = make_event(1, contrast_all=1.0, with_metric=False, with_structure=False,
                        previous_gap=None)
-    vector = dict(zip(er.FEATURE_ORDER, er.extract_features(event, [], 0.5)))
+    vector = dict(zip(er.FEATURE_ORDER, er.extract_features(event, [], 0.5), strict=True))
     assert vector["metric_available"] == 0.0
     assert vector["metric_abs_offset_ratio_clipped"] == 0.0
     assert vector["structure_available"] == 0.0
@@ -110,7 +110,7 @@ def test_group_context_transforms_are_clipped():
         "density_hz": 2.0, "dominant_band_path": ["low"] * 3,
     }]
     event = make_event(2, contrast_all=1.0, with_group=7)
-    vector = dict(zip(er.FEATURE_ORDER, er.extract_features(event, groups, 0.5)))
+    vector = dict(zip(er.FEATURE_ORDER, er.extract_features(event, groups, 0.5), strict=True))
     assert vector["group_available"] == 1.0
     assert vector["group_member_count_log"] == pytest.approx(math.log1p(3))
     assert vector["group_position_normalized"] == pytest.approx(0.5)
@@ -362,6 +362,6 @@ def test_dataset_group_descriptor_reaches_group_features():
         "density_hz": 7.5, "dominant_band_path": ["low", "mid", "high"],
     }
     song = {"events": {2: {"evidence": event, "strength": 0.5, "group": group}}}
-    vector = dict(zip(er.FEATURE_ORDER, song_feature_map(song)[2]))
+    vector = dict(zip(er.FEATURE_ORDER, song_feature_map(song)[2], strict=True))
     assert vector["group_available"] == 1.0
     assert vector["group_position_normalized"] == 0.5

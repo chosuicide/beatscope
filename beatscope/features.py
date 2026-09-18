@@ -49,7 +49,7 @@ def estimate_tempo_from_novelty(values: np.ndarray, rate: int, hop: int) -> floa
 
 def normalize_band_signal(values: np.ndarray) -> np.ndarray:
     """Robust percentile-based normalization with smooth compression.
-    
+
     Ensures that values >= 0.99 represent true extremes (< 2% of frames).
     """
     if len(values) == 0:
@@ -184,7 +184,7 @@ def extract_onsets(
         ]
         accent_thresh = float(np.percentile(local_strengths, 85)) if len(local_strengths) >= 4 else 0.72
         is_accent = bool(cur["strength"] >= max(0.60, accent_thresh))
-        
+
         onsets.append({
             "id": cur["id"],
             "raw_time": cur["raw_time"],

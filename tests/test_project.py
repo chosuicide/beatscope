@@ -33,7 +33,7 @@ def test_project_manager_lifecycle(tmp_path):
     pm = ProjectManager(cache_root=tmp_path / "cache")
     audio = tmp_path / "song.wav"
     audio.write_bytes(b"RIFF dummy wav data")
-    
+
     sha = content_hash(audio)
     cfg = {"subdivision": 16}
     cache_key = compute_cache_key(sha, cfg)

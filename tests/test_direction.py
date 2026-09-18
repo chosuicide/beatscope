@@ -160,7 +160,7 @@ def test_bar_and_time_anchors_agree_at_exact_boundaries():
     grid = ABA_RHYTHM["grid"]
     bar_seconds = 60.0 / ABA_RHYTHM["tempo"]["global_bpm"] * ABA_RHYTHM["meter"]["numerator"]
     resolved = [resolve_anchor_times(s["anchor"], grid, bar_seconds) for s in scenes]
-    for (_, prev_end), (next_start, _) in zip(resolved, resolved[1:]):
+    for (_, prev_end), (next_start, _) in zip(resolved, resolved[1:], strict=False):
         assert next_start == prev_end  # exact, not approximate
     # time anchors are their own resolution (identity)
     assert resolve_anchor_times({"kind": "time", "start_seconds": resolved[0][0], "end_seconds": resolved[0][1]}, grid, bar_seconds) == resolved[0]

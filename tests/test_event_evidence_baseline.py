@@ -82,7 +82,7 @@ def test_offgrid_offsets_survive_extraction(audio_dir: Path) -> None:
     detected = [float(onset["time"]) for onset in project["onsets"]]
     matches = gen._greedy_match([event["time"] for event in truth], detected, gen.MATCH_TOLERANCE_SECONDS)
     assert len(matches) == len(truth), "every labelled off-grid transient must be matched at +-50 ms"
-    for (truth_index, detection_index), event in zip(matches, truth):
+    for (_truth_index, detection_index), event in zip(matches, truth, strict=True):
         offset = event["grid_offset"]
         beat = event["nearest_beat"]
         detected_offset = detected[detection_index] - beat

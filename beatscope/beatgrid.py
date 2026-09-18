@@ -22,7 +22,7 @@ class BeatGridResult:
 
 def parse_beat_this(source: str | Path) -> list[dict[str, Any]]:
     """Parse Beat This .beats content into a structured list of beat dictionaries.
-    
+
     Each item contains:
       - time: float (seconds)
       - beat: int (1..4)
@@ -87,7 +87,7 @@ def parse_beat_this(source: str | Path) -> list[dict[str, Any]]:
 
 def estimate_bpm(beat_times: list[float] | np.ndarray) -> tuple[float, float, bool]:
     """Estimate global BPM from beat timestamps using median and MAD outlier rejection.
-    
+
     Returns (bpm, confidence, variable_tempo).
     """
     times = np.asarray(beat_times, dtype=float)
@@ -108,7 +108,7 @@ def estimate_bpm(beat_times: list[float] | np.ndarray) -> tuple[float, float, bo
         valid_intervals = intervals
 
     bpm = 60.0 / float(np.median(valid_intervals))
-    
+
     # Calculate variability
     std_interval = float(np.std(valid_intervals))
     variable_tempo = bool(std_interval > 0.015)
@@ -125,7 +125,7 @@ def quantize_to_beat_grid(
     default_origin: float = 0.0,
 ) -> dict[str, Any]:
     """Quantize a timestamp using real adjacent beat interpolation where possible.
-    
+
     Returns dict with quantized_time, offset_ms, bar, beat, step_in_bar, nearest_step, pre_grid.
     """
     if not beats:
@@ -233,14 +233,14 @@ class BeatGridAnalyzer:
         beats = parse_beat_this(beat_this_source)
         beat_times = [b["time"] for b in beats]
         bpm, confidence, variable_tempo = estimate_bpm(beat_times)
-        
+
         downbeat_time = next((b["time"] for b in beats if b["beat"] == 1), beat_times[0])
         max_time = max(duration, beat_times[-1])
         step_duration = (60.0 / bpm) / (subdivision / 4)
-        
+
         # Calculate bars
         bars = max(1, int(np.ceil(max(0.0, max_time - downbeat_time) / (60.0 / bpm * 4.0))))
-        
+
         warnings = []
         gap_count = sum(1 for b in beats if b["sequence_gap"])
         if gap_count > 0:

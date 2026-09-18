@@ -91,7 +91,7 @@ def diff_snapshots(expected: Any, actual: Any, path: str = "$") -> list[str]:
         if len(expected) != len(actual):
             diffs.append(f"{path}: length {len(expected)} -> {len(actual)}")
         else:
-            for index, (exp_item, act_item) in enumerate(zip(expected, actual)):
+            for index, (exp_item, act_item) in enumerate(zip(expected, actual, strict=True)):
                 diffs += diff_snapshots(exp_item, act_item, f"{path}[{index}]")
     elif expected != actual:
         diffs.append(f"{path}: {expected!r} -> {actual!r}")
