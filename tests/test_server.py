@@ -1,14 +1,13 @@
-import hashlib
 import http.client
 import json
 import threading
 import time
 import wave
+from http.server import ThreadingHTTPServer
 from pathlib import Path
 
-from http.server import ThreadingHTTPServer
 import beatscope.server as server_module
-from beatscope.server import Handler, MAX_UPLOAD_BYTES
+from beatscope.server import MAX_UPLOAD_BYTES, Handler
 
 
 def running_server():

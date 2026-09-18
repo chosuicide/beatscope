@@ -7,7 +7,6 @@ model-quality claim (plan sections 3.3 and 22.5).
 from __future__ import annotations
 
 import copy
-import hashlib
 import json
 import math
 import subprocess
@@ -20,9 +19,9 @@ import numpy as np
 import pytest
 
 from beatscope import event_ranker as er
+from scripts.train_event_ranker import song_feature_map
 from tests.fixtures.event_evidence.generate_event_evidence import REPO_ROOT
 from tests.test_event_ranker_evaluation import build_synth_dataset
-from scripts.train_event_ranker import song_feature_map
 
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
@@ -31,13 +30,6 @@ def make_event(onset_id: int, contrast_all: float, rank_all: float = 0.5,
                strength: float = 0.5, *, with_metric: bool = True,
                with_structure: bool = True, with_group: int | None = None,
                previous_gap: float | None = 0.4) -> dict:
-    groups = []
-    if with_group is not None:
-        groups = [{
-            "id": with_group, "onset_ids": [onset_id, onset_id + 1, onset_id + 2],
-            "span_seconds": 0.42, "intervals_seconds": [0.2, 0.2],
-            "interval_trend": 0.0, "density_hz": 4.8, "dominant_band_path": ["low"] * 3,
-        }]
     return {
         "onset_id": onset_id,
         "local": {"sample_count": 9,
@@ -212,7 +204,6 @@ def test_newton_accepts_float_resolution_convergence_for_large_sparse_features()
 
 
 def test_train_only_normalization_is_respected_for_evaluation():
-    matrix = np.array([[0.0], [10.0]])
     train_stats = er.fit_normalization(np.array([[0.0], [1.0]]))
     weights, normalization, _ = er.train_pair_weights(
         [(np.array([0.0]), np.array([1.0])), (np.array([10.0]), np.array([0.0]))],

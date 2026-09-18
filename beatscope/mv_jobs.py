@@ -3,13 +3,13 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 import re
 import secrets
 import shutil
 import subprocess
 import sys
 import threading
+from pathlib import Path
 
 from .project import _atomic_write_bytes
 from .response_relevance import build_response_relevance

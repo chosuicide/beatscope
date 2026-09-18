@@ -8,7 +8,6 @@ import sys
 
 import anyio
 import pytest
-
 from mcp import Client
 from mcp.client.stdio import StdioServerParameters
 

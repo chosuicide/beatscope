@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import runpy
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 

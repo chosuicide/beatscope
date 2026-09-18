@@ -1,10 +1,9 @@
 import numpy as np
-import pytest
+
 from beatscope.features import (
-    normalize_band_signal,
     compute_multiband_novelty,
-    detect_transient_peaks,
     extract_onsets,
+    normalize_band_signal,
 )
 
 

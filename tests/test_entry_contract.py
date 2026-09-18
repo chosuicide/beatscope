@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 
 import pytest
-
 from snapshot_utils import canonical_snapshot
 
 try:

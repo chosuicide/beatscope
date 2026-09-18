@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 from mcp import Client
-
 from mcp_support import PROJECT_A, build_snapshot_server
 
 pytestmark = pytest.mark.anyio

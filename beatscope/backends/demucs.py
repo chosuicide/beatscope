@@ -15,7 +15,6 @@ from ..backends.base import (
     ProgressCallback,
     check_cancelled,
 )
-from ..backends.beat_this import BeatThisBackend
 from ..backends.lightweight import LightweightBackend
 from ..models import AnalysisConfig
 

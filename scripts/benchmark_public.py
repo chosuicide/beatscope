@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import argparse
-from importlib.metadata import PackageNotFoundError, version
 import json
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from beatscope.public_benchmark import (

@@ -1,9 +1,8 @@
 import numpy as np
-import pytest
+
 from beatscope.structure import (
-    cosine_similarity,
-    build_bar_vector,
     analyze_song_structure,
+    cosine_similarity,
 )
 
 

@@ -15,7 +15,6 @@ regenerated manifest differs from the committed bytes. Regenerate with:
 from __future__ import annotations
 
 import json
-import math
 import wave
 from pathlib import Path
 from typing import Any

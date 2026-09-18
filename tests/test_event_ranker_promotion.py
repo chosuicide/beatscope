@@ -7,7 +7,6 @@ from pathlib import Path
 from beatscope import event_ranker as er
 from scripts import evaluate_event_ranker_v5 as evaluation
 
-
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "event_ranking_v6"
 MODEL = ROOT / "beatscope" / "data" / "response-ranker-v3.json"

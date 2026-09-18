@@ -1,5 +1,6 @@
 import pytest
-from beatscope.schema import SCHEMA_VERSION, ANALYZER_VERSION, validate_rhythm_v3, migrate_v2_to_v3
+
+from beatscope.schema import SCHEMA_VERSION, migrate_v2_to_v3, validate_rhythm_v3
 
 
 def sample_v3_dict():
@@ -229,11 +230,8 @@ def test_migrate_v3_overview_becomes_patterns():
 
 
 def test_normalize_rhythm_passthrough_and_rejection():
-    import pytest
 
-    from beatscope.schema import UnsupportedSchemaVersion, normalize_rhythm, validate_rhythm_v4
-
-    from beatscope.schema import migrate_v3_to_v4
+    from beatscope.schema import UnsupportedSchemaVersion, migrate_v3_to_v4, normalize_rhythm, validate_rhythm_v4
 
     v4 = migrate_v3_to_v4(sample_v3_dict(), project_id="a1b2c3d4e5f6")
     assert normalize_rhythm(v4) is v4  # v4 passthrough, no copy
@@ -284,8 +282,6 @@ def test_load_rhythm_project_migrates_without_rewriting(tmp_path):
 def test_load_rhythm_project_rejects_invalid_v4(tmp_path):
     import json as json_mod
 
-    import pytest
-
     from beatscope.schema import InvalidRhythmProject, load_rhythm_project
 
     path = tmp_path / "bad.rhythm.json"
@@ -299,7 +295,6 @@ def test_load_rhythm_project_rejects_invalid_v4(tmp_path):
 # --- schema v4 tempo segments and provenance extensions (plan section 22.3) ---
 
 def _minimal_v4_project(**tempo_overrides):
-    from beatscope.schema import SCHEMA_VERSION
 
     tempo = {
         "global_bpm": 120.0,

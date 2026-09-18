@@ -51,6 +51,7 @@ def main() -> int:
     import tempfile
 
     import answers
+
     from beatscope.models import AnalysisConfig
     from beatscope.pipeline import analyze_track
     from beatscope.project import ProjectManager, compute_cache_key, content_hash

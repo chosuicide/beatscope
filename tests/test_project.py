@@ -1,10 +1,12 @@
 import json
 from copy import deepcopy
+
 import pytest
+
 from beatscope.project import (
-    content_hash,
-    compute_cache_key,
     ProjectManager,
+    compute_cache_key,
+    content_hash,
 )
 
 

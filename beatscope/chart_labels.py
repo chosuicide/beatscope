@@ -460,7 +460,9 @@ def parse_stepmania_ssc(text: str, chart_sha256: str, audio_reference: str) -> l
         blocks.append(current)
     if not saw_notedata:
         raise ChartLabelError(CODE_MALFORMED_CHART, ".ssc file has no #NOTEDATA block")
-    song_timing = _timing_from_tags(song_tags, "song")
+    # Song-level tags are validated here; the chart-level timing below is what
+    # the markers use, so only the validation side effect is kept.
+    _timing_from_tags(song_tags, "song")
 
     charts: list[dict[str, Any]] = []
     chart_blocks = [block for block in blocks if "__NOTES__" in block]

@@ -13,7 +13,6 @@ from scripts.train_event_ranker_v5 import (
 )
 from tests.test_event_ranker import make_event
 
-
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "event_ranking_v5"
 

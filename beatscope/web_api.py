@@ -1,20 +1,17 @@
 """HTTP API route handlers for BeatScope server."""
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 from pathlib import Path
-import tempfile
-from typing import Any
-from urllib.parse import parse_qs, urlparse
 
-from .exports import generate_rhythm_midi, generate_rhythm_csv, generate_codex_export
 from .assets import (
+    VIDEO_MAX_BYTES,
     AssetError,
     AssetStore,
-    IMAGE_MAX_BYTES,
-    VIDEO_MAX_BYTES,
 )
+from .composition_store import _LOCK as COMPOSITION_LOCK
+from .composition_store import composition_request
 from .direction import (
     build_direction_document,
     canonical_direction_bytes,
@@ -25,13 +22,11 @@ from .direction import (
     validate_direction,
     validate_workspace,
 )
+from .exports import generate_codex_export, generate_rhythm_csv, generate_rhythm_midi
 from .jobs import JobManager
+from .media_http import describe_media
 from .project import ProjectManager
 from .response_relevance import build_response_relevance, canonical_response_relevance_bytes
-from .exports import canonical_json_bytes
-from .composition_store import composition_request, _LOCK as COMPOSITION_LOCK
-from .media_http import describe_media
-
 
 MAX_UPLOAD_BYTES = 500 * 1024 * 1024
 MAX_DIRECTION_BYTES = 8 * 1024 * 1024

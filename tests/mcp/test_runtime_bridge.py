@@ -7,11 +7,9 @@ missing so the suite stays portable.
 import asyncio
 import json
 import shutil
-import sys
 from pathlib import Path
 
 import pytest
-
 from mcp_support import FIXTURE_RHYTHM, PROJECT_A
 
 from beatscope.mcp.errors import RuntimeUnavailable

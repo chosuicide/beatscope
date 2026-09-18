@@ -415,7 +415,6 @@ def test_consumed_manifest_excludes_test_songs(tmp_path_factory: pytest.TempPath
     # Mark the synthetic corpus's first song as consumed test material.
     manifest = json.loads(synthetic_corpus.joinpath("../../../build/event-ranking/training-manifest.json").read_text()) \
         if False else None
-    built = json.loads((synthetic_corpus.parent / "x").read_text()) if False else None
     # Build a real manifest first so the consumed list carries a real audio sha.
     output = tmp_path_factory.mktemp("consumed-src")
     assert _run_builder(synthetic_corpus, output) == 0

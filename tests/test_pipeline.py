@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from fixtures.generate_audio import beats_file_content
 
 from beatscope.backends import (
     AnalysisCancelled,
@@ -21,7 +22,6 @@ from beatscope.pipeline import (
     resolve_backend,
 )
 from beatscope.schema import ANALYZER_VERSION, validate_rhythm_v4
-from fixtures.generate_audio import beats_file_content
 
 try:
     import demucs  # noqa: F401
@@ -277,8 +277,9 @@ def test_analyze_track_emits_v07_structure_natively(fixed_120_audio):
 
 def test_analyze_track_without_waveform_keeps_legacy_patterns():
     """No evidence.audio means the legacy bar-group slice plus an honest note."""
-    from fixtures.generate_audio import generate_all
     import tempfile
+
+    from fixtures.generate_audio import generate_all
 
     tmp = Path(tempfile.mkdtemp())
     audio = generate_all(tmp)["fixed-120"]["audio"]

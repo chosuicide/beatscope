@@ -12,7 +12,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from snapshot_utils import canonical_snapshot, diff_snapshots
 
 try:

@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
 import numpy as np
 
 
@@ -147,7 +148,6 @@ def quantize_to_beat_grid(
 
     # Case 1: t is before the first beat
     if t < beat_times[0]:
-        first_beat = beats[0]
         # estimate local step from first two beats
         avg_beat_len = beat_times[1] - beat_times[0] if len(beat_times) > 1 else (60.0 / default_bpm)
         step_len = avg_beat_len / parts_per_beat

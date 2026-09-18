@@ -451,7 +451,8 @@ def test_build_tempo_segments_merges_near_identical_neighbors():
 
 def test_build_tempo_segments_drift_keeps_merge_invariant():
     # 100 -> 140 BPM linear drift over 24 s, like the fixture.
-    bpm_at = lambda t: 100.0 + 40.0 * t / 24.0
+    def bpm_at(t: float) -> float:
+        return 100.0 + 40.0 * t / 24.0
     beats = variable_grid_times(bpm_at, 24.0)
     segments = build_tempo_segments_from_beats(beats, 24.0, method="m")
     assert len(segments) >= 2

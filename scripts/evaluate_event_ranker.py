@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import math
 import json
+import math
 import sys
 import time
 import tracemalloc
@@ -24,7 +24,7 @@ sys.path.insert(0, str(REPO_ROOT))
 import numpy as np  # noqa: E402
 
 from beatscope import event_ranker as er  # noqa: E402
-from scripts.train_event_ranker import group_by_song, load_dataset, song_feature_map, pair_vectors  # noqa: E402
+from scripts.train_event_ranker import group_by_song, load_dataset, song_feature_map  # noqa: E402
 
 
 def _safe_round(value):

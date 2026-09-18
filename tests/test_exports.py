@@ -1,13 +1,13 @@
 import csv
-import json
 import io
+import json
 import struct
 import zipfile
 from pathlib import Path
 
-from beatscope.exports import generate_codex_export, generate_rhythm_midi, generate_rhythm_csv
+from beatscope.cli import main, run_doctor
 from beatscope.consumer_validation import validate_handoff
-from beatscope.cli import run_doctor, main
+from beatscope.exports import generate_codex_export, generate_rhythm_csv, generate_rhythm_midi
 
 
 def test_generate_rhythm_midi_and_csv():

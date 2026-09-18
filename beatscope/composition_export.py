@@ -4,8 +4,8 @@ from __future__ import annotations
 import hashlib
 import io
 import json
-from pathlib import Path
 import zipfile
+from pathlib import Path
 
 from .assets import AssetStore
 from .composition import composition_bytes, validate_composition

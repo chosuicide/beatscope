@@ -2,12 +2,11 @@
 import json
 
 import pytest
-
+from mcp_support import PRIVATE_AUDIO, PROJECT_A, PROJECT_B
 from pydantic import ValidationError
 
 from beatscope.mcp.errors import ProjectNotFound
 from beatscope.mcp.models import EventsInput, GetProjectInput, ListProjectsInput
-from mcp_support import PRIVATE_AUDIO, PROJECT_A, PROJECT_B
 
 
 def _json(result: dict) -> str:

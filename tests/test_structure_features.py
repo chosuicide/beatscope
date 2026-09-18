@@ -1,10 +1,9 @@
 """Unit tests for bar-synchronous multi-view structure features (v0.7)."""
 from __future__ import annotations
 
-import numpy as np
-import pytest
-
 import librosa
+import numpy as np
+
 from beatscope.structure_features import (
     BarSpan,
     build_bar_spans,

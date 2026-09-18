@@ -6,19 +6,18 @@ All DSP lives in beatscope.backends; every job runs through
 from __future__ import annotations
 
 import datetime
+import hashlib
 import json
 import shutil
-from dataclasses import dataclass, field
-import hashlib
-from pathlib import Path
 import threading
-from typing import Any, Literal
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Literal
 
 from .models import AnalysisConfig
 from .pipeline import AnalysisCancelled, analyze_track
-from .project import ProjectManager, content_hash, compute_cache_key
-
+from .project import ProjectManager, compute_cache_key, content_hash
 
 JobState = Literal["queued", "running", "complete", "failed", "cancelled"]
 

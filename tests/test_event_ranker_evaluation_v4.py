@@ -13,7 +13,6 @@ from beatscope import event_ranker_boost as boost
 from scripts import evaluate_event_ranker_v4 as evaluation
 from tests.test_event_ranker_boost import _boost_model
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 

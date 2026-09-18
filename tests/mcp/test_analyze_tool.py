@@ -15,12 +15,12 @@ from pathlib import Path
 
 import pytest
 from mcp import Client
+from mcp_support import create_server_for_settings
 
 import beatscope.mcp.service as service_module
 from beatscope.mcp.errors import AnalysisCancelledError, AnalysisFailed
 from beatscope.mcp.models import AnalyzeAudioInput
 from beatscope.pipeline import AnalysisCancelled as PipelineCancelled
-from mcp_support import create_server_for_settings
 
 pytestmark = pytest.mark.anyio
 

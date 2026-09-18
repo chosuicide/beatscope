@@ -264,7 +264,6 @@ def _penalized_loss(weights: np.ndarray, design: np.ndarray, lam: float) -> floa
 
 def newton_fit(design: np.ndarray, lam: float) -> tuple[np.ndarray, int]:
     """Full-batch Newton with deterministic backtracking (plan section 14.3)."""
-    rows = design.shape[0]
     weights = np.zeros(design.shape[1], dtype=np.float64)
     identity = np.eye(design.shape[1]) * lam
     for iteration in range(1, NEWTON_MAX_ITERATIONS + 1):

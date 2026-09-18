@@ -14,12 +14,12 @@ from beatscope.benchmark import (
     BEAT_TOLERANCE_S,
     FIXED_F1_REGRESSION,
     SILENCE_FALSE_EVENT_LIMIT,
+    _prf,
     apply_baseline_gates,
     baseline_manifest_mismatch,
     build_baseline_entry,
     evaluate_case,
     match_events,
-    _prf,
 )
 
 try:

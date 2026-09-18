@@ -1,4 +1,3 @@
-import math
 import struct
 import wave
 
@@ -6,6 +5,7 @@ import numpy as np
 
 from beatscope.analysis import analyze_audio
 from beatscope.midi import build_midi
+
 
 def tone_wav(path, frequency, seconds=1.0, rate=8000):
     t = np.arange(int(rate * seconds)) / rate

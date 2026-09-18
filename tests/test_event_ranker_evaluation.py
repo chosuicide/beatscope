@@ -7,14 +7,11 @@ emit a promoted artifact.
 """
 from __future__ import annotations
 
-import copy
 import hashlib
 import json
 import subprocess
 import sys
 from pathlib import Path
-
-import pytest
 
 from beatscope import event_ranker as er
 from tests.fixtures.event_evidence.generate_event_evidence import REPO_ROOT

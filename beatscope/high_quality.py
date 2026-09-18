@@ -4,9 +4,11 @@ Demucs does separation; this module only analyzes its drums and bass stems.
 librosa is optional for the normal lightweight path but required by this pipeline.
 """
 from __future__ import annotations
+
 import json
 from pathlib import Path
 from typing import Any
+
 import numpy as np
 
 from .analysis import _event_grid, _midi_name

@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -64,7 +63,7 @@ def test_complete_movie_survives_restart(manager):
 
 
 def test_renderer_modules_exist():
-    from beatscope.mv_jobs import WEB, RUNTIME
+    from beatscope.mv_jobs import RUNTIME, WEB
     assert (RUNTIME / 'runtime.js').is_file()
     for name in ['mv-worker.mjs', 'mv-plan.mjs', 'mv-render.html', 'mv-visual.js', 'mv-frame.mjs']:
         assert (WEB / name).is_file()

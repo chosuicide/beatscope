@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import wave
 from pathlib import Path
-from typing import Any
+
 import numpy as np
 
 try:

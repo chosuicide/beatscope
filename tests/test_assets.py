@@ -18,9 +18,9 @@ import pytest
 
 import beatscope.server as server_module
 from beatscope.assets import (
+    IMAGE_MAX_BYTES,
     AssetError,
     AssetStore,
-    IMAGE_MAX_BYTES,
     sniff_asset,
 )
 from beatscope.project import ProjectManager

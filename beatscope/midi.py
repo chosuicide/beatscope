@@ -1,5 +1,6 @@
 """Small dependency-free Standard MIDI File writer for DAW import."""
 from __future__ import annotations
+
 import struct
 from pathlib import Path
 from typing import Any

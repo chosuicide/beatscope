@@ -36,16 +36,14 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Mapping
 
 from beatscope.consumer_contract import (
-    CHECKPOINT_SCHEMA,
     ENTRY_MEMBER,
     MANIFEST_MEMBER,
     PROBE_MEMBER,
-    RHYTHM_MEMBER,
     RECIPE_MEMBER,
+    RHYTHM_MEMBER,
     TIMELINE_MEMBER,
     WORKER_MEMBER,
     manifest_duration_errors,
-    package_member_digest,
     sha256_hex,
     valid_member_path,
     validate_checkpoints,

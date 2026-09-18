@@ -5,7 +5,7 @@ import hashlib
 import json
 from threading import RLock
 
-from .composition import composition_bytes, new_composition, validate_composition, MAX_COMPOSITION_BYTES
+from .composition import MAX_COMPOSITION_BYTES, composition_bytes, new_composition, validate_composition
 from .project import _atomic_write_bytes
 
 # Serialize the entire compare-and-replace, including lazy creation, across API instances.

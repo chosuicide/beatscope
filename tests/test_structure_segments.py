@@ -15,14 +15,13 @@ import numpy as np
 import pytest
 
 from beatscope.structure_benchmark import (
+    analyze_with_structure,
     evaluate_structure_case,
     load_structure_fixtures,
-    analyze_with_structure,
 )
 from beatscope.structure_features import BarSpan, StructureFeatures
 from beatscope.structure_segments import (
-    FAMILY_JOIN_THRESHOLD,
-    MIN_SEGMENT_BARS,
+    _family_letter,
     analyze_structure_segments,
     assign_families,
     checkerboard_novelty,
@@ -31,9 +30,7 @@ from beatscope.structure_segments import (
     segment_similarity,
     segment_with_dp,
     select_boundary_candidates,
-    _family_letter,
 )
-
 
 # ------------------------------------------------------------ similarity
 

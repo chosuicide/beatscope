@@ -598,14 +598,8 @@ def analyze_structure_segments(
             name: _pair_curve(matrix, pair_count, odd_tail)
             for name, matrix in views.items()
         }
-        work_energy = _pair_curve(energy_curve, pair_count, odd_tail)
-        work_density = _pair_curve(density_curve, pair_count, odd_tail)
-        work_bars = pair_count + (1 if odd_tail else 0)
     else:
         work_views = views
-        work_energy = energy_curve
-        work_density = density_curve
-        work_bars = count
 
     combined = combine_views(work_views)
     view_novelty = {

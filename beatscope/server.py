@@ -2,22 +2,22 @@
 from __future__ import annotations
 
 import json
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 import tempfile
 import threading
-from urllib.parse import parse_qs, urlparse
 import webbrowser
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
+from .exports import generate_codex_export, generate_rhythm_csv, generate_rhythm_midi
+from .jobs import JobManager
+from .media_http import describe_media
 from .midi import build_midi
 from .pipeline import analyze_track
 from .project import ProjectManager
-from .jobs import JobManager
-from .schema import load_rhythm_project
-from .web_api import WebApi, MAX_UPLOAD_BYTES
-from .exports import generate_rhythm_midi, generate_rhythm_csv, generate_codex_export
 from .response_relevance import build_response_relevance, canonical_response_relevance_bytes
-from .media_http import describe_media
+from .schema import load_rhythm_project
+from .web_api import MAX_UPLOAD_BYTES, WebApi
 
 ROOT = Path(__file__).parent / "web"
 RUNTIME_ROOT = Path(__file__).parent / "runtime"
@@ -28,7 +28,10 @@ PROJECT_MANAGER = ProjectManager()
 JOB_MANAGER = JobManager(PROJECT_MANAGER)
 WEB_API = WebApi(PROJECT_MANAGER, JOB_MANAGER)
 
-from .mv_jobs import MovieJobs, renderer_tools
+# Deliberately below the managers: mv_jobs imports this module's peers, and
+# hoisting it to the top creates an import cycle.
+from .mv_jobs import MovieJobs, renderer_tools  # noqa: E402
+
 MOVIE_JOBS = MovieJobs(PROJECT_MANAGER)
 
 

@@ -12,8 +12,8 @@ from __future__ import annotations
 import hashlib
 import io
 import json
-import re
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -24,7 +24,6 @@ import pytest
 
 from beatscope.consumer_contract import (
     CHECKPOINT_SCHEMA,
-    FIXTURE_LOCK_SCHEMA,
     MANIFEST_MEMBER,
     MANIFEST_SCHEMA,
     canonical_manifest_bytes,
@@ -32,10 +31,10 @@ from beatscope.consumer_contract import (
     manifest_duration_errors,
     package_member_digest,
     sha256_hex,
+    valid_member_path,
     validate_checkpoints,
     validate_fixture_lock,
     validate_manifest,
-    valid_member_path,
 )
 from beatscope.exports import PACKAGE_VERSION, generate_codex_export
 

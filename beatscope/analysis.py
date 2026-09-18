@@ -1,12 +1,15 @@
 """Lightweight audio analysis with no model download requirement."""
 from __future__ import annotations
+
 import json
 import shutil
 import subprocess
 import wave
 from pathlib import Path
 from typing import Any
+
 import numpy as np
+
 try:
     import soundfile as sf
 except ImportError:

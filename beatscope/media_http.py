@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import mimetypes
-from pathlib import Path
 import re
+from pathlib import Path
 
 
 def describe_media(path: Path, range_header: str | None):

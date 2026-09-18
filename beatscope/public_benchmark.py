@@ -5,19 +5,18 @@ validity, never changes a baseline, and never downloads audio in normal tests.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import math
-from pathlib import Path
 import statistics
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, Iterable
 
 import numpy as np
 
 from .pipeline import analyze_track
-
 
 BALLROOM_ANNOTATION_REVISION = "1db08914a8ae15edb01f104046e30bad88effe67"
 BALLROOM_AUDIO_MD5 = "2872a3e52070bc342a4510a95e2fa0b8"

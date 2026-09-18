@@ -19,8 +19,8 @@ from .consumer_contract import (
     sha256_hex,
     validate_manifest,
 )
-from .midi import TPQ, _meta_track, _meta_track_tempo_map, _tempo_map_tick, _track
 from .event_evidence import InvalidEventEvidenceSource
+from .midi import TPQ, _meta_track, _meta_track_tempo_map, _tempo_map_tick, _track
 from .response_relevance import (
     ResponseRelevanceError,
     build_response_relevance,

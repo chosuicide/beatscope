@@ -15,7 +15,6 @@ from pathlib import Path
 
 import pytest
 from mcp import Client
-
 from mcp_support import PROJECT_A, create_server_for_settings
 
 pytestmark = pytest.mark.anyio

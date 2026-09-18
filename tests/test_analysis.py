@@ -1,6 +1,9 @@
 import wave
+
 import numpy as np
+
 from beatscope.analysis import analyze_audio
+
 
 def make_wav(path, seconds=2.0, rate=8000, tone=True):
     t = np.arange(int(rate * seconds)) / rate; signal = 0.08 * np.sin(2 * np.pi * 55 * t) if tone else np.zeros_like(t)

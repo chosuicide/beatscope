@@ -27,7 +27,6 @@ from .schema import (
     ANALYZER_VERSION,
     SCHEMA_VERSION,
     InvalidRhythmProject,
-    UnsupportedSchemaVersion,
     validate_rhythm_v4,
 )
 from .structure import analyze_multiview_structure, analyze_song_structure

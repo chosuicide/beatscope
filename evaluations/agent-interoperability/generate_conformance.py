@@ -20,7 +20,6 @@ Exit codes: 0 written, 1 evidence missing or inconsistent.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 EVAL_DIR = Path(__file__).resolve().parent

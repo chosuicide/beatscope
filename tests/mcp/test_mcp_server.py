@@ -2,7 +2,6 @@
 import json
 
 import pytest
-
 from mcp import Client
 
 from beatscope.mcp.server import SERVER_NAME, create_server

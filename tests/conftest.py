@@ -6,8 +6,8 @@ import time
 from pathlib import Path
 
 import pytest
-
 from fixtures.generate_audio import beats_file_content, generate_all
+
 from beatscope.jobs import JobManager
 from beatscope.project import ProjectManager
 

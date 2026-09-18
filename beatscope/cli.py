@@ -3,19 +3,19 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import re
 import shutil
 import sys
+from pathlib import Path
 
 from .benchmark import run_benchmark
+from .exports import generate_rhythm_csv, generate_rhythm_midi
 from .models import AnalysisConfig
 from .pipeline import analyze_track
-from .server import serve
-from .separation import run_demucs
 from .rhythm import save_rhythm, write_rhythm_midi
-from .exports import generate_rhythm_midi, generate_rhythm_csv
 from .schema import load_rhythm_project
+from .separation import run_demucs
+from .server import serve
 
 
 def warn_deprecated(command: str, replacement: str) -> None:
@@ -87,8 +87,7 @@ def run_doctor() -> int:
 
     # 6. Demucs
     try:
-        import demucs
-        print(f" [PASS] Demucs: installed")
+        print(" [PASS] Demucs: installed")
     except Exception:
         print(" [INFO] Demucs: not installed (optional, needed for automated stem separation)")
 

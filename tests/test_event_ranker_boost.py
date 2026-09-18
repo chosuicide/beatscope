@@ -8,7 +8,6 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
-import math
 import subprocess
 import sys
 from pathlib import Path
@@ -18,15 +17,15 @@ import pytest
 
 from beatscope import event_ranker as er
 from beatscope import event_ranker_boost as boost
-from tests.fixtures.event_evidence.generate_event_evidence import REPO_ROOT
-from tests.test_event_ranker import make_event
-from tests.test_event_ranker_evaluation import build_synth_dataset
 from scripts.train_event_ranker_v3 import (
     _matching_non_metric,
     assemble_training_rows,
     slice_delta,
     view_matrix,
 )
+from tests.fixtures.event_evidence.generate_event_evidence import REPO_ROOT
+from tests.test_event_ranker import make_event
+from tests.test_event_ranker_evaluation import build_synth_dataset
 
 
 def _fit_setup(count: int = 60, split_at: int = 30,

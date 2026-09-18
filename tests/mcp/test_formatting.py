@@ -6,7 +6,6 @@ from beatscope.mcp.formatting import (
     full_or_truncated,
     paginate,
     project_summary,
-    provenance_methods,
     segment_energy_summary,
     summary_line,
     timing_view,

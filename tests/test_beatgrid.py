@@ -1,10 +1,8 @@
-import pytest
-import numpy as np
 from beatscope.beatgrid import (
-    parse_beat_this,
-    estimate_bpm,
-    quantize_to_beat_grid,
     BeatGridAnalyzer,
+    estimate_bpm,
+    parse_beat_this,
+    quantize_to_beat_grid,
 )
 
 

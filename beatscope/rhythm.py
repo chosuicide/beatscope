@@ -4,16 +4,34 @@ from __future__ import annotations
 import datetime
 import hashlib
 import json
-import struct
 from pathlib import Path
 from typing import Any
+
 import numpy as np
 
 from .audio_io import load_analysis_audio, probe_audio_channels
-from .beatgrid import BeatGridAnalyzer, parse_beat_this, quantize_to_beat_grid
+
+# parse_beat_this and quantize_to_beat_grid are re-exported here on purpose:
+# callers (and tests) import them from beatscope.rhythm.
+from .beatgrid import (
+    BeatGridAnalyzer,
+)
+from .beatgrid import (
+    parse_beat_this as parse_beat_this,
+)
+from .beatgrid import (
+    quantize_to_beat_grid as quantize_to_beat_grid,
+)
 from .features import compute_multiband_novelty, extract_onsets
+from .schema import (
+    ANALYZER_VERSION,
+    V3_SCHEMA_VERSION,
+    validate_rhythm_v3,
+)
+from .schema import (
+    migrate_v2_to_v3 as migrate_v2_to_v3,
+)
 from .structure import analyze_song_structure
-from .schema import V3_SCHEMA_VERSION, ANALYZER_VERSION, validate_rhythm_v3, migrate_v2_to_v3
 
 
 def analyze_rhythm(

@@ -9,19 +9,18 @@ import asyncio
 import json
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
 from mcp import Client
-
-from beatscope.mcp.paths import MCPSettings
 from mcp_support import (
     PRIVATE_AUDIO,
     PROJECT_A,
     build_snapshot_server,
     create_server_for_settings,
 )
+
+from beatscope.mcp.paths import MCPSettings
 
 pytestmark = [
     pytest.mark.anyio,

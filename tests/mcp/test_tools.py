@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 from mcp import Client
-
 from mcp_support import PRIVATE_AUDIO, PROJECT_A, build_snapshot_server
 
 pytestmark = pytest.mark.anyio
@@ -105,8 +104,9 @@ async def test_missing_project_error_carries_guidance(server):
 
 
 async def test_full_detail_truncates_against_small_budget(tmp_path: Path):
-    from beatscope.mcp.server import create_server
     from mcp_support import McpEnv
+
+    from beatscope.mcp.server import create_server
 
     env = McpEnv(tmp_path / "cache", tmp_path)
     env.seed()

@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 
 from beatscope.composition import composition_bytes, new_composition, validate_composition
-from tests.test_direction_http import DirectionServer, PROJECT_ID
+from tests.test_direction_http import PROJECT_ID, DirectionServer
 
 
 def document():
@@ -74,6 +74,7 @@ def test_export_is_portable_and_hash_checked(tmp_path):
     import io
     import subprocess
     import zipfile
+
     from beatscope.assets import AssetStore
     from beatscope.composition_export import composition_archive
     from tests.test_direction_http import ABA_RHYTHM

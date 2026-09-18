@@ -1,11 +1,13 @@
 """Optional Demucs launcher; keeps model and generated stems in a chosen cache."""
 from __future__ import annotations
+
 import json
 import os
 import subprocess
 import sys
 import time
 from pathlib import Path
+
 
 def run_demucs(audio: str | Path, output_dir: str | Path, model: str = "htdemucs", device: str = "cuda") -> dict[str, str]:
     source = Path(audio).resolve(); target = Path(output_dir).resolve(); target.mkdir(parents=True, exist_ok=True)
