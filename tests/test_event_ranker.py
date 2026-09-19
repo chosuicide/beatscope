@@ -316,18 +316,31 @@ def test_inference_preserves_exact_onset_id_set_and_never_mutates():
 
 
 def test_inference_meets_the_ten_thousand_event_budget():
+    """Ten thousand events must score inside the frame budget.
+
+    Warm-up plus the median of three runs, the same shape the evidence builder's
+    budget test uses: a single cold sample pays first-call costs and whatever
+    else the runner happens to be doing, which is how a 250 ms budget came back
+    as 260 ms on a loaded CI machine while the code had not changed.
+    """
     model = _valid_model()
     events = [make_event(index, contrast_all=0.2 + 0.05 * (index % 7)) for index in range(1, 10001)]
     strengths = {event["onset_id"]: 0.5 for event in events}
-    started = time.perf_counter()
-    rows = er.score_events(events, [], strengths, model)
-    elapsed_ms = (time.perf_counter() - started) * 1000.0
+    er.score_events(events, [], strengths, model)  # warm-up
+
+    timings = []
+    for _ in range(3):
+        started = time.perf_counter()
+        rows = er.score_events(events, [], strengths, model)
+        timings.append((time.perf_counter() - started) * 1000.0)
+    elapsed_ms = sorted(timings)[1]
+
     assert len(rows) == 10000
     tracemalloc.start()
     er.score_events(events, [], strengths, model)
     peak = tracemalloc.get_traced_memory()[1]
     tracemalloc.stop()
-    assert elapsed_ms < 250.0, f"inference took {elapsed_ms:.1f} ms"
+    assert elapsed_ms < 250.0, f"median of 3 inference runs took {elapsed_ms:.1f} ms"
     assert peak < 64 * 1024 * 1024, f"peak {peak / 1048576:.1f} MiB"
     assert len(er.canonical_model_bytes(model)) < 64 * 1024
 
