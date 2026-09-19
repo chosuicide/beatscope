@@ -54,11 +54,14 @@ def test_doctor_runs():
 
 
 def test_doctor_reports_demucs_from_what_is_installed(monkeypatch, capsys):
-    """The Demucs line must follow a real probe.
+    """The Demucs line must follow the probe, whatever the machine has.
 
     It used to print "[PASS] Demucs: installed" inside a try block that probed
     nothing, so the except branch was unreachable and the command lied to
-    exactly the people who run it.
+    exactly the people who run it. Both directions are stubbed rather than
+    relying on this machine: demucs is an optional extra and CI installs the
+    dev set, so asserting what the local environment happens to have is how a
+    test passes here and fails there.
     """
     import importlib.util
 
@@ -66,16 +69,17 @@ def test_doctor_reports_demucs_from_what_is_installed(monkeypatch, capsys):
 
     real_find_spec = importlib.util.find_spec
 
-    def without_demucs(name, *args, **kwargs):
-        if name == "demucs":
-            return None
-        return real_find_spec(name, *args, **kwargs)
+    def find_spec_returning(result):
+        def probe(name, *args, **kwargs):
+            return result if name == "demucs" else real_find_spec(name, *args, **kwargs)
+        return probe
 
-    monkeypatch.setattr(importlib.util, "find_spec", without_demucs)
+    monkeypatch.setattr(importlib.util, "find_spec", find_spec_returning(None))
     run_doctor()
     assert "[INFO] Demucs: not installed" in capsys.readouterr().out
 
-    monkeypatch.setattr(importlib.util, "find_spec", real_find_spec)
+    # The doctor only asks whether a spec exists, so any object stands in.
+    monkeypatch.setattr(importlib.util, "find_spec", find_spec_returning(object()))
     run_doctor()
     assert "[PASS] Demucs: installed" in capsys.readouterr().out
 
