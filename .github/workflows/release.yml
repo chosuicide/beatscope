@@ -175,7 +175,8 @@ jobs:
           if [ -f "$notes" ]; then
             cp "$notes" release-body.md
           else
-            echo "See the assets below." > release-body.md
+            # A tag without notes still gets a body that says where to look.
+            echo "No notes file for this tag. See [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/CHANGELOG.md) and the assets below." > release-body.md
           fi
       - uses: softprops/action-gh-release@v2
         with:
