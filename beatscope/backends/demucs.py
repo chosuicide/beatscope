@@ -51,7 +51,9 @@ class DemucsBackend:
         progress("separate", 0.30, msg("stage.separate"))
         from ..separation import run_demucs
 
-        stems = run_demucs(audio_path, self.stems_dir, self.model, self.device)
+        # The separation runs for minutes; hand it the cancel callback so a
+        # cancel request interrupts it instead of waiting for the next stage.
+        stems = run_demucs(audio_path, self.stems_dir, self.model, self.device, cancelled=cancelled)
         drums = stems.get("drums")
         if not drums or not Path(drums).is_file():
             raise RuntimeError("Demucs separation did not produce a drums stem")
