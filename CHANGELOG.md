@@ -41,6 +41,8 @@ package format.
 - User-visible strings live in `beatscope/messages.py`, English first with the
   Chinese column beside it.
 - The README version statements are checked against `pyproject.toml` in CI.
+- A test fails when a newly tracked file is over 1 MB, so demo media goes to a
+  release asset instead of into the clone.
 
 ## 0.12.1 — 2026-09-17
 
