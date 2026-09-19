@@ -53,6 +53,33 @@ def test_doctor_runs():
     assert exit_code == 0
 
 
+def test_doctor_reports_demucs_from_what_is_installed(monkeypatch, capsys):
+    """The Demucs line must follow a real probe.
+
+    It used to print "[PASS] Demucs: installed" inside a try block that probed
+    nothing, so the except branch was unreachable and the command lied to
+    exactly the people who run it.
+    """
+    import importlib.util
+
+    from beatscope.cli import run_doctor
+
+    real_find_spec = importlib.util.find_spec
+
+    def without_demucs(name, *args, **kwargs):
+        if name == "demucs":
+            return None
+        return real_find_spec(name, *args, **kwargs)
+
+    monkeypatch.setattr(importlib.util, "find_spec", without_demucs)
+    run_doctor()
+    assert "[INFO] Demucs: not installed" in capsys.readouterr().out
+
+    monkeypatch.setattr(importlib.util, "find_spec", real_find_spec)
+    run_doctor()
+    assert "[PASS] Demucs: installed" in capsys.readouterr().out
+
+
 def test_cli_export(tmp_path):
     json_path = tmp_path / "rhythm.json"
     midi_path = tmp_path / "export.mid"

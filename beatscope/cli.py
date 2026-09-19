@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import re
 import shutil
@@ -85,10 +86,11 @@ def run_doctor() -> int:
     except Exception:
         print(" [INFO] PyTorch: not installed (optional, needed for GPU Demucs)")
 
-    # 6. Demucs
-    try:
+    # 6. Demucs. find_spec answers "is it installed" without importing the
+    # package (which would pull torch in behind it).
+    if importlib.util.find_spec("demucs") is not None:
         print(" [PASS] Demucs: installed")
-    except Exception:
+    else:
         print(" [INFO] Demucs: not installed (optional, needed for automated stem separation)")
 
     # 7. Cache Directory & Free Disk Space
