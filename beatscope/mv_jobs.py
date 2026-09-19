@@ -21,15 +21,21 @@ RUNTIME = Path(__file__).parent / "runtime"
 
 def renderer_tools() -> dict:
     portable_root = Path(sys.executable).resolve().parent / "tools" if getattr(sys, "frozen", False) else None
+    repo_root = Path(__file__).parent.parent
     module = os.environ.get("BEATSCOPE_PLAYWRIGHT_MODULE", "")
     if not module:
-        candidate = Path(__file__).parent.parent / "web-src/node_modules/playwright/index.mjs"
-        if candidate.is_file():
-            module = str(candidate)
-        elif portable_root:
-            candidate = portable_root / "node_modules" / "playwright" / "index.mjs"
-            if candidate.is_file():
-                module = str(candidate)
+        # A frozen build carries its own tools; a checkout declares Playwright
+        # in tests/browser/package.json, next to the browser tests that drive
+        # the studio, and may also have it under web-src. Look where it is
+        # actually declared before giving up.
+        candidates = []
+        if portable_root:
+            candidates.append(portable_root / "node_modules" / "playwright" / "index.mjs")
+        candidates += [
+            repo_root / "tests/browser/node_modules/playwright/index.mjs",
+            repo_root / "web-src/node_modules/playwright/index.mjs",
+        ]
+        module = next((str(candidate) for candidate in candidates if candidate.is_file()), "")
     node = shutil.which("node")
     if not node and portable_root and (portable_root / "node.exe").is_file():
         node = str(portable_root / "node.exe")
