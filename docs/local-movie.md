@@ -29,7 +29,7 @@ The worker renders the film through **in-page WebCodecs encoding** by default: e
 - `BEATSCOPE_MV_ENCODER=png` forces the screenshot + FFmpeg encode path; a browser without WebCodecs falls back to it automatically, and the fallback is reported in the job's completion line and console output.
 - `BEATSCOPE_MV_BITRATE` (default 8000000) sets the in-page encoder's target bitrate.
 - Determinism: two runs with the in-page encoder produce **byte-identical** files (verified); frame content was already pixel-identical across pages, repeats and call histories.
-- The two paths measure as equivalent and are exactly frame-aligned. Read the canvas back as ground truth and the screenshot path sits ≈26.4 dB from it against ≈25.8 dB for the in-page path, while the two films agree with *each other* at 28–30 dB on the same frame; a lag sweep settles the alignment (matching frame N against N±1 collapses to ≈19 dB, the clip's own frame-to-frame baseline). The residual against the canvas is dominated by the shared YUV 4:2:0 conversion on this highly chromatic content, not by the capture method. `build/ab-probe.mjs` regenerates the sheet in `build/ab-compare.png` (canvas | screenshot path | in-page path).
+- The two paths measure as equivalent and are exactly frame-aligned. Read the canvas back as ground truth and the screenshot path sits ≈26.4 dB from it against ≈25.8 dB for the in-page path, while the two films agree with *each other* at 28–30 dB on the same frame; a lag sweep settles the alignment (matching frame N against N±1 collapses to ≈19 dB, the clip's own frame-to-frame baseline). The residual against the canvas is dominated by the shared YUV 4:2:0 conversion on this highly chromatic content, not by the capture method. `scripts/movie-bench/ab-probe.mjs` regenerates the sheet in `build/ab-compare.png` (canvas | screenshot path | in-page path).
 
 ## Performance
 
@@ -47,11 +47,11 @@ On the fallback screenshot path capture and encoding run at the same time, so a 
 
 Quality is preserved by construction on the capture side and measured on the encode side: the encoder output sits ≈41 dB PSNR against the lossless frames at CRF 20 (≈42 dB at CRF 18), and AV1/HEVC and the hardware encoders were measured and rejected — SVT-AV1 p8 was 30% larger at the same quality on this content, NVENC needs a newer driver than this machine has, and QSV was slower and larger.
 
-Tunable through the environment (defaults in parentheses): `BEATSCOPE_MV_ENCODER` (`webcodecs`), `BEATSCOPE_MV_BITRATE` (8000000), `BEATSCOPE_MV_PAGES` (3), `BEATSCOPE_MV_PRESET` (`slower`), `BEATSCOPE_MV_CRF` (20). Lowering the preset to `medium` buys ~25% more speed for ~15% more bytes; raising CRF to 22 cuts another ~18% of bytes at ~2.4 dB PSNR. `build/mv-perf-bench.mjs`, `mv-capture-bench.mjs`, `mv-encoder-bench.mjs`, `mv-parallel-bench.mjs`, `mv-determinism-probe.mjs`, `mv-history-probe.mjs` and `ab-probe.mjs` reproduce these numbers.
+Tunable through the environment (defaults in parentheses): `BEATSCOPE_MV_ENCODER` (`webcodecs`), `BEATSCOPE_MV_BITRATE` (8000000), `BEATSCOPE_MV_PAGES` (3), `BEATSCOPE_MV_PRESET` (`slower`), `BEATSCOPE_MV_CRF` (20). Lowering the preset to `medium` buys ~25% more speed for ~15% more bytes; raising CRF to 22 cuts another ~18% of bytes at ~2.4 dB PSNR. The probes that measured them are committed under `scripts/movie-bench/`: `mv-perf-bench.mjs`, `mv-capture-bench.mjs`, `mv-encoder-bench.mjs`, `mv-parallel-bench.mjs`, `mv-determinism-probe.mjs`, `mv-history-probe.mjs` and `ab-probe.mjs`. Each takes a rendered job directory (the cache directory of a finished movie job) and writes its table to stdout.
 
 ## Renderer setup
 
-Node, FFmpeg, Playwright and a compatible installed browser are required. Put installations on the user's chosen tools/project disk. The renderer finds `web-src/node_modules/playwright/index.mjs`, or an explicit path:
+Node, FFmpeg, Playwright and a compatible installed browser are required. Put installations on the user's chosen tools/project disk. The renderer looks for Playwright in the portable build's `tools/` first, then in `tests/browser/node_modules` (where `tests/browser/package.json` declares it) and `web-src/node_modules`; an explicit path always wins:
 
 ```powershell
 $env:BEATSCOPE_PLAYWRIGHT_MODULE='D:/Tools/your-playwright-install/node_modules/playwright/index.mjs'
