@@ -5292,7 +5292,7 @@
     "bloom": []
   },
   "energy": {
-    "fps": 172,
+    "fps": 172.265625,
     "start": 0.0,
     "bands": {
       "all": [
@@ -26098,7 +26098,7 @@
         "descriptors": [
           "opening"
         ],
-        "mean_energy": 0.1015,
+        "mean_energy": 0.1028,
         "id": "segment-001",
         "index": 0,
         "display_label": "A"
@@ -26112,7 +26112,7 @@
         "family": "B",
         "variant": 0,
         "descriptors": [],
-        "mean_energy": 0.1218,
+        "mean_energy": 0.1252,
         "id": "segment-002",
         "index": 1,
         "display_label": "B"
@@ -26128,7 +26128,7 @@
         "descriptors": [
           "ending"
         ],
-        "mean_energy": 0.0979,
+        "mean_energy": 0.0988,
         "id": "segment-003",
         "index": 2,
         "display_label": "C"
@@ -26154,7 +26154,7 @@
           "harmony": 0.9743,
           "timbre": 0.8748,
           "rhythm": 1.0,
-          "energy": 0.987
+          "energy": 0.9873
         }
       }
     ],

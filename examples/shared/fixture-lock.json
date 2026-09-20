@@ -1,8 +1,8 @@
 {
-  "checkpoint_sha256": "9be9653562a4c3d1ece6961eeff662aeb38285ee0d69395b5d7d9e543ab5cd24",
+  "checkpoint_sha256": "13a1e0e0e8c82a2f752a84904ac6803cb2d3e82c4f8c2e4bb7d82ab053eb1220",
   "duration": 30.0001,
   "generator_version": "consumer-fixture-1",
-  "package_sha256": "79caf7d49bce29966ec92dc2e0a73a0cb7be4f65e994bae0ccaf12212e06269a",
-  "rhythm_sha256": "a44b472983339e2b70fc0f20a0ba2f018d724480715ec7af2f4d068cf7f64f6a",
+  "package_sha256": "91b6ce64d8d7abd79f0a6f27369cb0bcdd644d2ec6372d264e8cfb5feded3466",
+  "rhythm_sha256": "718c4aef60a0e47537d53d84db1cb06aa9d284d75d7267cebffa67c5445110cf",
   "schema": "beatscope-consumer-fixture-lock-1"
 }
