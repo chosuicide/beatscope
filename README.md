@@ -65,7 +65,7 @@ coding agent creates the visual
 
 - beats, bars and tempo changes;
 - original onset timestamps—the sound is never moved onto a prettier grid;
-- LOW / MID / HIGH energy;
+- LOW / MID / HIGH spectral activity;
 - neutral repeated sections such as A / B / A′;
 - optional response ordering for dense songs, so consumers do not react to everything.
 

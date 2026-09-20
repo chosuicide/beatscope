@@ -47,7 +47,7 @@ export default function MovieStudio() {
   const lang = useLang();
   const [session, setSession] = useState<Session>({ name: '' });
   const [stage, setStage] = useState('idle'), [job, setJob] = useState<Job | null>(null);
-  const [error, setError] = useState(''), [capability, setCapability] = useState<{ available: boolean; message: string } | null>(null);
+  const [error, setError] = useState(''), [capability, setCapability] = useState<{ available: boolean; message: string; enhanced?: boolean; enhanced_message?: string } | null>(null);
   const [rhythm, setRhythm] = useState<MovieRhythm | null>(null);
   /* The v0.11 ordering sidecar, loaded best-effort beside the rhythm. The
      WebMCP port reads it through this ref; a missing or invalid sidecar stays
@@ -499,6 +499,9 @@ export default function MovieStudio() {
       </header>
       <input ref={input} type="file" hidden accept="audio/*,.flac,.m4a" onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ''; }} />
       {capability && !capability.available && <div className="mv-notice" role="alert">{capability.message}</div>}
+      {capability && capability.enhanced === false && (
+        <div className="mv-notice" role="status">{copy.precisionUnavailable}</div>
+      )}
       {error && (
         <div className="mv-error" role="alert">
           <span>{error}</span>
@@ -581,7 +584,8 @@ export default function MovieStudio() {
                   </button>
                   <button
                     className="btn-ink"
-                    disabled={busy}
+                    disabled={busy || !capability?.enhanced}
+                    title={capability?.enhanced ? undefined : copy.precisionUnavailable}
                     aria-pressed={precision === 'high'}
                     onClick={() => setPrecision((current) => (current === 'high' ? 'standard' : 'high'))}
                   >

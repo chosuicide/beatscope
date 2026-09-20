@@ -71,8 +71,11 @@ $env:BEATSCOPE_MODEL_DEVICE = 'cuda'
 beatscope serve --open
 ```
 
-The studio has no toggle for this yet - the plumbing above is what one would use,
-and the UI work is separate.
+The studio has a **Standard / High precision** button in the upload area, and it
+sends exactly this parameter. It needs the extra installed on the machine that
+serves the page: the portable Windows build deliberately ships without PyTorch, so
+high precision there is unavailable rather than silently absent, and the button
+says so.
 
 ## What the project says about itself
 

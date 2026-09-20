@@ -1,6 +1,7 @@
 """Local HTTP server and REST API for BeatScope."""
 from __future__ import annotations
 
+import importlib.util
 import json
 import tempfile
 import threading
@@ -137,7 +138,19 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/movies/capabilities":
             tools = renderer_tools()
-            self._send(200, json.dumps({"available": tools["available"], "message": tools["message"]}).encode(), "application/json")
+            # High precision needs Beat This, which the portable build deliberately
+            # does not ship. Reporting that here lets the studio offer the button
+            # only where it can work, instead of failing after the user picks it.
+            model_available = importlib.util.find_spec("beat_this") is not None
+            self._send(200, json.dumps({
+                "available": tools["available"],
+                "message": tools["message"],
+                "enhanced": model_available,
+                "enhanced_message": "" if model_available else (
+                    "High precision needs the public-benchmark extra; it is available "
+                    "in the Python installation, not in the portable build."
+                ),
+            }).encode(), "application/json")
             return
         if path.startswith("/api/movies/"):
             parts = path.strip("/").split("/")

@@ -341,3 +341,32 @@ def test_the_upload_route_accepts_a_backend_and_refuses_an_unknown_one():
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
+
+
+def test_the_capability_channel_reports_whether_high_precision_can_run():
+    """The studio offers the model path only where it can work.
+
+    The portable Windows build ships without PyTorch on purpose, so a High
+    precision button there would fail on first use. The capability the studio
+    already fetches for the renderer now says whether the backend is installed,
+    and the honest answer in an environment without the extra is no.
+    """
+    server, thread = running_server()
+    try:
+        conn = http.client.HTTPConnection(*server.server_address)
+        conn.request("GET", "/api/movies/capabilities")
+        response = conn.getresponse()
+        assert response.status == 200
+        payload = json.loads(response.read().decode())
+        assert "enhanced" in payload, "the studio cannot gate on a flag that is absent"
+        assert isinstance(payload["enhanced"], bool)
+        if payload["enhanced"]:
+            assert payload["enhanced_message"] == ""
+        else:
+            assert "public-benchmark" in payload["enhanced_message"], (
+                "an unavailable backend has to say what is missing"
+            )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)

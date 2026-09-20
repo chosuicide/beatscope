@@ -169,6 +169,10 @@ def build_rhythm_project(
     # missing tempo *score* says nothing about whether a tempo was measured, and
     # the enhanced backend reads its tempo off the model's beats with no score at
     # all. Defaults describe the lightweight path, which measures neither.
+    # LOW/MID/HIGH carry the normalized positive spectral flux per band, not
+    # acoustic power; the field is named energy for compatibility with every
+    # consumer that already reads it, and this says what it holds.
+    diagnostics["energy_semantics"] = "multiband-spectral-novelty"
     diagnostics.setdefault("meter_source", "assumed-4-4-not-measured")
     diagnostics.setdefault(
         "tempo_source", "prior-fallback" if diagnostics.get("tempo_fallback") else "measured"

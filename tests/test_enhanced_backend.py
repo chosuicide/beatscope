@@ -215,3 +215,36 @@ def test_the_lightweight_inner_backend_is_the_default_wrapper():
     assert isinstance(backend.inner, LightweightBackend)
     assert backend.name == "enhanced"
     assert backend.version == "beat-this-model:final0"
+
+
+def test_a_single_downbeat_does_not_declare_a_numerator_short_of_its_positions():
+    """The final bar runs from its downbeat to the last beat, inclusive.
+
+    The length was computed one short, so a track whose model reported a single
+    downbeat declared a numerator of three and then numbered four beats into the
+    bar - a project the schema rejects. Caught by review, not by the suite, which
+    covered 3/4, 5/4, two kinds of pickup and no downbeat but not this.
+    """
+    times = np.array([0.5, 1.5, 2.5, 3.5])
+    rows, numerator, source = _beat_rows(times, np.array([0.5]))
+
+    assert source == "measured-from-model-downbeats"
+    assert numerator == 4, "the bar holds all four beats it numbers"
+    assert [row["beat"] for row in rows] == [1, 2, 3, 4]
+    assert all(1 <= row["beat"] <= numerator for row in rows)
+
+
+def test_every_expressible_bar_shape_stays_inside_its_numerator():
+    """The shapes that reach the schema, checked together rather than one at a time."""
+    times = np.arange(0.5, 8.5, 1.0)
+    shapes = {
+        "single downbeat": [0.5],
+        "every four": [0.5, 4.5],
+        "weak start": [2.5, 6.5],
+        "waltz": [0.5, 3.5, 6.5],
+        "five per bar": [0.5, 5.5],
+    }
+    for label, downbeats in shapes.items():
+        rows, numerator, _ = _beat_rows(times, np.array(downbeats))
+        assert all(1 <= row["beat"] <= numerator for row in rows), f"{label}: {[r['beat'] for r in rows]}"
+        assert all(row["downbeat"] == (row["beat"] == 1) for row in rows), label

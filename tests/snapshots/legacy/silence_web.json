@@ -65,6 +65,7 @@
       },
       "onset_count": 0,
       "separated": false,
+      "energy_semantics": "multiband-spectral-novelty",
       "meter_source": "assumed-4-4-not-measured",
       "tempo_source": "prior-fallback",
       "tempo_segments_source": "synthesized-from-global"

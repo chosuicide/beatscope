@@ -130,7 +130,11 @@ def _beat_rows(
         later - earlier for earlier, later in zip(boundaries, boundaries[1:], strict=False)
     ]
     if boundaries and boundaries[-1] != len(times) - 1:
-        bar_lengths.append(len(times) - boundaries[-1] - 1)  # the final partial bar
+        # The final bar runs from its downbeat to the last beat inclusive, so its
+        # length is len(times) - boundaries[-1]. Subtracting one more - which this
+        # did - made a single-downbeat track declare a numerator one short of the
+        # positions it then generated, and the schema rejects that.
+        bar_lengths.append(len(times) - boundaries[-1])
     if not boundaries:
         bar_lengths = []
     if boundaries and boundaries[0] > 0:
