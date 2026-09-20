@@ -12,7 +12,7 @@ import statistics
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator
+from typing import Any, Callable, Iterable, Iterator, Mapping
 
 import numpy as np
 
@@ -42,22 +42,49 @@ class BenchmarkTrack:
 Prediction = tuple[list[float], list[float]]
 Estimator = Callable[[Path], Prediction]
 
+# Everything a prediction number depends on besides the audio: the metric
+# library, the trim protocol, and the annotation revision. Bumping this string
+# invalidates every cached prediction, which is the point - a protocol change
+# must not quietly reuse numbers measured under the old one.
+PROTOCOL_VERSION = "ballroom-trim5-mir_eval-v1"
 
-def cached_estimator(estimator: Estimator, cache_dir: str | Path, system_id: str) -> Estimator:
-    """Persist predictions so a long public-corpus run can resume safely."""
+
+def cached_estimator(
+    estimator: Estimator,
+    cache_dir: str | Path,
+    system_id: str,
+    *,
+    config: Mapping[str, Any] | None = None,
+) -> Estimator:
+    """Persist predictions so a long public-corpus run can resume safely.
+
+    The cache key covers the whole identity a prediction depends on: the system
+    name, its configuration, the protocol version, and the audio bytes. A
+    payload whose recorded identity does not match the request is a miss, so
+    predictions made under another setting - DBN on or off, a different
+    checkpoint, a different device - are recomputed rather than silently reused.
+    Reusing them is how a comparison ends up measuring a weakened baseline
+    instead of the system under test.
+    """
     cache_dir = Path(cache_dir)
+    identity: dict[str, Any] = {
+        "system_id": system_id,
+        "protocol": PROTOCOL_VERSION,
+        **dict(config or {}),
+    }
+    identity_bytes = canonical_report_bytes(identity)
 
     def estimate(audio_path: Path) -> Prediction:
         audio_sha256 = hashlib.sha256(audio_path.read_bytes()).hexdigest()
         cache_key = hashlib.sha256(
-            f"{system_id}\0{audio_path.stem}\0{audio_sha256}".encode()
+            identity_bytes + b"\0" + audio_path.stem.encode("utf-8") + b"\0" + audio_sha256.encode("ascii")
         ).hexdigest()
         cache_path = cache_dir / system_id / f"{cache_key}.json"
         if cache_path.is_file():
             payload = json.loads(cache_path.read_text(encoding="utf-8"))
             if (
                 payload.get("schema") == "beatscope-public-prediction-1"
-                and payload.get("system_id") == system_id
+                and payload.get("identity") == identity
                 and payload.get("audio_sha256") == audio_sha256
             ):
                 return (
@@ -68,6 +95,7 @@ def cached_estimator(estimator: Estimator, cache_dir: str | Path, system_id: str
         payload = {
             "schema": "beatscope-public-prediction-1",
             "system_id": system_id,
+            "identity": identity,
             "audio_sha256": audio_sha256,
             "beats": [round(float(value), 9) for value in beats],
             "downbeats": [round(float(value), 9) for value in downbeats],
@@ -182,13 +210,20 @@ def librosa_estimator(audio_path: Path) -> Prediction:
     return [float(value) for value in beats], []
 
 
-def beat_this_estimator(model: str = "final0", device: str = "cpu") -> Estimator:
-    """Create an official Beat This estimator when its optional package exists."""
+def beat_this_estimator(model: str = "final0", device: str = "cpu", *, dbn: bool = False) -> Estimator:
+    """Create an official Beat This estimator when its optional package exists.
+
+    `dbn` is a parameter rather than a literal because it changes the numbers: the
+    official pipeline applies DBN post-processing and scores higher than the raw
+    frame peaks. Whatever is chosen has to be recorded in the cache identity
+    (pass it in `config` to cached_estimator) and named in the system id, or a
+    comparison can silently measure a weakened baseline.
+    """
     try:
         from beat_this.inference import File2Beats
     except ImportError as exc:
         raise RuntimeError("Beat This is unavailable; install the public-benchmark extra") from exc
-    infer = File2Beats(checkpoint_path=model, device=device, dbn=False)
+    infer = File2Beats(checkpoint_path=model, device=device, dbn=dbn)
 
     def estimate(audio_path: Path) -> Prediction:
         beats, downbeats = infer(str(audio_path))
@@ -261,8 +296,14 @@ def run_public_benchmark(
                     **evaluate_events(reference, estimated),
                     "reference_beats": len(reference),
                     "estimated_beats": len(estimated),
+                    "reference_downbeats": len(reference_downbeats),
+                    "estimated_downbeats": len(estimated_downbeats),
                 }
-                if estimated_downbeats:
+                if reference_downbeats:
+                    # Scored whenever the annotation has downbeats, so a system
+                    # that predicts none scores zero instead of leaving the
+                    # denominator. Dropping those tracks is how a system could
+                    # look better by saying less.
                     row["downbeat_f_measure"] = evaluate_events(
                         reference_downbeats, estimated_downbeats
                     )["f_measure"]
@@ -293,7 +334,22 @@ def run_public_benchmark(
             for key in (*_METRIC_NAMES.values(), "downbeat_f_measure")
             if (value := _aggregate(rows, key)) is not None
         }
-        systems[name] = {"tracks": rows, "failures": failures, "aggregate": aggregate}
+        systems[name] = {
+            "tracks": rows,
+            "failures": failures,
+            "aggregate": aggregate,
+            # The denominators, stated rather than implied: a mean over
+            # successful rows only is easy to read as a mean over the corpus,
+            # and a downbeat mean is only comparable when the tracks it covers
+            # are known.
+            "counts": {
+                "selected": len(selected),
+                "evaluated": len(rows),
+                "failed": len(failures),
+                "downbeat_scored": sum(1 for row in rows if "downbeat_f_measure" in row),
+                "downbeat_unscorable": sum(1 for row in rows if not row["reference_downbeats"]),
+            },
+        }
     return {
         "schema": REPORT_SCHEMA,
         "dataset": {
@@ -324,20 +380,24 @@ def report_markdown(report: dict[str, Any]) -> str:
         f"Dataset: **{dataset['name']}** ({dataset['license']}), "
         f"{dataset['selected_tracks']} tracks, {dataset['selection']}.",
         "",
-        "| System | Tracks | Failed | F-measure | CMLt | AMLt | Downbeat F |",
+        "| System | Evaluated | Failed | F-measure | CMLt | AMLt | Downbeat F |",
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for name, system in report["systems"].items():
         aggregate = system["aggregate"]
+        counts = system.get("counts", {})
 
         # Bound per iteration for the same reason as evaluate_track above.
         def value(key: str, aggregate: dict[str, dict[str, float]] = aggregate) -> str:
             return f"{aggregate[key]['mean']:.3f}" if key in aggregate else "—"
 
+        downbeat = value("downbeat_f_measure")
+        if "downbeat_scored" in counts:
+            # The downbeat mean covers these tracks out of the evaluated ones.
+            downbeat = f"{downbeat} ({counts['downbeat_scored']}/{counts.get('evaluated', '?')})"
         lines.append(
-            f"| {name} | {len(system['tracks'])} | {len(system['failures'])} | "
-            f"{value('f_measure')} | {value('cmlt')} | {value('amlt')} | "
-            f"{value('downbeat_f_measure')} |"
+            f"| {name} | {counts.get('evaluated', len(system['tracks']))} | {len(system['failures'])} | "
+            f"{value('f_measure')} | {value('cmlt')} | {value('amlt')} | {downbeat} |"
         )
     lines.extend([
         "",

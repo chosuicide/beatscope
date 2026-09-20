@@ -43,16 +43,31 @@ a quick genre-balanced sample (replace the two roots with the extracted paths):
 
 Omit --limit for all 698 tracks. Use
 `--systems beatscope librosa beat-this` to include the official Beat This final0
-model; the first use downloads its published model weights.
+model; the first use downloads its published model weights (point `TORCH_HOME` at
+an existing cache to reuse them instead of downloading again).
 Use --device cuda only when the local PyTorch installation reports CUDA.
 
-The command caches each prediction by system id and audio SHA-256, so an
-interrupted full run resumes without recomputing finished tracks. It writes
-canonical results.json and a compact results.md. It uses
-mir_eval.beat.evaluate with five-second trimming, including F-measure, Cemgil,
-CMLc, CMLt, AMLc and AMLt. Downbeat F-measure is reported only by systems that
-actually predict downbeats. Failures remain visible per track instead of being
-silently removed.
+`--dbn` switches Beat This to its DBN post-processing, which is what the official
+`Audio2Beats` pipeline uses and which scores higher than the raw frame peaks.
+Without it the model runs without DBN, which is the configuration every recorded
+measurement in `evaluations/public-beat/` was made with. DBN needs `madmom`,
+which is not installed by the `public-benchmark` extra; until it is, the two
+configurations are not comparable and the choice must be stated wherever a
+number is quoted.
+
+The command caches each prediction by an identity covering the system id, the
+protocol version (metric library, five-second trimming, annotation revision) and
+the estimator's configuration, so an interrupted full run resumes without
+recomputing finished tracks - while a run under another configuration recomputes
+rather than reusing numbers that were measured differently. It writes canonical
+results.json and a compact results.md. It uses mir_eval.beat.evaluate with
+five-second trimming, including F-measure, Cemgil, CMLc, CMLt, AMLc and AMLt.
+
+Downbeat F-measure is scored for every track whose annotation has downbeats, so a
+system that predicts none scores zero there instead of leaving the denominator;
+the report states how many tracks the mean covers. Failures remain visible per
+track instead of being silently removed, and each system's counts block records
+how many tracks were selected, evaluated, failed, and scorable for downbeats.
 
 ## Interpretation
 

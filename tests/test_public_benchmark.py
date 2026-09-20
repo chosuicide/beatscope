@@ -103,8 +103,19 @@ def test_report_is_deterministic_and_keeps_failures_explicit(tmp_path, monkeypat
     assert report["systems"]["test"]["failures"] == [
         {"track_id": "bad", "error": "RuntimeError: deliberate"}
     ]
+    # The denominators are stated, not implied: two tracks selected, one of them
+    # scored, and the downbeat mean covers that one because its annotation has
+    # downbeats - the estimator predicted none, which scores zero rather than
+    # dropping the track from the mean.
+    assert report["systems"]["test"]["counts"] == {
+        "selected": 2,
+        "evaluated": 1,
+        "failed": 1,
+        "downbeat_scored": 1,
+        "downbeat_unscorable": 0,
+    }
     assert canonical_report_bytes(report) == canonical_report_bytes(report)
-    assert "| test | 1 | 1 | 0.500 | 0.200 | 0.700 | — |" in report_markdown(report)
+    assert "| test | 1 | 1 | 0.500 | 0.200 | 0.700 | 0.500 (1/1) |" in report_markdown(report)
 
 
 def test_parallel_report_preserves_input_order(tmp_path, monkeypatch):
@@ -154,3 +165,81 @@ def test_recorded_balanced_half_is_canonical_and_hash_locked():
     )
     assert payload["dataset"]["selected_tracks"] == 349
     assert all(not system["failures"] for system in payload["systems"].values())
+
+
+def test_downbeats_are_scored_even_when_the_prediction_is_empty(tmp_path, monkeypatch):
+    """A system that predicts no downbeats scores zero, it does not opt out.
+
+    The metric call itself is the assertion: before, an empty downbeat
+    prediction skipped the call, so the track left the downbeat mean and a
+    system could look better by saying less. The annotation decides whether a
+    track is scored; the prediction only decides the score.
+    """
+    scored = _track(tmp_path, "Jive", "scored", "0 1\n0.5 2\n1 3\n")
+    no_annotation = _track(tmp_path, "Waltz", "unlabelled", "0.5 2\n1.0 3\n")
+    calls: list[tuple[list[float], list[float]]] = []
+
+    def recording_evaluate(reference, estimated):
+        calls.append((list(reference), list(estimated)))
+        return {
+            "f_measure": 0.0 if not estimated else 0.5,
+            "cemgil": 0.0, "cmlc": 0.0, "cmlt": 0.0, "amlc": 0.0, "amlt": 0.0,
+        }
+
+    monkeypatch.setattr("beatscope.public_benchmark.evaluate_events", recording_evaluate)
+    report = run_public_benchmark(
+        [scored, no_annotation],
+        {"silent-downbeats": lambda path: ([0.01, 0.51, 1.01], [])},
+    )
+
+    rows = {row["track_id"]: row for row in report["systems"]["silent-downbeats"]["tracks"]}
+    assert rows["scored"]["downbeat_f_measure"] == 0.0
+    assert rows["scored"]["reference_downbeats"] == 1
+    assert "downbeat_f_measure" not in rows["unlabelled"], "no annotation, nothing to score"
+    assert report["systems"]["silent-downbeats"]["counts"] == {
+        "selected": 2,
+        "evaluated": 2,
+        "failed": 0,
+        "downbeat_scored": 1,
+        "downbeat_unscorable": 1,
+    }
+    # The empty prediction reached the metric instead of being skipped.
+    assert any(not estimated for _, estimated in calls), "the downbeat call was skipped"
+
+
+def test_prediction_cache_is_scoped_to_the_configuration(tmp_path: Path) -> None:
+    """Predictions made under another setting are recomputed, not reused.
+
+    The cache key used to cover only the system id, which the caller picks - so
+    changing the model or its post-processing while keeping the name would have
+    silently scored the old predictions. That is how a comparison ends up
+    measuring a weakened baseline.
+    """
+    audio = tmp_path / "song.wav"
+    audio.write_bytes(b"audio")
+    calls: list[str] = []
+
+    def estimator(label: str):
+        def run(path: Path):
+            calls.append(label)
+            return [0.5, 1.0], [0.5]
+        return run
+
+    cache = tmp_path / "cache"
+    dbn_off = cached_estimator(estimator("off"), cache, "beat-this", config={"dbn": False})
+    dbn_on = cached_estimator(estimator("on"), cache, "beat-this", config={"dbn": True})
+
+    assert dbn_off(audio) == ([0.5, 1.0], [0.5])
+    assert dbn_off(audio) == ([0.5, 1.0], [0.5])
+    assert calls == ["off"], "the second call is served from the cache"
+
+    assert dbn_on(audio) == ([0.5, 1.0], [0.5])
+    assert calls == ["off", "on"], "another configuration is a different identity"
+
+    # A payload from before identities existed cannot satisfy any request.
+    for stale in (cache / "beat-this").glob("*.json"):
+        payload = json.loads(stale.read_text(encoding="utf-8"))
+        payload.pop("identity")
+        stale.write_text(json.dumps(payload), encoding="utf-8")
+    assert dbn_off(audio) == ([0.5, 1.0], [0.5])
+    assert calls == ["off", "on", "off"], "an identity-less payload is a miss"
