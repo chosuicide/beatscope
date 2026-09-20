@@ -40,7 +40,7 @@ def test_repository_versions_match_patch_release():
     assert set(read_versions(ROOT).values()) == {"0.12.2"}
 
 
-@pytest.mark.parametrize("tag", ["v0.12.0", "v0.12.2", "v1.0.0"])
+@pytest.mark.parametrize("tag", ["v0.12.0", "v0.12.1", "v1.0.0"])
 def test_rejects_mismatched_tag(tag):
     errors = validate_release_version(ROOT, tag)
     assert errors and all("does not match tag" in error for error in errors)
