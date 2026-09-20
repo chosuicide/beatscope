@@ -379,3 +379,34 @@ def test_invalid_rhythm_project_raises(fixed_120_audio, monkeypatch):
     monkeypatch.setattr(pipeline, "build_rhythm_project", bad_builder)
     with pytest.raises(InvalidRhythmProject):
         analyze_track(fixed_120_audio)
+
+
+def test_a_project_labels_the_meter_and_tempo_it_did_not_measure(tmp_path):
+    """The schema requires a meter and a tempo, so both are always present.
+
+    What it must not do is let an assumption read as a measurement. The meter is
+    always assumed - nothing in the analyzer measures it - and the tempo is a
+    prior when tracking failed, which the plan's section 4.D asks to be labelled
+    until the format can carry "unknown" at all.
+    """
+    import wave
+
+    import numpy as np
+
+    from beatscope.pipeline import analyze_track
+
+    silence = tmp_path / "silence.wav"
+    rate = 44100
+    with wave.open(str(silence), "wb") as handle:
+        handle.setnchannels(1)
+        handle.setsampwidth(2)
+        handle.setframerate(rate)
+        handle.writeframes(np.zeros(rate * 2, dtype="<i2").tobytes())
+
+    project = analyze_track(silence, {"backend": "lightweight"})
+    diagnostics = project["analysis"]["diagnostics"]
+
+    assert project["meter"] == {"numerator": 4, "denominator": 4}
+    assert diagnostics["meter_source"] == "assumed-4-4-not-measured"
+    assert diagnostics["tempo_source"] == "prior-fallback", "no beats, so no measured tempo"
+    assert len(project["beats"]) < 2

@@ -159,6 +159,17 @@ def build_rhythm_project(
     diagnostics = dict(evidence.diagnostics)
     tempo_score = evidence.tempo_score
 
+    # Two things the project states that the analyzer did not measure, labelled
+    # so they stay traceable. The schema requires a meter and a global tempo, so
+    # neither can be omitted; what it must not do is let an assumption read as a
+    # measurement. The accuracy plan asks for exactly this until the format can
+    # carry "unknown" (section 4.D), and the 4/4 below is why a waltz currently
+    # looks like a measurement of four beats per bar.
+    diagnostics["meter_source"] = "assumed-4-4-not-measured"
+    diagnostics["tempo_source"] = (
+        "measured" if len(evidence.beats) >= 2 and tempo_score is not None else "prior-fallback"
+    )
+
     # Backend tempo segments pass through when present; the single-segment
     # fallback exists only for backends without variable-tempo evidence. A
     # score exists only when a real algorithm produced it.
