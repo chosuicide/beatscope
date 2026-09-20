@@ -10,6 +10,7 @@ from .base import (
     noop_progress,
 )
 from .beat_this import BeatThisBackend
+from .beat_this_model import MODEL_NAME, BeatThisModelBackend, BeatThisModelUnavailable
 from .demucs import DemucsBackend
 from .lightweight import LightweightBackend
 
@@ -18,6 +19,9 @@ __all__ = [
     "AnalysisEvidence",
     "AnalyzerBackend",
     "BeatThisBackend",
+    "MODEL_NAME",
+    "BeatThisModelBackend",
+    "BeatThisModelUnavailable",
     "DemucsBackend",
     "LightweightBackend",
     "check_cancelled",

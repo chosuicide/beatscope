@@ -4,7 +4,9 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any
 
-BACKENDS = ("lightweight", "beat-this", "demucs")
+# "enhanced" is the experimental model-backed path from the accuracy plan: it is
+# selectable and never the default until it shows a gain on a held-out set.
+BACKENDS = ("lightweight", "beat-this", "demucs", "enhanced")
 SEPARATION_MODES = ("off", "auto", "on")
 
 

@@ -25,6 +25,7 @@ _TEXT: dict[str, dict[str, str]] = {
     "stage.beatgrid": {"en": "Tracking local tempo and beats…", "zh": "追踪局部速度与拍点..."},
     "stage.features": {"en": "Extracting multi-band transient energy…", "zh": "提取多频段瞬态能量..."},
     "stage.separate": {"en": "Running Demucs separation…", "zh": "运行 Demucs 分离..."},
+    "stage.model": {"en": "Running the beat model frame by frame…", "zh": "逐帧运行拍点模型..."},
     "stage.drum-decode": {"en": "Reading the drum stem…", "zh": "读取鼓组音轨..."},
     "stage.drum-beatgrid": {"en": "Parsing Beat This beats…", "zh": "解析 Beat This 拍点..."},
     "stage.structure-aggregate": {"en": "Aggregating bar features…", "zh": "聚合小节特征..."},

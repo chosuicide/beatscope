@@ -6,14 +6,17 @@ project through ``analyze_track`` so there is only one source of truth.
 from __future__ import annotations
 
 import datetime
+import os
 from pathlib import Path
 from typing import Any
 
 from .backends import (
+    MODEL_NAME,
     AnalysisCancelled,
     AnalysisEvidence,
     AnalyzerBackend,
     BeatThisBackend,
+    BeatThisModelBackend,
     DemucsBackend,
     LightweightBackend,
     check_cancelled,
@@ -46,6 +49,18 @@ def resolve_backend(
     if config.backend == "demucs":
         inner = BeatThisBackend(beat_file, drums_path) if beat_file is not None else LightweightBackend()
         return DemucsBackend(inner)
+    if config.backend == "enhanced":
+        # Experimental: the model's beats over the lightweight analysis. Its
+        # weights live outside the repo, and a missing package says so rather
+        # than falling back to another algorithm under the same name.
+        # The checkpoint and device are pinned by environment rather than by the
+        # analysis config: the config is part of the stored project format, and
+        # the plan keeps format changes for the phase that lifts the 4/4 limit.
+        return BeatThisModelBackend(
+            LightweightBackend(),
+            model=os.environ.get("BEATSCOPE_MODEL", MODEL_NAME),
+            device=os.environ.get("BEATSCOPE_MODEL_DEVICE", "cpu"),
+        )
     return LightweightBackend()
 
 
