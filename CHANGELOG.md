@@ -5,7 +5,45 @@ that version. This file records the same history in one place, newest first;
 `PACKAGE_VERSION` in `beatscope/exports.py` tracks the handoff package format,
 which is versioned separately from the product.
 
-## Unreleased
+## 0.12.2
+
+The accuracy work: a held-out measurement, a model-backed backend, and two
+experiments that came back negative and were left off.
+
+**Measured**
+
+- The model-backed path (`--backend enhanced`, or the studio's high-precision
+  button) takes beats from Beat This and keeps BeatScope's onsets, energy, tempo
+  and exports. It agrees with the official pipeline element by element, including
+  across the chunk boundaries used for long audio.
+- Held-out numbers, model level: 999 GTZAN tracks at 0.8909 Beat F1 and 0.7871
+  downbeat F1, against 0.9908 on Ballroom - which is training data, and that gap is
+  what "in-domain" means, measured rather than assumed.
+- The published 349-track Ballroom measurement reproduces element by element with
+  the fixed runner (max delta 0.0000000000).
+
+**Changed**
+
+- Benchmark cache identity covers the system, protocol and configuration, so a run
+  with DBN on cannot reuse one with it off; reports state their denominators; the
+  corpus is pinned by a manifest with a song-level split.
+- A project labels the meter and tempo it did not measure instead of presenting
+  4/4 and a prior as findings.
+- The runtime numbers beats past the stored grid in the project's meter rather than
+  in fours.
+
+**Not enabled**
+
+- Onset v2: 0.519 against the shipping extractor's 0.649 on the development split,
+  with every mechanism swept and none of them paying.
+- Local timing refinement: no room on Ballroom, where vanilla is already at
+  0.99 against a ceiling of 1.0.
+
+**Known limits**
+
+- Classical and piano material scores 0.66-0.63 across two corpora.
+- Tempo changes cost continuity even where the beat F1 survives.
+- The checkpoint's licence has not been reviewed for redistribution.
 
 The audit pass over the 0.12 line. Nothing here changes the timing facts or the
 package format.

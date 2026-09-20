@@ -1,7 +1,7 @@
 {
   "name": "beatscope-web",
   "private": true,
-  "version": "0.12.1",
+  "version": "0.12.2",
   "type": "module",
   "description": "Beathi music-video Studio frontend (v0.12). Build output is emitted to beatscope/web and is never hand-edited.",
   "scripts": {

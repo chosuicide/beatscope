@@ -3,7 +3,7 @@
 [English](README.md) | 简体中文
 
 [![CI](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml/badge.svg)](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.12.1-c65032)](https://github.com/chosuicide/beatscope/releases/tag/v0.12.1)
+[![Version](https://img.shields.io/badge/version-0.12.2-c65032)](https://github.com/chosuicide/beatscope/releases/tag/v0.12.2)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
 **上传一首歌，生成踩准节奏的影片；也可以把准确时序交给 Coding Agent。**
@@ -26,14 +26,14 @@ BeatScope 会测量拍点、真实瞬态、能量变化、速度变化和重复�
 
 ### Windows
 
-下载 **[Beathi Studio v0.12.1](https://github.com/chosuicide/beatscope/releases/download/v0.12.1/Beathi-Studio-v0.12.1-windows-x64.zip)**，解压后双击 **Beathi Studio.exe**。便携包已经带好分析器、浏览器和 FFmpeg。
+下载 **[Beathi Studio v0.12.2](https://github.com/chosuicide/beatscope/releases/download/v0.12.2/Beathi-Studio-v0.12.2-windows-x64.zip)**，解压后双击 **Beathi Studio.exe**。便携包已经带好分析器、浏览器和 FFmpeg。
 
 ### Python 3.10+
 
-从 [v0.12.1 Release](https://github.com/chosuicide/beatscope/releases/tag/v0.12.1) 下载 wheel，然后运行：
+从 [v0.12.2 Release](https://github.com/chosuicide/beatscope/releases/tag/v0.12.2) 下载 wheel，然后运行：
 
 ```powershell
-pip install beatscope-0.12.1-py3-none-any.whl
+pip install beatscope-0.12.2-py3-none-any.whl
 beatscope serve --open
 ```
 
