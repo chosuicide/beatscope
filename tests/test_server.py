@@ -312,3 +312,32 @@ def test_handlers_serve_from_the_context_not_a_global(tmp_path):
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
+
+
+def test_the_upload_route_accepts_a_backend_and_refuses_an_unknown_one():
+    """The web entry for high-precision mode, and what it does with a typo.
+
+    The studio has no toggle yet; this is the plumbing a toggle would use. An
+    unknown backend is refused at the door rather than quietly analysing with the
+    default under a name the caller did not ask for.
+    """
+    server, thread = running_server()
+    try:
+        conn = http.client.HTTPConnection(*server.server_address)
+        conn.request("POST", "/api/jobs/analyze?backend=beat-this-model", body=b"RIFF",
+                     headers={"Content-Length": "4", "X-Filename": "song.wav"})
+        response = conn.getresponse()
+        assert response.status == 400
+        assert b"unknown backend" in response.read()
+
+        # A known backend is accepted and the work is queued; whether it can run
+        # here depends on the optional extra, which is the job's business.
+        conn.request("POST", "/api/jobs/analyze?backend=lightweight", body=b"RIFF",
+                     headers={"Content-Length": "4", "X-Filename": "song.wav"})
+        response = conn.getresponse()
+        assert response.status == 200
+        assert "job_id" in json.loads(response.read().decode())
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)

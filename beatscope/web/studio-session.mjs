@@ -1,4 +1,22 @@
 /** The last successful film is independent of the job being tracked. */
+/** The model-backed analyzer, selectable per upload. */
+export const HIGH_PRECISION_BACKEND = 'enhanced';
+
+/**
+ * The analyze endpoint for one upload.
+ *
+ * Defaults are omitted rather than sent, so a request that asks for
+ * nothing looks like it always did and the server's own defaults stay the
+ * single place they are defined.
+ */
+export function analyzeUrl({ backend, subdivision } = {}) {
+  const query = new URLSearchParams();
+  if (backend) query.set('backend', backend);
+  if (subdivision) query.set('subdivision', String(subdivision));
+  const suffix = query.toString();
+  return suffix ? `/api/jobs/analyze?${suffix}` : '/api/jobs/analyze';
+}
+
 export function applyJobToSession(session, job) {
   const next = { ...session, job };
   if (job?.state === 'complete' && job.video_url) {

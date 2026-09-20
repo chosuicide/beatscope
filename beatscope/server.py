@@ -16,6 +16,7 @@ from .exports import generate_codex_export, generate_rhythm_csv, generate_rhythm
 from .jobs import JobManager
 from .media_http import describe_media
 from .midi import build_midi
+from .models import BACKENDS
 from .mv_jobs import MovieJobs, renderer_tools
 from .project import ProjectManager
 from .response_relevance import build_response_relevance, canonical_response_relevance_bytes
@@ -381,7 +382,13 @@ class Handler(BaseHTTPRequestHandler):
                 # Parse optional query parameters for config
                 query = parse_qs(route.query)
                 subdiv = int(query.get("subdivision", [16])[0])
-                config = {"subdivision": subdiv, "separation": "auto"}
+                # A web client may ask for the model-backed path; an unknown name
+                # is refused here rather than silently analysing as lightweight.
+                backend = query.get("backend", ["lightweight"])[0]
+                if backend not in BACKENDS:
+                    self._send(400, json.dumps({"error": f"unknown backend: {backend}"}).encode(), "application/json")
+                    return
+                config = {"subdivision": subdiv, "separation": "auto", "backend": backend}
 
                 job = self.ctx.job_manager.submit_analysis(temp_path, filename, config)
                 submitted = True

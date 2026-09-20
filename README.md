@@ -100,7 +100,7 @@ BeatScope also provides:
 - `beatscope validate-handoff <package.zip>` and `beatscope validate-consumer <package.zip>`,
   which check an exported package against the consumer contract before you build on it.
 
-Read more: [movie renderer](docs/local-movie.md) · [MCP](docs/mcp.md) · [WebMCP](docs/webmcp-studio.md) · [Agent Skill](skills/beatscope-visualizer/SKILL.md)
+Read more: [movie renderer](docs/local-movie.md) · [MCP](docs/mcp.md) · [WebMCP](docs/webmcp-studio.md) · [high-precision mode](docs/high-precision.md) · [Agent Skill](skills/beatscope-visualizer/SKILL.md)
 
 ## Honest limits
 

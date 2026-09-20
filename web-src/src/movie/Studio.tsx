@@ -14,7 +14,13 @@ import { MovieTransport } from './MovieTransport';
 import { CueMap } from './CueMap';
 import type { MovieRhythm } from './types';
 import { createMusicGrid } from '../../../beatscope/web/music-grid.mjs';
-import { applyJobToSession, lastFilmUrl, trackJob } from '../../../beatscope/web/studio-session.mjs';
+import {
+  HIGH_PRECISION_BACKEND,
+  analyzeUrl,
+  applyJobToSession,
+  lastFilmUrl,
+  trackJob,
+} from '../../../beatscope/web/studio-session.mjs';
 import type { AgentActivity, ExportResult, MovieActionResult, ResponseRelevanceSidecar, StudioDirectorPort, StudioDirectorSnapshot, StudioStage } from '../webmcp/types.js';
 import { installStudioWebMCP, type DirectorStatus } from '../webmcp/register.js';
 import { LANGS, setLang, t, useCopy, useLang } from './copy';
@@ -62,6 +68,7 @@ export default function MovieStudio() {
   const [stripHidden, setStripHidden] = useState(false);
   const [time, setTime] = useState(0), [playing, setPlaying] = useState(false);
   const [startBar, setStartBar] = useState(1), [follow, setFollow] = useState(true);
+  const [precision, setPrecision] = useState<'standard' | 'high'>('standard');
   const [elapsed, setElapsed] = useState(0);
   const input = useRef<HTMLInputElement>(null), video = useRef<HTMLVideoElement>(null), audio = useRef<HTMLAudioElement>(null);
   const preview = useRef<HTMLIFrameElement>(null);
@@ -337,7 +344,8 @@ export default function MovieStudio() {
     setJob(null); setStage('uploading'); setRelevance(null); auditionCleanup.current?.(); auditionRef.current = null; save({ name: file.name, seed });
     startedRef.current = null;
     try {
-      const next = await request('/api/jobs/analyze', {
+      const backend = precision === 'high' ? HIGH_PRECISION_BACKEND : undefined;
+      const next = await request(analyzeUrl({ backend }), {
         method: 'POST',
         body: file,
         headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': encodeURIComponent(file.name) },
@@ -571,6 +579,15 @@ export default function MovieStudio() {
                   <button className="btn-ink" disabled={busy} onClick={() => input.current?.click()}>
                     {copy.uploadSong}
                   </button>
+                  <button
+                    className="btn-ink"
+                    disabled={busy}
+                    aria-pressed={precision === 'high'}
+                    onClick={() => setPrecision((current) => (current === 'high' ? 'standard' : 'high'))}
+                  >
+                    {precision === 'high' ? copy.precisionHigh : copy.precisionStandard}
+                  </button>
+                  <span className="note">{copy.precisionHint}</span>
                   <span className="note">{copy.uploadHint}</span>
                 </div>
               </div>
