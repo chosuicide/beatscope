@@ -42,6 +42,8 @@ export function normalizeMap(rhythmMap, responseRelevance = null) {
     bpm: Number(tempo.global_bpm || tempo.bpm || map.bpm) || 120,
     origin: Number(grid.origin ?? map.origin ?? 0) || 0,
     defaultSubdivision: Number(grid.default_subdivision || grid.subdivision || map.subdivision) || 16,
+    // The bar length the project states, for numbering past the stored grid.
+    numerator: Number(map.meter?.numerator ?? grid.time_signature?.[0]) || 4,
     duration: Number(map.source?.duration ?? map.duration ?? 0) || 0,
     beats: Array.isArray(map.beats) ? map.beats : [],
     onsets: Array.isArray(map.onsets) ? map.onsets : [],
@@ -208,8 +210,9 @@ export function positionAt(map, indexes, time, options = {}) {
     const lastBeat = map.beats[map.beats.length - 1];
     const advanced = beatIndex - (map.beats.length - 1);
     const carried = (Number(lastBeat.beat_in_bar ?? lastBeat.beat) || 1) - 1 + advanced;
-    bar = (Number(lastBeat.bar) || 1) + Math.floor(carried / 4);
-    beat = (carried % 4) + 1;
+    const numerator = map.numerator;
+    bar = (Number(lastBeat.bar) || 1) + Math.floor(carried / numerator);
+    beat = (carried % numerator) + 1;
   }
 
   return {
@@ -477,8 +480,8 @@ export function quantize(map, indexes, rawTime, subdivision = map.defaultSubdivi
     const quantized = beatTimes[beatTimes.length - 1] + stepsAfter * stepLen;
 
     const curBeatIdx = ((lastBeat.beat_in_bar ?? lastBeat.beat) - 1) + Math.floor(stepsAfter / partsPerBeat);
-    const curBar = lastBeat.bar + Math.floor(curBeatIdx / 4);
-    const curBeat = (curBeatIdx % 4) + 1;
+    const curBar = lastBeat.bar + Math.floor(curBeatIdx / map.numerator);
+    const curBeat = (curBeatIdx % map.numerator) + 1;
     const curStepInBar = (curBeat - 1) * partsPerBeat + (stepsAfter % partsPerBeat) + 1;
     const absStep = (curBar - 1) * subdivision + curStepInBar - 1;
 

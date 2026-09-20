@@ -12,7 +12,9 @@ import {
   buildIndexes,
   createTrack,
   normalizeMap,
+  positionAt,
   previousIndex,
+  quantize,
   responseEventsBetween,
   trackForProject,
 } from '../beatscope/runtime/runtime.js';
@@ -499,4 +501,39 @@ console.log('Runtime OK: createTrack contract, immutability, quantize parity, pu
     selected: 2,
     events: project.onsets.slice(1, 3),
   });
+}
+
+// The runtime numbers stored beats from their own bar/beat_in_bar, but past the
+// stored grid it used to carry the last beat forward in hardcoded fours - so a
+// waltz's extrapolated tail came out 1,2,3,4,1,2,3. The meter is now read where
+// the rhythm is normalized, and both extrapolation sites use it.
+for (const numerator of [3, 4, 5]) {
+  const beats = Array.from({ length: 8 }, (_, index) => ({
+    time: index * 0.5,
+    bar: Math.floor(index / numerator) + 1,
+    beat_in_bar: (index % numerator) + 1,
+    downbeat: index % numerator === 0,
+  }));
+  const map = normalizeMap({
+    meter: { numerator, denominator: 4 },
+    tempo: { global_bpm: 120 },
+    grid: { origin: 0, default_subdivision: 16 },
+    beats,
+    source: { duration: 8 },
+  });
+  const indexes = buildIndexes(map);
+  const past = positionAt(map, indexes, 5.25);
+  const quantized = quantize(map, indexes, 5.25);
+
+  assert.equal(map.numerator, numerator);
+  assert.ok(past.beat >= 1 && past.beat <= numerator, `positionAt beat ${past.beat} outside 1..${numerator}`);
+  assert.ok(quantized.beat >= 1 && quantized.beat <= numerator, `quantize beat ${quantized.beat} outside 1..${numerator}`);
+}
+
+// The schema always carries a meter; an older map may not, and then four is the
+// documented fallback rather than an accident.
+{
+  const beats = Array.from({ length: 6 }, (_, index) => ({ time: index * 0.5, bar: Math.floor(index / 4) + 1, beat_in_bar: (index % 4) + 1, downbeat: index % 4 === 0 }));
+  const map = normalizeMap({ tempo: { global_bpm: 120 }, grid: { origin: 0 }, beats, source: { duration: 4 } });
+  assert.equal(map.numerator, 4);
 }
