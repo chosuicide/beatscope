@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
 import re
 import shutil
 import sys
@@ -175,7 +176,17 @@ def main(argv: list[str] | None = None) -> int:
     analyze = sub.add_parser("analyze", help="analyze an audio file into a rhythm project")
     analyze.add_argument("audio", type=Path)
     analyze.add_argument("-o", "--output", type=Path, help="output rhythm JSON (default: <audio>.rhythm.json)")
-    analyze.add_argument("--backend", choices=("lightweight", "beat-this", "demucs"), default="lightweight")
+    analyze.add_argument(
+        "--backend",
+        choices=("lightweight", "beat-this", "demucs", "enhanced"),
+        default="lightweight",
+        help="enhanced runs the Beat This model for beats; it needs the public-benchmark extra",
+    )
+    analyze.add_argument(
+        "--model-device",
+        default="cpu",
+        help="device for --backend enhanced (the backend reads it from the environment)",
+    )
     analyze.add_argument("--beats", type=Path, help="Beat This beat file (required for --backend beat-this)")
     analyze.add_argument("--drums", type=Path, help="drums stem to analyze instead of the full mix (beat-this)")
     analyze.add_argument("--subdivision", type=int, choices=(16, 32), default=16)
@@ -280,6 +291,9 @@ def main(argv: list[str] | None = None) -> int:
         return run_doctor()
 
     if args.command == "analyze":
+        # The backend pins its device through the environment rather than the
+        # analysis config, which is part of the stored project format.
+        os.environ["BEATSCOPE_MODEL_DEVICE"] = args.model_device
         config = AnalysisConfig(backend=args.backend, subdivision=args.subdivision)
         result = analyze_track(args.audio, config, beat_file=args.beats, drums_path=args.drums)
         output = args.output or args.audio.with_suffix(".rhythm.json")

@@ -257,10 +257,19 @@ class BeatThisModelBackend:
             "support_note": "sigmoid of the model's frame logits; not a calibrated probability",
             "downbeat_times": [round(float(value), 6) for value in downbeats],
         }
+        # The structure analysis is computed by the pipeline from the waveform,
+        # against the *lightweight* bar grid - so its bar indices do not describe
+        # this project's bars. On one ARTBeaT track that produced a project the
+        # schema rejects ("segments[0] must start at bar 1"), which is how a
+        # warning-only version of this failed. Withholding the waveform makes the
+        # pipeline skip that analysis and say so, which is the plan's rule for
+        # bar-dependent work whose grid is not the one it was computed against.
+        evidence.audio = None
+        evidence.diagnostics["structure_unavailable"] = "computed against the lightweight bar grid"
         evidence.warnings = [
             *evidence.warnings,
             "beats come from the enhanced model, not the lightweight tracker",
-            "structure was computed against the lightweight grid; bar indices may not match the model's bars",
+            "structure analysis is unavailable here: it is computed against the lightweight bar grid",
         ]
         return evidence
 
