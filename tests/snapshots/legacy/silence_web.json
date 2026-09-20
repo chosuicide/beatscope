@@ -34,6 +34,7 @@
       }
     },
     "diagnostics": {
+      "tempo_fallback": true,
       "tempo_method": "no-track-global-tempo-fallback",
       "beat_method": "no-track-global-tempo-fallback",
       "candidate_windows": 9,
@@ -63,7 +64,10 @@
         ]
       },
       "onset_count": 0,
-      "separated": false
+      "separated": false,
+      "meter_source": "assumed-4-4-not-measured",
+      "tempo_source": "prior-fallback",
+      "tempo_segments_source": "synthesized-from-global"
     }
   },
   "tempo": {

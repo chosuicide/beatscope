@@ -24,6 +24,7 @@ diagnostics for the phase 5 work that lifts that restriction.
 """
 from __future__ import annotations
 
+import bisect
 from pathlib import Path
 from typing import Any
 
@@ -98,25 +99,78 @@ def model_beats_and_downbeats(
     return np.asarray(beats, dtype=float), np.asarray(downbeats, dtype=float), support
 
 
-def _beat_rows(times: np.ndarray, downbeats: np.ndarray, numerator: int = 4) -> list[dict[str, Any]]:
-    """Product-shaped beat rows for the model's times.
+def _beat_rows(
+    times: np.ndarray,
+    downbeats: np.ndarray,
+    *,
+    max_numerator: int = 16,
+    tolerance: float = 1e-3,
+) -> tuple[list[dict[str, Any]], int, str]:
+    """Number the model's beats, publishing the model's own downbeats.
 
-    Numbering stays the product's 4-cycle for now; see the module docstring for
-    why the model's own downbeats are not used for bar/beat yet. They are kept in
-    the diagnostics instead of being dropped.
+    Returns ``(rows, numerator, downbeat_source)``. The schema allows a numerator
+    of 1..16, requires a downbeat exactly where beat_in_bar is 1, and says nothing
+    about where a track starts - so the numbering bends to the model rather than
+    the other way round:
+
+    - the numerator is the longest bar, which keeps every beat_in_bar in range
+      even when the model heard bars of different lengths;
+    - a track that begins mid-bar is numbered as the end of the bar before it, so
+      its first downbeat still lands on beat_in_bar 1;
+    - only a model with no downbeats at all, or a bar longer than the schema can
+      express, falls back to the product's 4-cycle - and then the source says so.
     """
-    rows: list[dict[str, Any]] = []
+    downbeat_set = set()
     for index, time in enumerate(times):
-        rows.append(
-            {
-                "time": round(float(time), 6),
-                "beat": index % numerator + 1,
-                "bar": index // numerator + 1,
-                "downbeat": index % numerator == 0,
-                "sequence_gap": False,
-            }
-        )
-    return rows
+        if any(abs(float(time) - float(value)) <= tolerance for value in downbeats):
+            downbeat_set.add(index)
+    boundaries = sorted(downbeat_set)
+
+    bar_lengths = [
+        later - earlier for earlier, later in zip(boundaries, boundaries[1:], strict=False)
+    ]
+    if boundaries and boundaries[-1] != len(times) - 1:
+        bar_lengths.append(len(times) - boundaries[-1] - 1)  # the final partial bar
+    if not boundaries:
+        bar_lengths = []
+    if boundaries and boundaries[0] > 0:
+        bar_lengths.append(boundaries[0])  # the leading partial bar, counted back
+
+    numerator = max(bar_lengths, default=0)
+    if boundaries and max_numerator >= numerator >= 1:
+        starts_on_downbeat = boundaries[0] == 0
+        rows = []
+        for index, time in enumerate(times):
+            before = bisect.bisect_right(boundaries, index) - 1
+            if before < 0:
+                # Ahead of the first downbeat: the tail of the preceding bar.
+                bar = 1
+                position = numerator - (boundaries[0] - index) + 1
+            else:
+                bar = before + 1 + (0 if starts_on_downbeat else 1)
+                position = index - boundaries[before] + 1
+            rows.append(
+                {
+                    "time": round(float(time), 6),
+                    "beat": position,
+                    "bar": bar,
+                    "downbeat": index in downbeat_set,
+                    "sequence_gap": False,
+                }
+            )
+        return rows, numerator, "measured-from-model-downbeats"
+
+    rows = [
+        {
+            "time": round(float(time), 6),
+            "beat": index % 4 + 1,
+            "bar": index // 4 + 1,
+            "downbeat": index % 4 == 0,
+            "sequence_gap": False,
+        }
+        for index, time in enumerate(times)
+    ]
+    return rows, 4, "assumed-4-4-not-measured"
 
 
 def _tempo_from_beats(times: np.ndarray) -> float:
@@ -164,8 +218,19 @@ class BeatThisModelBackend:
         # The product's own work, unchanged: onsets, energy, structure.
         evidence = self.inner.analyze(audio_path, config, progress, cancelled)
 
-        evidence.beats = _beat_rows(beats, downbeats)
+        rows, numerator, downbeat_source = _beat_rows(beats, downbeats)
+        evidence.beats = rows
         evidence.tempo_bpm = _tempo_from_beats(beats)
+        # Every beat-derived fact comes from the model, so the project cannot say
+        # one tempo globally and another in its segments, or cover three bars of
+        # beats while declaring five. Empty segments make the pipeline build one
+        # segment from this tempo; the origin is the first model beat; the bar
+        # count is the one the numbering produced.
+        evidence.tempo_segments = []
+        evidence.grid_origin = float(beats[0]) if len(beats) else 0.0
+        evidence.bars = max((row["bar"] for row in rows), default=0)
+        # No score exists for a tempo read off the beats, and a score is not what
+        # says whether something was measured - so the backend says it directly.
         evidence.tempo_score = None
         # The model is the only source of beat judgement here; saying so keeps the
         # two contributions separable, which is the whole point of the phase.
@@ -173,6 +238,12 @@ class BeatThisModelBackend:
             **evidence.provenance,
             "beats": {"method": f"beat-this-model:{self.model}"},
         }
+        # No beats means no measured tempo, whatever the reason; the lightweight
+        # path uses the same rule. A project that says "measured" with a global
+        # tempo of zero is a contradiction a consumer would have to guess about.
+        evidence.diagnostics["tempo_fallback"] = len(beats) < 2
+        evidence.diagnostics["meter_numerator"] = numerator
+        evidence.diagnostics["meter_source"] = downbeat_source
         evidence.diagnostics["model"] = {
             "checkpoint": self.model,
             "device": self.device,
@@ -184,9 +255,13 @@ class BeatThisModelBackend:
             "downbeats": int(len(downbeats)),
             "mean_beat_support": round(float(np.mean(support)), 6) if len(support) else None,
             "support_note": "sigmoid of the model's frame logits; not a calibrated probability",
-            "downbeat_times": [round(float(value), 6) for value in downbeats[:64]],
+            "downbeat_times": [round(float(value), 6) for value in downbeats],
         }
-        evidence.warnings = [*evidence.warnings, "beats come from the enhanced model, not the lightweight tracker"]
+        evidence.warnings = [
+            *evidence.warnings,
+            "beats come from the enhanced model, not the lightweight tracker",
+            "structure was computed against the lightweight grid; bar indices may not match the model's bars",
+        ]
         return evidence
 
 

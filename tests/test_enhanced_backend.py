@@ -80,6 +80,15 @@ def test_the_model_supplies_the_beats_and_the_product_keeps_the_rest(monkeypatch
     assert model_report["frame_rate"] == pytest.approx(50.0)
     assert model_report["beats"] == 5 and model_report["downbeats"] == 2
     assert "not a calibrated probability" in model_report["support_note"]
+    # Every model downbeat is kept, not a prefix of them.
+    assert model_report["downbeat_times"] == [0.5, 2.5]
+    # The beat-derived facts move together: one tempo, one origin, one bar count.
+    assert evidence.tempo_segments == [], "no stale segments from the inner engine"
+    assert evidence.grid_origin == 0.5
+    assert evidence.bars == 2, "five beats over two model downbeats"
+    assert evidence.tempo_bpm == 120.0, "from the model's own intervals"
+    assert evidence.diagnostics["meter_source"] == "measured-from-model-downbeats"
+    assert evidence.diagnostics["tempo_fallback"] is False, "a tempo read off the beats is measured"
 
 
 def test_a_missing_model_package_says_so_instead_of_switching_algorithms(monkeypatch, tmp_path):
@@ -95,12 +104,67 @@ def test_a_missing_model_package_says_so_instead_of_switching_algorithms(monkeyp
         backend.analyze(audio, AnalysisConfig.from_dict({}), noop_progress, never_cancelled)
 
 
-def test_beat_rows_keep_the_products_numbering_and_the_models_times():
-    rows = _beat_rows(np.array([0.5, 1.0, 1.5]), np.array([0.5]))
-    assert [row["time"] for row in rows] == [0.5, 1.0, 1.5]
-    assert [row["downbeat"] for row in rows] == [True, False, False]
-    assert [row["beat"] for row in rows] == [1, 2, 3]
-    assert [row["bar"] for row in rows] == [1, 1, 1]
+def test_the_models_downbeats_are_published_when_the_schema_can_hold_them():
+    """A waltz is three beats per bar, and the project must say so."""
+    times = np.arange(0.5, 12.0, 1.0)
+    downbeats = np.array([0.5, 3.5, 6.5, 9.5])  # every third beat
+    rows, numerator, source = _beat_rows(times, downbeats)
+
+    assert numerator == 3, "the bar length the model heard"
+    assert source == "measured-from-model-downbeats"
+    assert [row["time"] for row in rows if row["downbeat"]] == [0.5, 3.5, 6.5, 9.5]
+    assert [row["beat"] for row in rows[:4]] == [1, 2, 3, 1]
+    assert [row["bar"] for row in rows[:4]] == [1, 1, 1, 2]
+
+
+def test_a_bar_the_schema_can_hold_is_published_rather_than_replaced():
+    """Five beats per bar is expressible: the numerator allows 1..16.
+
+    The previous version fell back to a 4-cycle for anything outside 1..4, which
+    threw away downbeats the model had found correctly. Measured on six tracks,
+    that cost 0.45 of downbeat F1 while the beats stayed at 0.99.
+    """
+    times = np.arange(0.5, 12.0, 1.0)
+    downbeats = np.array([0.5, 5.5, 10.5])  # every fifth beat
+    rows, numerator, source = _beat_rows(times, downbeats)
+
+    assert numerator == 5 and source == "measured-from-model-downbeats"
+    assert [row["time"] for row in rows if row["downbeat"]] == [0.5, 5.5, 10.5]
+
+
+def test_a_weak_start_is_numbered_as_the_tail_of_the_bar_before_it():
+    """The schema does not require the first beat to be beat 1 of bar 1."""
+    times = np.arange(0.5, 12.0, 1.0)
+    downbeats = np.array([2.5, 6.5, 10.5])  # the first beat is not one
+    rows, numerator, source = _beat_rows(times, downbeats)
+
+    assert numerator == 4 and source == "measured-from-model-downbeats"
+    assert [row["time"] for row in rows if row["downbeat"]] == [2.5, 6.5, 10.5]
+    # The two beats ahead of the first downbeat end the bar that precedes it.
+    assert [row["beat"] for row in rows[:3]] == [3, 4, 1]
+    assert [row["bar"] for row in rows[:3]] == [1, 1, 2]
+    assert rows[0]["downbeat"] is False and rows[2]["downbeat"] is True
+
+
+def test_a_two_beat_pickup_into_a_waltz_keeps_every_downbeat():
+    times = np.arange(0.5, 12.0, 1.0)
+    downbeats = np.array([2.5, 5.5, 8.5, 11.5])  # two beats, then threes
+    rows, numerator, source = _beat_rows(times, downbeats)
+
+    assert numerator == 3 and source == "measured-from-model-downbeats"
+    assert [row["time"] for row in rows if row["downbeat"]] == [2.5, 5.5, 8.5, 11.5]
+
+
+def test_only_a_model_with_no_downbeats_falls_back():
+    times = np.arange(0.5, 12.0, 1.0)
+    rows, numerator, source = _beat_rows(times, np.array([]))
+    assert numerator == 4 and source == "assumed-4-4-not-measured"
+    assert [row["time"] for row in rows if row["downbeat"]] == [0.5, 4.5, 8.5]
+
+
+def test_the_model_measures_a_tempo_even_without_a_score():
+    """A missing score is not evidence of a missing measurement."""
+    assert _tempo_from_beats(np.array([0.0, 1.0, 2.0])) == 60.0
 
 
 def test_tempo_comes_from_the_models_own_beats():

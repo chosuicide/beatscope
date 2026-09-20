@@ -37,6 +37,7 @@
       }
     },
     "diagnostics": {
+      "tempo_fallback": false,
       "tempo_method": "local-autocorrelation-viterbi",
       "beat_method": "novelty-guided-dynamic-programming",
       "candidate_windows": 17,
@@ -66,7 +67,10 @@
         ]
       },
       "onset_count": 16,
-      "separated": false
+      "separated": false,
+      "meter_source": "assumed-4-4-not-measured",
+      "tempo_source": "measured",
+      "tempo_segments_source": "evidence"
     }
   },
   "tempo": {

@@ -99,7 +99,10 @@ class LightweightBackend:
         interval_cv = float(np.std(intervals) / mean_interval) if mean_interval > 0 else 0.0
 
         path_diagnostics = result.diagnostics
+        # The tracker falls back to its prior when it cannot measure a tempo;
+        # only this side knows which happened, so it says so.
         diagnostics: dict[str, Any] = {
+            "tempo_fallback": len(result.beat_times) < 2,
             "tempo_method": (
                 "local-autocorrelation-viterbi"
                 if beats else "no-track-global-tempo-fallback"

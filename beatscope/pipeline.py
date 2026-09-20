@@ -165,14 +165,20 @@ def build_rhythm_project(
     # measurement. The accuracy plan asks for exactly this until the format can
     # carry "unknown" (section 4.D), and the 4/4 below is why a waltz currently
     # looks like a measurement of four beats per bar.
-    diagnostics["meter_source"] = "assumed-4-4-not-measured"
-    diagnostics["tempo_source"] = (
-        "measured" if len(evidence.beats) >= 2 and tempo_score is not None else "prior-fallback"
+    # Both are reported by the backend that knows, rather than inferred here: a
+    # missing tempo *score* says nothing about whether a tempo was measured, and
+    # the enhanced backend reads its tempo off the model's beats with no score at
+    # all. Defaults describe the lightweight path, which measures neither.
+    diagnostics.setdefault("meter_source", "assumed-4-4-not-measured")
+    diagnostics.setdefault(
+        "tempo_source", "prior-fallback" if diagnostics.get("tempo_fallback") else "measured"
     )
 
     # Backend tempo segments pass through when present; the single-segment
     # fallback exists only for backends without variable-tempo evidence. A
     # score exists only when a real algorithm produced it.
+    diagnostics["tempo_segments_source"] = "evidence" if evidence.tempo_segments else "synthesized-from-global"
+    diagnostics["tempo_segments_source"] = "evidence" if evidence.tempo_segments else "synthesized-from-global"
     if evidence.tempo_segments:
         segments = canonicalize_evidence_segments(evidence.tempo_segments, duration)
     else:
@@ -278,7 +284,10 @@ def build_rhythm_project(
             "global_bpm": round(float(evidence.tempo_bpm), 3),
             "segments": segments,
         },
-        "meter": {"numerator": 4, "denominator": 4},
+        "meter": {
+            "numerator": int(diagnostics.get("meter_numerator", 4)),
+            "denominator": 4,
+        },
         "grid": {
             "origin": round(float(evidence.grid_origin), 4),
             "default_subdivision": config.subdivision,
