@@ -6,7 +6,7 @@ import { dirname, join, resolve } from "node:path";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const testsDirectory = join(root, "tests");
 const tests = readdirSync(testsDirectory)
-  .filter((name) => /^test_.*\.js$/.test(name))
+  .filter((name) => /^test_.*\.(?:m?js)$/.test(name))
   .sort()
   .map((name) => join(testsDirectory, name));
 if (tests.length === 0) {

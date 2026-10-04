@@ -5,6 +5,18 @@ that version. This file records the same history in one place, newest first;
 `PACKAGE_VERSION` in `beatscope/exports.py` tracks the handoff package format,
 which is versioned separately from the product.
 
+## 0.15.0
+
+- Ship two native movie templates: Voxel Interference and Prismatic Echo.
+- Add edited stages and cue markers with saved-plan exports, explicit preview refresh and undo/redo.
+- Integrate the accepted grey/blue/red footage treatment, contour echoes, kaleidoscopes and sparse moving negative windows.
+- Move material composition and mask/region analysis to WebGL2, reuse decoded images and GPU textures, and prefer hardware H.264 encoding with capability fallback.
+- Refine new/resumed Agent handoffs and optional asset/reference handling; keep package format 0.19.2 independent of the product version.
+- Remove the optional High precision model path, UI controls and model-specific dependencies/tools.
+- Bundle the verified template sources in the portable app and publish a separate material archive, current UI screenshots and a native video sample.
+
+See [release notes](.github/release-notes/v0.15.0.md) for downloads, measurements and known limits.
+
 ## 0.12.2
 
 The accuracy work: a held-out measurement, a model-backed backend, and two

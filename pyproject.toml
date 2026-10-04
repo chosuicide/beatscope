@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "beatscope"
-version = "0.12.2"
+version = "0.15.0"
 description = "Local music timing analysis, deterministic video preview, and portable Agent handoffs"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -24,7 +24,7 @@ dependencies = ["numpy>=1.24", "soundfile>=0.12", "librosa>=0.10"]
 dev = ["pytest>=7", "mcp>=2,<3", "anyio>=4", "ruff>=0.9", "mypy>=2", "setuptools>=68"]
 high-quality = ["demucs>=4.1"]
 mcp = ["mcp>=2,<3"]
-public-benchmark = ["mir_eval>=0.8,<1", "beat-this>=1.1,<2"]
+public-benchmark = ["mir_eval>=0.8,<1"]
 
 [project.scripts]
 beatscope = "beatscope.cli:main"
@@ -46,9 +46,13 @@ beatscope = [
   "web/music-grid.mjs", "web/studio-session.mjs",
   "web/mv-encode.mjs", "web/mv-frame.mjs", "web/mv-io.mjs",
   "web/mv-plan.mjs", "web/mv-worker.mjs",
+  "web/movie-factory.mjs", "web/movie-templates.mjs",
+  "web/material-frame.mjs", "web/material-gpu.mjs", "web/material-plan.mjs", "web/material-prepare.mjs",
+  "web/edit-plan.js",
+  "web/material-library.json", "web/material-setups.json",
   "web/app/*.html", "web/app/*.webp", "web/app/assets/*", "web/app/fonts/*",
   "runtime/*.js", "runtime/*.mjs",
-  "agent_skill/*.md", "agent_skill/references/*.md",
+  "agent_skill/*.md", "agent_skill/*.mjs", "agent_skill/references/*.md",
   "mcp/*.mjs", "mcp/data/*.json",
   "data/*.json",
 ]

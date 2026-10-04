@@ -36,7 +36,6 @@ def read_versions(root: Path) -> dict[str, str]:
     versions = {
         "pyproject.toml": matches[0],
         "beatscope/__init__.py": _python_constant(root / "beatscope/__init__.py", "__version__"),
-        "beatscope/exports.py": _python_constant(root / "beatscope/exports.py", "PACKAGE_VERSION"),
     }
     for name in ("package.json", "web-src/package.json"):
         versions[name] = json.loads((root / name).read_text(encoding="utf-8"))["version"]

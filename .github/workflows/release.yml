@@ -99,6 +99,18 @@ jobs:
           Copy-Item packaging/PORTABLE-README.txt "$app/README.txt"
           Copy-Item packaging/THIRD-PARTY-NOTICES.txt "$app/THIRD-PARTY-NOTICES.txt"
           Copy-Item LICENSE "$app/LICENSE"
+      - name: Bundle the verified Prismatic Echo material pack
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $archive = "Beathi-Materials-v$($env:GITHUB_REF_NAME -replace '^v', '').zip"
+          gh release download "$env:GITHUB_REF_NAME" --repo "$env:GITHUB_REPOSITORY" --pattern $archive --pattern "$archive.sha256" --dir material-download
+          $expected = ((Get-Content "material-download/$archive.sha256" -Raw).Trim() -split '\s+')[0]
+          $actual = (Get-FileHash "material-download/$archive" -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $expected) { throw "Material release archive checksum mismatch" }
+          Expand-Archive -LiteralPath "material-download/$archive" -DestinationPath "dist/Beathi Studio"
+          python scripts/verify-release-materials.py --root "dist/Beathi Studio/materials"
       - name: Smoke the installed application
         shell: pwsh
         run: |
