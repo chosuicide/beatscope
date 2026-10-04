@@ -10,7 +10,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  HIGH_PRECISION_BACKEND,
   analyzeUrl,
   applyJobToSession,
   lastFilmUrl,
@@ -110,15 +109,14 @@ test('persisted film survives refresh after a failed regeneration', () => {
   assert.equal(lastFilmUrl(applyJobToSession(failed, { id: 'j3', state: 'complete' })), '/v1');
 });
 
-// The analyze URL for one upload: defaults omitted, the model path named only
-// when it is asked for, so a standard request looks exactly as it always did.
+// The analyze URL for one upload omits defaults.
 {
   assert.equal(analyzeUrl(), '/api/jobs/analyze');
-  assert.equal(analyzeUrl({ backend: HIGH_PRECISION_BACKEND }), '/api/jobs/analyze?backend=enhanced');
+  assert.equal(analyzeUrl({ backend: 'lightweight' }), '/api/jobs/analyze?backend=lightweight');
   assert.equal(analyzeUrl({ subdivision: 32 }), '/api/jobs/analyze?subdivision=32');
   assert.equal(
-    analyzeUrl({ backend: HIGH_PRECISION_BACKEND, subdivision: 16 }),
-    '/api/jobs/analyze?backend=enhanced&subdivision=16',
+    analyzeUrl({ backend: 'lightweight', subdivision: 16 }),
+    '/api/jobs/analyze?backend=lightweight&subdivision=16',
   );
   assert.equal(analyzeUrl({ backend: undefined }), '/api/jobs/analyze', 'undefined is omitted, not sent');
 }

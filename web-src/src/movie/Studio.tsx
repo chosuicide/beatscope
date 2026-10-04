@@ -12,10 +12,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MovieTransport } from './MovieTransport';
 import { CueMap } from './CueMap';
+import {useEditPlan} from './useEditPlan';
+import type {EditPlan} from '../../../beatscope/runtime/edit-plan.js';
 import type { MovieRhythm } from './types';
 import { createMusicGrid } from '../../../beatscope/web/music-grid.mjs';
 import {
-  HIGH_PRECISION_BACKEND,
   analyzeUrl,
   applyJobToSession,
   lastFilmUrl,
@@ -24,13 +25,14 @@ import {
 import type { AgentActivity, ExportResult, MovieActionResult, ResponseRelevanceSidecar, StudioDirectorPort, StudioDirectorSnapshot, StudioStage } from '../webmcp/types.js';
 import { installStudioWebMCP, type DirectorStatus } from '../webmcp/register.js';
 import { LANGS, setLang, t, useCopy, useLang } from './copy';
+import { agentHandoffPrompt } from './agent-handoff';
+import {MOVIE_TEMPLATES} from '../../../beatscope/web/movie-templates.mjs';
 import './studio.css';
 
-type Job = { id: string; state: string; progress: number; message: string; project_id?: string; video_url?: string; error?: string; seed?: number };
-type Session = { name: string; projectId?: string; analysisId?: string; movieId?: string; seed?: number; videoUrl?: string; videoJobId?: string; job?: Job | null };
+type Job = { id: string; state: string; progress: number; message: string; project_id?: string; video_url?: string; error?: string; seed?: number; edit_plan_digest?:string; template?:string; template_digest?:string; template_version?:string };
+type Session = { name: string; projectId?: string; analysisId?: string; movieId?: string; seed?: number; videoUrl?: string; videoJobId?: string; videoPlanDigest?:string; job?: Job | null; template?:string; videoTemplate?:string; videoTemplateVersion?:string };
 const key = 'beathi.movie.session.1';
 const mmss = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
-const TEMPLATE = { name: 'VOXEL INTERFERENCE', version: 'voxel-phrase-2' };
 
 async function request(url: string, init?: RequestInit) {
   const response = await fetch(url, init);
@@ -46,9 +48,19 @@ export default function MovieStudio() {
   const copy = useCopy();
   const lang = useLang();
   const [session, setSession] = useState<Session>({ name: '' });
+  const TEMPLATE=MOVIE_TEMPLATES.find(t=>t.id===session.template)??MOVIE_TEMPLATES[0];
   const [stage, setStage] = useState('idle'), [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState(''), [capability, setCapability] = useState<{ available: boolean; message: string } | null>(null);
   const [rhythm, setRhythm] = useState<MovieRhythm | null>(null);
+  const editor=useEditPlan(session.projectId,rhythm);
+  const [previewPlan,setPreviewPlan]=useState<{projectId:string;rhythm:MovieRhythm;value:EditPlan;digest:string}|null>(null);
+  const [previewUpdating,setPreviewUpdating]=useState(false);
+  const renderSnapshot=useRef<typeof previewPlan>(null);
+  useEffect(()=>{
+    if(editor.plan&&session.projectId&&rhythm)setPreviewPlan(prior=>prior&&prior.projectId===session.projectId&&prior.rhythm===rhythm?prior:{projectId:session.projectId!,rhythm,value:editor.plan!,digest:editor.digest});
+  },[editor.plan,editor.digest,session.projectId,rhythm]);
+  const shownPlan=previewPlan&&previewPlan.projectId===session.projectId&&previewPlan.rhythm===rhythm?previewPlan:null;
+  const previewPending=!!shownPlan&&editor.ready&&shownPlan.digest!==editor.digest;
   /* The v0.11 ordering sidecar, loaded best-effort beside the rhythm. The
      WebMCP port reads it through this ref; a missing or invalid sidecar stays
      an honest null and never blocks preview or playback. */
@@ -66,16 +78,18 @@ export default function MovieStudio() {
   /* WebMCP presence: 'unsupported' renders nothing at all. */
   const [agent, setAgent] = useState<{ status: DirectorStatus; count: number; detail?: string }>({ status: 'unsupported', count: 0 });
   const [stripHidden, setStripHidden] = useState(false);
+  const [handoffCopied, setHandoffCopied] = useState(false);
+  const [handoffFallback, setHandoffFallback] = useState(false);
   const [time, setTime] = useState(0), [playing, setPlaying] = useState(false);
   const [startBar, setStartBar] = useState(1), [follow, setFollow] = useState(true);
-  const [precision, setPrecision] = useState<'standard' | 'high'>('standard');
+  const [mapViewBars,setMapViewBars]=useState(8);
   const [elapsed, setElapsed] = useState(0);
   const input = useRef<HTMLInputElement>(null), video = useRef<HTMLVideoElement>(null), audio = useRef<HTMLAudioElement>(null);
   const preview = useRef<HTMLIFrameElement>(null);
   const generation = useRef(0), sessionRef = useRef<Session>({ name: '' });
   const startedRef = useRef<number | null>(null);
   const busy = ['uploading', 'analyzing', 'rendering'].includes(stage);
-  const canRender = Boolean(rhythm && session.projectId && capability?.available) && !busy;
+  const canRender = Boolean(rhythm && session.projectId && capability?.available) && !busy && editor.ready && !editor.saving;
   const grid = useMemo(() => createMusicGrid(rhythm), [rhythm]);
   const duration = Number(rhythm?.source?.duration ?? 0);
   /* The film slot comes from the session kernel: it survives regeneration
@@ -83,7 +97,12 @@ export default function MovieStudio() {
      While a job runs the stage shows the live preview again; the finished
      film stays in the rail and returns to the stage once tracking ends. */
   const filmUrl = lastFilmUrl(session);
-  const hasFilm = filmUrl != null && !busy;
+  const automaticBoundaries=JSON.stringify((rhythm?.patterns?.segments??[]).map(s=>s.start_time).filter(t=>t>0&&t<duration).sort((a,b)=>a-b));
+  const legacyPlanUnchanged=editor.plan?.cues.length===0&&JSON.stringify(editor.plan.boundaries.map(b=>b.time))===automaticBoundaries;
+  const filmCurrent=editor.ready&&(session.videoPlanDigest?session.videoPlanDigest===editor.digest:legacyPlanUnchanged)&&(session.videoTemplate??'voxel')===TEMPLATE.id&&(TEMPLATE.id==='voxel'||session.videoTemplateVersion===TEMPLATE.version);
+  const shownAutomatic=shownPlan?.value.cues.length===0&&JSON.stringify(shownPlan.value.boundaries.map(b=>b.time))===automaticBoundaries;
+  const shownFilmCurrent=!!shownPlan&&(session.videoPlanDigest?session.videoPlanDigest===shownPlan.digest:shownAutomatic)&&(session.videoTemplate??'voxel')===TEMPLATE.id&&(TEMPLATE.id==='voxel'||session.videoTemplateVersion===TEMPLATE.version);
+  const hasFilm = filmUrl != null && !busy && shownFilmCurrent;
   const segments = rhythm?.patterns?.segments ?? [];
   const bpm = Number(rhythm?.tempo?.global_bpm ?? 0);
   const save = (next: Session) => { sessionRef.current = next; setSession(next); remember(next); };
@@ -91,6 +110,13 @@ export default function MovieStudio() {
 
   const sendPreview = (payload: Record<string, unknown>) => {
     preview.current?.contentWindow?.postMessage(payload, window.location.origin);
+  };
+  useEffect(()=>{if(shownPlan)sendPreview({type:'edit-plan',value:shownPlan.value});},[shownPlan,hasFilm]);
+  useEffect(()=>{sendPreview({type:'lang',value:lang});},[lang,hasFilm]);
+  const updatePreview=()=>{
+    if(!editor.plan||!session.projectId||!rhythm||editor.saving||busy)return;
+    audio.current?.pause();video.current?.pause();setPlaying(false);setPreviewUpdating(true);
+    setPreviewPlan({projectId:session.projectId,rhythm,value:editor.plan,digest:editor.digest});
   };
   // The render poll repeats the same seed; the preview rebuilds on every seed
   // message, so only a real change is forwarded.
@@ -178,14 +204,14 @@ export default function MovieStudio() {
       sendPreview({ type: 't', value: now });
       if (follow && duration > 0) {
         const bar = grid.barAtTime(now) ?? 1;
-        setStartBar(Math.max(1, Math.floor((bar - 1) / 8) * 8 + 1));
+        setStartBar(Math.max(1, Math.floor((bar - 1) / mapViewBars) * mapViewBars + 1));
       }
     };
     const tick = () => { lastRaf = performance.now(); push(); raf = requestAnimationFrame(tick); };
     raf = requestAnimationFrame(tick);
     const fallback = window.setInterval(() => { if (performance.now() - lastRaf > 250) push(); }, 200);
     return () => { cancelAnimationFrame(raf); window.clearInterval(fallback); };
-  }, [follow, duration, grid, hasFilm]);
+  }, [follow, duration, grid, hasFilm, mapViewBars]);
 
   // Re-sync after async preview initialization (including a paused seek), and
   // surface preview build errors in the main error banner instead of losing
@@ -193,8 +219,8 @@ export default function MovieStudio() {
   useEffect(() => {
     const receive = (event: MessageEvent) => {
       if (event.origin !== location.origin || event.source !== preview.current?.contentWindow) return;
-      if (event.data?.type === 'ready') sendPreview({ type: 't', value: player()?.currentTime ?? 0 });
-      if (event.data?.type === 'error') setError(copy.previewFailed);
+      if (event.data?.type === 'ready') {setPreviewUpdating(false);sendPreview({ type: 't', value: player()?.currentTime ?? 0 });}
+      if (event.data?.type === 'error') {setPreviewUpdating(false);setError(copy.previewFailed);}
     };
     window.addEventListener('message', receive);
     return () => window.removeEventListener('message', receive);
@@ -212,7 +238,7 @@ export default function MovieStudio() {
   /* space toggles playback, like every media tool */
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.code !== 'Space') return;
+      if (event.code !== 'Space' || event.defaultPrevented) return;
       const target = event.target as HTMLElement | null;
       if (target && /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(target.tagName)) return;
       event.preventDefault();
@@ -240,13 +266,14 @@ export default function MovieStudio() {
       isCurrent: () => token === generation.current,
       accept: async (next: Job) => {
         setJob(next);
-        save(applyJobToSession(sessionRef.current, next));
+        save({...applyJobToSession(sessionRef.current, next),...(next.state==='complete'?{videoPlanDigest:next.edit_plan_digest,videoTemplate:next.template??'voxel',videoTemplateVersion:next.template_version}:{})});
         sendSeed(next.seed);
         if (next.state === 'complete') {
+          if(renderSnapshot.current?.digest===next.edit_plan_digest)setPreviewPlan(renderSnapshot.current);
           // hand the clock over to the film: one player at a time
           audio.current?.pause();
           setTime(0); setPlaying(false);
-          setStage('complete');
+          setStage('complete'); setError('');
           return true;
         }
         if (next.state === 'cancelled') { save({ ...sessionRef.current, movieId: undefined }); setStage('preview'); return true; }
@@ -256,7 +283,8 @@ export default function MovieStudio() {
     });
   }
   async function submitMovie(id: string, token: number, seed?: number): Promise<Job> {
-    const next: Job = await request('/api/movies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_id: id, seed: seed ?? sessionRef.current.seed ?? 1 }) });
+    renderSnapshot.current=editor.plan&&rhythm?{projectId:id,rhythm,value:editor.plan,digest:editor.digest}:null;
+    const next: Job = await request('/api/movies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_id: id, seed: seed ?? sessionRef.current.seed ?? 1, template:sessionRef.current.template??'voxel' }) });
     if (token !== generation.current) return next;
     sendSeed(next.seed);
     save({ ...sessionRef.current, projectId: id, analysisId: undefined, movieId: next.id, seed: next.seed });
@@ -272,10 +300,11 @@ export default function MovieStudio() {
   /* The Agent path returns as soon as the job exists; progress is read back
      through the state tool while the poll keeps running. */
   async function startRenderForAgent(seed?: number): Promise<MovieActionResult> {
+    if(!editor.ready||editor.saving) throw Error(lang==='zh'?'请等待编辑方案保存完成。':'Wait until the edit plan is saved.');
     const id = sessionRef.current.projectId;
     if (!id) throw new Error('no project');
     const token = ++generation.current;
-    setStage('rendering'); setJob(null);
+    setStage('rendering'); setJob(null); setError('');
     startedRef.current = Date.now();
     let next: Job;
     try { next = await submitMovie(id, token, seed); }
@@ -318,7 +347,14 @@ export default function MovieStudio() {
     void request('/api/movies/capabilities').then(setCapability).catch((e) => setCapability({ available: false, message: String(e) }));
     let saved: Session | null = null;
     try { saved = JSON.parse(localStorage.getItem(key) || 'null'); } catch { /* no saved session */ }
+    const link=new URLSearchParams(location.search),linkedProject=link.get('project'),linkedTemplate=link.get('template');
+    if(linkedProject&&/^[0-9a-f]{12}$/.test(linkedProject)){
+      saved={...(saved?.projectId===linkedProject?saved:{name:link.get('name')||linkedProject}),projectId:linkedProject};
+      if(MOVIE_TEMPLATES.some(t=>t.id===linkedTemplate))saved.template=linkedTemplate!;
+      const linkedSeed=Number(link.get('seed'));if(link.has('seed')&&Number.isInteger(linkedSeed)&&linkedSeed>=0&&linkedSeed<2**24)saved.seed=linkedSeed;
+    }
     if (saved && typeof saved.name === 'string') {
+      if(saved.template?.startsWith('material-')&&saved.template!=='material-mix')saved.template='material-mix';
       save(saved);
       void (async () => {
         if (saved!.projectId) {
@@ -341,17 +377,16 @@ export default function MovieStudio() {
     audio.current?.pause(); video.current?.pause();
     setError(''); setRhythm(null); setTime(0); setPlaying(false); setStartBar(1); setFollow(true);
     const seed = crypto.getRandomValues(new Uint32Array(1))[0] & 0xffffff;
-    setJob(null); setStage('uploading'); setRelevance(null); auditionCleanup.current?.(); auditionRef.current = null; save({ name: file.name, seed });
+    setJob(null); setStage('uploading'); setRelevance(null); auditionCleanup.current?.(); auditionRef.current = null; save({ name: file.name, seed,template:sessionRef.current.template });
     startedRef.current = null;
     try {
-      const backend = precision === 'high' ? HIGH_PRECISION_BACKEND : undefined;
-      const next = await request(analyzeUrl({ backend }), {
+      const next = await request(analyzeUrl(), {
         method: 'POST',
         body: file,
         headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': encodeURIComponent(file.name) },
       });
       if (token !== generation.current) return;
-      save({ name: file.name, analysisId: next.job_id, seed });
+      save({ name: file.name, analysisId: next.job_id, seed,template:sessionRef.current.template });
       await analysisLoop(next.job_id, token);
     } catch (e) { if (token === generation.current) { setError(String(e)); setStage('failed'); } }
   }
@@ -369,7 +404,7 @@ export default function MovieStudio() {
   }
 
   const percent = Math.round((job?.progress ?? 0) * 100);
-  const previewReady = Boolean(rhythm && session.projectId);
+  const previewReady = Boolean(rhythm && session.projectId && shownPlan);
   const status = stage === 'uploading' ? copy.status.uploading
     : stage === 'analyzing' ? copy.status.analyzing
     : stage === 'rendering' ? copy.status.rendering
@@ -382,14 +417,26 @@ export default function MovieStudio() {
     ? Math.max(0, elapsed / job.progress - elapsed)
     : null;
   const exportBase = session.projectId ? `/api/projects/${encodeURIComponent(session.projectId)}/export` : null;
-  const timingPackageUrl = exportBase ? `${exportBase}/codex.zip` : null;
+  const timingPackageUrl = exportBase && editor.ready && !editor.saving ? `${exportBase}/codex.zip` : null;
   const timingPackageName = session.projectId ? `${session.projectId}.beatscope-codex.zip` : 'timing-package.zip';
+  async function copyAgentInstructions() {
+    if (!session.projectId) return;
+    try {
+      await navigator.clipboard.writeText(agentHandoffPrompt(lang));
+      setHandoffCopied(true);
+      setHandoffFallback(false);
+    } catch {
+      setHandoffCopied(false);
+      setHandoffFallback(true);
+    }
+  }
   /* Same URL as the visible Data export button: the button keeps its native
      anchor (the most reliable path), the tool path clicks the same href and
      falls back to the button when a programmatic download is refused. */
   async function downloadTimingPackage(): Promise<ExportResult> {
     if (!timingPackageUrl) throw new Error('no project');
     if (!('download' in HTMLAnchorElement.prototype)) {
+      dataExport.current?.closest('details')?.setAttribute('open','');
       dataExport.current?.focus();
       return { filename: timingPackageName, started: false, requires_user_action: true };
     }
@@ -413,6 +460,8 @@ export default function MovieStudio() {
         name: sessionRef.current.name,
         rhythm,
         responseRelevance: relevanceRef.current,
+        editPlan:editor.plan,
+        movieTemplate:TEMPLATE,
         seed: sessionRef.current.seed ?? null,
         movieJob: job ? { id: job.id, state: job.state, progress: Number(job.progress ?? 0), video_ready: Boolean(job.video_url) } : null,
         movieFailureText: job?.error || job?.message || null,
@@ -508,7 +557,7 @@ export default function MovieStudio() {
 
       <div className="mv-body">
         <aside className="mv-rail" aria-label={copy.structure}>
-          <div className="rail-cap">{copy.structure}{segments.length ? ` · ${copy.sections(segments.length)}` : ''}</div>
+          <div className="rail-cap">{copy.structure}{segments.length ? ` · ${lang==='zh'?copy.sections(segments.length):segments.length}` : ''}</div>
           <ol className="seg-list">
             {segments.map((segment, index) => {
               const active = time >= segment.start_time && time < segment.end_time;
@@ -544,9 +593,9 @@ export default function MovieStudio() {
 
         <main className="mv-stage">
           <div className="stage-head">
-            <span className="stage-name">{TEMPLATE.name}</span>
+            <span className="stage-name">{lang==='zh'?TEMPLATE.nameZh:TEMPLATE.name}</span>
             <span className="stage-sep" />
-            <span className="stage-meta">1080 × 1080 · 30 FPS</span>
+            <span className="stage-meta">{hasFilm?'1080 × 1080':'540 × 540'} · 30 FPS</span>
             {session.seed != null && <><span className="stage-sep" /><span className="stage-meta">seed {session.seed}</span></>}
             <span className="tb-sp" />
             <span className="stage-meta">{hasFilm ? copy.filmReady : previewReady ? copy.transport.preview : ''}</span>
@@ -568,9 +617,9 @@ export default function MovieStudio() {
                 ref={preview}
                 className="mv-preview"
                 title={copy.livePreviewTitle}
-                key={`${session.projectId}-${lang}`}
-                src={`/movie-preview.html?project=${encodeURIComponent(session.projectId!)}&seed=${session.seed ?? 1}&lang=${lang}`}
-                onLoad={() => { sendPreview({ type: 't', value: time }); sendSeed(session.seed); }}
+                key={`${session.projectId}-${TEMPLATE.id}`}
+                src={`/movie-preview.html?project=${encodeURIComponent(session.projectId!)}&seed=${session.seed ?? 1}&template=${TEMPLATE.id}`}
+                onLoad={() => { sendPreview({type:'lang',value:lang});sendPreview({ type: 't', value: time }); sendSeed(session.seed); if(shownPlan)sendPreview({type:'edit-plan',value:shownPlan.value}); }}
               />
             ) : (
               <div className="mv-placeholder">
@@ -579,15 +628,6 @@ export default function MovieStudio() {
                   <button className="btn-ink" disabled={busy} onClick={() => input.current?.click()}>
                     {copy.uploadSong}
                   </button>
-                  <button
-                    className="btn-ink"
-                    disabled={busy}
-                    aria-pressed={precision === 'high'}
-                    onClick={() => setPrecision((current) => (current === 'high' ? 'standard' : 'high'))}
-                  >
-                    {precision === 'high' ? copy.precisionHigh : copy.precisionStandard}
-                  </button>
-                  <span className="note">{copy.precisionHint}</span>
                   <span className="note">{copy.uploadHint}</span>
                 </div>
               </div>
@@ -604,6 +644,10 @@ export default function MovieStudio() {
               <button type="button" aria-label={copy.agent.dismiss} onClick={() => setStripHidden(true)}>×</button>
             </div>
           )}
+          {previewReady&&<div className={`preview-edit-state${previewPending?' pending':''}`} data-testid="preview-edit-state">
+            <span role="status">{previewUpdating?(lang==='zh'?'正在更新预览…':'Updating preview…'):previewPending?(lang==='zh'?'编辑已保存，预览待更新':'Edits saved · preview needs updating'):(lang==='zh'?'预览已同步':'Preview is up to date')}</span>
+            <button type="button" className="btn-line" onClick={updatePreview} disabled={!previewPending||editor.saving||previewUpdating||busy}>{lang==='zh'?'更新预览':'Update preview'}</button>
+          </div>}
           <MovieTransport
             time={time}
             duration={duration}
@@ -617,6 +661,17 @@ export default function MovieStudio() {
         </main>
 
         <aside className="mv-rail" aria-label={copy.filmExport}>
+          <section className="card template-card">
+            <div className="rail-cap">{copy.template}</div>
+            <select className="template-select" aria-label={copy.template} value={TEMPLATE.id} disabled={busy} onChange={event=>{audio.current?.pause();video.current?.pause();setPlaying(false);if(editor.plan&&rhythm&&session.projectId)setPreviewPlan({projectId:session.projectId,rhythm,value:editor.plan,digest:editor.digest});save({...sessionRef.current,template:event.target.value});}}>
+              {MOVIE_TEMPLATES.map(template=><option key={template.id} value={template.id}>{lang==='zh'?template.nameZh:template.name}</option>)}
+            </select>
+            <details className="template-details">
+              <summary>{lang==='zh'?'模板说明':'Template details'}</summary>
+              {TEMPLATE.id!=='voxel'&&<p className="material-note">{lang==='zh'?'裁切、镜像、万花筒、同色拖影与负片，按色组编排。':'Crops, mirrors, kaleidoscopes, tonal trails and negatives, arranged by color.'}</p>}
+              <div className="kv"><span>{copy.kv.version}</span><b>{TEMPLATE.version}</b></div>
+            </details>
+          </section>
           <section className="card">
             <div className="rail-cap">{copy.video}</div>
             <div className="kv"><span>{copy.kv.status}</span><b className={`tone-${statusTone || 'idle'}`}>{status}</b></div>
@@ -635,19 +690,38 @@ export default function MovieStudio() {
             {stage === 'failed' && !canRender && !session.projectId && (
               <button className="btn-line wide" onClick={() => void retry()}>{copy.retry}</button>
             )}
+            <a
+              className={`btn-line wide${filmUrl ? '' : ' off'}`}
+              href={filmUrl ? `${filmUrl}?download=1` : undefined}
+              download
+              aria-disabled={!filmUrl}
+            >
+              {filmUrl ? (!filmCurrent ? (lang==='zh'?'下载上次视频 · 方案已修改':'Previous video · plan changed') : (lang==='zh'?'下载视频 · MP4':'Download video · MP4')) : copy.filmMissing}
+            </a>
           </section>
 
-          <section className="card">
-            <div className="rail-cap">{copy.dataExport}</div>
+          <details className="card export-tools">
+            <summary className="rail-cap">{copy.moreExport}</summary>
+            <div className="export-tools-body">
             <a
-              className={`btn-line wide${exportBase ? '' : ' off'}`}
+              className={`btn-line wide${timingPackageUrl ? '' : ' off'}`}
               ref={dataExport}
               href={timingPackageUrl ?? undefined}
               download
-              aria-disabled={!exportBase}
+              aria-disabled={!timingPackageUrl}
             >
               {copy.dataPackage}
             </a>
+            <button className="btn-line wide" type="button" disabled={!exportBase} onClick={() => void copyAgentInstructions()}>
+              {copy.copyAgentInstructions}
+            </button>
+            {handoffCopied && <p className="handoff-note" role="status">{copy.agentInstructionsCopied}</p>}
+            {handoffFallback && (
+              <div className="handoff-fallback" role="status">
+                <p>{copy.agentInstructionsFallback}</p>
+                <textarea aria-label={copy.copyAgentInstructions} readOnly value={agentHandoffPrompt(lang)} onFocus={(event) => event.currentTarget.select()} />
+              </div>
+            )}
             <div className="row2">
               <a className={`btn-line${exportBase ? '' : ' off'}`} href={exportBase ? `${exportBase}/rhythm.mid` : undefined} download aria-disabled={!exportBase}>
                 {copy.rhythmMidi}
@@ -656,31 +730,22 @@ export default function MovieStudio() {
                 {copy.rhythmCsv}
               </a>
             </div>
-            <div className="rail-cap" style={{ marginTop: 6 }}>{copy.filmExport}</div>
-            <a
-              className={`btn-line wide${filmUrl ? '' : ' off'}`}
-              href={filmUrl ? `${filmUrl}?download=1` : undefined}
-              download
-              aria-disabled={!filmUrl}
-            >
-              {filmUrl ? copy.filmReady : copy.filmMissing}
-            </a>
-          </section>
-
-          <section className="card">
-            <div className="rail-cap">{copy.template}</div>
-            <div className="kv"><span>{copy.kv.name}</span><b>{TEMPLATE.name}</b></div>
-            <div className="kv"><span>{copy.kv.version}</span><b>{TEMPLATE.version}</b></div>
-          </section>
+            </div>
+          </details>
         </aside>
       </div>
 
       {previewReady && rhythm && (
         <CueMap
+          key={session.projectId}
+          editor={editor}
+          editingDisabled={busy}
           rhythm={rhythm}
           time={time}
           seek={seek}
           startBar={startBar}
+          viewBars={mapViewBars}
+          onViewBars={setMapViewBars}
           onStartBar={(bar) => { setFollow(false); setStartBar(bar); }}
           onFollowChange={(next) => setFollow(next)}
         />

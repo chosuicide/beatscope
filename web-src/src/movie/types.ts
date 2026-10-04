@@ -4,7 +4,7 @@
  * are named here; everything else passes through untouched.
  */
 export interface MovieRhythm {
-  source: { duration: number };
+  source: { duration: number; sha256?:string };
   tempo?: { global_bpm?: number };
   beats?: { time: number; bar: number; beat?: number; beat_in_bar?: number; downbeat?: boolean }[];
   onsets?: { id?: string | number; time: number; strength: number; bands?: Record<string, number>; accent?: boolean }[];

@@ -422,8 +422,8 @@ export function studioState(snapshot: StudioDirectorSnapshot): ToolResult {
       clock,
     },
     movie: {
-      template: 'VOXEL INTERFERENCE',
-      plan_version: 'voxel-phrase-2',
+      template: snapshot.movieTemplate?.name??'VOXEL INTERFERENCE',
+      plan_version: snapshot.movieTemplate?.version??'voxel-phrase-2',
       seed: snapshot.seed,
       renderer_available: snapshot.rendererAvailable,
       job: snapshot.movieJob && snapshot.movieJob.state === 'failed'

@@ -6,28 +6,34 @@
  *
  * Like the original it splits every view into a static canvas and an overlay
  * canvas, so following the playhead only repaints a few lines instead of the
- * whole instrument. Read-only: a click seeks, nothing edits the document.
+ * whole instrument. Editing uses the time ruler and the accent row;
+ * the measured five-row instrument remains the source of truth.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useCopy } from './copy';
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
+import { useCopy, useLang } from './copy';
 import type { MovieRhythm } from './types';
 import { createMusicGrid, type MusicGrid } from '../../../beatscope/web/music-grid.mjs';
+import { CueIcon, CueMapToolbar, editorCopy, useCueMapEditor, type CueSelection } from './CueMapEditor';
+import type { PlanEditor } from './useEditPlan';
+import './cue-map-edit.css';
 
 const COLLAPSE_KEY = 'beathi.cuemap.collapsed';
 
 const ROWS = ['all', 'low', 'mid', 'high', 'accent'] as const;
-const LABELS = ['IMPACT', 'LOW / SCALE', 'MID / FLOW', 'HIGH / FLASH', 'ACCENT / BLOOM'];
-const HINTS = ['transient', 'size + weight', 'surface motion', 'light + detail', 'hero event'];
+const LABELS = {en:['IMPACT', 'LOW / SCALE', 'MID / FLOW', 'HIGH / FLASH', 'ACCENT / BLOOM'],zh:['冲击', '低频 / 尺度', '中频 / 流动', '高频 / 闪光', '重音 / 绽放']};
+const HINTS = {en:['transient', 'size + weight', 'surface motion', 'light + detail', 'hero event'],zh:['瞬态强度', '大小与重量', '表面运动', '光线与细节', '重点事件']};
 const LEFT = 124;
 const RIGHT = 18;
 const TOP = 30;
 const ROW_H = 27;
 const GRID_BOTTOM = TOP + ROWS.length * ROW_H;
+const CUE_ROW_TOP = GRID_BOTTOM - ROW_H;
+const CUE_BASELINE = CUE_ROW_TOP + 22;
 /** Virtual instrument boxes: the canvases scale to fit, never clip. */
 const MAP_W = 1400;
 const MAP_H = 232;
 const OVERVIEW_W = 1560;
-const OVERVIEW_H = 104;
+const OVERVIEW_H = 128;
 
 const INK = '#171719';
 const MID = '#77737d';
@@ -95,16 +101,26 @@ function virtualX(clientX: number, rect: { left: number; width: number; height: 
 }
 
 interface CueMapProps {
+  editor?:PlanEditor;
+  editingDisabled?:boolean;
   rhythm: MovieRhythm;
   time: number;
   seek: (time: number) => void;
   startBar: number;
+  viewBars?:number;
+  onViewBars?:(bars:number)=>void;
   onStartBar: (bar: number) => void;
   onFollowChange: (follow: boolean) => void;
 }
 
-export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChange }: CueMapProps) {
+export function CueMap({ rhythm, time, seek, startBar, viewBars=8, onViewBars, onStartBar, onFollowChange, editor, editingDisabled=false }: CueMapProps) {
   const copy = useCopy();
+  const lang = useLang();
+  const editCopy = editorCopy[lang];
+  const edit = useCueMapEditor(editor, rhythm, time, editingDisabled);
+  // Hit regions stay mounted while the audio clock advances.
+  const actions = useRef({edit,seek,onFollowChange});
+  actions.current = {edit,seek,onFollowChange};
   const overviewStatic = useRef<HTMLCanvasElement | null>(null);
   const overviewOverlay = useRef<HTMLCanvasElement | null>(null);
   const mapStatic = useRef<HTMLCanvasElement | null>(null);
@@ -121,7 +137,6 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
       return next;
     });
   };
-  const viewBars = 8;
 
   const metrics = useMemo(() => createMusicGrid(rhythm), [rhythm]);
   const [sizeVersion, resize] = useState(0);
@@ -132,6 +147,28 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
   }, [metrics.available]);
   const { values, rawByStep } = useMemo(() => stepValues(rhythm, metrics), [rhythm, metrics]);
   const duration = Number(rhythm.source?.duration ?? 0) || 1;
+  const boundaries = edit.plan?.boundaries;
+  const selectedId = edit.selection?.id;
+  const selectedStage = edit.selection?.kind==='stage'?edit.resolved?.stages.find(s=>s.id===selectedId):undefined;
+  const sourceStarts=useMemo(()=>[...new Set((rhythm.patterns?.segments??[]).map(s=>s.start_time).filter(t=>t>0&&t<duration))].sort((a,b)=>a-b),[rhythm,duration]);
+  const authoredBoundary=(id:string,t:number)=>!/^s:\d+$/.test(id)||Math.abs((sourceStarts[Number(id.slice(2))]??t)-t)>.001;
+  const stageName=(index:number)=>`${lang==='zh'?'阶段':'Stage'} ${String(index+1).padStart(2,'0')}`;
+  const clock=(seconds:number)=>`${String(Math.floor(seconds/60)).padStart(2,'0')}:${(seconds%60).toFixed(2).padStart(5,'0')}`;
+  const startStep = (startBar - 1) * metrics.subdivision;
+  const columns = viewBars * metrics.subdivision;
+  const cellWidth = (MAP_W - LEFT - RIGHT) / columns;
+  const graphTop = GRID_BOTTOM + 12;
+  const graphHeight = MAP_H - graphTop - 10;
+  const centreY = graphTop + graphHeight * .56;
+  const cuePoints = useMemo(() => {
+    const cues = edit.resolved?.cues ?? (rhythm.onsets??[]).map((o,i)=>({id:`o:${i}`,time:o.time,strength:o.strength,manual:false}));
+    return cues.flatMap(cue => {
+      const column = metrics.stepAtTime(cue.time) - startStep;
+      if (column < 0 || column >= columns) return [];
+      const strength=clamp01(cue.strength);
+      return [{...cue,strength,x:LEFT+column*cellWidth}];
+    });
+  }, [edit.resolved, rhythm, metrics, startStep, columns, cellWidth]);
 
   /* ---------------- overview: static ---------------- */
 
@@ -152,6 +189,8 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
 
     const segments = rhythm.patterns?.segments ?? [];
     const families = [...new Set(segments.map((segment) => segment.family))];
+    const scale=Math.min(canvas.clientWidth/OVERVIEW_W,canvas.clientHeight/OVERVIEW_H);
+    // Measured recurrence families keep their original spans and labels.
     segments.forEach((segment) => {
       const left = at(segment.start_time);
       const right = at(segment.end_time);
@@ -199,8 +238,8 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
         context.lineTo(width - RIGHT, laneY);
         context.stroke();
         context.globalAlpha = 0.72;
-        context.font = '600 8px "Geist Mono", ui-monospace, monospace';
-        context.fillText(band.toUpperCase(), 8, laneY - 4);
+        context.font = '600 11px "Geist Mono", ui-monospace, monospace';
+        context.fillText(lang==='zh'?({low:'低频',mid:'中频',high:'高频'}[band]??band):band.toUpperCase(), 8, laneY - 4);
         context.globalAlpha = band === 'high' ? 0.74 : 0.58;
         context.lineWidth = band === 'low' ? 1.3 : 1;
         context.beginPath();
@@ -243,23 +282,41 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
       context.globalAlpha = 0.55;
       context.beginPath();
       context.moveTo(x, 26);
-      context.lineTo(x, height - 12);
+      context.lineTo(x, 92);
       context.stroke();
       context.globalAlpha = 1;
       context.fillStyle = MID;
       context.font = '8px "Geist Mono", ui-monospace, monospace';
-      context.fillText(String(bar), x + 3, height - 4);
+      context.fillText(String(bar), x + 3, 100);
     }
 
     context.fillStyle = ACCENT;
     context.globalAlpha = 0.055;
-    context.fillRect(at(windowStart), 26, Math.max(2, at(windowEnd) - at(windowStart)), height - 34);
+    context.fillRect(at(windowStart), 26, Math.max(2, at(windowEnd) - at(windowStart)), 70);
     context.globalAlpha = 0.9;
     context.strokeStyle = ACCENT;
     context.lineWidth = 1.5;
-    context.strokeRect(at(windowStart), 26, Math.max(2, at(windowEnd) - at(windowStart)), height - 34);
+    context.strokeRect(at(windowStart), 26, Math.max(2, at(windowEnd) - at(windowStart)), 70);
     context.globalAlpha = 1;
-  }, [rhythm, startBar, metrics, duration, viewBars, sizeVersion]);
+    // Authored phases belong to the time ruler, below the measured instrument.
+    context.strokeStyle=LINE;context.lineWidth=1;
+    context.beginPath();context.moveTo(LEFT,122);context.lineTo(width-RIGHT,122);context.stroke();
+    if(selectedStage) {
+      context.strokeStyle=ACCENT;context.lineWidth=3;
+      context.beginPath();context.moveTo(at(selectedStage.start),122);context.lineTo(at(selectedStage.end),122);context.stroke();
+    }
+    for(const boundary of boundaries??[]) {
+      const x=at(boundary.time),selected=boundary.id===selectedId,manual=authoredBoundary(boundary.id,boundary.time);
+      context.fillStyle=selected||manual?ACCENT:INK;context.strokeStyle=context.fillStyle;
+      context.lineWidth=(selected?1.5:1)/scale;
+      context.beginPath();context.moveTo(x,106);context.lineTo(x,124);context.stroke();
+      context.beginPath();context.moveTo(x,106);context.lineTo(x+12,106);context.lineTo(x+8,111);context.lineTo(x,111);context.closePath();context.fill();
+      if(selected&&selectedStage&&scale>.4) {
+        context.font='600 9px "Geist Mono", ui-monospace, monospace';
+        context.fillText(String(selectedStage.index+1).padStart(2,'0'),x+4,121);
+      }
+    }
+  }, [rhythm, startBar, metrics, duration, viewBars, sizeVersion, edit.resolved, boundaries, selectedId, sourceStarts,lang]);
 
   /* ---------------- overview: overlay (playhead only) ---------------- */
 
@@ -284,7 +341,7 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
     context.closePath();
     context.fillStyle = ACCENT;
     context.fill();
-  }, [time, duration]);
+  }, [time, duration, sizeVersion]);
 
   /* ---------------- 8-bar map: static ---------------- */
 
@@ -308,8 +365,8 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
       context.fillStyle = BAR_FILL[bar % 2];
       context.fillRect(barX, TOP, metrics.subdivision * cellWidth, GRID_BOTTOM - TOP);
       context.fillStyle = bar === 0 ? ACCENT : INK;
-      context.font = '700 10px "Geist Mono", ui-monospace, monospace';
-      context.fillText(`BAR ${String(startBar + bar).padStart(2, '0')}`, barX + 7, 10);
+      context.font = '700 12px "Geist Mono", ui-monospace, monospace';
+      context.fillText(`${lang==='zh'?'小节':'BAR'} ${String(startBar + bar).padStart(2, '0')}`, barX + 7, 12);
       context.fillStyle = MID;
       context.font = '8px "Geist Mono", ui-monospace, monospace';
       for (let beat = 1; beat <= 4; beat++) {
@@ -331,6 +388,12 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
       context.globalAlpha = 1;
     }
 
+    if(selectedStage) {
+      const left=Math.max(LEFT,LEFT+(metrics.stepAtTime(selectedStage.start)-startStep)*cellWidth);
+      const right=Math.min(width-RIGHT,LEFT+(metrics.stepAtTime(selectedStage.end)-startStep)*cellWidth);
+      context.fillStyle='rgba(117,103,232,.10)';
+      if(right>left)context.fillRect(left,TOP,right-left,GRID_BOTTOM-TOP);
+    }
     ROWS.forEach((row, index) => {
       const y = TOP + ROW_H * index;
       const baseline = y + 22;
@@ -345,11 +408,11 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
 
       const highlight = row === 'high' || row === 'accent';
       context.fillStyle = highlight ? ACCENT : INK;
-      context.font = '700 9px "Geist Mono", ui-monospace, monospace';
-      context.fillText(LABELS[index], 16, y + 11);
+      context.font = '700 12px "Geist Mono", ui-monospace, monospace';
+      context.fillText(LABELS[lang][index], 16, y + 11);
       context.fillStyle = MID;
-      context.font = '7.5px "Geist Mono", ui-monospace, monospace';
-      context.fillText(HINTS[index], 16, y + 21);
+      context.font = '10px "Geist Mono", ui-monospace, monospace';
+      context.fillText(HINTS[lang][index], 16, y + 23);
 
       context.strokeStyle = row === 'mid' ? MID : highlight ? ACCENT : INK;
       context.globalAlpha = 0.18;
@@ -439,12 +502,18 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
     const graphTop = GRID_BOTTOM + 12;
     const graphHeight = Math.max(22, height - graphTop - 10);
     const centreY = graphTop + graphHeight * 0.56;
+    if(selectedStage) {
+      const left=Math.max(LEFT,LEFT+(metrics.stepAtTime(selectedStage.start)-startStep)*cellWidth);
+      const right=Math.min(width-RIGHT,LEFT+(metrics.stepAtTime(selectedStage.end)-startStep)*cellWidth);
+      context.fillStyle='rgba(117,103,232,.15)';
+      if(right>left)context.fillRect(left,graphTop-6,right-left,height-graphTop+6);
+    }
     context.fillStyle = INK;
-    context.font = '700 9px "Geist Mono", ui-monospace, monospace';
-    context.fillText('MOTION CUES', 16, graphTop + 9);
+    context.font = '700 12px "Geist Mono", ui-monospace, monospace';
+    context.fillText(lang==='zh'?'动作卡点':'MOTION CUES', 16, graphTop + 9);
     context.fillStyle = MID;
-    context.font = '8px "Geist Mono", ui-monospace, monospace';
-    context.fillText('pulse · flow · flash', 16, graphTop + 21);
+    context.font = '10px "Geist Mono", ui-monospace, monospace';
+    context.fillText(lang==='zh'?'脉冲 · 流动 · 闪光':'pulse · flow', 16, graphTop + 23);
     context.strokeStyle = LINE;
     context.lineWidth = 1;
     context.beginPath();
@@ -461,17 +530,15 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
       context.stroke();
       context.globalAlpha = 1;
     }
-    for (let column = 0; column < columns; column++) {
-      const step = stepAt(column);
-      const all = values.all[step] ?? 0;
-      if (all <= 0.02) continue;
-      const x = LEFT + (column + 0.5) * cellWidth;
-      const low = values.low[step] ?? 0;
-      const mid = values.mid[step] ?? 0;
-      const high = values.high[step] ?? 0;
-      const driver = low >= mid && low >= high ? 'low' : high >= mid ? 'high' : 'mid';
+    // Keep the original lower rail as the measured summary.
+    for (let column=0;column<columns;column++) {
+      const step=stepAt(column),all=values.all[step]??0;
+      if(all<=.02)continue;
+      const x=LEFT+(column+.5)*cellWidth;
+      const low=values.low[step]??0,mid=values.mid[step]??0,high=values.high[step]??0;
+      const driver=low>=mid&&low>=high?'low':high>=mid?'high':'mid';
+      const cueTop=centreY-6-all*graphHeight*.3;
       const color = driver === 'high' ? ACCENT : driver === 'mid' ? MID : INK;
-      const cueTop = centreY - 6 - all * graphHeight * 0.3;
       context.strokeStyle = color;
       context.globalAlpha = 0.3 + all * 0.7;
       context.lineWidth = driver === 'low' ? 2.2 : 1.2;
@@ -496,6 +563,40 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
       }
       context.globalAlpha = 1;
     }
+    // Cue handles sit in the purple row, at their exact source/edited times.
+    // Hollow diamonds distinguish authored marks from the filled measured accents.
+    for(const cue of cuePoints) {
+      const selected=cue.id===selectedId;
+      if(!cue.manual&&!selected&&edit.mode!=='cue')continue;
+      const x=cue.x,y=CUE_BASELINE-9;
+      context.strokeStyle=ACCENT;context.fillStyle=ACCENT;
+      context.globalAlpha=cue.manual||selected?1:.32;
+      context.lineWidth=selected?2:1.2;
+      if(selected) {
+        context.globalAlpha=.15;context.beginPath();context.arc(x,y,8,0,Math.PI*2);context.fill();context.globalAlpha=1;
+      }
+      context.beginPath();context.moveTo(x,CUE_BASELINE);context.lineTo(x,cue.manual||selected?y+4:CUE_BASELINE-3);context.stroke();
+      if(cue.manual||selected) {
+        context.beginPath();context.moveTo(x,y-4);context.lineTo(x+4,y);context.lineTo(x,y+4);context.lineTo(x-4,y);context.closePath();context.stroke();
+      }
+      context.globalAlpha=1;
+    }
+    for (const boundary of boundaries??[]) {
+      const column=metrics.stepAtTime(boundary.time)-startStep;
+      if(column<0||column>=columns)continue;
+      const x=LEFT+column*cellWidth,selected=boundary.id===selectedId,manual=authoredBoundary(boundary.id,boundary.time);
+      const scale=Math.min(canvas.clientWidth/MAP_W,canvas.clientHeight/MAP_H);
+      context.strokeStyle=selected||manual?ACCENT:INK;context.globalAlpha=selected?.9:manual?.6:.2;
+      context.setLineDash([3,4]);context.lineWidth=1;
+      context.beginPath();context.moveTo(x,TOP);context.lineTo(x,MAP_H-5);context.stroke();context.setLineDash([]);context.globalAlpha=1;
+      context.fillStyle=selected||manual?ACCENT:INK;
+      context.beginPath();context.moveTo(x,centreY+2);context.lineTo(x,MAP_H-4);context.stroke();
+      context.beginPath();context.moveTo(x,MAP_H-18);context.lineTo(x+17,MAP_H-18);context.lineTo(x+12,MAP_H-11);context.lineTo(x,MAP_H-11);context.closePath();context.fill();
+      if(selected&&selectedStage&&scale>.4) {
+        context.fillStyle=ACCENT;context.font='600 9px "Geist Mono", ui-monospace, monospace';
+        context.fillText(String(selectedStage.index+1).padStart(2,'0'),x+4,MAP_H-2);
+      }
+    }
     context.strokeStyle = INK;
     context.globalAlpha = 0.72;
     context.beginPath();
@@ -503,7 +604,7 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
     context.lineTo(width - RIGHT, GRID_BOTTOM);
     context.stroke();
     context.globalAlpha = 1;
-  }, [rhythm, startBar, metrics, values, rawByStep, viewBars, sizeVersion]);
+  }, [rhythm, startBar, metrics, values, rawByStep, viewBars, sizeVersion, cuePoints, boundaries, selectedId, sourceStarts, edit.mode,lang]);
 
   /* ---------------- 8-bar map: overlay (hover + playhead) ---------------- */
 
@@ -555,23 +656,81 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
   };
 
   const currentBar = metrics.barAtTime(time) ?? 0;
+  const markerLayers = useMemo(() => {
+    if (!editor) return null;
+    const makeLayer = (overview:boolean) => {
+      const width=overview?OVERVIEW_W:MAP_W,height=overview?OVERVIEW_H:MAP_H;
+      const at=(t:number)=>overview?LEFT+t/duration*(width-LEFT-RIGHT):LEFT+(metrics.stepAtTime(t)-startStep)*cellWidth;
+      const toTime=(clientX:number,rect:DOMRect)=>{
+        const x=virtualX(clientX,rect,width,height)-LEFT;
+        return overview?x/(width-LEFT-RIGHT)*duration:metrics.timeAtStep(startStep+x/cellWidth);
+      };
+      const hit=(selection:CueSelection,t:number,x:number,y:number,w:number,h:number,manual=false)=>{
+        const stageIndex=edit.resolved?.stages.find(s=>s.id===selection.id)?.index??0;
+        const label=`${selection.kind==='stage'?stageName(stageIndex):editCopy.cue} · ${t.toFixed(3)} s`;
+        return <g key={selection.id} className={`cm-hit${manual?' manual':''}`} data-marker={selection.id} data-kind={selection.kind}
+          role="button" tabIndex={edit.blocked?-1:0} aria-label={label} aria-disabled={edit.blocked}
+          onFocus={()=>actions.current.edit.select(selection)}
+          onPointerDown={(e:PointerEvent<SVGGElement>)=>{
+            if(actions.current.edit.blocked||e.button!==0)return;
+            e.preventDefault();e.stopPropagation();e.currentTarget.focus();
+            const svg=e.currentTarget.ownerSVGElement!,rect=svg.getBoundingClientRect();
+            actions.current.edit.begin(selection,e.clientX,clientX=>toTime(clientX,rect));
+            svg.setPointerCapture(e.pointerId);
+          }}
+          onKeyDown={e=>{
+            if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();actions.current.edit.remove();}
+            else if(e.key==='Enter'||e.key===' '){e.preventDefault();actions.current.seek(t);}
+            else if(e.key==='Escape')actions.current.edit.finish(true);
+          }}>
+          <title>{label}</title><rect x={x} y={y} width={Math.max(.5,w)} height={h}/>
+        </g>;
+      };
+      const stageHits=(boundaries??[]).flatMap(b=>{
+        const x=at(b.time);if(x<LEFT||x>width-RIGHT)return [];
+        const canvas=overview?overviewStatic.current:mapStatic.current;
+        const scale=canvas?Math.min(canvas.clientWidth/width,canvas.clientHeight/height):1;
+        return [hit({kind:'stage',id:b.id},b.time,x-5/scale,overview?104:centreY+3,12/scale,overview?24:MAP_H-centreY-3,authoredBoundary(b.id,b.time))];
+      });
+      const cueHits=overview?null:cuePoints.map((c,i)=>{
+        // Dense clusters remain separate targets; zoom expands this same graph.
+        const left=Math.max(c.x-8,i? (cuePoints[i-1].x+c.x)/2:LEFT);
+        const right=Math.min(c.x+8,i+1<cuePoints.length?(cuePoints[i+1].x+c.x)/2:width-RIGHT);
+        return hit({kind:'cue',id:c.id},c.time,left,CUE_ROW_TOP,right-left,ROW_H,c.manual);
+      });
+      return <svg className="cm-edit-layer" viewBox={`0 0 ${width} ${height}`} aria-label={overview?editCopy.stage:editCopy.cue}
+        onPointerMove={e=>actions.current.edit.move(e.clientX)}
+        onPointerUp={e=>{
+          const action=actions.current;
+          if(action.edit.finish()&&action.edit.selectedTime!==undefined){action.seek(action.edit.selectedTime);if(overview)action.onFollowChange(true);}
+          if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);
+        }}
+        onPointerCancel={()=>actions.current.edit.finish(true)}>
+        {stageHits}{cueHits}
+      </svg>;
+    };
+    return {overview:makeLayer(true),map:makeLayer(false)};
+  }, [!!editor, edit.blocked, boundaries, cuePoints, editCopy, duration, metrics, startStep, cellWidth, graphTop, sizeVersion, lang, sourceStarts]);
 
   return (
     <section className={`cm${collapsed ? ' collapsed' : ''}`} aria-label={copy.cue.label}>
       <header className="cm-head">
         <div>
-          <span className="cm-eyebrow">BEATSCOPE / ANALYSIS</span>
-          <h2>{copy.cue.overview}</h2>
+          <span className="cm-eyebrow">BEATSCOPE / {lang==='zh'?'节奏编辑':'Rhythm editor'}</span>
+          <h2>{copy.cue.overview}{edit.resolved&&<span className="cm-stage-count" data-testid="stage-count" title={lang==='zh'?'编辑阶段用于预览和导出；左侧自动分段是原始分析结果。':'Edited stages drive preview and export; automatic sections are the original analysis.'}>{lang==='zh'?`编辑阶段 ${edit.resolved.stages.length}`:`Edited stages ${edit.resolved.stages.length}`}</span>}</h2>
         </div>
         {metrics.available && <span className="cm-meta">
           {copy.cue.meta(Number(rhythm.tempo?.global_bpm ?? 0).toFixed(1), metrics.bars, Math.max(1, Math.min(metrics.bars, currentBar)))}
         </span>}
+        {editor && <CueMapToolbar edit={edit}/>}
         <button
           className="tbtn cm-toggle"
           aria-expanded={!collapsed}
+          aria-label={collapsed ? copy.cue.expand : copy.cue.collapse}
+          title={collapsed ? copy.cue.expand : copy.cue.collapse}
           onClick={toggleCollapsed}
         >
-          {collapsed ? copy.cue.expand : copy.cue.collapse}
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d={collapsed?'m6 9 6 6 6-6':'m6 15 6-6 6 6'}/></svg>
         </button>
       </header>
       {/* the collapsible half: the wrapper animates its height, the inner
@@ -579,7 +738,7 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
           instead of being cut off */}
       <div className="cm-body">
         <div className="cm-body-inner">
-          <div className="cm-stack cm-stack-overview">
+          <div className={`cm-stack cm-stack-overview${editor?' cm-editable':''}`}>
             <canvas
               ref={overviewStatic}
               aria-label={copy.cue.overviewLabel}
@@ -591,26 +750,32 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
               }}
             />
             <canvas ref={overviewOverlay} aria-hidden="true" />
+            {markerLayers?.overview}
           </div>
           {metrics.available && <><div className="cm-tools">
             <span>
               {copy.cue.barsRange(String(startBar).padStart(2, '0'), String(Math.min(startBar + viewBars - 1, metrics.bars)).padStart(2, '0'), metrics.bars)}
+              {selectedStage&&<span className="cm-stage-selection" data-testid="selected-stage"><b>{stageName(selectedStage.index)}</b><span>{clock(selectedStage.start)}—{clock(selectedStage.end)}</span></span>}
             </span>
             <div>
-              <button className="tbtn" disabled={startBar <= 1} onClick={() => onStartBar(Math.max(1, startBar - viewBars))}>
-                {copy.cue.prev}
+              <button className="cm-icon" title={editCopy.prev} aria-label={editCopy.prev} disabled={startBar <= 1} onClick={() => {onFollowChange(false);onStartBar(Math.max(1, startBar - viewBars));}}>
+                <CueIcon name="prev"/>
               </button>
-              <button className="tbtn" onClick={() => onFollowChange(true)}>{copy.cue.follow}</button>
+              <button className="cm-icon" title={editCopy.follow} aria-label={editCopy.follow} onClick={() => onFollowChange(true)}><CueIcon name="follow"/></button>
               <button
-                className="tbtn"
+                className="cm-icon" title={editCopy.next} aria-label={editCopy.next}
                 disabled={startBar + viewBars > metrics.bars}
-                onClick={() => onStartBar(startBar + viewBars)}
+                onClick={() => {onFollowChange(false);onStartBar(startBar + viewBars);}}
               >
-                {copy.cue.next}
+                <CueIcon name="next"/>
               </button>
+              <div className="cm-zoom">
+                <button className="cm-icon" title={editCopy.zoomIn} aria-label={editCopy.zoomIn} disabled={viewBars===1||!onViewBars} onClick={()=>onViewBars?.(Math.max(1,viewBars/2))}><CueIcon name="zoomIn"/></button>
+                <button className="cm-icon" title={editCopy.zoomOut} aria-label={editCopy.zoomOut} disabled={viewBars===8||!onViewBars} onClick={()=>onViewBars?.(Math.min(8,viewBars*2))}><CueIcon name="zoomOut"/></button>
+              </div>
             </div>
           </div>
-          <div className="cm-stack cm-stack-map">
+          <div className={`cm-stack cm-stack-map${editor?' cm-editable':''}`}>
             <canvas
               ref={mapStatic}
               aria-label={copy.cue.mapLabel}
@@ -626,6 +791,7 @@ export function CueMap({ rhythm, time, seek, startBar, onStartBar, onFollowChang
               }}
             />
             <canvas ref={mapOverlay} aria-hidden="true" />
+            {markerLayers?.map}
           </div></>}
         </div>
       </div>

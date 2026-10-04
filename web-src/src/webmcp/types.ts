@@ -82,6 +82,8 @@ export interface ResponseRelevanceSidecar {
 
 /** One read of the mounted Studio. Copied values only — never live objects. */
 export interface StudioDirectorSnapshot {
+  movieTemplate?:{id:string;name:string;version:string};
+  editPlan?:import('../../../beatscope/runtime/edit-plan.js').EditPlan|null;
   stage: StudioStage;
   projectId: string | null;
   name: string;

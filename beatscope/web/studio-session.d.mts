@@ -1,4 +1,3 @@
-export declare const HIGH_PRECISION_BACKEND: 'enhanced';
 export declare function analyzeUrl(options?: { backend?: string; subdivision?: number }): string;
 export interface SessionFilmView {
   videoUrl?: string;

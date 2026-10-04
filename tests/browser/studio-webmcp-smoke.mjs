@@ -53,6 +53,7 @@ const p95 = (values) => [...values].sort((a, b) => a - b)[Math.max(0, Math.ceil(
 
 const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
 const context = await browser.newContext();
+await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 const abortedTools = [];
 await context.exposeFunction('__reportAbort', (name) => { abortedTools.push(name); });
 await context.addInitScript(initScript);
@@ -170,6 +171,7 @@ try {
   }
 
   // 8. seek, then audition: the visible transport moves and stops at the end
+  await page.waitForLoadState('networkidle');
   const seek = await callTool('beatscope_control_playback', { action: 'seek', time: 12.5 });
   assert.equal(seek.result.ok, true);
   assert.ok(Math.abs(await page.evaluate(() => document.querySelector('audio').currentTime) - 12.5) < 0.05);
@@ -178,7 +180,10 @@ try {
   const audition = await callTool('beatscope_control_playback', { action: 'audition', start_time: 20, end_time: 21 });
   assert.equal(audition.result.ok, true);
   assert.equal(audition.result.data.started, true, 'autoplay is allowed in this launch');
-  await page.waitForTimeout(1500);
+  await page.waitForFunction(() => {
+    const media=document.querySelector('audio');
+    return media.paused && media.currentTime >= 20.9;
+  }, null, {timeout:10000});
   const stopped = await page.evaluate(() => document.querySelector('audio').currentTime);
   assert.ok(stopped >= 20.9 && stopped <= 21.3, `audition should stop at the range end, saw ${stopped}`);
   assert.match(await page.textContent('.mv-strip'), /Auditioning/);
@@ -202,6 +207,26 @@ try {
   const file = await download;
   assert.equal(new URL(file.url()).pathname, `/api/projects/${PROJECT_ID}/export/codex.zip`);
   assert.ok(!JSON.stringify(exported.result).includes('PK'), 'no archive bytes in the result');
+  assert.equal(exported.result.data.start_here, 'AGENT.md');
+
+  // The human handoff uses the same package route and does not disturb audio.
+  const positionBeforeCopy = await page.evaluate(() => document.querySelector('audio').currentTime);
+  await page.getByRole('button', { name: 'Copy Agent instructions' }).click();
+  const englishPrompt = await page.evaluate(() => navigator.clipboard.readText());
+  assert.match(englishPrompt, /Read AGENT\.md first/);
+  assert.match(englishPrompt, /intent:music-video/);
+  assert.ok(Math.abs((await page.evaluate(() => document.querySelector('audio').currentTime)) - positionBeforeCopy) < 0.05);
+  await page.getByRole('button', { name: '中文' }).click();
+  await page.getByRole('button', { name: '复制给 Agent 的说明' }).click();
+  const chinesePrompt = await page.evaluate(() => navigator.clipboard.readText());
+  assert.match(chinesePrompt, /先读包内 AGENT\.md/);
+  assert.match(chinesePrompt, /intent:music-video/);
+  await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', {
+    configurable: true, value: { writeText: async () => { throw new Error('denied'); } },
+  }));
+  await page.getByRole('button', { name: '复制给 Agent 的说明' }).click();
+  assert.ok(await page.getByRole('textbox', { name: '复制给 Agent 的说明' }).isVisible());
+  assert.match(await page.getByRole('textbox', { name: '复制给 Agent 的说明' }).inputValue(), /AGENT\.md/);
 
   // 10b. the real render path, opt-in with --render: one short film, then the
   // state tool reports the finished job and its MP4 answers on the same origin.
@@ -250,6 +275,12 @@ try {
   console.log(`  response ranking: ${rankedAvailable ? 'ranked events verified' : 'absent, honest ranking_unavailable verified'}`);
   for (const [label, ok, value] of budgets) console.log(`  ${ok ? 'ok  ' : 'OVER'} ${label} (${Number(value).toFixed(2)})`);
   if (budgets.some(([, ok]) => !ok)) process.exitCode = 1;
+} catch(error) {
+  console.error(await page.evaluate(()=>{
+    const a=document.querySelector('audio');
+    return {time:a?.currentTime,paused:a?.paused,readyState:a?.readyState,networkState:a?.networkState,error:a?.error?.message};
+  }));
+  throw error;
 } finally {
   await browser.close();
 }

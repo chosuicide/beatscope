@@ -26,6 +26,7 @@ export interface ExplainMovieInput {
 
 interface CachedPlan {
   plan: ReturnType<typeof makePlan>;
+  editPlan:StudioDirectorSnapshot['editPlan'];
 }
 
 /**
@@ -60,13 +61,13 @@ function planFor(snapshot: StudioDirectorSnapshot) {
     byRelevance.set(key, bySeed);
   }
   const cached = bySeed.get(seed);
-  if (cached) return { rhythm, seed, plan: cached.plan };
+  if (cached && cached.editPlan===snapshot.editPlan) return { rhythm, seed, plan: cached.plan };
 
   const { track } = trackFor(snapshot);
   const duration = Number(rhythm.source?.duration ?? snapshot.duration);
   let plan;
   try {
-    plan = makePlan(rhythm, track.responseBetween(0, duration), seed);
+    plan = makePlan(rhythm, track.responseBetween(0, duration), seed, snapshot.editPlan);
   } catch (error) {
     throw new ToolError(
       'movie_plan_unavailable',
@@ -74,7 +75,7 @@ function planFor(snapshot: StudioDirectorSnapshot) {
       'Check that the song is between 0 and 600 seconds and has a response-relevance sidecar.',
     );
   }
-  bySeed.set(seed, { plan });
+  bySeed.set(seed, { plan,editPlan:snapshot.editPlan });
   return { rhythm, seed, plan };
 }
 
@@ -107,6 +108,8 @@ function entryOf(rhythm: NonNullable<StudioDirectorSnapshot['rhythm']>, shot: Mo
       time: sanitizeNumber(segment?.start_time ?? shot.start),
     };
   }
+  if(shot.kind==='stage') return {kind:'stage' as const,time:shot.start,stage_id:shot.stageId??shot.eventId};
+  if(shot.kind==='cue') return {kind:'cue' as const,time:shot.start,source_onset_id:shot.eventId};
   const onset = (rhythm.onsets ?? []).find((candidate) => candidate.id === shot.eventId);
   return {
     kind: 'onset' as const,
@@ -135,7 +138,7 @@ function describe(
     start: sanitizeNumber(shot.start),
     end: sanitizeNumber(shot.end),
     family: shot.family,
-    world: shot.world,
+    world: snapshot.movieTemplate&&snapshot.movieTemplate.id!=='voxel'?null:shot.world,
     entry: entry.kind === 'onset'
       ? { ...entry, response_relevance: relevanceOf(snapshot, shot.eventId) }
       : entry,
@@ -189,13 +192,14 @@ export function explainMovie(snapshot: StudioDirectorSnapshot, input: ExplainMov
       ? `ranked onset ${shot.entry.onset_id} at ${shot.entry.time} s`
       : shot.entry.kind === 'structure'
         ? `structural boundary ${shot.entry.segment_id} (family ${shot.entry.family})`
-        : 'the start of the song';
+        : shot.entry.kind === 'stage' ? `authored stage boundary at ${shot.start} s`
+          : shot.entry.kind === 'cue' ? `authored response cue at ${shot.start} s` : 'the start of the song';
     return success(
       tool,
       `Shot ${index} begins at ${shot.start} s on ${cause}.`,
       {
         seed,
-        plan_version: plan.version,
+        plan_version: snapshot.movieTemplate?.version??plan.version,
         shot,
         neighbors,
       },

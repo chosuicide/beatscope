@@ -289,6 +289,8 @@ export async function exportTimingPackage(port: StudioDirectorPort): Promise<Too
       started: result.started,
       includes: ['timing facts', 'runtime', 'probe', 'Skill', 'Agent guidance', 'MIDI', 'CSV'],
       excludes: ['source audio', 'movie', 'visual template', 'scenes', 'task statement'],
+      start_here: 'AGENT.md',
+      next_action: 'Inspect supplied reference motion and materials; render and compare a representative preview before expanding.',
     });
   } catch (error) {
     return fromError(tool, error);

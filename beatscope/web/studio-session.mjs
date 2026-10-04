@@ -1,7 +1,3 @@
-/** The last successful film is independent of the job being tracked. */
-/** The model-backed analyzer, selectable per upload. */
-export const HIGH_PRECISION_BACKEND = 'enhanced';
-
 /**
  * The analyze endpoint for one upload.
  *
