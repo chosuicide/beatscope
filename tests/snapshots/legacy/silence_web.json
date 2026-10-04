@@ -10,7 +10,7 @@
   },
   "analysis": {
     "backend": "lightweight",
-    "pipeline_version": "0.7.0",
+    "pipeline_version": "0.7.1",
     "warnings": [
       "Tempo estimation failed; fell back to 120 BPM",
       "Insufficient rhythmic evidence; no tracked beats emitted",
@@ -65,6 +65,7 @@
       },
       "onset_count": 0,
       "separated": false,
+      "energy_semantics": "multiband-spectral-novelty",
       "meter_source": "assumed-4-4-not-measured",
       "tempo_source": "prior-fallback",
       "tempo_segments_source": "synthesized-from-global"

@@ -10,7 +10,7 @@
   },
   "analysis": {
     "backend": "lightweight",
-    "pipeline_version": "0.7.0",
+    "pipeline_version": "0.7.1",
     "warnings": [],
     "separation_used": false,
     "parameters": {
@@ -68,6 +68,7 @@
       },
       "onset_count": 16,
       "separated": false,
+      "energy_semantics": "multiband-spectral-novelty",
       "meter_source": "assumed-4-4-not-measured",
       "tempo_source": "measured",
       "tempo_segments_source": "evidence"
@@ -608,7 +609,8 @@
         "mean_energy": 0.0434,
         "id": "segment-001",
         "index": 0,
-        "display_label": "A"
+        "display_label": "A",
+        "mean_rms": 0.0657
       }
     ],
     "boundaries": [],
@@ -633,7 +635,10 @@
       "segments_inferred": 1,
       "families_used": [
         "A"
-      ]
+      ],
+      "segment_mean_energy_semantics": "legacy-mean-spectral-novelty-not-level",
+      "segment_mean_rms_semantics": "linear-rms-of-analysis-waveform-not-perceived-loudness",
+      "break_level_source": "per-bar-waveform-rms"
     }
   },
   "cues": {

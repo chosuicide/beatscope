@@ -11,7 +11,7 @@ from typing import Any, TypeGuard
 
 SCHEMA_VERSION = "4.0"
 V3_SCHEMA_VERSION = "3.0"
-ANALYZER_VERSION = "0.7.0"
+ANALYZER_VERSION = "0.7.1"
 
 
 class InvalidRhythmProject(ValueError):

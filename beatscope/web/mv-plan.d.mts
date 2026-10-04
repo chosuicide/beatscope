@@ -5,7 +5,7 @@
  * beatscope/web/music-grid.d.mts.
  */
 
-export type ShotEntryKind = 'start' | 'structure' | 'onset';
+export type ShotEntryKind = 'start' | 'structure' | 'onset' | 'stage' | 'cue';
 
 export interface MovieShot {
   start: number;
@@ -15,6 +15,10 @@ export interface MovieShot {
   kind: ShotEntryKind;
   family: string;
   world: number;
+  stageId?:string;
+  stageStart?:number;
+  stageEnd?:number;
+  stageIndex?:number;
 }
 
 export interface MoviePlan {
@@ -29,7 +33,7 @@ export interface MoviePlan {
 }
 
 /** Throws when the audio length is unusable or no ranking is available. */
-export function makePlan(map: unknown, response: unknown, seed?: number): MoviePlan;
+export function makePlan(map: unknown, response: unknown, seed?: number, editPlan?:unknown): MoviePlan;
 
 export function worldsFor(family: unknown, seed?: number): number[];
 

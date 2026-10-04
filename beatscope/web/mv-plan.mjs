@@ -1,4 +1,5 @@
 // A consumer editing policy, not inferred musical truth. Original event times survive.
+import {resolveEditPlan} from './edit-plan.js';
 export const POLICY = Object.freeze({anchor: .82, support: .74, neighbour: .48, spacing: .16});
 // Family -> the backgrounds that family owns, in rotation order. Each shot takes
 // the next entry of its family's list, so a repeated section returns to the same
@@ -33,24 +34,38 @@ export function selectResponses(events) {
   }
   return selected.sort((a,b)=>a.time-b.time||a.id-b.id);
 }
-export function makePlan(map, response, seed=0) {
+export function makePlan(map, response, seed=0, editPlan=null) {
   const duration = map.source?.duration ?? map.duration;
   if (!Number.isFinite(duration) || duration<=0 || duration>600) throw Error('Audio must be between 0 and 600 seconds');
   if (!response.available) throw Error('Response ranking is unavailable; no substitute beat grid was invented');
-  const details = selectResponses(response.events.filter(e=>e.time>=0&&e.time<duration));
+  let details = selectResponses(response.events.filter(e=>e.time>=0&&e.time<duration));
   const segments = map.patterns?.segments ?? [];
-  const boundaries = segments.filter(s=>s.start_time>0&&s.start_time<duration).map(s=>({time:s.start_time,id:s.id,kind:'structure'}));
+  const authored = editPlan ? resolveEditPlan(map, editPlan) : null;
+  const boundaries = authored ? editPlan.boundaries.map(b=>({...b,kind:'stage'})) : segments.filter(s=>s.start_time>0&&s.start_time<duration).map(s=>({time:s.start_time,id:s.id,kind:'structure'}));
+  if (authored) {
+    const kept = new Map(authored.cues.filter(c=>c.sourceId!==null).map(c=>[String(c.sourceId),c]));
+    details = details.flatMap(e=>{
+      const c = kept.get(String(e.id));
+      return c && !c.manual ? [{...e, cueId:c.id}] : [];
+    });
+    for (const c of authored.cues.filter(c=>c.manual)) {
+      const original = response.events.find(e=>String(e.id)===String(c.sourceId));
+      details.push({...original, id:c.sourceId??c.id, cueId:c.id, time:c.time, source_time:c.sourceTime, strength:c.strength, response_relevance:original?.response_relevance??1, manual:true});
+    }
+    details.sort((a,b)=>a.time-b.time || String(a.id).localeCompare(String(b.id)));
+  }
   // The cut list stays ranked events only, exactly as before: responses are
   // spent on the v0.11 ordering, never on the metre. (Cutting every bar was
   // measured and removed — it answers the grid instead of the evidence, and the
   // ranker's whole point is that not every transient deserves a response.)
-  const cuts = [{time:0,id:'start',kind:'start'},...boundaries,...details.filter(e=>e.time>=POLICY.spacing&&boundaries.every(b=>Math.abs(b.time-e.time)>=POLICY.spacing)).map(e=>({...e,kind:'onset'}))].sort((a,b)=>a.time-b.time);
+  const cuts = [{time:0,id:'start',kind:'start'},...boundaries,...details.filter(e=>e.manual ? e.time>0 : e.time>=POLICY.spacing&&boundaries.every(b=>Math.abs(b.time-e.time)>=POLICY.spacing)).map(e=>({...e,kind:e.manual?'cue':'onset'}))].sort((a,b)=>a.time-b.time);
   const unique = cuts.filter((c,i)=>!i||c.time!==cuts[i-1].time);
   const counters = {};
   const shots = unique.map((e,i)=>{
-    const family = segments.find(s=>s.start_time<=e.time&&s.end_time>e.time)?.family ?? 'A';
+    const stage = authored?.stages.find(s=>s.start<=e.time&&s.end>e.time);
+    const family = segments.find(s=>s.start_time<=(stage?.start??e.time)&&s.end_time>(stage?.start??e.time))?.family ?? 'A';
     const worlds = worldsFor(family, seed), n=counters[family]??0; counters[family]=n+1;
-    return {start:e.time,end:unique[i+1]?.time??duration,eventId:e.id,kind:e.kind,family,world:worlds[(n+(seed>>>0)%worlds.length)%worlds.length]};
+    return {start:e.time,end:unique[i+1]?.time??duration,eventId:e.id,kind:e.kind,family,world:worlds[(n+(seed>>>0)%worlds.length)%worlds.length], ...(stage?{stageId:stage.id,stageStart:stage.start,stageEnd:stage.end,stageIndex:stage.index}:{})};
   });
-  return {version:'voxel-phrase-2',duration,fps:30,size:1080,seed,shots,details,policy:POLICY};
+  return {version:'voxel-phrase-2',duration,fps:30,size:1080,seed,shots,details,policy:POLICY, ...(authored?{stages:authored.stages}:{})};
 }

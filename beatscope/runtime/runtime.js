@@ -362,6 +362,9 @@ export function structureStateAt(map, indexes, time) {
     // this countdown is honest even for the last segment.
     nextBoundaryTime: endTime,
     secondsToBoundary: Math.max(0, endTime - t),
+    // Optional segment amplitude, not a frame envelope or perceived loudness.
+    ...(typeof segment.mean_rms === 'number' && Number.isFinite(segment.mean_rms) && segment.mean_rms >= 0
+      ? { meanRms: segment.mean_rms } : {}),
   };
 }
 

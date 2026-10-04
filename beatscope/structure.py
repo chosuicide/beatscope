@@ -147,10 +147,9 @@ def analyze_multiview_structure(
 ) -> dict[str, Any] | None:
     """Whole-song structure payload (v0.7); None when the input is unusable.
 
-    Wraps per-bar feature extraction and segment inference. Per-bar energy
-    comes from the stored 'all' band curve and per-bar density from raw onset
-    counts, so the break detector sees the same facts the rest of the
-    pipeline publishes. ``total_bars`` is the grid bar count; the final
+    Wraps per-bar feature extraction and segment inference. Break-level
+    evidence comes from waveform RMS, not the stored spectral-novelty band.
+    Density comes from raw onset counts. ``total_bars`` is the grid bar count; the final
     segment extends to it so segments tile the whole song.
     """
     features = extract_structure_features(
@@ -160,8 +159,16 @@ def analyze_multiview_structure(
     if not spans:
         return None
 
+    def rms(start: float, end: float) -> float:
+        a = max(0, min(len(audio), round(start * sr)))
+        b = max(a, min(len(audio), round(end * sr)))
+        chunk = np.nan_to_num(np.asarray(audio[a:b], dtype=np.float64),
+                              nan=0.0, posinf=0.0, neginf=0.0)
+        return float(np.sqrt(np.mean(chunk * chunk))) if chunk.size else 0.0
+
     band_means = _band_means_per_bar(energy, spans)
-    bar_energy = band_means[:, 0] if band_means.size else np.zeros(len(spans))
+    bar_novelty = band_means[:, 0] if band_means.size else np.zeros(len(spans))
+    bar_level = np.asarray([rms(span.start_time, span.end_time) for span in spans])
 
     starts = np.asarray([span.start_time for span in spans], dtype=np.float64)
     ends = np.asarray([span.end_time for span in spans], dtype=np.float64)
@@ -174,6 +181,21 @@ def analyze_multiview_structure(
         if 0 <= index < len(spans) and time < ends[index]:
             bar_density[index] += 1.0
 
-    return analyze_structure_segments(
-        features, float(duration), int(total_bars), bar_energy, bar_density,
+    result = analyze_structure_segments(
+        features, float(duration), int(total_bars), bar_level, bar_density,
     )
+    if result is None:
+        return None
+    by_bar = {span.bar: index for index, span in enumerate(spans)}
+    for segment in result["segments"]:
+        indices = [by_bar[b] for b in range(segment["start_bar"], segment["end_bar"] + 1) if b in by_bar]
+        # Keep the legacy statistic's units. New consumers have an explicit
+        # amplitude field, measured over the full segment including its tail.
+        segment["mean_energy"] = round(float(bar_novelty[indices].mean()), 4) if indices else 0.0
+        segment["mean_rms"] = round(rms(segment["start_time"], segment["end_time"]), 6)
+    result["diagnostics"].update(
+        segment_mean_energy_semantics="legacy-mean-spectral-novelty-not-level",
+        segment_mean_rms_semantics="linear-rms-of-analysis-waveform-not-perceived-loudness",
+        break_level_source="per-bar-waveform-rms",
+    )
+    return result

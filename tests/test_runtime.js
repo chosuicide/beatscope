@@ -444,6 +444,14 @@ console.log('Runtime OK: createTrack contract, immutability, quantize parity, pu
     secondsToBoundary: 3,
   });
 
+  const withLevel = structuredClone(structureProject);
+  withLevel.patterns.segments[1].mean_rms = 0.37;
+  assert.equal(createTrack(withLevel).at(5).structure.meanRms, 0.37);
+  for (const malformed of [-1, NaN, Infinity, null, '0.37']) {
+    withLevel.patterns.segments[1].mean_rms = malformed;
+    assert.equal(Object.hasOwn(createTrack(withLevel).at(5).structure, 'meanRms'), false);
+  }
+
   // Out-of-order queries are deterministic (seek safety).
   const late = structureTrack.at(7.5).structure;
   const early = structureTrack.at(0.5).structure;
