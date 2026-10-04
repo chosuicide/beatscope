@@ -211,6 +211,7 @@ try {
 
   // The human handoff uses the same package route and does not disturb audio.
   const positionBeforeCopy = await page.evaluate(() => document.querySelector('audio').currentTime);
+  await page.locator('.export-tools > summary').click();
   await page.getByRole('button', { name: 'Copy Agent instructions' }).click();
   const englishPrompt = await page.evaluate(() => navigator.clipboard.readText());
   assert.match(englishPrompt, /Read AGENT\.md first/);

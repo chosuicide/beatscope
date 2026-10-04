@@ -84,8 +84,8 @@ VISUAL_MEMBERS = frozenset(
     }
 )
 
-# The frozen historical timing package keeps its original member set.
-FIXTURE_MEMBERS = frozenset(['AGENT.md', 'BEATSCOPE.md', 'LICENSE', 'README.md', 'SKILL.md', 'beatscope-package.json', 'beatscope-runtime.js', 'consumer-probe.js', 'reference-tools.mjs', 'references/reference-workflow.md', 'references/schema.md', 'rhythm-map.json', 'rhythm.csv', 'rhythm.mid', 'visual-state.js', 'worker-example.js'])
+# The refreshed fixture intentionally exercises the unranked minimal handoff.
+FIXTURE_MEMBERS = TIMING_ONLY_MEMBERS - {'response-relevance.json'}
 
 AUDIO_SUFFIXES = {".wav", ".wave", ".mp3", ".flac", ".ogg", ".m4a", ".aiff", ".aif", ".opus"}
 
