@@ -220,7 +220,7 @@ try {
   await page.getByRole('button', { name: '中文' }).click();
   await page.getByRole('button', { name: '复制给 Agent 的说明' }).click();
   const chinesePrompt = await page.evaluate(() => navigator.clipboard.readText());
-  assert.match(chinesePrompt, /先读包内 AGENT\.md/);
+  assert.match(chinesePrompt, /先读 AGENT\.md/);
   assert.match(chinesePrompt, /intent:music-video/);
   await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', {
     configurable: true, value: { writeText: async () => { throw new Error('denied'); } },
