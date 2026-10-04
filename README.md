@@ -47,7 +47,7 @@ Choose **Voxel Interference** for procedural glitch visuals or **Prismatic Echo*
 
 Edit stage boundaries and add, move or mute cue markers on the rhythm graph, with undo/redo and optional snapping. Edits save immediately; **Update preview** applies them to the film. Exports and renders always use the latest saved edit plan, even while the preview is stale. [Template guide](docs/material-template.md).
 
-Prismatic Echo now composites on the GPU and prefers hardware encoding. In one RTX 5060 Laptop 8-second comparison, rendering time fell about 24% and cumulative browser CPU time about 25%. Unsupported GPUs use the existing Canvas path. [Measured results and limits](docs/prismatic-gpu-composite.md).
+Prismatic Echo uses GPU composition, hardware encoding and reusable caches to streamline rendering. Devices without the required GPU capabilities automatically use the Canvas renderer.
 
 ### Timing a coding agent can use
 

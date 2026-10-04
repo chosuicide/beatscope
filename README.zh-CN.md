@@ -47,7 +47,7 @@ beatscope serve --open
 
 在节奏图上编辑阶段边界，添加、移动或静音卡点，支持撤销、重做和可选吸附。编辑立即保存，点击「更新预览」后应用到画面；导出包和正式渲染始终使用最新保存的编辑计划。[模板说明](docs/material-template.md)。
 
-「棱镜残像」使用 GPU 合成并优先硬件编码。本机 RTX 5060 Laptop 的同一段8秒对照中，渲染耗时降低约24%，浏览器累计 CPU 时间降低约25%；不支持的 GPU 自动沿用 Canvas 路径。[实测与限制](docs/prismatic-gpu-composite.md)。
+「棱镜残像」使用 GPU 合成、硬件编码与缓存复用，优化渲染流程。设备不满足 GPU 功能要求时，会自动使用 Canvas 渲染。
 
 ### Coding Agent 能使用的时序
 
