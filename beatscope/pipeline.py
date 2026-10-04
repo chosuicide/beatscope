@@ -6,17 +6,14 @@ project through ``analyze_track`` so there is only one source of truth.
 from __future__ import annotations
 
 import datetime
-import os
 from pathlib import Path
 from typing import Any
 
 from .backends import (
-    MODEL_NAME,
     AnalysisCancelled,
     AnalysisEvidence,
     AnalyzerBackend,
     BeatThisBackend,
-    BeatThisModelBackend,
     DemucsBackend,
     LightweightBackend,
     check_cancelled,
@@ -42,6 +39,7 @@ def resolve_backend(
     drums_path: str | Path | None = None,
 ) -> AnalyzerBackend:
     """Map the config onto a concrete backend; raises for impossible routes."""
+    config.validate()
     if config.backend == "beat-this":
         if beat_file is None:
             raise ValueError("beat-this backend requires a Beat This beat file")
@@ -49,18 +47,6 @@ def resolve_backend(
     if config.backend == "demucs":
         inner = BeatThisBackend(beat_file, drums_path) if beat_file is not None else LightweightBackend()
         return DemucsBackend(inner)
-    if config.backend == "enhanced":
-        # Experimental: the model's beats over the lightweight analysis. Its
-        # weights live outside the repo, and a missing package says so rather
-        # than falling back to another algorithm under the same name.
-        # The checkpoint and device are pinned by environment rather than by the
-        # analysis config: the config is part of the stored project format, and
-        # the plan keeps format changes for the phase that lifts the 4/4 limit.
-        return BeatThisModelBackend(
-            LightweightBackend(),
-            model=os.environ.get("BEATSCOPE_MODEL", MODEL_NAME),
-            device=os.environ.get("BEATSCOPE_MODEL_DEVICE", "cpu"),
-        )
     return LightweightBackend()
 
 
@@ -166,9 +152,12 @@ def build_rhythm_project(
     # carry "unknown" (section 4.D), and the 4/4 below is why a waltz currently
     # looks like a measurement of four beats per bar.
     # Both are reported by the backend that knows, rather than inferred here: a
-    # missing tempo *score* says nothing about whether a tempo was measured, and
-    # the enhanced backend reads its tempo off the model's beats with no score at
-    # all. Defaults describe the lightweight path, which measures neither.
+    # missing tempo *score* says nothing about whether a tempo was measured.
+    # Defaults describe the lightweight path, which measures neither.
+    # LOW/MID/HIGH carry the normalized positive spectral flux per band, not
+    # acoustic power; the field is named energy for compatibility with every
+    # consumer that already reads it, and this says what it holds.
+    diagnostics["energy_semantics"] = "multiband-spectral-novelty"
     diagnostics.setdefault("meter_source", "assumed-4-4-not-measured")
     diagnostics.setdefault(
         "tempo_source", "prior-fallback" if diagnostics.get("tempo_fallback") else "measured"

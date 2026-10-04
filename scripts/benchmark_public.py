@@ -7,7 +7,6 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from beatscope.public_benchmark import (
-    beat_this_estimator,
     beatscope_estimator,
     cached_estimator,
     canonical_report_bytes,
@@ -36,16 +35,8 @@ def main() -> int:
     parser.add_argument(
         "--systems",
         nargs="+",
-        choices=("beatscope", "librosa", "beat-this"),
+        choices=("beatscope", "librosa"),
         default=("beatscope", "librosa"),
-    )
-    parser.add_argument("--beat-this-model", default="final0")
-    parser.add_argument("--device", default="cpu")
-    parser.add_argument(
-        "--dbn",
-        action="store_true",
-        help="apply Beat This's DBN post-processing (the official pipeline); the choice "
-        "is recorded in the system id and in the prediction cache identity",
     )
     parser.add_argument(
         "--workers",
@@ -80,21 +71,6 @@ def main() -> int:
                 librosa_estimator,
                 args.cache_dir,
                 system_id,
-            )
-        else:
-            estimator = beat_this_estimator(args.beat_this_model, args.device, dbn=args.dbn)
-            # The id names the post-processing too: two runs that differ only in
-            # dbn are two systems, and a cache entry from one must never serve
-            # the other.
-            system_id = (
-                f"beat-this-{_version('beat-this')}-{args.beat_this_model}-{args.device}"
-                f"-{'dbn' if args.dbn else 'nodbn'}"
-            )
-            estimators[system_id] = cached_estimator(
-                estimator,
-                args.cache_dir,
-                system_id,
-                config={"model": args.beat_this_model, "device": args.device, "dbn": args.dbn},
             )
 
     report = run_public_benchmark(tracks, estimators, workers=args.workers)

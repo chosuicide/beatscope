@@ -212,7 +212,7 @@ def test_lightweight_provenance_and_diagnostics_are_real(fixed_120_audio):
 def test_analyzer_version_bump_changes_cache_key():
     from beatscope.project import compute_cache_key
 
-    assert ANALYZER_VERSION == "0.7.0"
+    assert ANALYZER_VERSION == "0.7.1"
     sha = "0" * 64
     config = {"subdivision": 16}
     assert (
@@ -339,6 +339,8 @@ def test_invalid_config_rejected(fixed_120_audio):
 
 
 def test_resolve_backend_routing(beat_file):
+    with pytest.raises(ValueError, match="unsupported backend"):
+        resolve_backend(AnalysisConfig(backend="enhanced"))
     assert isinstance(resolve_backend(AnalysisConfig()), LightweightBackend)
     assert isinstance(resolve_backend(AnalysisConfig(backend="beat-this"), beat_file), BeatThisBackend)
     demucs_backend = resolve_backend(AnalysisConfig(backend="demucs"))

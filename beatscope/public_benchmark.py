@@ -210,28 +210,6 @@ def librosa_estimator(audio_path: Path) -> Prediction:
     return [float(value) for value in beats], []
 
 
-def beat_this_estimator(model: str = "final0", device: str = "cpu", *, dbn: bool = False) -> Estimator:
-    """Create an official Beat This estimator when its optional package exists.
-
-    `dbn` is a parameter rather than a literal because it changes the numbers: the
-    official pipeline applies DBN post-processing and scores higher than the raw
-    frame peaks. Whatever is chosen has to be recorded in the cache identity
-    (pass it in `config` to cached_estimator) and named in the system id, or a
-    comparison can silently measure a weakened baseline.
-    """
-    try:
-        from beat_this.inference import File2Beats
-    except ImportError as exc:
-        raise RuntimeError("Beat This is unavailable; install the public-benchmark extra") from exc
-    infer = File2Beats(checkpoint_path=model, device=device, dbn=dbn)
-
-    def estimate(audio_path: Path) -> Prediction:
-        beats, downbeats = infer(str(audio_path))
-        return [float(value) for value in beats], [float(value) for value in downbeats]
-
-    return estimate
-
-
 _METRIC_NAMES = {
     "F-measure": "f_measure",
     "Cemgil": "cemgil",

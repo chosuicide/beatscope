@@ -7,7 +7,7 @@ the ones the Ballroom corpus barely contains. Its annotations are a single colum
 of beat times, so beats are scored and downbeats are not.
 
 This runs the whole product path per track, not just the model: decode, analyze
-with the enhanced backend, export MIDI and the handoff package, validate the
+with the standard backend, export MIDI and the handoff package, validate the
 package, and check the project's own consistency invariants. Failures are counted
 rather than skipped, and the timing is reported per track so a slow path shows up
 as a slow path.
@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import statistics
 import sys
 import time
@@ -50,8 +49,7 @@ def read_beat_times(path: Path) -> list[float]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
-    parser.add_argument("--backend", default="enhanced")
-    parser.add_argument("--device", default="cuda")
+    parser.add_argument("--backend", choices=("lightweight", "demucs"), default="lightweight")
     parser.add_argument("--output", type=Path, default=Path("build/artbeat-stress.json"))
     args = parser.parse_args()
 
@@ -61,7 +59,6 @@ def main() -> int:
         raise SystemExit(f"expected Audio/ and Annotations/gt_csv/ under {args.root}")
 
     annotations = {path.stem.replace("_gt", ""): path for path in annotation_dir.glob("*.csv")}
-    os.environ["BEATSCOPE_MODEL_DEVICE"] = args.device
 
     rows = []
     for audio in sorted(audio_dir.glob("*.wav")):
@@ -92,7 +89,7 @@ def main() -> int:
 
     ok = [row for row in rows if row["ok"]]
     failed = [row for row in rows if not row["ok"]]
-    print(f"  {len(rows)} tracks, backend {args.backend} on {args.device}")
+    print(f"  {len(rows)} tracks, backend {args.backend}")
     print(f"\n  {'track':<34} {'beats':>6} {'F1':>7} {'CMLt':>7} {'秒':>6} {'问题':>5}")
     for row in rows:
         if not row["ok"]:
