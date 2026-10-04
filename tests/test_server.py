@@ -222,6 +222,32 @@ def test_visual_artifact_routes_are_gone(tmp_path):
         assert b'visual' not in body.lower()
 
 
+def test_studio_codex_download_uses_current_engine_package(tmp_path):
+    import io
+    import zipfile
+
+    from beatscope.consumer_contract import validate_manifest
+    from beatscope.exports import PACKAGE_VERSION, generate_codex_export
+    from beatscope.project import ProjectManager
+    from beatscope.web_api import WebApi
+
+    rhythm = _seed_project(tmp_path / 'projects')
+    api = WebApi(ProjectManager(tmp_path))
+    status, headers, payload = api.handle_get(
+        '/api/projects/0a1b2c3d4e5f/export/codex.zip', {}, {})
+    assert status == 200 and headers['Content-Type'] == 'application/zip'
+    assert payload == generate_codex_export(rhythm)
+    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+        members = {name: archive.read(name) for name in archive.namelist()}
+    manifest = json.loads(members['beatscope-package.json'])
+    assert manifest['package_version'] == PACKAGE_VERSION
+    assert manifest['capabilities']['edit_score'] is True
+    assert manifest['capabilities']['choreography'] is True
+    assert 'picture-tools.js' in members
+    assert 'references/picture-tools.md' in members
+    assert validate_manifest(manifest, members) == []
+
+
 def test_response_relevance_route_is_canonical_and_cacheable(tmp_path):
     from beatscope.project import ProjectManager
     from beatscope.response_relevance import canonical_response_relevance_bytes
@@ -315,16 +341,17 @@ def test_handlers_serve_from_the_context_not_a_global(tmp_path):
 
 
 def test_the_upload_route_accepts_a_backend_and_refuses_an_unknown_one():
-    """The web entry for high-precision mode, and what it does with a typo.
-
-    The studio has no toggle yet; this is the plumbing a toggle would use. An
-    unknown backend is refused at the door rather than quietly analysing with the
-    default under a name the caller did not ask for.
-    """
+    """Removed and unknown backends are refused before starting analysis."""
     server, thread = running_server()
     try:
         conn = http.client.HTTPConnection(*server.server_address)
         conn.request("POST", "/api/jobs/analyze?backend=beat-this-model", body=b"RIFF",
+                     headers={"Content-Length": "4", "X-Filename": "song.wav"})
+        response = conn.getresponse()
+        assert response.status == 400
+        assert b"unknown backend" in response.read()
+
+        conn.request("POST", "/api/jobs/analyze?backend=enhanced", body=b"RIFF",
                      headers={"Content-Length": "4", "X-Filename": "song.wav"})
         response = conn.getresponse()
         assert response.status == 400
@@ -337,6 +364,23 @@ def test_the_upload_route_accepts_a_backend_and_refuses_an_unknown_one():
         response = conn.getresponse()
         assert response.status == 200
         assert "job_id" in json.loads(response.read().decode())
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
+def test_the_capability_channel_reports_renderer_only():
+    """The removed model is not advertised as an unavailable capability."""
+    server, thread = running_server()
+    try:
+        conn = http.client.HTTPConnection(*server.server_address)
+        conn.request("GET", "/api/movies/capabilities")
+        response = conn.getresponse()
+        assert response.status == 200
+        payload = json.loads(response.read().decode())
+        assert set(payload) == {"available", "message"}
+        assert isinstance(payload["available"], bool)
     finally:
         server.shutdown()
         server.server_close()

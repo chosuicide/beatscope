@@ -21,6 +21,7 @@ from .direction import (
     validate_direction,
     validate_workspace,
 )
+from .edit_plan import edit_plan_request, load_edit_plan
 from .exports import generate_codex_export, generate_rhythm_csv, generate_rhythm_midi
 from .jobs import JobManager
 from .media_http import describe_media
@@ -36,6 +37,7 @@ MAX_ASSET_BYTES = VIDEO_MAX_BYTES
 # segment captures one path segment; the table is read in order, and because a
 # pattern must match the segment count exactly, no entry can shadow another.
 GET_ROUTES: list[Route] = [
+    ("GET", ("api", "projects", ":id", "edit-plan"), "_get_edit_plan"),
     ("GET", ("api", "projects", ":id", "composition"), "_get_composition"),
     ("GET", ("api", "projects", ":id", "export", "composition.zip"), "_get_composition_export"),
     ("GET", ("api", "jobs", ":id"), "_get_job"),
@@ -100,7 +102,7 @@ class WebApi:
         if store is None:
             return 404, {"Content-Type": "application/json"}, b'{"error":"Project not found"}'
         try:
-            archive = composition_archive(json.loads(document_bytes), self.project_manager.get_project_rhythm(params["id"]), store)
+            archive = composition_archive(json.loads(document_bytes), self.project_manager.get_project_rhythm(params["id"]), store, load_edit_plan(self.project_manager, params["id"]))
         except (ValueError, OSError) as exc:
             return 422, {"Content-Type": "application/json"}, json.dumps({"error": "composition/export-failed", "message": str(exc)}).encode()
         return 200, {"Content-Type": "application/zip", "Content-Disposition": 'attachment; filename="beatscope-composition.zip"'}, archive
@@ -155,7 +157,10 @@ class WebApi:
             return 404, {"Content-Type": "application/json"}, json.dumps({"error": "Project not found"}).encode()
         # The handoff carries timing facts only; the visual layer is the
         # consumer decision, so nothing is compiled into the package here.
-        archive = generate_codex_export(rhythm)
+        try:
+            archive = generate_codex_export(rhythm, edit_plan=load_edit_plan(self.project_manager, params["id"], rhythm))
+        except ValueError as exc:
+            return 422, {"Content-Type": "application/json"}, json.dumps({"error": str(exc)}).encode()
         return 200, {
             "Content-Type": "application/zip",
             "Content-Disposition": f'attachment; filename="{project_id}.beatscope-codex.zip"',
@@ -166,6 +171,15 @@ class WebApi:
 
     def _get_direction(self, params, query, headers) -> tuple[int, dict[str, str], bytes]:
         return self._serve_direction(params["id"], headers)
+
+    def _get_edit_plan(self, params, query, headers):
+        return edit_plan_request(self.project_manager, params["id"])
+
+    def handle_put_edit_plan(self, path, body, headers):
+        parts = path.strip("/").split("/")
+        if len(parts) != 4 or parts[:2] != ["api", "projects"] or parts[3] != "edit-plan":
+            return 404, {"Content-Type": "text/plain"}, b"Not found"
+        return edit_plan_request(self.project_manager, parts[2], body, headers.get("If-Match") or headers.get("if-match"))
 
     def _get_workspace(self, params, query, headers) -> tuple[int, dict[str, str], bytes]:
         return self._serve_workspace(params["id"], headers)

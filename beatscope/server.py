@@ -135,9 +135,31 @@ class Handler(BaseHTTPRequestHandler):
         path = route.path
         query = parse_qs(route.query)
 
+        if path == '/api/materials/library':
+            self._send(200, (ROOT / 'material-library.json').read_bytes(), 'application/json')
+            return
+        if path == '/api/materials/prepare':
+            try:
+                state = self.ctx.movie_jobs.materials.prepare(query.get('project',[''])[0], int(query.get('seed',['1'])[0]), query.get('template',['material-mix'])[0], renderer_tools())
+                self._send(200, json.dumps(state).encode(), 'application/json')
+            except (ValueError, OSError) as exc:
+                self._send(422, json.dumps({'message':str(exc)}).encode(), 'application/json')
+            return
+        if path.startswith('/api/materials/cache/'):
+            parts = path.split('/',5)
+            target = self.ctx.movie_jobs.materials.resource(parts[4], parts[5]) if len(parts)==6 else None
+            if target:
+                self._send(200,target.read_bytes(),'image/jpeg' if target.suffix=='.jpg' else 'application/json')
+            else:
+                self._send(404,b'Not found','text/plain')
+            return
+
         if path == "/api/movies/capabilities":
             tools = renderer_tools()
-            self._send(200, json.dumps({"available": tools["available"], "message": tools["message"]}).encode(), "application/json")
+            self._send(200, json.dumps({
+                "available": tools["available"],
+                "message": tools["message"],
+            }).encode(), "application/json")
             return
         if path.startswith("/api/movies/"):
             parts = path.strip("/").split("/")
@@ -329,7 +351,7 @@ class Handler(BaseHTTPRequestHandler):
                 data = json.loads(self.rfile.read(int(declared_size)))
                 if not isinstance(data, dict) or not isinstance(data.get("project_id"), str):
                     raise ValueError("project_id required")
-                job = self.ctx.movie_jobs.submit(data["project_id"], seed=data.get("seed"))
+                job = self.ctx.movie_jobs.submit(data["project_id"], seed=data.get("seed"), **({'template':data['template']} if 'template' in data else {}))
                 self._send(202, json.dumps(job).encode(), "application/json")
             except RuntimeError as exc:
                 self._send(409, json.dumps({"message": str(exc)}).encode(), "application/json")
@@ -478,6 +500,17 @@ class Handler(BaseHTTPRequestHandler):
             return
         route = urlparse(self.path)
         path = route.path
+        if path.startswith("/api/projects/") and path.endswith("/edit-plan"):
+            from .edit_plan import MAX_EDIT_PLAN_BYTES
+            raw_size = self.headers.get("Content-Length", "")
+            if not raw_size.isdigit() or int(raw_size) > MAX_EDIT_PLAN_BYTES:
+                self.close_connection = True
+                self._send(413 if raw_size.isdigit() else 400, b'{"error":"edit-plan/body-length"}', "application/json")
+                return
+            body = self.rfile.read(int(raw_size))
+            status, headers, payload = self.ctx.web_api.handle_put_edit_plan(path, body, dict(self.headers.items()))
+            self._send(status, payload, "application/json", headers)
+            return
         if path.startswith("/api/projects/") and path.endswith("/composition"):
             from .composition import MAX_COMPOSITION_BYTES
 

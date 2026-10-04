@@ -37,20 +37,22 @@ test('render chunk endpoint requires the job token, exact host and content type'
 });
 
 test('VideoEncoder errors propagate before queue waiting and VideoFrames always close', async () => {
-  let callbacks, closed = 0;
+  let callbacks, closed = 0, instances = 0;
   const oldEncoder = globalThis.VideoEncoder, oldFrame = globalThis.VideoFrame;
   try {
     globalThis.VideoEncoder = class {
       static async isConfigSupported() { return {supported: true}; }
-      constructor(config) { callbacks = config; }
+      constructor(config) { callbacks = config; this.probe = instances++ === 0; }
       encodeQueueSize = 0;
       configure() {}
-      encode() { throw new Error('encode failed'); }
+      encode() { if (!this.probe) throw new Error('encode failed'); }
+      async flush() {}
+      close() {}
     };
     globalThis.VideoFrame = class { close() { closed++; } };
     const encoder = await createFrameEncoder({canvas: {width: 1080, height: 1080}});
     await assert.rejects(encoder.encode(0), /encode failed/);
-    assert.equal(closed, 1);
+    assert.equal(closed, 2); // Initialization probe and the failing real frame.
     callbacks.error(new Error('device lost'));
     await assert.rejects(encoder.encode(1), /device lost/);
     await assert.rejects(encoder.finish(), /device lost/);

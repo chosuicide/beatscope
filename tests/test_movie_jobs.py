@@ -11,11 +11,26 @@ def manager(tmp_path, monkeypatch):
     audio = tmp_path / 'audio.wav'
     audio.write_bytes(b'test')
     projects = SimpleNamespace(cache_root=tmp_path,
+        get_project_dir=lambda key: tmp_path / key,
         get_project_rhythm=lambda key: {'source': {'duration': 12}} if key == 'a' * 12 else None,
         get_project_audio_path=lambda key: audio)
     monkeypatch.setattr('beatscope.mv_jobs.renderer_tools', lambda: {'available': True})
     monkeypatch.setattr('beatscope.mv_jobs.threading.Thread.start', lambda self: None)
     return MovieJobs(projects)
+
+
+def test_templates_freeze_identity_and_isolate_active_jobs(manager):
+    job = manager.submit('a' * 12, seed=7, template='material-mix')
+    assert job['template'] == 'material-mix'
+    assert job['template_version'] == 'prismatic-echo-4'
+    assert len(job['template_digest']) == 64
+    assert manager.submit('a' * 12, seed=7, template='material-mix')['id'] == job['id']
+    with pytest.raises(RuntimeError):
+        manager.submit('a' * 12, seed=7, template='voxel')
+    with pytest.raises(ValueError):
+        manager.submit('a' * 12, seed=7, template='material-gray')
+    with pytest.raises(ValueError):
+        manager.submit('a' * 12, template='../outside')
 
 
 def test_movie_admission_and_cancel(manager):

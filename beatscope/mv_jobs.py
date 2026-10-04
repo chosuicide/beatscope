@@ -1,6 +1,7 @@
 """Local-only movie jobs. Analysis/export contracts are intentionally unchanged."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -9,14 +10,25 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 
+from .edit_plan import edit_plan_bytes, load_edit_plan
+from .material_templates import MaterialTemplates, material_version, validate_template
 from .messages import msg
 from .project import _atomic_write_bytes
 from .response_relevance import build_response_relevance
 
 WEB = Path(__file__).parent / "web"
 RUNTIME = Path(__file__).parent / "runtime"
+
+
+def _link_or_copy(source, target):
+    try:
+        os.link(source, target)
+    except OSError:
+        shutil.copyfile(source, target)
+    return target
 
 
 def renderer_tools() -> dict:
@@ -55,6 +67,7 @@ class MovieJobs:
         self.lock = threading.RLock()
         self.active = None
         self.jobs = {}
+        self.materials = MaterialTemplates(projects)
 
     def _save(self, job):
         _atomic_write_bytes(self.root / job["id"] / "status.json", json.dumps(job, ensure_ascii=False).encode())
@@ -80,7 +93,9 @@ class MovieJobs:
                 self._save(job)
             return job
 
-    def submit(self, project_id, seed=None):
+    def submit(self, project_id, seed=None, template='voxel'):
+        validate_template(template)
+        template_digest = material_version() if template != 'voxel' else 'voxel-phrase-2'
         if seed is not None and (type(seed) is not int or not 0 <= seed < 2**24):
             raise ValueError("seed must be an integer from 0 to 16777215")
         if not re.fullmatch(r"[0-9a-f]{12}", project_id):
@@ -97,21 +112,26 @@ class MovieJobs:
         audio = self.projects.get_project_audio_path(project_id)
         if not audio or not audio.is_file():
             raise ValueError(msg("movie.missing-audio"))
+        edit_plan = load_edit_plan(self.projects, project_id, rhythm)
+        edit_digest = hashlib.sha256(edit_plan_bytes(edit_plan)).hexdigest()
         with self.lock:
             if self.active:
                 active = self.jobs[self.active]
-                if active["project_id"] == project_id and (seed is None or active["seed"] == seed):
+                if active["project_id"] == project_id and (seed is None or active["seed"] == seed) and active.get("edit_plan_digest") == edit_digest and active.get('template', 'voxel') == template and active.get('template_digest', 'voxel-phrase-2') == template_digest:
                     return dict(active)
                 raise RuntimeError(msg("movie.busy"))
             job_id = secrets.token_hex(12)
             directory = self.root / job_id
             directory.mkdir()
             job = {"id": job_id, "project_id": project_id, "seed": secrets.randbits(24) if seed is None else seed,
+                   "edit_plan_digest": edit_digest,
+                   "template": template, "template_digest": template_digest,
+                   "template_version": 'prismatic-echo-4' if template == 'material-mix' else 'voxel-phrase-2',
                    "state": "queued", "progress": 0, "message": msg("movie.preparing"), "duration": duration}
             self.jobs[job_id] = job
             self.active = job_id
             self._save(job)
-            threading.Thread(target=self._run, args=(job_id, rhythm, audio, tools), daemon=True).start()
+            threading.Thread(target=self._run, args=(job_id, rhythm, audio, tools, edit_plan), daemon=True).start()
             return dict(job)
 
     def cancel(self, job_id):
@@ -124,18 +144,33 @@ class MovieJobs:
             self._save(job)
             return True
 
-    def _run(self, job_id, rhythm, audio, tools):
+    def _run(self, job_id, rhythm, audio, tools, edit_plan=None):
         directory = self.root / job_id
         job = self.jobs[job_id]
         process = None
         try:
-            for name in ("mv-render.html", "mv-frame.mjs", "mv-visual.js", "mv-plan.mjs", "mv-encode.mjs"):
+            for name in ("mv-render.html", "mv-frame.mjs", "mv-visual.js", "mv-plan.mjs", "mv-encode.mjs", 'movie-factory.mjs', 'movie-templates.mjs', 'material-frame.mjs', 'material-gpu.mjs'):
                 shutil.copyfile(WEB / name, directory / name)
             shutil.copyfile(RUNTIME / "runtime.js", directory / "beatscope-runtime.js")
+            shutil.copyfile(RUNTIME / "edit-plan.js", directory / "edit-plan.js")
             (directory / "package.json").write_text('{"type":"module"}', encoding="utf-8")
             ranking = build_response_relevance(rhythm)
             (directory / "input.json").write_text(json.dumps({"rhythm": rhythm, "ranking": ranking,
-                "audio": str(audio.resolve()), "seed": job["seed"]}), encoding="utf-8")
+                "audio": str(audio.resolve()), "seed": job["seed"], "editPlan": edit_plan, 'template': job.get('template', 'voxel')}), encoding="utf-8")
+            if job.get('template', 'voxel') != 'voxel':
+                while True:
+                    if (directory / 'cancel').exists():
+                        raise ValueError('cancelled')
+                    state = self.materials.prepare(job['project_id'], job['seed'], job['template'], tools, rhythm, edit_plan)
+                    if state['state'] == 'failed':
+                        raise ValueError(state['message'])
+                    if state['state'] == 'ready':
+                        break
+                    time.sleep(.5)
+                prepared = self.materials.root / state['key']
+                for name in ('score.json', 'plan.json', 'material-timeline.json', 'material-library.json'):
+                    shutil.copyfile(prepared / name, directory / name)
+                shutil.copytree(prepared / 'media', directory / 'media', copy_function=_link_or_copy)
             if (directory / "cancel").exists():
                 raise ValueError("cancelled")
             env = dict(os.environ, BEATSCOPE_PLAYWRIGHT_MODULE=tools["module"], BEATSCOPE_FFMPEG=tools["ffmpeg"],
@@ -155,6 +190,8 @@ class MovieJobs:
                         continue
                     with self.lock:
                         job["progress"] = max(0, min(1, float(update.get("progress", 0))))
+                        if isinstance(update.get("acceleration"), dict):
+                            job["acceleration"] = update["acceleration"]
                         self._save(job)
                 code = process.wait()
             if (directory / "cancel").exists():

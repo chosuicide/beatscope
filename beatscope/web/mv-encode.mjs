@@ -12,7 +12,7 @@
  */
 const CODECS = ['avc1.640028', 'avc1.4d002a', 'avc1.42e02a']; // High 4.0, Main 4.2, Baseline 4.2
 
-export async function createFrameEncoder({ canvas, fps = 30, bitrate = 8_000_000, token = '', onError }) {
+export async function createFrameEncoder({ canvas, fps = 30, bitrate = 8_000_000, token = '', hardwareAcceleration = 'prefer-hardware', onError }) {
   if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return null;
   const base = {
     width: canvas.width,
@@ -23,14 +23,30 @@ export async function createFrameEncoder({ canvas, fps = 30, bitrate = 8_000_000
     avc: { format: 'annexb' },
   };
   let config = null;
-  for (const codec of CODECS) {
-    const candidate = { ...base, codec };
+  // Supported config is only a hint. Exercise one frame before selecting it,
+  // so a driver which rejects initialization can fall back without losing the job.
+  const canEncode=async candidate=>{
+    let probe,timer;
+    try{
+      let failed=false;probe=new VideoEncoder({output:()=>{},error:()=>{failed=true;}});probe.configure(candidate);
+      const frame=new VideoFrame(canvas,{timestamp:0,duration:Math.round(1e6/fps)});
+      try{probe.encode(frame,{keyFrame:true});}finally{frame.close();}
+      await Promise.race([probe.flush(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Encoder initialization timeout')),5000);})]);
+      return !failed;
+    }catch{return false;}finally{clearTimeout(timer);if(probe&&probe.state!=='closed')probe.close();}
+  };
+  const preferences=hardwareAcceleration==='prefer-hardware'?['prefer-hardware','no-preference']:[hardwareAcceleration];
+  for (const preference of preferences) {
+   for (const codec of CODECS) {
+    const candidate = { ...base, codec, hardwareAcceleration:preference };
     try {
       const support = await VideoEncoder.isConfigSupported(candidate);
-      if (support && support.supported) { config = candidate; break; }
+      if (support && support.supported && await canEncode(candidate)) { config = candidate; break; }
     } catch {
       /* try the next profile */
     }
+   }
+   if(config)break;
   }
   if (!config) return null;
 
@@ -61,6 +77,7 @@ export async function createFrameEncoder({ canvas, fps = 30, bitrate = 8_000_000
   let index = 0;
   return {
     codec: config.codec,
+    hardwareAcceleration: config.hardwareAcceleration,
     bitrate,
     /** Render one frame and hand it to the encoder. */
     async encode(timeSeconds) {

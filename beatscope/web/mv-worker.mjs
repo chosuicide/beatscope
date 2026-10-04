@@ -14,7 +14,7 @@ const input=JSON.parse(fs.readFileSync(path.join(root,'input.json')));
 const hash=createHash('sha256');for await(const chunk of fs.createReadStream(input.audio))hash.update(chunk);
 if(hash.digest('hex')!==input.rhythm.source.sha256)throw Error('Audio hash mismatch');
 const track=createTrack(input.rhythm,{responseRelevance:input.ranking});
-const plan=makePlan(input.rhythm,track.responseBetween(0,input.rhythm.source.duration),input.seed);
+const plan=input.template&&input.template!=='voxel'?JSON.parse(fs.readFileSync(path.join(root,'plan.json'))):makePlan(input.rhythm,track.responseBetween(0,input.rhythm.source.duration),input.seed,input.editPlan);
 fs.writeFileSync(path.join(root,'plan.json'),JSON.stringify(plan));
 // Capture is the bottleneck (frame rendering itself costs <1 ms), so several
 // pages render and grab frames in parallel, chunk by chunk, and the frames are
@@ -33,10 +33,13 @@ const THREADS=Math.max(0,Math.min(64,Math.floor(Number(process.env.BEATSCOPE_MV_
 // In-page WebCodecs encoding is the fast path; BEATSCOPE_MV_ENCODER=png forces
 // the screenshot+FFmpeg path, and an unsupported browser falls back to it too.
 const ENCODER=String(process.env.BEATSCOPE_MV_ENCODER||'webcodecs').toLowerCase();
+const HARDWARE=['prefer-hardware','prefer-software','no-preference'].includes(process.env.BEATSCOPE_MV_HARDWARE)?process.env.BEATSCOPE_MV_HARDWARE:'prefer-hardware';
+const GPU=process.env.BEATSCOPE_MV_GPU==='0'?'0':'1';
+const COMPOSITE=process.env.BEATSCOPE_MV_COMPOSITE==='0'?'0':'1';
 const BITRATE=Math.max(100000,Math.min(50000000,Math.floor(Number(process.env.BEATSCOPE_MV_BITRATE)||8000000)));
 const token=randomBytes(24).toString('hex');
 let videoMode=ENCODER==='png'?'png':'webcodecs';
-const allowed=new Set(['mv-render.html','mv-frame.mjs','mv-visual.js','mv-plan.mjs','mv-encode.mjs','beatscope-runtime.js','input.json','plan.json']);
+const allowed=new Set(['mv-render.html','mv-frame.mjs','mv-visual.js','mv-plan.mjs','mv-encode.mjs','beatscope-runtime.js','edit-plan.js','input.json','plan.json','movie-factory.mjs','movie-templates.mjs','material-frame.mjs','material-gpu.mjs','material-timeline.json']);
 let encoderStream=null; // ffmpeg stdin, fed by POST /chunk from the page
 const publicInput=JSON.stringify({rhythm:input.rhythm,ranking:input.ranking});
 const server=http.createServer(async (req,res)=>{
@@ -52,8 +55,9 @@ const server=http.createServer(async (req,res)=>{
   return;
  }
  if(req.method!=='GET'){res.writeHead(405).end();return;}
- if(!allowed.has(name)){res.writeHead(404).end();return;}
- res.setHeader('Content-Type',name.endsWith('.html')?'text/html':name.endsWith('.json')?'application/json':'text/javascript');
+ if(!allowed.has(name)&&!(input.template?.startsWith('material-')&&/^media\/[A-Za-z0-9_-]+\.jpg$/.test(name))){res.writeHead(404).end();return;}
+ if(!fs.existsSync(path.join(root,name))){res.writeHead(404).end();return;}
+ res.setHeader('Content-Type',name.endsWith('.html')?'text/html':name.endsWith('.json')?'application/json':name.endsWith('.jpg')?'image/jpeg':'text/javascript');
  res.end(name==='input.json'?publicInput:fs.readFileSync(path.join(root,name)));
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -74,7 +78,7 @@ const watchdog=setInterval(()=>{
 const check=()=>{if(fs.existsSync(path.join(root,'cancel'))){cancelled=true;throw Error('Cancelled');}};
 const temp=path.join(root,'movie.partial.mp4'), output=path.join(root,'movie.mp4');
 try {
- check();browser=await chromium.launch({headless:true,channel:process.env.BEATSCOPE_BROWSER_CHANNEL||(process.platform==='win32'?'msedge':'chromium'),args:['--enable-webgl','--ignore-gpu-blocklist']});
+ check();browser=await chromium.launch({headless:true,channel:process.env.BEATSCOPE_BROWSER_CHANNEL||(process.platform==='win32'?'msedge':'chromium'),args:['--enable-gpu','--enable-webgl']});
  const errors=[];
  const makeWorker=async()=>{
   const page=await browser.newPage({viewport:{width:1080,height:1080},deviceScaleFactor:1});
@@ -82,7 +86,7 @@ try {
   // Lossless but much faster than page.screenshot(): the CDP screenshot with
   // optimizeForSpeed uses a faster zlib setting, so pixels are identical.
   const cdp=await page.context().newCDPSession(page);
- const query=videoMode==='webcodecs'?`?encode=webcodecs&bitrate=${BITRATE}&token=${token}`:'';
+ const query=videoMode==='webcodecs'?`?encode=webcodecs&bitrate=${BITRATE}&hardware=${HARDWARE}&gpu=${GPU}&composite=${COMPOSITE}&token=${token}`:`?gpu=${GPU}&composite=${COMPOSITE}`;
   await page.goto(`http://127.0.0.1:${server.address().port}/${query}`);
   await page.waitForFunction(()=>window.ready,{},{timeout:45000});
   if(videoMode==='webcodecs'){
@@ -105,22 +109,28 @@ try {
   workers.push(worker);
  }
  const lead=workers[0];
+ const acceleration=await lead.page.evaluate(()=>({encodingPreference:window.encoderAcceleration||null,effects:window.renderAt.acceleration||null}));
+ fs.writeFileSync(path.join(root,'acceleration.json'),JSON.stringify(acceleration,null,2));
  const checkpoint=Math.min(8,plan.duration/2);
  await lead.page.evaluate(t=>window.renderAt(t),checkpoint);const before=await lead.page.screenshot();
  await lead.page.evaluate(()=>window.renderAt(0));await lead.page.evaluate(t=>window.renderAt(t),checkpoint);
  if(!before.equals(await lead.page.screenshot()))throw Error('Seek reproducibility check failed');
  const frames=Math.ceil(plan.duration*plan.fps);let stderr='';
+ const diagnostics=await browser.newBrowserCDPSession();
+ const cpuBefore=await diagnostics.send('SystemInfo.getProcessInfo').catch(()=>null),renderStarted=Date.now();
  // webcodecs: the page encodes, FFmpeg only muxes the elementary stream
  // png: FFmpeg decodes the screenshots and encodes the video itself
  const videoArgs=videoMode==='webcodecs'
-  ?['-f','h264','-framerate',String(plan.fps),'-i','pipe:0']
+  // Annex B discards WebCodecs timestamps. Force a constant input clock:
+  // some software encoders rewrite their VUI timing at a later keyframe.
+  ?['-f','h264','-r',String(plan.fps),'-i','pipe:0']
   :['-f','image2pipe','-framerate',String(plan.fps),'-vcodec','png','-i','pipe:0'];
  // Both paths must describe the same RGB->YUV mapping: Chromium converts a
  // canvas with BT.709, while ffmpeg defaults to BT.601 for RGB sources. Pin
  // both to BT.709 and tag the output so players agree with us.
  const BT709=['-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-color_range','tv'];
  const videoCodecArgs=videoMode==='webcodecs'
-  ?['-c:v','copy','-bsf:v','h264_metadata=colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1']
+  ?['-c:v','copy','-bsf:v','h264_metadata=colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1',...BT709]
   :['-c:v','libx264','-preset',PRESET,'-crf',String(CRF),'-tune','film',...(THREADS?['-threads',String(THREADS)]:[]),'-pix_fmt','yuv420p','-vf','scale=out_color_matrix=bt709:out_range=tv',...BT709];
  encoder=spawn(process.env.BEATSCOPE_FFMPEG||'ffmpeg',['-y','-v','error',...videoArgs,'-i',input.audio,'-map','0:v:0','-map','1:a:0','-af',`atrim=duration=${plan.duration},asetpts=PTS-STARTPTS`,...videoCodecArgs,'-c:a','aac','-b:a','192k','-t',String(plan.duration),'-movflags','+faststart',temp],{windowsHide:true,stdio:['pipe','ignore','pipe']});
  encoderStream=videoMode==='webcodecs'?encoder.stdin:null;
@@ -153,7 +163,11 @@ try {
  if(videoMode==='webcodecs')await workers[0].page.evaluate(()=>window.finishEncode());
  encoderStream=null;encoder.stdin.end();const [code]=await closed;if(code!==0)throw Error(stderr);
  check();fs.renameSync(temp,output);
- console.log(JSON.stringify({progress:1,complete:true,frames,duration:plan.duration,shots:plan.shots.length,pages:workers.length,encoder:videoMode,preset:videoMode==='png'?PRESET:null,crf:videoMode==='png'?Number(CRF):null,bitrate:videoMode==='webcodecs'?BITRATE:null}));
+ const cpuAfter=await diagnostics.send('SystemInfo.getProcessInfo').catch(()=>null);
+ if(cpuBefore&&cpuAfter){const initial=new Map(cpuBefore.processInfo.map(p=>[p.id,p.cpuTime]));acceleration.browserCpuSeconds=cpuAfter.processInfo.reduce((sum,p)=>sum+Math.max(0,p.cpuTime-(initial.get(p.id)??0)),0);}
+ acceleration.renderSeconds=(Date.now()-renderStarted)/1000;
+ fs.writeFileSync(path.join(root,'acceleration.json'),JSON.stringify(acceleration,null,2));
+ console.log(JSON.stringify({progress:1,complete:true,frames,duration:plan.duration,shots:plan.shots.length,pages:workers.length,encoder:videoMode,acceleration,preset:videoMode==='png'?PRESET:null,crf:videoMode==='png'?Number(CRF):null,bitrate:videoMode==='webcodecs'?BITRATE:null}));
 } finally {
  clearInterval(watchdog);
  if(encoder&&encoder.exitCode===null){encoder.stdin.destroy();encoder.kill();await encoderClosed?.catch(()=>{});}
