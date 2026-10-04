@@ -27,6 +27,15 @@ REQUIRED_PACKAGE_FILES = {
     "SKILL.md",
     "references/schema.md",
     "README.md",
+    "choreography.js",
+    "edit-score.js",
+    "picture-tools.js",
+    "edit-plan.js",
+    "edit-plan.json",
+    "music-brief.mjs",
+    "AGENT.md",
+    "references/directing.md",
+    "references/picture-tools.md",
 }
 
 
@@ -64,6 +73,22 @@ async def test_export_roundtrip_via_mcp(mcp_env, tmp_path: Path):
         rhythm_map = json.loads(archive.read("rhythm-map.json"))
         assert rhythm_map["bpm"]  # agent-facing map is complete
         assert "getVisualState" in archive.read("visual-state.js").decode("utf-8")
+
+
+async def test_mcp_export_preserves_studio_authored_timing(mcp_env, tmp_path: Path):
+    from beatscope.edit_plan import edit_plan_bytes, edit_plan_request
+    status, headers, payload = edit_plan_request(mcp_env.projects, PROJECT_A)
+    assert status == 200
+    plan = json.loads(payload)
+    plan["boundaries"] = [{"id": "stage:edited", "time": 1.234}]
+    plan["cues"] = [{"id": "o:0", "deleted": True}, {"id": "u:added", "time": 2.345}]
+    assert edit_plan_request(mcp_env.projects, PROJECT_A, edit_plan_bytes(plan), headers["ETag"])[0] == 200
+    destination = tmp_path / "edited.zip"
+    async with Client(_server(mcp_env), raise_exceptions=True) as client:
+        result = await _export(client, project_id=PROJECT_A, destination=str(destination))
+    assert not result.is_error
+    with zipfile.ZipFile(destination) as archive:
+        assert json.loads(archive.read("edit-plan.json")) == plan
 
 
 async def test_export_requires_overwrite_for_existing_destination(mcp_env, tmp_path: Path):
@@ -157,8 +182,17 @@ def test_wheel_ships_mcp_package_data(tmp_path: Path):
         "beatscope/mcp/runtime_worker.mjs",
         "beatscope/mcp/data/schema_v4.json",
         "beatscope/runtime/runtime.js",
+        "beatscope/runtime/choreography.js",
+        "beatscope/runtime/edit-score.js",
+        "beatscope/runtime/picture-tools.js",
+        "beatscope/agent_skill/music-brief.mjs",
         "beatscope/agent_skill/SKILL.md",
         "beatscope/agent_skill/references/schema.md",
+        "beatscope/agent_skill/references/directing.md",
+        "beatscope/agent_skill/references/picture-tools.md",
+        "beatscope/agent_skill/references/reference-workflow.md",
+        "beatscope/agent_skill/references/video-workflow.md",
+        "beatscope/agent_skill/reference-tools.mjs",
     }
     assert required <= names, sorted(required - names)
     assert any(name.startswith("beatscope/web/app/assets/index-") and name.endswith(".js") for name in names)

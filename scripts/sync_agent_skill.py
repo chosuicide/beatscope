@@ -13,11 +13,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "beatscope" / "agent_skill"
 TARGET = ROOT / "skills" / "beatscope-visualizer"
-FILES = (Path("SKILL.md"), Path("references/schema.md"))
+FILES = tuple(Path(name) for name in (
+    "SKILL.md", "references/schema.md", "references/directing.md", "references/picture-tools.md",
+))
 
 
 def drifted_files() -> list[Path]:
-    return [relative for relative in FILES if (SOURCE / relative).read_bytes() != (TARGET / relative).read_bytes()]
+    return [
+        relative for relative in FILES
+        if not (TARGET / relative).is_file() or (SOURCE / relative).read_bytes() != (TARGET / relative).read_bytes()
+    ]
 
 
 def sync() -> None:

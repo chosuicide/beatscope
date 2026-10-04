@@ -1,34 +1,15 @@
-"""Compare complete product output between two backends, not just their beats.
+"""Check complete product output consistency and per-track beat metrics.
 
-The review that prompted this asked for the whole project to be compared, and for
-good reason: the enhanced backend's first version agreed with the official
-pipeline internally while publishing a project that contradicted itself - a
-global tempo of 60 with segments at 120, three bars of beats inside a five-bar
-grid, and the model's downbeats replaced by a 4-cycle. None of that shows up in a
-beat F1 number, and all of it would reach a consumer.
-
-So this checks the invariants a project must satisfy as well as the metric:
-
-- the global tempo and the tempo segments agree;
-- the declared bar count covers the beats that exist;
-- the meter numerator matches the numbering the beats use;
-- the downbeat flags agree with the meter's first beat;
-- the source labels are present and consistent with what the backend did.
-
-The metric is reported per backend and per track. Which corpus it runs on decides
-what the number means: Ballroom is in final0's training data, so on Ballroom this
-is a wiring check and nothing more. final0's own documentation says it was trained
-on all data except GTZAN, which makes GTZAN the held-out set - and its audio is
-licence-restricted, so it has to be obtained separately.
+Checks tempo segments, bar coverage, meter numbering, downbeat flags and
+source labels, rather than treating a beat F1 number as complete validation.
 
 Usage:
-    python scripts/compare_product_output.py --limit 8 [--device cuda] [--backends lightweight enhanced]
+    python scripts/compare_product_output.py --limit 8 --backends lightweight
 """
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import statistics
 import sys
 from pathlib import Path
@@ -115,16 +96,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--limit", type=int, default=8)
     parser.add_argument("--split", choices=("dev", "test", "all"), default="dev")
-    parser.add_argument("--backends", nargs="+", default=["lightweight", "enhanced"])
-    parser.add_argument("--device", default="cpu")
+    parser.add_argument("--backends", nargs="+", choices=("lightweight", "demucs"), default=["lightweight"])
     parser.add_argument("--output", type=Path, default=Path("build/product-output-comparison.json"))
     parser.add_argument("--manifest", type=Path, default=MANIFEST)
     parser.add_argument("--audio-root", type=Path, default=REPO_ROOT / "build/public-benchmark/audio/BallroomData")
     parser.add_argument("--annotation-root", type=Path, default=REPO_ROOT / "build/public-benchmark/annotations")
     args = parser.parse_args()
-    # The enhanced backend pins its device through the environment, so the flag has
-    # to reach it there or the comparison silently runs on CPU.
-    os.environ["BEATSCOPE_MODEL_DEVICE"] = args.device
 
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
     selected = [row["track_id"] for row in manifest["tracks"] if args.split in ("all", row["split"])][: args.limit]

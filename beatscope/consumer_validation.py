@@ -50,6 +50,7 @@ from beatscope.consumer_contract import (
     validate_manifest,
 )
 from beatscope.exports import (
+    _agent_skill_file,
     _probe_source,
     _runtime_source,
     _visual_data_module,
@@ -75,6 +76,11 @@ MAX_TOTAL_BYTES = 128 * 1024 * 1024
 
 NODE_TIMEOUT_SECONDS = 60.0
 WORKER_TIMEOUT_SECONDS = 30.0
+
+# Frozen 0.12.2 reference checker, retained independently of its self-hash.
+# Later directing guides do not require it; old content-addressed evidence
+# remains verifiable. Never accept a digest supplied by the package itself.
+LEGACY_REFERENCE_HELPER_SHA256 = "80c5acda6dadc2ab856a1871a0f419d54b8e698690019f6b36ec5528207185f0"
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_DIR = Path(__file__).resolve().parent / "runtime"
@@ -365,6 +371,12 @@ def _manifest_check(members: Mapping[str, bytes] | None) -> tuple[dict[str, Any]
             try:
                 rhythm_map = json.loads(members[RHYTHM_MEMBER].decode("utf-8"))
                 rhythm_errors = manifest_duration_errors(manifest, rhythm_map)
+                if manifest.get("capabilities", {}).get("edit_plan") and "edit-plan.json" in members:
+                    from .edit_plan import validate_edit_plan
+                    try:
+                        validate_edit_plan(json.loads(members["edit-plan.json"]), rhythm_map)
+                    except (ValueError, TypeError) as exc:
+                        rhythm_errors.append(f"edit-plan:invalid:{exc}")
             except (UnicodeDecodeError, json.JSONDecodeError) as error:
                 rhythm_errors.append(f"rhythm-map:unreadable:{error}")
             errors.extend(rhythm_errors)
@@ -475,10 +487,22 @@ def _executable_trust_check(
         PROBE_MEMBER: _probe_source().encode("utf-8"),
         WORKER_MEMBER: _worker_example_source().encode("utf-8"),
         ENTRY_MEMBER: _visual_state_source(
-            rhythm, response_relevance
+            rhythm, response_relevance,
+            embedded="with { type: 'json' }" not in members.get(ENTRY_MEMBER, b"").decode("utf-8", errors="replace"),
         ).encode("utf-8"),
     }
-    if response_relevance is not None:
+    if isinstance(capabilities, dict) and capabilities.get("choreography"):
+        expected["choreography.js"] = (RUNTIME_DIR / "choreography.js").read_text(encoding="utf-8").encode("utf-8")
+        expected["music-brief.mjs"] = _agent_skill_file("music-brief.mjs").encode("utf-8")
+    if "edit-score.js" in members or isinstance(capabilities, dict) and capabilities.get("edit_score"):
+        expected["edit-score.js"] = (RUNTIME_DIR / "edit-score.js").read_text(encoding="utf-8").encode("utf-8")
+    if "picture-tools.js" in members:
+        expected["picture-tools.js"] = (RUNTIME_DIR / "picture-tools.js").read_text(encoding="utf-8").encode("utf-8")
+    if "edit-plan.js" in members:
+        expected["edit-plan.js"] = (RUNTIME_DIR / "edit-plan.js").read_bytes()
+    if "reference-tools.mjs" in members:
+        expected["reference-tools.mjs"] = _agent_skill_file("reference-tools.mjs").encode("utf-8")
+    if response_relevance is not None and "response-relevance-data.js" in members:
         expected["response-relevance-data.js"] = _visual_data_module(
             "RESPONSE_RELEVANCE", response_relevance
         ).encode("utf-8")
@@ -487,8 +511,9 @@ def _executable_trust_check(
         if actual is None:
             errors.append(f"executable:missing:{name}")
         elif actual != trusted:
-            # Strict: the fixture is regenerated from the current generators, so
-            # no historical allowance is needed.
+            if (name == "reference-tools.mjs" and manifest.get("package_version") == "0.12.2"
+                    and sha256_hex(actual) == LEGACY_REFERENCE_HELPER_SHA256):
+                continue
             errors.append(f"executable:untrusted-bytes:{name}")
     return _check(
         "executable-trust",

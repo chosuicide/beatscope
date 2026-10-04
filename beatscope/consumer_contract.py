@@ -49,7 +49,7 @@ KNOWN_CAPABILITIES = (
 )
 REQUIRED_CAPABILITIES = ("timing", "bands", "structure", "scenes", "module_worker")
 KNOWN_FUNCTIONS = ("frame", "timing", "scene", "response_events")
-KNOWN_FILES = ("rhythm", "recipe", "timeline", "response_relevance")
+KNOWN_FILES = ("rhythm", "recipe", "timeline", "response_relevance", "edit_plan")
 
 DURATION_TOLERANCE = 1e-6
 
@@ -261,6 +261,44 @@ def validate_manifest(
         errors.append("capabilities.timing:required-with-rhythm-file")
 
     worker_on = capabilities.get("module_worker") is True
+    if capabilities.get("edit_plan") is True:
+        if files.get("edit_plan") != "edit-plan.json":
+            errors.append("files.edit_plan:required-with-capability")
+        author = manifest.get("authoring")
+        if not isinstance(author, dict) or author.get("plan_module") != "edit-plan.js":
+            errors.append("authoring.plan_module:required-with-edit-plan")
+        if members is not None and "edit-plan.js" not in members:
+            errors.append("authoring.plan_module:missing-member")
+    elif "edit_plan" in files:
+        errors.append("files.edit_plan:requires-capability")
+    authoring = manifest.get("authoring")
+    if capabilities.get("choreography") is True:
+        if not isinstance(authoring, dict):
+            errors.append("authoring:required-with-choreography")
+        else:
+            for key in ("module", "brief"):
+                path = authoring.get(key)
+                if not valid_member_path(path):
+                    errors.append(f"authoring.{key}:invalid-path")
+                elif members is not None and path not in members:
+                    errors.append(f"authoring.{key}:missing-member:{path}")
+            if authoring.get("factory") != "createChoreography":
+                errors.append("authoring.factory:expected-createChoreography")
+    elif authoring is not None:
+        errors.append("authoring:requires-choreography")
+    if capabilities.get("edit_score") is True:
+        if capabilities.get("choreography") is not True or not isinstance(authoring, dict):
+            errors.append("authoring.editor:requires-choreography")
+        else:
+            path = authoring.get("editor")
+            if not valid_member_path(path):
+                errors.append("authoring.editor:invalid-path")
+            elif members is not None and path not in members:
+                errors.append(f"authoring.editor:missing-member:{path}")
+            if authoring.get("editor_factory") != "createEditScore":
+                errors.append("authoring.editor_factory:expected-createEditScore")
+    elif isinstance(authoring, dict) and ("editor" in authoring or "editor_factory" in authoring):
+        errors.append("authoring.editor:requires-edit-score")
     if members is not None:
         if WORKER_MEMBER in members and not worker_on:
             errors.append(f"capabilities.module_worker:required-with-{WORKER_MEMBER}")

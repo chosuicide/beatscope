@@ -46,31 +46,34 @@ LOCK_PATH = SHARED_DIR / "fixture-lock.json"
 GENERATOR_PATH = Path(__file__).parent / "fixtures" / "consumer" / "generate_consumer.py"
 PROBE_SOURCE_PATH = REPO_ROOT / "beatscope" / "runtime" / "consumer-probe.js"
 PROBE_SIZE_BUDGET = 24 * 1024
-AGENT_WORD_BUDGET = 900
+AGENT_WORD_BUDGET = 400
 
 # The live handoff carries timing facts only: the v0.8 visual layer (recipe,
 # timeline, scene director, scene surface) is no longer shipped, because the
 # package states no task and pre-decides no visual language.
-TIMING_ONLY_MEMBERS = frozenset(
-    {
-        MANIFEST_MEMBER,
-        "README.md",
-        "AGENT.md",
-        "rhythm-map.json",
-        "rhythm.mid",
-        "rhythm.csv",
-        "response-relevance.json",
-        "response-relevance-data.js",
-        "visual-state.js",
-        "beatscope-runtime.js",
-        "worker-example.js",
-        "consumer-probe.js",
-        "BEATSCOPE.md",
-        "SKILL.md",
-        "references/schema.md",
-        "LICENSE",
-    }
-)
+TIMING_ONLY_MEMBERS = frozenset({
+    'AGENT.md',
+    'BEATSCOPE.md',
+    'LICENSE',
+    'README.md',
+    'SKILL.md',
+    'beatscope-package.json',
+    'beatscope-runtime.js',
+    'choreography.js',
+    'edit-score.js',
+    'picture-tools.js',
+    'edit-plan.js',
+    'edit-plan.json',
+    'music-brief.mjs',
+    'consumer-probe.js',
+    'references/directing.md',
+    'references/picture-tools.md',
+    'references/schema.md',
+    'response-relevance.json',
+    'rhythm-map.json',
+    'visual-state.js',
+    'worker-example.js',
+})
 VISUAL_MEMBERS = frozenset(
     {
         "visual-recipe.json",
@@ -81,9 +84,8 @@ VISUAL_MEMBERS = frozenset(
     }
 )
 
-# The frozen fixture is a timing-only package: the live member set minus the
-# response sidecar, which this arrangement does not need to exercise.
-FIXTURE_MEMBERS = TIMING_ONLY_MEMBERS - frozenset({"response-relevance.json", "response-relevance-data.js"})
+# The frozen historical timing package keeps its original member set.
+FIXTURE_MEMBERS = frozenset(['AGENT.md', 'BEATSCOPE.md', 'LICENSE', 'README.md', 'SKILL.md', 'beatscope-package.json', 'beatscope-runtime.js', 'consumer-probe.js', 'reference-tools.mjs', 'references/reference-workflow.md', 'references/schema.md', 'rhythm-map.json', 'rhythm.csv', 'rhythm.mid', 'visual-state.js', 'worker-example.js'])
 
 AUDIO_SUFFIXES = {".wav", ".wave", ".mp3", ".flac", ".ogg", ".m4a", ".aiff", ".aif", ".opus"}
 
@@ -178,9 +180,8 @@ def test_export_member_set_is_timing_only():
     names = set(archive.namelist())
     assert names == TIMING_ONLY_MEMBERS
     assert not (names & VISUAL_MEMBERS)
-    # The sidecars that carry the same facts into a DAW or a spreadsheet ship
-    # inside the package now, instead of only behind separate downloads.
-    assert {"rhythm.mid", "rhythm.csv"} <= names
+    # DAW/spreadsheet carriers remain separate downloads; no duplicate facts.
+    assert not ({"rhythm.mid", "rhythm.csv", "response-relevance-data.js"} & names)
 
 
 def test_export_manifest_is_valid_honest_and_deterministic():
@@ -197,7 +198,7 @@ def test_export_manifest_is_valid_honest_and_deterministic():
     assert manifest["capabilities"]["module_worker"] is ("worker-example.js" in members)
     assert manifest["capabilities"]["response_relevance"] is True
     assert manifest["display_name"] == "characterization.wav"
-    assert set(manifest["summary"]) == {"bpm", "bars", "beats", "onsets", "segments"}
+    assert set(manifest["summary"]) == {"bpm", "bars", "beats", "onsets", "segments", "stage_count", "cue_edits"}
     assert manifest["functions"]["timing"] == "getVisualState"
     assert manifest["functions"]["response_events"] == "getResponseEvents"
     # Two exports of the same input are byte-identical, manifest included.
@@ -231,21 +232,23 @@ def test_agent_document_is_the_single_entry():
     assert len(agent.split()) <= AGENT_WORD_BUDGET
     for anchor in (
         "beatscope-package.json",
-        manifest["functions"]["timing"],
-        manifest["functions"]["response_events"],
-        "audio.currentTime",
-        "frame / fps",
         "consumer-probe.js",
         "BEATSCOPE.md",
         "SKILL.md",
         "raw_time",
-        "Read this package cheaply",
-        "Work with the user",
-        "aspect ratio",
-        "Derive the response budget yourself",
-        "pick a number of onsets",
+        "references/directing.md",
+        "representative preview",
+        "Compare paired",
+        "user accepted",
+        "not a visual concept",
+        "line chart",
     ):
         assert anchor in agent, f"AGENT.md is missing {anchor!r}"
+    # Entry routes to SKILL.md; exact APIs have one owner instead of being
+    # repeated in the workflow document.
+    api_guide = members["SKILL.md"].decode("utf-8")
+    for function in manifest["functions"].values():
+        assert function in api_guide, f"SKILL.md is missing {function!r}"
     # It states the flow, not a task and not the invariants: those live in
     # BEATSCOPE.md, and an entry that restates them is the duplication this
     # package was reviewed for.
@@ -322,7 +325,7 @@ def test_legacy_export_honestly_reduces_capabilities():
     assert manifest["capabilities"]["scenes"] is False
     assert manifest["capabilities"]["structure"] is False
     assert set(manifest["functions"]) == {"timing"}
-    assert set(manifest["files"]) == {"rhythm"}
+    assert set(manifest["files"]) == {"rhythm", "edit_plan"}
     assert "visual-recipe.json" not in members and "scene-director.js" not in members
     assert validate_manifest(manifest, members) == []
     # A map without a project id gets a stable content-derived one.
@@ -416,7 +419,10 @@ def test_fixture_regeneration_is_byte_identical(tmp_path: Path):
     # generations on the same runner, while the committed fixture remains
     # independently content-addressed and contract-validated below.
     assert tree(generated[0]) == tree(generated[1])
-    assert set(tree(generated[0])) == set(tree(SHARED_DIR))
+    # A live export includes the new workflow; keep the historical fixture
+    # content-addressed instead of rewriting its evidence for a docs change.
+    live_fixture_members = TIMING_ONLY_MEMBERS - {"response-relevance.json"}
+    assert set(tree(generated[0])) == {f"fixture.beatscope/{name}" for name in live_fixture_members} | {"checkpoints.json", "fixture-lock.json"}
 
 
 # --------------------------------------------------------- manifest rules

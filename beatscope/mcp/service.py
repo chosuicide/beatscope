@@ -21,6 +21,7 @@ from typing import Any, Callable, Coroutine
 
 import anyio
 
+from ..edit_plan import load_edit_plan
 from ..exports import generate_codex_export
 from ..models import AnalysisConfig
 from ..pipeline import AnalysisCancelled as PipelineAnalysisCancelled
@@ -277,7 +278,7 @@ class BeatScopeService:
                 "Pass overwrite=true to replace it."
             )
 
-        payload = generate_codex_export(rhythm)
+        payload = generate_codex_export(rhythm, edit_plan=load_edit_plan(self.projects, request.project_id, rhythm))
         tmp_target = target.with_name(f"{target.name}.tmp-{os.getpid()}-{threading.get_ident()}")
         try:
             tmp_target.write_bytes(payload)
@@ -299,6 +300,8 @@ class BeatScopeService:
             "sha256": hashlib.sha256(payload).hexdigest(),
             "overwritten": bool(existed),
             "files": files,
+            "start_here": "AGENT.md",
+            "next_action": "Read AGENT.md; inspect references and music facts, design development with layers and camera, then render and review a continuous preview before expansion.",
         }
 
     # ---------------------------------------------------- runtime queries

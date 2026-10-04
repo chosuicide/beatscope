@@ -1,0 +1,30 @@
+{
+  "case_id": "editorial-image",
+  "client": "Codex-subagent",
+  "comparison_sha256": [],
+  "evidence_status": "incomplete",
+  "generation": 1,
+  "incomplete_reason": "missing_review_record",
+  "input_sha256": {
+    "audio": "8e0870e6777d708d6f8fc0b4054d35b29739bcb8c97c1463d705056176ef860a",
+    "duo": "6f75162e0bbe7aae9b201e68420203db8090acecb4f481a620910caa2c11e2d8",
+    "hero": "85ce16a272fa9da69bb3802a7bd0cc1db1cee282ff14903b29c6c4b6cf419d52",
+    "reference": "2ba01c31967522f8aa5e1219a25ebaf8593d8b6799da46ea0dcad2d5bcb4915b"
+  },
+  "intervention_count": 1,
+  "model": "inherited-parent-model",
+  "model_version": "unreported",
+  "package_sha256": "f6340ac592985347e9158ab879d565e21edf224bab7f225baf0473a67d1cba1c",
+  "preview_duration": 10.0,
+  "preview_sha256": "4ef078a8a56e03f68ec8284834057d5e5d92d5cd3112e2b94156e6debaa3e256",
+  "reference_fidelity": "not_verified",
+  "review_level": "none",
+  "run_id": "first-pair",
+  "schema": "beatscope-reference-agent-run-1",
+  "source_sha256": "c5f6ac8c9c076f0ee0baa79b027810338a09323b23a05c541eb23a76a0808be4",
+  "task_sha256": "6b869edda9390361af31ae30707a547b53a74c6938ba804dd51ee3e976429f72",
+  "timing_sha256": "792d14da12a218c20b9b5f3210a3340b4f324d233335abd4f587af4a02a13714",
+  "tool_access": "local-file-and-shell",
+  "user_accepted": false,
+  "variant": "baseline"
+}

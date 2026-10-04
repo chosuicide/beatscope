@@ -1,9 +1,21 @@
 {
+  "authoring": {
+    "brief": "music-brief.mjs",
+    "editor": "edit-score.js",
+    "editor_factory": "createEditScore",
+    "factory": "createChoreography",
+    "module": "choreography.js",
+    "plan_module": "edit-plan.js"
+  },
   "capabilities": {
     "bands": true,
+    "choreography": true,
+    "edit_plan": true,
+    "edit_score": true,
     "module_worker": true,
     "response_relevance": false,
     "scenes": false,
+    "segment_levels": true,
     "structure": true,
     "timing": true
   },
@@ -17,6 +29,7 @@
   "duration": 30.0001,
   "entry": "visual-state.js",
   "files": {
+    "edit_plan": "edit-plan.json",
     "rhythm": "rhythm-map.json"
   },
   "functions": {
@@ -25,22 +38,28 @@
   "integrity": {
     "algorithm": "sha256",
     "members": {
-      "AGENT.md": "7d1834d8088c39259144033538c7b50e5e73ae3b1840a319c6adcc781d8d5d74",
-      "BEATSCOPE.md": "673d25c96f3ac143b890a6bbe24fc1f9d744f0fd8bac282c178d565454f89783",
+      "AGENT.md": "f770f4ab04e6c3efacefab94e33e168e1f8a157c87fbae0f65f7ee7535a8efcb",
+      "BEATSCOPE.md": "1620079ff7c6fdbf0fa627abfd7f4898199441d09c04032fb86143062fe0c8ff",
       "LICENSE": "d4b53efee2dc67ed7b322c35f6c156f2f762b83ba8ed0129246c7970d677072b",
-      "README.md": "28c871ad687f2e04a84bc3e82b63e684bd78caaec5db7fc3067553783439894e",
-      "SKILL.md": "94f2686ab1cd256ad4b6274df1c29d01917ce8fe68fac9b73fbd11d769fe1d3e",
-      "beatscope-runtime.js": "189015e8150c887f4047287ba6e0ca81b8affa668f582824c40ea652764d0781",
-      "consumer-probe.js": "da76e4b6a0bc83a793b98e465ee6f8c1a6afe26b090092bca6232b07eb52ba46",
-      "references/schema.md": "fff3caa0f6aa9d071071d53fe1879b5b2e13d6f29fcaea04f5159b1d408e4b3b",
-      "rhythm-map.json": "718c4aef60a0e47537d53d84db1cb06aa9d284d75d7267cebffa67c5445110cf",
-      "rhythm.csv": "5b1818071cbb585a7acd247090f33452cc22b3631907a60203cfaf689e215db3",
-      "rhythm.mid": "c317e43de998ba22f8b1d84c23bc6ffe221da7de078c7b088380e84eb1a64013",
-      "visual-state.js": "237b636f149cb123cc932b65cbb7b062d3996299925a5e6483bc12eeaa1250e5",
+      "README.md": "0bf24787d09bba5ee97bee445e976e4602411cd3c37c5e1280ae5eb02b9a71b9",
+      "SKILL.md": "2fb872b016bee06e69d5d8347253e66ae0a3e2461a04fd642ca213e080a36b5e",
+      "beatscope-runtime.js": "f8854a6d569ef22be4d0b8b291a8af329e24c5b1fe549837288a925a7c68e99f",
+      "choreography.js": "f08d2b1459e9ff44a9491f3dadaeb4efcbc709f8cf762201d3bcea5e0d9eca40",
+      "consumer-probe.js": "ddf205c7d06d3847083627a2c8412bd6cde7b54d100e3051bd9ae31f7373d111",
+      "edit-plan.js": "9ae2f10b344568e619700bbccbc2d94d5ef8b47f36f49195f0a03c36acc34d0b",
+      "edit-plan.json": "0900b07d4a9ef18d3946fd92350462a1e01b24b842ab2cc1c21ad1070d7a0757",
+      "edit-score.js": "d3f2eb3e1e471b3408880681dfa569fdac31033595e9aa4b0b2e295d9ae43ee1",
+      "music-brief.mjs": "0ac4535126076126a6dfd12cbd4883960de6733de1523ca1f0c8b751ac685819",
+      "picture-tools.js": "0b4730ffa463df3094ca89f2379ee06d376cd19567c878438d5b00e22ca8dc2c",
+      "references/directing.md": "5cc6e87a5c52b816603e6fa68d19ab2460317b1c86c05f0decae73e5dff25d0f",
+      "references/picture-tools.md": "4933a4863fcc970940528ea216e866bf142add1dec73007e518ffad7195c668f",
+      "references/schema.md": "d69c9201076c939303cc648b26c3a7601fb0f9d82db81c763d0ac65237e84417",
+      "rhythm-map.json": "af1017e1d5c534ab487198e38afc4fcf0b8e370bf96c445fe33100427f899f9f",
+      "visual-state.js": "b1a3fb30659c7a53fd0eb4add871078a3a47c3069a1334ec8149a7c721800bd4",
       "worker-example.js": "aea9d2aa15f99237c0abab2bdc2c132d8090ddd3632e3aa2048ff7d9b21a0a70"
     }
   },
-  "package_version": "0.12.2",
+  "package_version": "0.19.2",
   "probe": "consumer-probe.js",
   "project_id": "e5d9366aa963",
   "schema": "beatscope-package-1",
@@ -48,7 +67,13 @@
     "bars": 15,
     "beats": 60,
     "bpm": 120.233,
+    "cue_edits": {
+      "added": 0,
+      "deleted": 0,
+      "moved": 0
+    },
     "onsets": 370,
-    "segments": 3
+    "segments": 3,
+    "stage_count": 3
   }
 }

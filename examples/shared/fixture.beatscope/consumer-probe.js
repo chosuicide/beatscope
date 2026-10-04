@@ -376,6 +376,13 @@ export async function inspectPackage(manifest, moduleNamespace) {
 
   return {
     ok: errors.length === 0,
+    runtime_contract_ok: errors.length === 0,
+    timing_reliability: {
+      assessment: moduleNamespace?.RHYTHM_MAP?.analysis?.diagnostics?.timing_quality?.status ?? "unavailable-not-verified",
+      suspect_tempo_regions: moduleNamespace?.RHYTHM_MAP?.analysis?.diagnostics?.timing_quality?.suspect_tempo_regions ?? [],
+      meter_source: moduleNamespace?.RHYTHM_MAP?.analysis?.diagnostics?.timing_quality?.meter_source ?? "unspecified",
+      limits: "Runtime success does not verify beats, meter, musical sections, perceived sync or picture quality. Risk hints are not calibrated confidence.",
+    },
     errors,
     checks,
     manifest: {
@@ -551,10 +558,17 @@ async function runCli(argv) {
   const entryUrl = pathToFileURL(join(resolve(root), manifest.entry)).href;
   const moduleNamespace = await import(entryUrl);
   const report = await inspectPackage(manifest, moduleNamespace);
+  if (report.ok && manifest.capabilities?.edit_plan) {
+    const {resolveEditPlan} = await import(pathToFileURL(join(resolve(root), 'edit-plan.js')).href);
+    const plan = JSON.parse(readFileSync(join(resolve(root), 'edit-plan.json'), 'utf8'));
+    const resolved = resolveEditPlan(moduleNamespace.RHYTHM_MAP, plan);
+    report.edit_plan = {stages:resolved.stages.length, cues:resolved.cues.length, manual_cues:resolved.cues.filter(c=>c.manual).length};
+  }
   if (checkpointsPath) {
     const checkpoints = JSON.parse(readFileSync(resolve(checkpointsPath), "utf8"));
     report.checkpoints = runCheckpointSuite(moduleNamespace, checkpoints, { frameFunction: frameFunctionName(manifest) });
     report.ok = report.ok && report.checkpoints.ok;
+    report.runtime_contract_ok = report.ok;
   }
   return report;
 }

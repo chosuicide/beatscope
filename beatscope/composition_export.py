@@ -15,7 +15,7 @@ WEB = Path(__file__).parent / "web"
 PRESETS = {"martin - reflections on black tiles", "martin - glass corridor", "Flexi - smashing fractals [acid etching mix]"}
 
 
-def composition_archive(document, rhythm, store: AssetStore) -> bytes:
+def composition_archive(document, rhythm, store: AssetStore, edit_plan=None) -> bytes:
     assets = {a["asset_id"]: a for a in store.manifest()}
     errors = validate_composition(document, set(assets))
     if errors:
@@ -26,7 +26,7 @@ def composition_archive(document, rhythm, store: AssetStore) -> bytes:
     if preset and preset not in PRESETS:
         raise ValueError("composition/unsupported-background")
     members = {"composition.json": composition_bytes(document)}
-    with zipfile.ZipFile(io.BytesIO(generate_codex_export(rhythm))) as timing:
+    with zipfile.ZipFile(io.BytesIO(generate_codex_export(rhythm, edit_plan=edit_plan))) as timing:
         for name in timing.namelist():
             members["timing/" + name] = timing.read(name)
     members["composition-runtime.mjs"] = (WEB / "composition-runtime.mjs").read_bytes()

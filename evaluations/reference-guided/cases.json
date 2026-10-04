@@ -1,0 +1,27 @@
+{
+  "schema": "beatscope-reference-eval-cases-1",
+  "generation": 1,
+  "target_audio": {"id": "song-1", "sha256": "8e0870e6777d708d6f8fc0b4054d35b29739bcb8c97c1463d705056176ef860a"},
+  "cases": [
+    {
+      "id": "editorial-image",
+      "reference": {"id": "ref-editorial", "sha256": "2ba01c31967522f8aa5e1219a25ebaf8593d8b6799da46ea0dcad2d5bcb4915b"},
+      "assets": [
+        {"id": "hero", "sha256": "85ce16a272fa9da69bb3802a7bd0cc1db1cee282ff14903b29c6c4b6cf419d52"},
+        {"id": "duo", "sha256": "6f75162e0bbe7aae9b201e68420203db8090acecb4f481a620910caa2c11e2d8"}
+      ],
+      "reference_duration": 30,
+      "intent": "Reference with editorial image and typography changes; user task still reveals no expected observations."
+    },
+    {
+      "id": "voxel-state",
+      "reference": {"id": "ref-voxel", "sha256": "f5c9912bd8baad17e1e5a9e96a9ad2173f7cac66f4a4aa6f9f6a09087eb1885f"},
+      "assets": [
+        {"id": "source-a", "sha256": "6c499ea8d58ff604724de7a7ff7c2a2e2f4fac50ab6c9094050b7ccd518e3a99"},
+        {"id": "source-b", "sha256": "96be8ddcd735a548b010f453fdfa1bac91194b3016d9752d00332785b4fe914f"}
+      ],
+      "reference_duration": 10,
+      "intent": "Reference with a persistent central geometric subject and changing surroundings; user task still reveals no expected observations."
+    }
+  ]
+}

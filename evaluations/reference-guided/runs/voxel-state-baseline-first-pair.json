@@ -1,0 +1,30 @@
+{
+  "case_id": "voxel-state",
+  "client": "Codex-subagent",
+  "comparison_sha256": [],
+  "evidence_status": "incomplete",
+  "generation": 1,
+  "incomplete_reason": "missing_review_record",
+  "input_sha256": {
+    "audio": "8e0870e6777d708d6f8fc0b4054d35b29739bcb8c97c1463d705056176ef860a",
+    "reference": "f5c9912bd8baad17e1e5a9e96a9ad2173f7cac66f4a4aa6f9f6a09087eb1885f",
+    "source-a": "6c499ea8d58ff604724de7a7ff7c2a2e2f4fac50ab6c9094050b7ccd518e3a99",
+    "source-b": "96be8ddcd735a548b010f453fdfa1bac91194b3016d9752d00332785b4fe914f"
+  },
+  "intervention_count": 0,
+  "model": "inherited-parent-model",
+  "model_version": "unreported",
+  "package_sha256": "f6340ac592985347e9158ab879d565e21edf224bab7f225baf0473a67d1cba1c",
+  "preview_duration": 10.0,
+  "preview_sha256": "0244c48f71cf7c54a42798a953fa3917336c45691ca90f9d466888aca220cd18",
+  "reference_fidelity": "not_verified",
+  "review_level": "none",
+  "run_id": "first-pair",
+  "schema": "beatscope-reference-agent-run-1",
+  "source_sha256": "30de509f4abe1558ed4e60e13043127853d31ffc4f8b3ffe074581103a5b0e41",
+  "task_sha256": "6b869edda9390361af31ae30707a547b53a74c6938ba804dd51ee3e976429f72",
+  "timing_sha256": "792d14da12a218c20b9b5f3210a3340b4f324d233335abd4f587af4a02a13714",
+  "tool_access": "local-file-and-shell",
+  "user_accepted": false,
+  "variant": "baseline"
+}
