@@ -14,7 +14,9 @@ import { loadStudioWebmcp, loadStudioWebmcpResponses, loadStudioWebmcpModule } f
 import { FIXTURES, loadRhythmFixture, makeSnapshot } from './helpers/studio-webmcp-fixtures.mjs';
 
 const OUT_DIR = new URL('./snapshots/studio-webmcp/', import.meta.url);
-mkdirSync(OUT_DIR, { recursive: true });
+// Contract tests compare fresh-process output without rewriting shared fixtures.
+const stdoutOnly = process.argv.includes('--stdout-only');
+if (!stdoutOnly) mkdirSync(OUT_DIR, { recursive: true });
 
 const { TOOL_DEFINITIONS, ERROR_CODE_SET, LIMITS, RETIRED_TOKENS, FORBIDDEN_INPUT_KEYS } =
   await loadStudioWebmcp();
@@ -47,7 +49,7 @@ const snapshots = {
 for (const [name, payload] of Object.entries(snapshots)) {
   const bytes = canonicalJson(payload);
   const target = new URL(`${name}.json`, OUT_DIR);
-  writeFileSync(target, bytes, 'utf8');
+  if (!stdoutOnly) writeFileSync(target, bytes, 'utf8');
   process.stdout.write(bytes);
-  console.error(`recorded ${name} -> ${fileURLToPath(target)}`);
+  if (!stdoutOnly) console.error(`recorded ${name} -> ${fileURLToPath(target)}`);
 }

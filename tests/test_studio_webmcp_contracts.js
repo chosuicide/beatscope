@@ -8,7 +8,7 @@
  */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -137,11 +137,19 @@ test('the committed snapshot is the current catalog, byte for byte', () => {
 });
 
 test('snapshot bytes are identical across two fresh Node processes', () => {
-  const record = () => execFileSync(process.execPath, [RECORDER], { encoding: 'utf8' });
+  const directory = new URL('./snapshots/studio-webmcp/', import.meta.url);
+  const snapshotFiles = readdirSync(directory).filter((name) => name.endsWith('.json'));
+  const readSnapshots = () => snapshotFiles.map((name) => {
+    const path = new URL(name, directory);
+    return { name, bytes: readFileSync(path, 'utf8'), modified: statSync(path).mtimeMs };
+  });
+  const before = readSnapshots();
+  const record = () => execFileSync(process.execPath, [RECORDER, '--stdout-only'], { encoding: 'utf8' });
   const first = record();
   const second = record();
   assert.equal(first, second, 'canonical bytes must not depend on the process');
   assert.ok(first.includes(readFileSync(SNAPSHOT, 'utf8').trim()), 'the catalog snapshot is one of the recorded bytes');
+  assert.deepEqual(readSnapshots(), before, 'verification must not rewrite committed snapshots');
 });
 
 // --- envelopes and sanitizers ----------------------------------------------
