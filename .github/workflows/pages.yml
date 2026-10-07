@@ -27,7 +27,7 @@ jobs:
       - name: Check out the WebMCP demo source
         uses: actions/checkout@v4
         with:
-          ref: 3eea89e
+          ref: 3eea89ef64e3bd74e500fb77b5b1a2fcbde93248
           path: demo-src
           fetch-depth: 0
 
