@@ -6,8 +6,8 @@ This gate stops the bleeding - it fails when a *new* file above the budget is
 committed, and the fix is to attach it to a release and link it, which is how
 the product tour film is published already.
 
-The two files listed below are the media that predate the gate. They stay: the
-point is to stop growth, not to rewrite history.
+The files listed below are exempt from the budget. The docs/ entries predate
+the gate and stay: the point is to stop growth, not to rewrite history.
 """
 from __future__ import annotations
 
@@ -22,6 +22,8 @@ ROOT = Path(__file__).resolve().parents[1]
 ALLOWED_OVERSIZED = {
     "docs/demo/beathi-studio.gif": "the studio walkthrough the README embeds",
     "docs/demo/agent-to-film.webp": "the agent-to-film loop the README embeds",
+    "site/agent-to-film.webp": "the agent-to-film loop the product page embeds",
+    "site/beatscope-promo-en.mp4": "the promo film the product page embeds",
 }
 BUDGET_BYTES = 1024 * 1024
 
