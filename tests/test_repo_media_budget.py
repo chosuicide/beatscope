@@ -24,6 +24,10 @@ ALLOWED_OVERSIZED = {
     "docs/demo/agent-to-film.webp": "the agent-to-film loop the README embeds",
     "site/agent-to-film.webp": "the agent-to-film loop the product page embeds",
     "site/beatscope-promo-en.mp4": "the promo film the product page embeds",
+    "site/chornic-1080p60.mp4": "the Shattered Heartbeat feature film (1080p60) the exhibition page embeds",
+    "site/chornic-720p30.mp4": "the Shattered Heartbeat feature film (720p30) the exhibition page embeds",
+    "site/hero-loop-1080.mp4": "the hero background loop the exhibition page embeds",
+    "site/hero-loop-720.mp4": "the hero background loop the exhibition page embeds",
 }
 BUDGET_BYTES = 1024 * 1024
 
