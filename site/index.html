@@ -80,6 +80,19 @@
       .nav .seg a[aria-current="true"] { background: #3a3734; color: #ece9e4; }
       .nav .theme-btn { background: #2a2826; color: #ece9e4; }
       .nav .theme-btn:hover { box-shadow: inset 0 0 0 100px #ece9e410; }
+      /* Song-in-film-out pipeline: replaces the generic numbered steps */
+      .pipeline { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(20px, 3vw, 36px); margin-top: 28px; }
+      .pipe { position: relative; display: grid; gap: 12px; align-content: start; padding: 20px; border: 1px solid var(--stroke-secondary); border-radius: var(--r-m); background: var(--fill-tertiary); }
+      .pipe:not(:last-child)::after { content: "→"; position: absolute; top: 50%; right: calc(clamp(20px, 3vw, 36px) / -2); transform: translate(50%, -50%); color: var(--text-tertiary); font-size: 20px; }
+      .pipe__kicker { font: var(--type-label); color: var(--text-primary); margin: 0; }
+      .pipe__media { margin: 0; }
+      .pipe__media img { display: block; width: 100%; height: 120px; object-fit: cover; border-radius: var(--r-s); border: 1px solid var(--stroke-secondary); }
+      .pipe__note { margin: 0; font-size: var(--size-small); color: var(--text-secondary); }
+      .pipe .step__pills { margin: 0; }
+      @media (max-width: 720px) {
+        .pipeline { grid-template-columns: minmax(0, 1fr); }
+        .pipe:not(:last-child)::after { content: "↓"; top: auto; bottom: calc(clamp(20px, 3vw, 36px) / -2); right: 50%; transform: translate(50%, 50%); }
+      }
     </style>
   </head>
   <body>
@@ -87,7 +100,9 @@
       <header class="nav glass" data-auto></header>
       <main class="main">
         <section class="hero">
-          <img class="hero__img" src="hero.jpg" alt="Grey ink smoke billowing across a dark frame, from the BeatScope promo" />
+          <video class="hero__img" autoplay muted loop playsinline preload="metadata" poster="promo-poster.jpg" aria-label="BeatScope promo: cuts timed by BeatScope's own analysis of the track">
+            <source src="beatscope-promo-en.mp4" type="video/mp4" />
+          </video>
           <div class="hero__copy">
             <p class="hero__eyebrow">Open source · Beathi Studio</p>
             <h1>BeatScope</h1>
@@ -102,7 +117,7 @@
               <a class="btn" href="https://github.com/chosuicide/beatscope" target="_blank" rel="noopener">View on GitHub</a>
             </div>
           </aside>
-          <p class="hero__credit">Frame from the promo</p>
+          <p class="hero__credit">Promo — cuts timed by BeatScope's own analysis · <a class="link" href="#promo">watch with sound</a></p>
         </section>
 
         <section class="section" id="promo" data-nav="Promo">
@@ -120,33 +135,27 @@
 
         <section class="section" id="how" data-nav="How it works">
           <div class="head">
-            <h2>Three steps from song to film or timing.</h2>
+            <h2>Song in. Film out.</h2>
           </div>
           <figure class="x-shot">
             <img src="beathi-studio-v015.png" alt="Beathi Studio v0.15.0 showing a Prismatic Echo preview, editable stages and onset markers" />
             <figcaption>Beathi Studio v0.15.0 with Prismatic Echo, editable stages and onset markers</figcaption>
           </figure>
-          <div class="steps">
-            <article class="step">
-              <div class="step__intro"><p class="step__num">01</p><p class="step__eyebrow">Upload</p></div>
-              <div>
-                <h3>Upload a song</h3>
-                <ul class="step__pills"><li>WAV</li><li>FLAC</li><li>MP3</li><li>OGG</li><li>M4A</li></ul>
-              </div>
+          <div class="pipeline">
+            <article class="pipe">
+              <p class="pipe__kicker">Drop in a song</p>
+              <ul class="step__pills"><li>WAV</li><li>FLAC</li><li>MP3</li><li>OGG</li><li>M4A</li></ul>
+              <p class="pipe__note">Any track. It never leaves your machine.</p>
             </article>
-            <article class="step">
-              <div class="step__intro"><p class="step__num">02</p><p class="step__eyebrow">Check</p></div>
-              <div>
-                <h3>Check the analysis</h3>
-                <p>Review the film preview, song structure and rhythm map.</p>
-              </div>
+            <article class="pipe">
+              <p class="pipe__kicker">See the timing</p>
+              <figure class="pipe__media"><img src="beathi-analysis-map.png" alt="BeatScope analysis map: whole-song structure above, eight-bar rhythm detail below" /></figure>
+              <p class="pipe__note">Beats, bars, onsets — measured, never snapped onto a prettier grid.</p>
             </article>
-            <article class="step">
-              <div class="step__intro"><p class="step__num">03</p><p class="step__eyebrow">Output</p></div>
-              <div>
-                <h3>Render, export or hand off</h3>
-                <p>Render a video, export MIDI/CSV, or give the <code>.beatscope</code> package to a coding agent.</p>
-              </div>
+            <article class="pipe">
+              <p class="pipe__kicker">Ship it</p>
+              <figure class="pipe__media"><img src="prismatic-echo-v015.webp" alt="Prismatic Echo render: mirrored footage cut to the beat" /></figure>
+              <p class="pipe__note">Render a film, export MIDI/CSV, or hand the <code>.beatscope</code> package to a coding agent.</p>
             </article>
           </div>
         </section>
@@ -301,5 +310,12 @@ beatscope serve --open</code></pre>
       </footer>
     </div>
     <script src="hark.js"></script>
+    <script>
+      // Respect reduced-motion: don't autoplay the hero promo.
+      if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        var hv = document.querySelector('video.hero__img');
+        if (hv) { hv.removeAttribute('autoplay'); hv.pause(); }
+      }
+    </script>
   </body>
 </html>
