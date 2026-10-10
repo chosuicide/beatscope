@@ -1,16 +1,23 @@
-"""The renderer copies these files into every job; a wheel without one cannot render."""
+"""Every movie job dependency must be declared, even in a clean source build."""
+import ast
 import fnmatch
 import re
-import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_movie_runtime_files_are_packaged():
-    patterns = tomllib.loads((ROOT / 'pyproject.toml').read_text())['tool']['setuptools']['package-data']['beatscope']
-    source = (ROOT / 'beatscope' / 'mv_jobs.py').read_text()
-    names = set(re.findall(r"""["']((?:mv|movie|material|custom|media|paint)[\w.-]*\.(?:html|mjs|js))["']""", source))
+    # This string array uses syntax shared by TOML and Python. Keep the test
+    # runnable on the project's Python 3.10 minimum without adding a parser.
+    metadata = (ROOT / 'pyproject.toml').read_text(encoding='utf-8')
+    array = re.search(r'(?ms)^\[tool.setuptools.package-data\]\s*\n.*?^beatscope\s*=\s*(\[.*?^\])', metadata)
+    assert array is not None
+    patterns = ast.literal_eval(array[1])
+    source = (ROOT / 'beatscope' / 'mv_jobs.py').read_text(encoding='utf-8')
+    names = set(re.findall(r'''["']((?:mv|movie|material|custom|media|paint)[\w.-]*\.(?:html|mjs|js))["']''', source))
     assert 'mv-visual.js' in names
-    missing = [n for n in sorted(names) if (ROOT / 'beatscope' / 'web' / n).exists() and not any(fnmatch.fnmatch('web/' + n, p) for p in patterns)]
+    missing = [name for name in sorted(names)
+               if not any(fnmatch.fnmatch('web/' + name, pattern) for pattern in patterns)]
     assert not missing, f'not in package-data: {missing}'
+    assert all((ROOT / 'beatscope' / 'web' / name).is_file() for name in names)
