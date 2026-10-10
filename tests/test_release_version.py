@@ -41,7 +41,7 @@ def test_repository_versions_match_patch_release():
 
 def test_handoff_format_is_independent_of_product_release():
     from beatscope.exports import PACKAGE_VERSION
-    assert PACKAGE_VERSION == "0.19.2"
+    assert PACKAGE_VERSION == "0.20.1"
     assert "beatscope/exports.py" not in read_versions(ROOT)
 
 

@@ -1,0 +1,109 @@
+{
+  "intent": "music-video",
+  "stages": [
+    {
+      "id": "example",
+      "start": 0,
+      "end": 2,
+      "entry": "before",
+      "focus": "The moving boundary between the outgoing pale world and incoming dark material.",
+      "change": "A circle on pale ground gives way to a pale rectangle on dark ground through brief coexistence.",
+      "rhythm": [
+        {
+          "start": 0,
+          "end": 2,
+          "mode": "switch",
+          "music": "A strong synthetic 65 Hz attack at 1.0 s lies between two weaker 100 Hz attacks.",
+          "reason": "Begin four frames early so half coverage coincides with the audible attack rather than trailing it.",
+          "anchors": [
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "shots": [
+    {
+      "id": "before",
+      "relation": "A dark circle sits left of center on a pale field above a horizontal line.",
+      "setup": {
+        "mode": "transition"
+      },
+      "clock": {
+        "mode": "continuous"
+      }
+    },
+    {
+      "id": "after",
+      "relation": "A pale rectangle sits right of center on a dark field as the incoming mask covers the outgoing world.",
+      "setup": {
+        "mode": "transition"
+      },
+      "clock": {
+        "mode": "continuous"
+      }
+    }
+  ],
+  "cuts": [
+    {
+      "at": 1,
+      "shot": "after"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "world.cover",
+      "keys": [
+        {
+          "at": 0,
+          "value": 0,
+          "ease": "hold"
+        },
+        {
+          "at": 0.866666666667,
+          "value": 0,
+          "ease": "linear"
+        },
+        {
+          "at": 1,
+          "value": 0.5,
+          "ease": "linear"
+        },
+        {
+          "at": 1.133333333333,
+          "value": 1,
+          "ease": "hold"
+        }
+      ]
+    }
+  ],
+  "sync": [
+    {
+      "at": 1,
+      "cueId": "o:1",
+      "kind": "transition",
+      "measure": "half-cover"
+    }
+  ],
+  "demo": {
+    "duration": 2,
+    "audioEvents": [
+      {
+        "time": 0.5,
+        "frequency": 100,
+        "gain": 0.15
+      },
+      {
+        "time": 1,
+        "frequency": 65,
+        "gain": 0.7
+      },
+      {
+        "time": 1.5,
+        "frequency": 100,
+        "gain": 0.15
+      }
+    ],
+    "semantics": "Synthetic timing and sound for teaching only; not the exported song or a production style."
+  }
+}

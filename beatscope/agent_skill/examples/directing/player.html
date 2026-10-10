@@ -1,0 +1,17 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>BeatScope directing example</title>
+<style>html,body{margin:0;overflow:hidden;background:#ebe9e3}canvas{display:block}</style>
+<canvas id="frame" width="640" height="640"></canvas>
+<script type="module">
+import {createEditScore} from '../../edit-score.js';
+import {demoTiming,draw} from './draw.mjs';
+const name=new URLSearchParams(location.search).get('example')??'accent';
+if(!['accent','transition','transition-late','buildup','dense','pause','return'].includes(name))throw Error('Unknown tutorial');
+const score=await fetch('./'+name+'.json').then(r=>r.json());
+const edit=createEditScore(score,demoTiming(score)),canvas=document.querySelector('canvas');
+window.beatscopeRender={duration:2,selector:'#frame',ready:document.fonts.ready,
+ resize(width,height){canvas.width=width;canvas.height=height;},
+ renderAt(time){draw(canvas,edit.at(time),time);}};
+window.beatscopeRender.renderAt(0);
+</script>

@@ -33,7 +33,17 @@ from .timing_quality import timing_quality
 # The handoff package format version (plan section 4.3). This tracks the
 # package contract only: the audio analyser stays at schema.ANALYZER_VERSION
 # (0.7.0) and the visual recipe contract at 0.8.0.
-PACKAGE_VERSION = "0.19.2"
+PACKAGE_VERSION = "0.20.1"
+
+# Generic instructional assets, never a per-song visual plan or original media.
+DIRECTING_EXAMPLES = ("accent", "transition", "transition-late", "buildup", "dense", "pause", "return")
+HANDOFF_RESOURCES = (
+    "query.mjs", "tool-utils.mjs", "render-inputs.mjs", "render.mjs", "verify.mjs",
+    "references/handoff-rules.md", "references/complete-example.md",
+    "references/rendering.md", "references/common-failures.md",
+    "examples/start.mjs", "examples/directing/player.html", "examples/directing/draw.mjs",
+    *(f"examples/directing/{name}.{suffix}" for name in DIRECTING_EXAMPLES for suffix in ("json", "mp4")),
+)
 
 
 def _agent_skill_file(relative_path: str) -> str:
@@ -117,6 +127,10 @@ def _package_manifest(
             "choreography": True,
             "edit_score": True,
             "edit_plan": True,
+            "bounded_query": True,
+            "render_driver": True,
+            "sync_inspection": True,
+            "directing_examples": True,
             **({"segment_levels": True} if any(
                 isinstance(segment.get("mean_rms"), (int, float))
                 and not isinstance(segment.get("mean_rms"), bool)
@@ -133,6 +147,10 @@ def _package_manifest(
             "editor": "edit-score.js",
             "editor_factory": "createEditScore",
             "plan_module": "edit-plan.js",
+            "query": "query.mjs",
+            "render": "render.mjs",
+            "verify": "verify.mjs",
+            "example": "examples/start.mjs",
         },
         "integrity": {
             "algorithm": "sha256",
@@ -524,7 +542,13 @@ Read `AGENT.md` first. Query data; do not load the map in full into context.
 - `edit-plan.json`, `edit-plan.js`: stage boundaries and compact cue overrides;
   resolve with `resolveEditPlan(rhythm, plan)` before authoring the score.
 - `picture-tools.js`: optional target framing and native picture bindings; no style.
-- `music-brief.mjs`: one bounded music summary query, no dependencies.
+- `query.mjs`, `music-brief.mjs`: bounded window selectors, activity and saved stages.
+- `render.mjs`: segmented, resumable sample render via an existing scene adapter.
+- `verify.mjs`: cue binding and coarse picture-change diagnostics; not aesthetic proof.
+- `examples/start.mjs`: runnable new-project example; no existing files overwritten.
+- `examples/directing/`: six geometry scores and short clips with synthetic sound.
+- `references/complete-example.md`, `references/rendering.md`: commands and limits.
+- `references/handoff-rules.md`, `references/common-failures.md`: optional detail.
 - `consumer-probe.js`, `worker-example.js`: contract check and module-worker adapter.
 - `SKILL.md`: API examples; `BEATSCOPE.md`: timing invariants.
 - `references/schema.md`: fields; `references/directing.md`: video workflow.
@@ -533,7 +557,8 @@ Read `AGENT.md` first. Query data; do not load the map in full into context.
 
 ## Not in this package
 
-No audio, assets, style, visual scene plan, rendered video or machine paths. Pair this
+No original audio, project assets, fixed style, job scene plan or machine paths.
+Generic geometry tutorials include synthetic sound and short MP4s. Pair this
 with `{display_name}` and the user's task. References and assets are optional;
 follow AGENT.md for direction and source authorization. CSV and MIDI remain separate
 BeatScope exports. Job-specific sources, decisions and evidence stay in the job.
@@ -544,68 +569,31 @@ BeatScope exports. Job-specific sources, decisions and evidence stay in the job.
 passage/response timing. The entry imports facts with JSON
 import attributes; use Node 22+ or a current Chromium browser/module worker.
 In a browser, serve the package over HTTP with JSON MIME `application/json` and
-JavaScript MIME `text/javascript`; opening a file URL is insufficient. No build
-step or extra runtime dependency is required. Accessors remain synchronous after
+JavaScript MIME `text/javascript`; opening a file URL is insufficient. Timing/query APIs require no build step or extra runtime dependency.
+Rendering requires existing Playwright/browser and FFmpeg; nothing is auto-installed. Accessors remain synchronous after
 module loading. Use the manifest instead of guessing capabilities.
 """
 
 
 def _agent_document(display_name: str, duration: float, rhythm_map: dict[str, Any]) -> str:
-    """Short entry; API, timing and directing each have one owner."""
+    """Ten-step entry; detailed rules and runnable examples live separately."""
     quality = rhythm_map.get("analysis", {}).get("diagnostics", {}).get("timing_quality", {})
-    timing_label = "Unverified timing candidate" if quality.get("timing_revision_status") == "unverified" else "Measured music timing"
+    label = "Unverified timing candidate" if quality.get("timing_revision_status") == "unverified" else "Measured music timing"
     return f"""# BeatScope handoff: {display_name}
 
-{timing_label}, {duration:.3f} seconds. This package supplies music facts and
-generic choreography, not a visual concept or fixed style. A line chart is not
-the default picture.
+{label}, {duration:.3f} seconds; not a visual concept or fixed style.
+A line chart is not the default picture.
 
-## Continue or start
-Identify the matching song/project by source hash, score duration and revision
-binding. Material paths prove neither identity nor authorization. Reuse assets/code
-separately from another song's timing.
-Resume a matching project within scope; otherwise create without inventing history.
-Read summaries/selected fields, not entire maps, embedded
-rhythm/ranking caches or recursive asset listings.
-Assets and references are optional. Reuse explicit direction/authorization;
-without references design independently. Without assets choose procedural visuals or
-online sources within authorization. If direction and source authorization are
-both unclear, ask once together; otherwise ask only for blocking inputs.
-Do not require references, technical parameters or engineering versions.
-Run `node consumer-probe.js .` for changed packages; reuse results for identical
-bytes. Cache `node music-brief.mjs` by rhythm/edit-plan hashes;
-Query uncertain windows only; do not decode/reanalyse music unless explicitly requested.
-Read `beatscope-package.json`, `SKILL.md` and `BEATSCOPE.md`.
-Consult `references/schema.md` for uncertain fields; runtime success does not prove timing.
-
-## Compose
-For video read `references/directing.md`. Inspect supplied reference passages once;
-cache observations. Reuse a matching job-local
-`score.json`, or create one. For an MV use `intent:"music-video"`: passage rhythm,
-related shots, then motion. Compile with `createEditScore`; apply setup and values.
-Keep measured `time` (legacy `raw_time`). Resolve `edit-plan.json` with `edit-plan.js` first:
-use its boundaries and deleted/moved/added cues; preserve source times.
-Stages require entry or explicit carry; cues can coordinate layers/sequences.
-Default boundaries are suggestions; overrides are authored timing.
-The saved plan outranks stale preview timing and automatic sections.
-Preserve authored edits outside the requested scope.
-
-Reuse renderer, camera and asset bindings. Optional `picture-tools.js`:
-read `references/picture-tools.md` for needed helpers only. Helpers require no
-extra analysis, reports or preview passes.
-
-## Check within scope
-Run `node music-brief.mjs --score ../score.json --mv` after score changes.
-For a new piece use one representative preview at 24–30fps covering beats,
-an accent and a handoff; revisions check affected windows/seams only.
-Compare paired moving passages with audio when references exist; otherwise check
-the declared direction. Reuse unaffected evidence. Repeated failure needs an
-approach change or honest limitation. Follow user rendering limits.
-
-## Deliver
-Provide media, source, rerender command, credits and remaining differences.
-Separate package verified, self-reviewed and user accepted. Keep job score,
-assets and evidence outside this ZIP. `README.md` lists files.
+1. Read `beatscope-package.json` and reuse the matching song/project, renderer, assets and accepted requirements within the requested scope.
+2. Run `node consumer-probe.js .` for a changed package; reuse valid unchanged checks.
+3. Do not read `rhythm-map.json` in full; use `node query.mjs` for saved stages, activity and timing risks. Query only uncertain windows with `node query.mjs 16.5 26.5 --accents --stages --limit 12`.
+4. Resolve the latest `edit-plan.json`: its stage boundaries and added/moved/deleted cues outrank stale previews and automatic sections.
+5. Reuse job-local `score.json`; create it only if missing. An MV uses `intent:"music-video"`. Preserve unrelated edits.
+6. Use `SKILL.md` for APIs, `BEATSCOPE.md` for timing, `references/schema.md` for fields, and `references/directing.md` for picture choices; keep measured `time` (legacy `raw_time`).
+7. References/assets are optional. Reuse existing authorization and observations; ask only for blocking inputs. Identity, sourcing and cache details: `references/handoff-rules.md`.
+8. Check edits with `node music-brief.mjs --score ../score.json --mv`. New-project walkthrough: `references/complete-example.md`.
+9. Respect rendering limits: one representative preview with audio, affected windows for revisions. Adapt the existing renderer via `references/rendering.md`; use `render.mjs` and `verify.mjs` when needed. Compare paired moving references; diagnostics do not prove timing or aesthetics.
+10. Deliver playable media, source, exact rerender command, credits and remaining differences. Distinguish verified, self-reviewed and user accepted. `README.md` lists package contents.
 """
 
 
@@ -613,6 +601,7 @@ def generate_codex_export(
     rhythm_data: dict[str, Any],
     include_response_relevance: bool = True,
     edit_plan: dict[str, Any] | None = None,
+    custom_media: dict[str, Any] | None = None,
 ) -> bytes:
     """Package the measured timing facts for one audio file.
 
@@ -657,6 +646,9 @@ def generate_codex_export(
     members["references/schema.md"] = _agent_skill_file("references/schema.md").encode("utf-8")
     members["references/directing.md"] = _agent_skill_file("references/directing.md").encode("utf-8")
     members["references/picture-tools.md"] = _agent_skill_file("references/picture-tools.md").encode("utf-8")
+    for name in HANDOFF_RESOURCES:
+        path = Path(__file__).with_name("agent_skill") / name
+        members[name] = path.read_bytes() if name.endswith(".mp4") else path.read_text(encoding="utf-8").encode("utf-8")
     members["consumer-probe.js"] = _probe_source().encode("utf-8")
     members["AGENT.md"] = _agent_document(
         display_name, float(rhythm_map["duration"]), rhythm_map
@@ -664,6 +656,11 @@ def generate_codex_export(
     license_bytes = _license_bytes()
     if license_bytes is not None:
         members["LICENSE"] = license_bytes
+    if custom_media is not None:
+        members['custom-media.json'] = (json.dumps(custom_media, sort_keys=True, separators=(',', ':'), allow_nan=False) + '\n').encode()
+        note = '\n\nCustom media: custom-media.json carries the saved authored arrangement and SHA-256 references for originals, image proxies and video preview clips. Media bytes are stored separately in the project assets directory and are NOT included in this timing package. Reuse the matching project assets; request missing originals only when required. These are user-authored visual choices, not measured timing facts.\n'
+        members['README.md'] += note.encode()
+        members['AGENT.md'] += b'\nSaved visual arrangement: custom-media.json; original/proxy media are NOT included and stay in separate project assets.\n'
     members[MANIFEST_MEMBER] = _package_manifest(
         rhythm_map, response_relevance, members, display_name
     )
@@ -690,6 +687,8 @@ def generate_codex_export(
         "references/directing.md",
         "references/picture-tools.md",
         "LICENSE",
+        "custom-media.json",
+        *HANDOFF_RESOURCES,
     ]
     missing_from_order = sorted(set(members) - set(order))
     if missing_from_order:

@@ -53,6 +53,9 @@ beatscope = [
   "web/app/*.html", "web/app/*.webp", "web/app/assets/*", "web/app/fonts/*",
   "runtime/*.js", "runtime/*.mjs",
   "agent_skill/*.md", "agent_skill/*.mjs", "agent_skill/references/*.md",
+  "agent_skill/examples/*.mjs", "agent_skill/examples/directing/*.mjs",
+  "agent_skill/examples/directing/*.html", "agent_skill/examples/directing/*.json",
+  "agent_skill/examples/directing/*.mp4",
   "mcp/*.mjs", "mcp/data/*.json",
   "data/*.json",
 ]
@@ -60,6 +63,9 @@ beatscope = [
 # Release policy: the studio page and the shared runtime modules ship in the
 # wheel so a local install serves the studio offline; the built frontend under
 # web/app is packaged the same way.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.ruff]
 target-version = "py310"

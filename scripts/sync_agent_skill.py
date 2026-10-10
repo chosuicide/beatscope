@@ -15,7 +15,13 @@ SOURCE = ROOT / "beatscope" / "agent_skill"
 TARGET = ROOT / "skills" / "beatscope-visualizer"
 FILES = tuple(Path(name) for name in (
     "SKILL.md", "references/schema.md", "references/directing.md", "references/picture-tools.md",
+    "references/handoff-rules.md", "references/complete-example.md",
+    "references/rendering.md", "references/common-failures.md",
 ))
+# Keep the relative score/clip links in directing.md valid in both skill copies.
+FILES += tuple(Path(f"examples/directing/{name}.{suffix}")
+               for name in ("accent", "transition", "transition-late", "buildup", "dense", "pause", "return")
+               for suffix in ("json", "mp4"))
 
 
 def drifted_files() -> list[Path]:

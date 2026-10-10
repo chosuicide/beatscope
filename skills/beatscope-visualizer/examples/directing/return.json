@@ -1,0 +1,105 @@
+{
+  "intent": "music-video",
+  "stages": [
+    {
+      "id": "example",
+      "start": 0,
+      "end": 2,
+      "entry": "main",
+      "focus": "The recognizable circle composition returning with one relationship changed.",
+      "change": "The upper line disappears and the pale opening shifts from left to right while the circle and lower line remain.",
+      "rhythm": [
+        {
+          "start": 0,
+          "end": 2,
+          "mode": "hold",
+          "music": "Synthetic pulses recur at 0.0, 0.5, 1.0 and 1.5 s; the composition change is authored at the 1.0 s pulse.",
+          "reason": "Retaining the main composition allows recognition; removing one line and reversing the opening develops the return.",
+          "anchors": [
+            1
+          ],
+          "action": "On the 1.0 s pulse remove the upper line and reverse the opening position, then retain the changed composition."
+        }
+      ]
+    }
+  ],
+  "shots": [
+    {
+      "id": "main",
+      "relation": "A dark circle sits between horizontal lines; its pale opening changes sides as the upper line vanishes.",
+      "setup": {
+        "mode": "return"
+      },
+      "clock": {
+        "mode": "continuous"
+      }
+    }
+  ],
+  "cuts": [],
+  "tracks": [
+    {
+      "id": "thread.alpha",
+      "keys": [
+        {
+          "at": 0,
+          "value": 1,
+          "ease": "hold"
+        },
+        {
+          "at": 1,
+          "value": 0,
+          "ease": "hold"
+        }
+      ]
+    },
+    {
+      "id": "detail.direction",
+      "keys": [
+        {
+          "at": 0,
+          "value": -1,
+          "ease": "hold"
+        },
+        {
+          "at": 1,
+          "value": 1,
+          "ease": "hold"
+        }
+      ]
+    }
+  ],
+  "sync": [
+    {
+      "at": 1,
+      "cueId": "o:2",
+      "kind": "impact",
+      "measure": "authored event"
+    }
+  ],
+  "demo": {
+    "duration": 2,
+    "audioEvents": [
+      {
+        "time": 0,
+        "frequency": 65,
+        "gain": 0.5
+      },
+      {
+        "time": 0.5,
+        "frequency": 100,
+        "gain": 0.14
+      },
+      {
+        "time": 1,
+        "frequency": 65,
+        "gain": 0.7
+      },
+      {
+        "time": 1.5,
+        "frequency": 100,
+        "gain": 0.14
+      }
+    ],
+    "semantics": "Synthetic timing and sound for teaching only; not the exported song or a production style."
+  }
+}

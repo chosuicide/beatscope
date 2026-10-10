@@ -1,0 +1,137 @@
+{
+  "intent": "music-video",
+  "stages": [
+    {
+      "id": "example",
+      "start": 0,
+      "end": 2,
+      "entry": "main",
+      "focus": "The central circle tightening before an authored release.",
+      "change": "The circle contracts while lower dots grow, briefly holds, then expands and settles.",
+      "rhythm": [
+        {
+          "start": 0,
+          "end": 2,
+          "mode": "hold",
+          "music": "Synthetic attacks become more closely spaced before the strong attack at 1.0 s; this illustrative drop is authored, not a measured song role.",
+          "reason": "Increasing attack density supports contraction and detail growth; the held pose makes the following expansion legible.",
+          "anchors": [
+            1
+          ],
+          "action": "Contract into the pre-release hold, expand on the authored 1.0 s attack, and recover over nine frames."
+        }
+      ]
+    }
+  ],
+  "shots": [
+    {
+      "id": "main",
+      "relation": "A central dark circle sits above four evenly spaced dots; outward radial marks accompany expansion.",
+      "setup": {
+        "mode": "buildup"
+      },
+      "clock": {
+        "mode": "continuous"
+      }
+    }
+  ],
+  "cuts": [],
+  "tracks": [
+    {
+      "id": "actor.scale",
+      "keys": [
+        {
+          "at": 0,
+          "value": 1,
+          "ease": "in-cubic"
+        },
+        {
+          "at": 0.75,
+          "value": 0.7,
+          "ease": "hold"
+        },
+        {
+          "at": 1,
+          "value": 1.5,
+          "ease": "out-cubic"
+        },
+        {
+          "at": 1.3,
+          "value": 1,
+          "ease": "hold"
+        }
+      ]
+    },
+    {
+      "id": "world.order",
+      "keys": [
+        {
+          "at": 0,
+          "value": 0,
+          "ease": "linear"
+        },
+        {
+          "at": 0.75,
+          "value": 1,
+          "ease": "hold"
+        }
+      ]
+    }
+  ],
+  "sync": [
+    {
+      "at": 1,
+      "cueId": "o:6",
+      "kind": "impact",
+      "measure": "authored event"
+    }
+  ],
+  "demo": {
+    "duration": 2,
+    "audioEvents": [
+      {
+        "time": 0.25,
+        "frequency": 280,
+        "gain": 0.15
+      },
+      {
+        "time": 0.5,
+        "frequency": 280,
+        "gain": 0.18
+      },
+      {
+        "time": 0.625,
+        "frequency": 280,
+        "gain": 0.2
+      },
+      {
+        "time": 0.75,
+        "frequency": 280,
+        "gain": 0.2
+      },
+      {
+        "time": 0.8125,
+        "frequency": 280,
+        "gain": 0.22
+      },
+      {
+        "time": 0.875,
+        "frequency": 280,
+        "gain": 0.22
+      },
+      {
+        "time": 1,
+        "frequency": 65,
+        "gain": 0.7
+      },
+      {
+        "time": 1.5,
+        "frequency": 100,
+        "gain": 0.12
+      }
+    ],
+    "semantics": "Synthetic timing and sound for teaching only; not the exported song or a production style.",
+    "role": "drop",
+    "roleSource": "authored tutorial annotation"
+  }
+}

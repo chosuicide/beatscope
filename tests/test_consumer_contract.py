@@ -36,7 +36,7 @@ from beatscope.consumer_contract import (
     validate_fixture_lock,
     validate_manifest,
 )
-from beatscope.exports import PACKAGE_VERSION, generate_codex_export
+from beatscope.exports import HANDOFF_RESOURCES, PACKAGE_VERSION, generate_codex_export
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SHARED_DIR = REPO_ROOT / "examples" / "shared"
@@ -86,6 +86,7 @@ VISUAL_MEMBERS = frozenset(
 
 # The refreshed fixture intentionally exercises the unranked minimal handoff.
 FIXTURE_MEMBERS = TIMING_ONLY_MEMBERS - {'response-relevance.json'}
+TIMING_ONLY_MEMBERS = TIMING_ONLY_MEMBERS | frozenset(HANDOFF_RESOURCES)
 
 AUDIO_SUFFIXES = {".wav", ".wave", ".mp3", ".flac", ".ogg", ".m4a", ".aiff", ".aif", ".opus"}
 
@@ -233,6 +234,8 @@ def test_agent_document_is_the_single_entry():
     for anchor in (
         "beatscope-package.json",
         "consumer-probe.js",
+        "Do not read `rhythm-map.json` in full",
+        "node query.mjs",
         "BEATSCOPE.md",
         "SKILL.md",
         "raw_time",

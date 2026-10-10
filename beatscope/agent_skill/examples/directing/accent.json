@@ -1,0 +1,105 @@
+{
+  "intent": "music-video",
+  "stages": [
+    {
+      "id": "example",
+      "start": 0,
+      "end": 2,
+      "entry": "main",
+      "focus": "The central circle compressing and expanding around one strong attack.",
+      "change": "The circle contracts, expands with radial marks, then returns to its original size.",
+      "rhythm": [
+        {
+          "start": 0,
+          "end": 2,
+          "mode": "hold",
+          "music": "One strong synthetic 65 Hz attack at 1.0 s stands out from weaker 90 Hz pulses.",
+          "reason": "A short compression prepares the isolated attack; recovery preserves its emphasis without another cut.",
+          "anchors": [
+            1
+          ],
+          "action": "Begin preparation five frames before the attack, compress and briefly hold, expand at 1.0 s, and recover over eight frames."
+        }
+      ]
+    }
+  ],
+  "shots": [
+    {
+      "id": "main",
+      "relation": "A dark circle with a pale horizontal opening occupies the center; radial marks appear outside it.",
+      "setup": {
+        "mode": "accent"
+      },
+      "clock": {
+        "mode": "continuous"
+      }
+    }
+  ],
+  "cuts": [],
+  "tracks": [
+    {
+      "id": "actor.scale",
+      "keys": [
+        {
+          "at": 0,
+          "value": 1,
+          "ease": "hold"
+        },
+        {
+          "at": 0.833333333333,
+          "value": 1,
+          "ease": "in-cubic"
+        },
+        {
+          "at": 0.966666666667,
+          "value": 0.85,
+          "ease": "hold"
+        },
+        {
+          "at": 1,
+          "value": 1.45,
+          "ease": "out-cubic"
+        },
+        {
+          "at": 1.266666666667,
+          "value": 1,
+          "ease": "hold"
+        }
+      ]
+    }
+  ],
+  "sync": [
+    {
+      "at": 1,
+      "cueId": "o:2",
+      "kind": "impact",
+      "measure": "authored event"
+    }
+  ],
+  "demo": {
+    "duration": 2,
+    "audioEvents": [
+      {
+        "time": 0.25,
+        "frequency": 90,
+        "gain": 0.12
+      },
+      {
+        "time": 0.5,
+        "frequency": 90,
+        "gain": 0.12
+      },
+      {
+        "time": 1,
+        "frequency": 65,
+        "gain": 0.7
+      },
+      {
+        "time": 1.5,
+        "frequency": 90,
+        "gain": 0.12
+      }
+    ],
+    "semantics": "Synthetic timing and sound for teaching only; not the exported song or a production style."
+  }
+}

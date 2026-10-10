@@ -8,7 +8,13 @@ it does not require references, technical parameters or engineering versions.
 The Agent authors the edit;
 users do not fill in motion parameters or a shot table.
 
-## Engine integration: package format 0.19.2 (editable stages and cues)
+## Engine integration: package format 0.20.1 (bounded queries and sample tools)
+
+The entry guide now has ten quick-start steps. A complete runnable example and
+identity/authorization/cache appendix keep detailed rules out of the entry path.
+Six geometric directing examples include runnable scores and two-second MP4s
+with synthetic sound; a late-transition counterexample illustrates arrival timing.
+These are instructional mechanisms, not the default visual style.
 
 `beatscope.exports.generate_codex_export` is the shared exporter for the Studio
 download (`GET /api/projects/:id/export/codex.zip`), legacy server and MCP
@@ -46,8 +52,9 @@ reload. The original plots fit their container without horizontal clipping.
 Edits save atomically per project with ETag conflict checks, without reanalysis.
 
 The ZIP carries measured timing, compact authored timing overrides, optional
-onset ordering, generic choreography and edit execution. No song audio, sources, visual style, job score or rendered
-movie is embedded. CSV/MIDI remain separate exports. Size depends on song data;
+onset ordering, generic choreography and edit execution. No original song audio,
+project sources, fixed visual style, job score or project movie is embedded.
+Instructional clips use synthetic sound. CSV/MIDI remain separate exports. Size depends on song data;
 the older Mafia v26 ZIP was359850bytes, not a universal size limit.
 
 ## Contents and execution
@@ -75,6 +82,27 @@ the older Mafia v26 ZIP was359850bytes, not a universal size limit.
   `stages` uses the resolved editor plan. `automaticSections` and
   `measuredAnchorCandidates` describe analysis evidence separately. Manual cue
   inspection is bounded and reports truncation; execute the full resolved plan.
+- `query.mjs`: window selectors `--accents`, `--onsets`, `--beats`, `--stages`,
+  `--limit`, `--min-strength`, `--activity-points`. Full saved stage boundaries
+  remain separate from the queried interval. Roles are unlabelled; activity is
+  spectral novelty, not calibrated loudness or inferred drop semantics.
+- `render.mjs`: one-frame-in-flight, single-encoder-thread sample driver with
+  source/audio/settings fingerprints and hash-checked resumable segments.
+  Browser scenes are reused with periodic recycling; --executable supports local
+  Chromium, and element dimensions are checked before encoding. --frames-dir
+  accepts selected PNGs without a browser. Direct segment muxing avoids joined.mp4;
+  --clean removes completed cache files while preserving output/report. Exclusions
+  and free-space preflight keep generated folders and disk pressure explicit.
+  Transcoded audio needs a SHA-verified original and decoded comparison; all
+  timing remains unchanged. `--memory-mb` is a soft working budget, not an OS or GPU memory cap. Existing
+  Playwright/browser and FFmpeg are required; tools never install dependencies.
+- `verify.mjs`: declared cue binding, saved-stage alignment, frame quantization
+  and coarse picture-change candidates/offsets. Missing candidates stay unverified.
+  This cannot establish the correct BPM or aesthetic success.
+- `examples/start.mjs` and `references/complete-example.md`: a new-project
+  geometry example using the actual saved timing, with a three-second audio render.
+- `references/handoff-rules.md`, `references/common-failures.md` and
+  `references/rendering.md`: optional rules, directing pitfalls and scene adapter.
 - `consumer-probe.js`, `worker-example.js`: contract checks and worker adapter.
 - `AGENT.md`, `SKILL.md`, `BEATSCOPE.md`, `README.md`, schema/directing references,
   optional `references/picture-tools.md`

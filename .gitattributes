@@ -18,3 +18,7 @@ beatscope/web/app/**/*.js text eol=lf
 beatscope/web/app/**/*.css text eol=lf
 beatscope/web/app/**/*.txt text eol=lf
 beatscope/web/app/**/*.html text eol=lf
+beatscope/agent_skill/*.md text eol=lf
+beatscope/agent_skill/references/*.md text eol=lf
+skills/beatscope-visualizer/*.md text eol=lf
+skills/beatscope-visualizer/references/*.md text eol=lf

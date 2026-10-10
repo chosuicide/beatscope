@@ -50,6 +50,7 @@ from beatscope.consumer_contract import (
     validate_manifest,
 )
 from beatscope.exports import (
+    HANDOFF_RESOURCES,
     _agent_skill_file,
     _probe_source,
     _runtime_source,
@@ -81,6 +82,12 @@ WORKER_TIMEOUT_SECONDS = 30.0
 # Later directing guides do not require it; old content-addressed evidence
 # remains verifiable. Never accept a digest supplied by the package itself.
 LEGACY_REFERENCE_HELPER_SHA256 = "80c5acda6dadc2ab856a1871a0f419d54b8e698690019f6b36ec5528207185f0"
+# Approved 0.20.0 renderer helpers, before browser reuse and frame input.
+LEGACY_RENDER_HELPERS_SHA256 = {
+    "render.mjs": "d0ad10305d6a80786ce5b701b4c987ab427693713b9ac10c8565691502539cf2",
+    "tool-utils.mjs": "892e5ad4528f106c030e8a996905eb27d4d33e6de27d872540e5b28a84da12f4",
+    "verify.mjs": "47925b94a0ea4f99299ec900a6a86506db5e8ffa0145c22645b4f89a1997ef48",
+}
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_DIR = Path(__file__).resolve().parent / "runtime"
@@ -502,6 +509,12 @@ def _executable_trust_check(
         expected["edit-plan.js"] = (RUNTIME_DIR / "edit-plan.js").read_bytes()
     if "reference-tools.mjs" in members:
         expected["reference-tools.mjs"] = _agent_skill_file("reference-tools.mjs").encode("utf-8")
+    for name in HANDOFF_RESOURCES:
+        required = isinstance(capabilities, dict) and capabilities.get("render_driver")
+        if name == "render-inputs.mjs" and manifest.get("package_version") == "0.20.0":
+            required = False
+        if name.endswith((".mjs", ".html")) and (name in members or required):
+            expected[name] = _agent_skill_file(name).encode("utf-8")
     if response_relevance is not None and "response-relevance-data.js" in members:
         expected["response-relevance-data.js"] = _visual_data_module(
             "RESPONSE_RELEVANCE", response_relevance
@@ -511,6 +524,12 @@ def _executable_trust_check(
         if actual is None:
             errors.append(f"executable:missing:{name}")
         elif actual != trusted:
+            if manifest.get("package_version") == "0.20.0" and sha256_hex(actual) == LEGACY_RENDER_HELPERS_SHA256.get(name):
+                continue
+            if (name == "music-brief.mjs" and manifest.get("package_version") == "0.19.2"
+                    and sha256_hex(actual) == "0ac4535126076126a6dfd12cbd4883960de6733de1523ca1f0c8b751ac685819"):
+                # Frozen 0.19.2 helper, before selectors were added. Exact bytes only.
+                continue
             if (name == "reference-tools.mjs" and manifest.get("package_version") == "0.12.2"
                     and sha256_hex(actual) == LEGACY_REFERENCE_HELPER_SHA256):
                 continue

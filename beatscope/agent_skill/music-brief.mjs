@@ -5,6 +5,7 @@ import {createEditScore, groupOnsets} from './edit-score.js';
 import {createTrack} from './beatscope-runtime.js';
 import plan from './edit-plan.json' with {type: 'json'};
 import {resolveEditPlan} from './edit-plan.js';
+import {options,number} from './tool-utils.mjs';
 const {RHYTHM_MAP: map} = timing;
 const track = createTrack(map);
 const resolvedPlan = resolveEditPlan(map, plan);
@@ -21,6 +22,8 @@ if (args[0] === '--score') {
     const edit = Array.isArray(score.shots) ? createEditScore(score, timing) : null;
     const compiled = edit || createChoreography(score, timing);
     const choreography = edit?.choreography || compiled;
+    if(args[2]==='--mv'&&(choreography.stages.length!==resolvedPlan.stages.length||choreography.stages.some((s,i)=>Math.abs(s.start-resolvedPlan.stages[i].start)>1e-8||Math.abs(s.end-resolvedPlan.stages[i].end)>1e-8)))
+      throw Error('Score stage boundaries do not match the latest saved edit-plan.json');
     const times = [...new Set([0, map.duration, ...Object.values(choreography.moments),
       ...choreography.stages.flatMap(s => [s.start, (s.start + s.end) / 2]),
       ...(edit?.cuts.flatMap(c => [c.time, (c.time + c.end) / 2]) || [])])].filter(t => t >= 0 && t <= map.duration);
@@ -46,53 +49,50 @@ if (args[0] === '--score') {
       }))}, null, 2));
   } catch (error) { console.error(error.message); process.exitCode = 1; }
 } else {
-const start = args.length ? Number(args[0]) : 0;
-const end = args.length > 1 ? Number(args[1]) : map.duration;
-if (args.length > 2 || !Number.isFinite(start) || !Number.isFinite(end)
-    || start < 0 || end <= start || end > map.duration) {
-  console.error('Usage: node music-brief.mjs [startSeconds endSeconds]');
-  process.exit(1);
-}
-const round = n => Number.isFinite(n) ? Math.round(n * 1e5) / 1e5 : null;
-const segments = (map.patterns?.segments || []).map(s => ({...s,
-  start: s.start_time ?? s.start, end: s.end_time ?? s.end,
-  label: s.display_label ?? s.label,
-})).filter(s => s.start < end && s.end > start);
-function windowSummary(a, b) {
-  const beats = map.beats.filter(x => x.time >= a && x.time < b);
-  const onsets = map.onsets.filter(x => (x.time ?? x.raw_time) >= a && (x.time ?? x.raw_time) < b);
-  const activity = {};
-  for (const band of ['low', 'mid', 'high', 'all']) {
-    const e = map.energy || {}, values = e.bands?.[band];
-    if (!values?.length) continue;
-    const fps = e.fps || 100, origin = e.start || 0;
-    const lo = Math.max(0, Math.ceil((a - origin) * fps));
-    const hi = Math.min(values.length, Math.ceil((b - origin) * fps));
-    let sum = 0, max = 0;
-    for (let i = lo; i < hi; i++) { sum += values[i]; max = Math.max(max, values[i]); }
-    activity[band] = {mean: hi > lo ? round(sum / (hi - lo)) : null, max: hi > lo ? round(max) : null};
-  }
-  const selection = typeof timing.getResponseEvents === 'function'
-    ? timing.getResponseEvents(a, b, 3) : track.responseBetween(a, b, 3);
-  const candidates = selection.events;
-  return {interval: [a, b], beatCount: beats.length, onsetCount: onsets.length,
-    firstBeat: beats[0] ? {index: beats[0].index, time: beats[0].time} : null,
-    activity, selectionStrategy: selection.strategy,
-    measuredAnchorCandidates: candidates.map(x => ({id: x.onset_id ?? x.id, time: x.time ?? x.raw_time}))};
-}
-const editedCues = resolvedPlan.cues.filter(c => c.manual && c.time >= start && c.time < end);
-const brief = {
-  source: map.source?.display_name, duration: map.duration, bpm: map.bpm,
-  semantics: 'Spectral novelty is activity, not loudness. stages come from edit-plan.json; automaticSections and measuredAnchorCandidates are analysis evidence. Use resolveEditPlan cues for authored responses, never fire deleted cues or the old time of moved cues. No cut/effect schedule is supplied.',
-  timing: map.analysis?.diagnostics?.timing_quality || null,
-  interval: [start, end],
-  stages: resolvedPlan.stages.filter(s => s.start < end && s.end > start).map(s => ({id: s.id, interval: [s.start, s.end],
-    ...windowSummary(Math.max(start, s.start), Math.min(end, s.end))})),
-  automaticSections: segments.map(s => ({id: s.id, interval: [s.start, s.end], family: s.family,
-    candidateLabel: s.label, waveformRms: s.mean_rms ?? null})),
-  cueEdits: {deletedInPlan: plan.cues.filter(c => c.deleted).length,
-    totalInWindow: editedCues.length, shown: editedCues.slice(0, 24), truncated: editedCues.length > 24},
-};
-if (!segments.length || args.length) brief.window = windowSummary(start, end);
-console.log(JSON.stringify(brief, null, 2));
+try{
+ const positional=args.filter(x=>!x.startsWith('--')).slice(0,args[0]?.startsWith('--')?0:args[1]?.startsWith('--')?1:2);
+ const opts=options(args.slice(positional.length),['accents','beats','stages','onsets','help'],['limit','min-strength','activity-points']);
+ if(opts.help){console.log('node query.mjs [start end] [--accents] [--beats] [--stages] [--onsets] [--limit 24] [--min-strength 0.8] [--activity-points 16]');process.exit(0);}
+ const start=number(positional[0],0,0,map.duration,'start'),end=number(positional[1],map.duration,0,map.duration,'end');
+ if(end<=start)throw Error('Query end must follow start');
+ const limit=number(opts.limit,24,1,100,'limit'),minStrength=number(opts['min-strength'],0,0,1,'min-strength');
+ const pointCount=number(opts['activity-points'],16,1,64,'activity-points');
+ if(!Number.isInteger(limit)||!Number.isInteger(pointCount))throw Error('Output limits must be integers');
+ const round=n=>Number.isFinite(n)?Math.round(n*1e5)/1e5:null;
+ const inWindow=x=>x.time>=start&&x.time<end;
+ const bounded=rows=>({total:rows.length,shown:rows.slice(0,limit),truncated:rows.length>limit});
+ const segments=(map.patterns?.segments||[]).map(s=>({id:s.id,start:s.start_time??s.start,end:s.end_time??s.end,family:s.family,label:s.display_label??s.label,rms:s.mean_rms??null})).filter(s=>s.start<end&&s.end>start);
+ function activity(a,b){
+  const result={};
+  for(const band of ['low','mid','high','all']){
+   const e=map.energy||{},v=e.bands?.[band];if(!v?.length)continue;
+   const fps=e.fps||100,origin=e.start||0,lo=Math.max(0,Math.ceil((a-origin)*fps)),hi=Math.min(v.length,Math.ceil((b-origin)*fps));let sum=0,max=0;
+   for(let i=lo;i<hi;i++){sum+=v[i];max=Math.max(max,v[i]);}
+   result[band]={mean:hi>lo?round(sum/(hi-lo)):null,max:hi>lo?round(max):null};
+  }return result;
+ }
+ function windowSummary(a,b){
+  const beats=(map.beats||[]).filter(x=>x.time>=a&&x.time<b),onsets=(map.onsets||[]).filter(x=>(x.time??x.raw_time)>=a&&(x.time??x.raw_time)<b);
+  const selection=typeof timing.getResponseEvents==='function'?timing.getResponseEvents(a,b,3):track.responseBetween(a,b,3);
+  return {interval:[a,b],beatCount:beats.length,onsetCount:onsets.length,onsetDensity:round(onsets.length/(b-a)),firstBeat:beats[0]?{index:beats[0].index,time:beats[0].time}:null,activity:activity(a,b),selectionStrategy:selection.strategy,measuredAnchorCandidates:selection.events.map(x=>({id:x.onset_id??x.id,time:x.time??x.raw_time}))};
+ }
+ const stages=resolvedPlan.stages.filter(s=>s.start<end&&s.end>start).map(s=>({id:s.id,...windowSummary(Math.max(start,s.start),Math.min(end,s.end)),interval:[s.start,s.end],queriedInterval:[Math.max(start,s.start),Math.min(end,s.end)],musicalRole:null,roleSource:'unlabelled'}));
+ const bins=Array.from({length:pointCount},(_,i)=>{const a=start+(end-start)*i/pointCount,b=start+(end-start)*(i+1)/pointCount;return {interval:[round(a),round(b)],...activity(a,b)};});
+ const edited=resolvedPlan.cues.filter(c=>c.manual&&inWindow(c));
+ const brief={stages:stages.slice(0,limit),stageCount:stages.length,stagesTruncated:stages.length>limit,
+  activityTrend:{semantics:'normalized spectral novelty; activity, not loudness',bins},
+  source:map.source?.display_name,duration:map.duration,bpm:map.bpm,interval:[start,end],
+  semantics:'Editor stages and resolved cues are authoritative. Musical roles are unlabelled; add authored annotations only after listening or user direction. Strength/support are not calibrated confidence. Measured anchors are candidates, not a cut schedule.',
+  timing:map.analysis?.diagnostics?.timing_quality?Object.fromEntries(Object.entries(map.analysis.diagnostics.timing_quality).map(([key,value])=>[key,Array.isArray(value)?{...bounded(value.filter(x=>!Array.isArray(x.interval)||x.interval[0]<end&&x.interval[1]>start)),totalInSong:value.length}:value])):null,
+  automaticSections:segments.slice(0,limit).map(s=>({id:s.id,interval:[s.start,s.end],family:s.family,candidateLabel:s.label,waveformRms:s.rms})),
+  automaticSectionCount:segments.length,automaticSectionsTruncated:segments.length>limit,
+  cueEdits:{deletedInPlan:plan.cues.filter(c=>c.deleted).length,totalInWindow:edited.length,shown:edited.slice(0,limit),truncated:edited.length>limit},window:windowSummary(start,end)};
+ const filtered=opts.accents||opts.beats||opts.stages||opts.onsets;
+ const accentIds=new Set((map.cues?.accent||[]).map(c=>c.onset_id??c.onset??c.id));
+ if(opts.accents)brief.accents=bounded(resolvedPlan.cues.filter(c=>inWindow(c)&&c.strength>=minStrength&&(c.manual||accentIds.has(c.sourceId))));
+ if(opts.beats)brief.beats=bounded((map.beats||[]).filter(inWindow).map(({index,time,bar,beat_in_bar,downbeat})=>({index,time,bar,beat_in_bar,downbeat})));
+ if(opts.onsets)brief.onsets=bounded(resolvedPlan.cues.filter(c=>inWindow(c)&&c.strength>=minStrength));
+ if(filtered){delete brief.automaticSections;delete brief.cueEdits;if(!opts.stages)delete brief.stages;}
+ console.log(JSON.stringify(brief,null,2));
+}catch(error){console.error(error.message);process.exitCode=2;}
 }

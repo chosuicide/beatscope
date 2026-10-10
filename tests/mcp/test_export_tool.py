@@ -17,6 +17,8 @@ import pytest
 from mcp import Client
 from mcp_support import PROJECT_A, create_server_for_settings
 
+from beatscope.exports import HANDOFF_RESOURCES
+
 pytestmark = pytest.mark.anyio
 
 REQUIRED_PACKAGE_FILES = {
@@ -37,6 +39,7 @@ REQUIRED_PACKAGE_FILES = {
     "references/directing.md",
     "references/picture-tools.md",
 }
+REQUIRED_PACKAGE_FILES.update(HANDOFF_RESOURCES)
 
 
 def _server(mcp_env):
@@ -194,6 +197,7 @@ def test_wheel_ships_mcp_package_data(tmp_path: Path):
         "beatscope/agent_skill/references/video-workflow.md",
         "beatscope/agent_skill/reference-tools.mjs",
     }
+    required.update(f"beatscope/agent_skill/{name}" for name in HANDOFF_RESOURCES)
     assert required <= names, sorted(required - names)
     assert any(name.startswith("beatscope/web/app/assets/index-") and name.endswith(".js") for name in names)
     assert any(name.startswith("beatscope/web/app/assets/index-") and name.endswith(".css") for name in names)

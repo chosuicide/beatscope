@@ -5,19 +5,12 @@ description: Use BeatScope music facts, grouped edits and seek-safe motion for v
 
 # Query music and execute an edit
 Read AGENT.md. Resume a matching project within scope, or create a new work.
-Verify source hash, score duration and revision binding before timeline reuse;
-an asset directory or ready flag is not proof of an accepted matching project.
-Check supplied inputs and clearly linked workspace records only; do not search
-the whole machine for assets/history or ask users to resolve internal cache versions.
-When linked records disagree, do not invent accepted requirements. Recover the
-matching record when possible; otherwise ask about the intended visual direction
-or whether to start a new work, in ordinary language.
-Extract summaries and selected fields. Never dump entire maps, caches embedding
-rhythm/ranking, or recursive asset inventories into context.
-Cache `node music-brief.mjs` by rhythm/edit-plan hashes; query an uncertain window with
-`node music-brief.mjs 81 103`. Exact meanings: BEATSCOPE.md/references/schema.md.
-Visual decisions: references/directing.md. JSON imports need Node22+ or current
-Chromium over HTTP with JSON/JS MIME, no build/runtime dependencies.
+Query summaries, not whole maps: `node query.mjs 81 103 --accents --stages`.
+Exact meanings: BEATSCOPE.md/references/schema.md. Visual choices:
+references/directing.md. Identity, authorization and cached evidence:
+references/handoff-rules.md. End-to-end sample: references/complete-example.md.
+JSON imports need Node22+ or current Chromium over HTTP with JSON/JS MIME.
+Rendering dependencies and limits live in references/rendering.md.
 The brief's `stages` are resolved editor stages; `automaticSections` and
 `measuredAnchorCandidates` remain factual suggestions. `cueEdits.shown` is a
 bounded inspection list, not the full cue schedule. Resolve the plan for execution.

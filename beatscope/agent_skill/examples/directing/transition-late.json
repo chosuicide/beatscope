@@ -1,0 +1,104 @@
+{
+  "intent": "music-video",
+  "stages": [
+    {
+      "id": "example",
+      "start": 0,
+      "end": 2,
+      "entry": "before",
+      "focus": "The delay between the audio attack and the incoming mask reaching half coverage.",
+      "change": "The same pale-to-dark handoff starts on the attack and reaches its visual center four frames later.",
+      "rhythm": [
+        {
+          "start": 0,
+          "end": 2,
+          "mode": "switch",
+          "music": "The comparison uses the same strong synthetic 65 Hz attack at 1.0 s and weaker surrounding pulses.",
+          "reason": "This counterexample starts the mask on the attack, making half coverage arrive four frames late; do not copy its timing as the recommended handoff.",
+          "anchors": [
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "shots": [
+    {
+      "id": "before",
+      "relation": "A dark circle and lower horizontal line remain on the outgoing pale field at the attack.",
+      "setup": {
+        "mode": "transition"
+      },
+      "clock": {
+        "mode": "continuous"
+      }
+    },
+    {
+      "id": "after",
+      "relation": "A pale rectangle enters on dark ground after the audio attack, revealing the delayed handoff.",
+      "setup": {
+        "mode": "transition"
+      },
+      "clock": {
+        "mode": "continuous"
+      }
+    }
+  ],
+  "cuts": [
+    {
+      "at": 1,
+      "shot": "after"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "world.cover",
+      "keys": [
+        {
+          "at": 0,
+          "value": 0,
+          "ease": "hold"
+        },
+        {
+          "at": 1,
+          "value": 0,
+          "ease": "linear"
+        },
+        {
+          "at": 1.2666666666666666,
+          "value": 1,
+          "ease": "hold"
+        }
+      ]
+    }
+  ],
+  "sync": [
+    {
+      "at": 1,
+      "cueId": "o:1",
+      "kind": "transition",
+      "measure": "intentionally late half-cover; not a recommended transition"
+    }
+  ],
+  "demo": {
+    "duration": 2,
+    "audioEvents": [
+      {
+        "time": 0.5,
+        "frequency": 100,
+        "gain": 0.15
+      },
+      {
+        "time": 1,
+        "frequency": 65,
+        "gain": 0.7
+      },
+      {
+        "time": 1.5,
+        "frequency": 100,
+        "gain": 0.15
+      }
+    ],
+    "semantics": "Synthetic timing and sound for teaching only; not the exported song or a production style."
+  }
+}

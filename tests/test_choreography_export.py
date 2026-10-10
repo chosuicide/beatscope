@@ -38,7 +38,7 @@ def test_brief_and_score_execute_from_export(tmp_path, ranked):
     assert len(brief.stdout.encode()) < 14000
     assert all(len(s['measuredAnchorCandidates']) <= 3 for s in doc['stages'])
     bad = subprocess.run(['node', 'music-brief.mjs', 'NaN', '2'], cwd=tmp_path, capture_output=True, text=True)
-    assert bad.returncode == 1 and 'Usage:' in bad.stderr
+    assert bad.returncode == 2 and 'start must be between' in bad.stderr
 
     score = {'moments': {'arrival': middle},
              'stages': [{'id': 'first', 'start': 0, 'end': middle, 'focus': 'subject', 'change': 'approach'},

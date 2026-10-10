@@ -7,7 +7,7 @@ from pathlib import Path
 
 from beatscope.cli import main, run_doctor
 from beatscope.consumer_validation import validate_handoff
-from beatscope.exports import generate_codex_export, generate_rhythm_csv, generate_rhythm_midi
+from beatscope.exports import HANDOFF_RESOURCES, generate_codex_export, generate_rhythm_csv, generate_rhythm_midi
 
 
 def test_generate_rhythm_midi_and_csv():
@@ -317,6 +317,7 @@ VISUAL_MANIFEST_MEMBERS = {
     "visual-recipe.json", "visual-timeline.json", "visual-recipe-data.js",
     "visual-timeline-data.js", "scene-director.js",
 }
+TIMING_ONLY_MANIFEST.update(HANDOFF_RESOURCES)
 
 
 def _visual_export_rhythm():

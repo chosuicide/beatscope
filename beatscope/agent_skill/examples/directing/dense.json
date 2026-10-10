@@ -1,0 +1,170 @@
+{
+  "intent": "music-video",
+  "stages": [
+    {
+      "id": "example",
+      "start": 0,
+      "end": 2,
+      "entry": "main",
+      "focus": "The supporting ring of dots around a stable central subject.",
+      "change": "The outer dots briefly grow and move outward on each small attack while the central circle stays fixed.",
+      "rhythm": [
+        {
+          "start": 0,
+          "end": 2,
+          "mode": "hold",
+          "music": "Synthetic 3000 Hz attacks repeat every 0.25 s with equal gain, illustrating a dense subdivision pattern.",
+          "reason": "Assigning repeated attacks to a secondary layer keeps the subject readable without repeated full-frame cuts.",
+          "anchors": [
+            1
+          ],
+          "action": "Pulse the surrounding dots on each selected attack and return them over two frames; hold the central circle."
+        }
+      ]
+    }
+  ],
+  "shots": [
+    {
+      "id": "main",
+      "relation": "Eight small dots surround a stationary dark circle with a pale horizontal opening.",
+      "setup": {
+        "mode": "dense"
+      },
+      "clock": {
+        "mode": "continuous"
+      }
+    }
+  ],
+  "cuts": [],
+  "tracks": [
+    {
+      "id": "detail.tick",
+      "keys": [
+        {
+          "at": 0,
+          "value": 0,
+          "ease": "hold"
+        },
+        {
+          "at": 0.25,
+          "value": 1,
+          "ease": "out-cubic"
+        },
+        {
+          "at": 0.316666666667,
+          "value": 0,
+          "ease": "hold"
+        },
+        {
+          "at": 0.5,
+          "value": 1,
+          "ease": "out-cubic"
+        },
+        {
+          "at": 0.5666666666669999,
+          "value": 0,
+          "ease": "hold"
+        },
+        {
+          "at": 0.75,
+          "value": 1,
+          "ease": "out-cubic"
+        },
+        {
+          "at": 0.8166666666669999,
+          "value": 0,
+          "ease": "hold"
+        },
+        {
+          "at": 1,
+          "value": 1,
+          "ease": "out-cubic"
+        },
+        {
+          "at": 1.066666666667,
+          "value": 0,
+          "ease": "hold"
+        },
+        {
+          "at": 1.25,
+          "value": 1,
+          "ease": "out-cubic"
+        },
+        {
+          "at": 1.316666666667,
+          "value": 0,
+          "ease": "hold"
+        },
+        {
+          "at": 1.5,
+          "value": 1,
+          "ease": "out-cubic"
+        },
+        {
+          "at": 1.566666666667,
+          "value": 0,
+          "ease": "hold"
+        },
+        {
+          "at": 1.75,
+          "value": 1,
+          "ease": "out-cubic"
+        },
+        {
+          "at": 1.816666666667,
+          "value": 0,
+          "ease": "hold"
+        }
+      ]
+    }
+  ],
+  "sync": [
+    {
+      "at": 1,
+      "cueId": "o:3",
+      "kind": "impact",
+      "measure": "authored event"
+    }
+  ],
+  "demo": {
+    "duration": 2,
+    "audioEvents": [
+      {
+        "time": 0.25,
+        "frequency": 3000,
+        "gain": 0.22
+      },
+      {
+        "time": 0.5,
+        "frequency": 3000,
+        "gain": 0.22
+      },
+      {
+        "time": 0.75,
+        "frequency": 3000,
+        "gain": 0.22
+      },
+      {
+        "time": 1,
+        "frequency": 3000,
+        "gain": 0.22
+      },
+      {
+        "time": 1.25,
+        "frequency": 3000,
+        "gain": 0.22
+      },
+      {
+        "time": 1.5,
+        "frequency": 3000,
+        "gain": 0.22
+      },
+      {
+        "time": 1.75,
+        "frequency": 3000,
+        "gain": 0.22
+      }
+    ],
+    "semantics": "Synthetic timing and sound for teaching only; not the exported song or a production style."
+  }
+}
