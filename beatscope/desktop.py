@@ -3,12 +3,19 @@ from __future__ import annotations
 
 import ctypes
 import os
+import sys
+from pathlib import Path
 
 from beatscope.server import serve
 
 
 def main() -> int:
     try:
+        # Decoders and probes must find bundled tools even on a machine that
+        # has never installed FFmpeg or Node. This changes this process only.
+        tools = Path(sys.executable).resolve().parent / "tools"
+        if getattr(sys, "frozen", False) and tools.is_dir():
+            os.environ["PATH"] = str(tools) + os.pathsep + os.environ.get("PATH", "")
         # Port zero avoids colliding with a development server. Release smoke
         # tests can pin a port and suppress the browser without maintaining a
         # second executable entry point.

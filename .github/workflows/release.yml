@@ -96,6 +96,9 @@ jobs:
           if (-not $ffmpeg) { $ffmpeg = (Get-Command ffmpeg -ErrorAction SilentlyContinue).Source }
           if (-not $ffmpeg -or -not (Test-Path $ffmpeg)) { throw "FFmpeg binary not found after choco install" }
           Copy-Item $ffmpeg "$tools/ffmpeg.exe"
+          $ffprobe = Join-Path (Split-Path $ffmpeg) "ffprobe.exe"
+          if (-not (Test-Path $ffprobe)) { throw "FFprobe binary not found beside FFmpeg" }
+          Copy-Item $ffprobe "$tools/ffprobe.exe"
           Copy-Item packaging/PORTABLE-README.txt "$app/README.txt"
           Copy-Item packaging/THIRD-PARTY-NOTICES.txt "$app/THIRD-PARTY-NOTICES.txt"
           Copy-Item LICENSE "$app/LICENSE"
