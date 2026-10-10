@@ -345,6 +345,8 @@ class AssetStore:
         sniffed = sniff_asset(data)  # decoded type decides, not the extension
         if sniffed["kind"] == "image" and len(data) > IMAGE_MAX_BYTES:
             raise AssetError("asset/too-large", f"images are limited to {IMAGE_MAX_BYTES} bytes")
+        if sniffed['kind'] == 'image' and (sniffed['width'] <= 0 or sniffed['height'] <= 0 or sniffed['width'] * sniffed['height'] > 32 * 1024 * 1024):
+            raise AssetError('asset/too-large', 'images are limited to 32 megapixels')
         if sniffed["kind"] == "video":
             if len(data) > VIDEO_MAX_BYTES:
                 raise AssetError("asset/too-large", f"videos are limited to {VIDEO_MAX_BYTES} bytes")

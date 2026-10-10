@@ -22,7 +22,7 @@ def manager(tmp_path, monkeypatch):
 def test_templates_freeze_identity_and_isolate_active_jobs(manager):
     job = manager.submit('a' * 12, seed=7, template='material-mix')
     assert job['template'] == 'material-mix'
-    assert job['template_version'] == 'prismatic-echo-4'
+    assert job['template_version'] == 'prismatic-echo-5'
     assert len(job['template_digest']) == 64
     assert manager.submit('a' * 12, seed=7, template='material-mix')['id'] == job['id']
     with pytest.raises(RuntimeError):
@@ -31,6 +31,16 @@ def test_templates_freeze_identity_and_isolate_active_jobs(manager):
         manager.submit('a' * 12, seed=7, template='material-gray')
     with pytest.raises(ValueError):
         manager.submit('a' * 12, template='../outside')
+
+
+def test_paint_freezes_its_own_renderer_identity(manager):
+    job = manager.submit('a' * 12, seed=7, template='paint', output={'aspect': '9:16', 'resolution': 1080})
+    assert job['template_version'] == 'pastel-bloom-2'
+    assert len(job['template_digest']) == 64
+    assert job['output']['width'] == 1080 and job['output']['height'] == 1920
+    assert manager.submit('a' * 12, seed=7, template='paint', output={'aspect': '9:16', 'resolution': 1080})['id'] == job['id']
+    with pytest.raises(RuntimeError):
+        manager.submit('a' * 12, seed=7, template='material-mix')
 
 
 def test_movie_admission_and_cancel(manager):

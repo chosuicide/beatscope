@@ -1,0 +1,16 @@
+export type Focus={x:number;y:number;zoom:number;fit:'cover'|'contain'};
+export type MediaAsset={id:string;proxy?:string;focus:Focus;overrides:Partial<Record<string,Focus>>;kind?:'image'|'video';clip?:string;duration?:number};
+export type MediaSlot={start:number;end:number;asset:string;fixed:boolean;offset?:number};
+export type MediaDocument={schema:'beathi-media-1';source_sha256:string;target:number;seed:number;assets:MediaAsset[];slots:MediaSlot[];color?:{enabled:boolean;strength:number}};
+export function normalizeMediaSlot(slot:MediaSlot,asset:MediaAsset|undefined):MediaSlot;
+export function arrangeMedia(doc:MediaDocument,rhythm:any,editPlan:any,reshuffle?:boolean,preferredTime?:number|null):MediaDocument;
+export function mediaRatio(doc:MediaDocument,duration:number):number;
+export function focusRect(iw:number,ih:number,w:number,h:number,f:Focus,p?:number):{x:number;y:number;width:number;height:number};
+export function snapPoints(rhythm:any,editPlan:any):number[];
+export function snapTime(t:number,points:number[]):number;
+export function beatLength(rhythm:any):number;
+export function placeSlot(doc:MediaDocument,slot:{start:number;end:number;asset:string;offset?:number},replaceKey?:{start:number;asset:string}):MediaDocument;
+export function freeRange(doc:MediaDocument,at:number,duration:number,ignoreKey?:{start:number;asset:string}):{min:number;max:number};
+export function clipWindow(clip:number,slot:{start:number;end:number;offset?:number},edge:'l'|'r',target:number,minLen:number):{start:number;end:number;offset:number};
+export function createMediaSource(initial:MediaDocument,urls:(id:string)=>string,options?:{preview?:boolean;width?:number;height?:number;aspect?:string;mediaFrames?:Record<string,number>;frameUrl?:(slotIndex:number,frame:number)=>string}):any;
+export function attachMedia(canvas:HTMLCanvasElement,baseCanvas:HTMLCanvasElement,baseRender:any,mediaSource:any):Promise<any>;

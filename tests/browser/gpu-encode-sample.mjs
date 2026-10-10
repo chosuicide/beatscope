@@ -9,7 +9,7 @@ input.audio=audio;input.rhythm.source.sha256=createHash('sha256').update(fs.read
 const env={...process.env,BEATSCOPE_PLAYWRIGHT_MODULE:path.resolve('tests/browser/node_modules/playwright/index.mjs')},reports=[];
 for(const mode of ['legacy-hardware','gpu-hardware']){
  const dir=out+'/'+mode;fs.mkdirSync(dir+'/media',{recursive:true});
- for(const file of ['mv-render.html','mv-frame.mjs','mv-visual.js','mv-plan.mjs','mv-encode.mjs','movie-factory.mjs','movie-templates.mjs','material-frame.mjs','material-gpu.mjs'])fs.copyFileSync('beatscope/web/'+file,dir+'/'+file);
+ for(const file of ['mv-render.html','mv-frame.mjs','mv-visual.js','mv-plan.mjs','mv-encode.mjs','movie-factory.mjs','movie-templates.mjs','material-frame.mjs','material-gpu.mjs','custom-media.mjs','media-color.mjs','paint-frame.mjs','paint-sources.mjs'])fs.copyFileSync('beatscope/web/'+file,dir+'/'+file);
  for(const file of ['beatscope-runtime.js','edit-plan.js','package.json'])fs.copyFileSync(source+'/'+file,dir+'/'+file);
  for(const a of Object.values(assets))for(const file of a.files){if(!fs.existsSync(dir+'/'+file))fs.linkSync(source+'/'+file,dir+'/'+file);}
  fs.writeFileSync(dir+'/input.json',JSON.stringify(input));fs.writeFileSync(dir+'/plan.json',JSON.stringify({...plan,duration}));fs.writeFileSync(dir+'/material-timeline.json',JSON.stringify({duration,fps:30,frames,assets}));

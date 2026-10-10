@@ -44,6 +44,7 @@ _TEXT: dict[str, dict[str, str]] = {
     "movie.missing-audio": {"en": "The original audio is gone; upload the song again.", "zh": "找不到原始音频，请重新上传。"},
     "movie.busy": {"en": "Another video is being generated; wait or cancel it first.", "zh": "另一个视频正在生成，请等待或先取消。"},
     "movie.preparing": {"en": "Preparing the music data", "zh": "准备音乐数据"},
+    "movie.preparing-video": {"en": "Preparing video clips", "zh": "处理视频片段"},
     "movie.stopping": {"en": "Stopping the render", "zh": "正在停止生成"},
     "movie.rendering": {"en": "Rendering frames", "zh": "逐帧渲染视频"},
     "movie.complete": {"en": "Video ready", "zh": "视频已生成"},

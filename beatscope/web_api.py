@@ -11,6 +11,7 @@ from .assets import (
     AssetStore,
 )
 from .composition_store import composition_lock, composition_request, locked_composition_request
+from .custom_media import load_media
 from .direction import (
     build_direction_document,
     canonical_direction_bytes,
@@ -158,7 +159,14 @@ class WebApi:
         # The handoff carries timing facts only; the visual layer is the
         # consumer decision, so nothing is compiled into the package here.
         try:
-            archive = generate_codex_export(rhythm, edit_plan=load_edit_plan(self.project_manager, params["id"], rhythm))
+            with composition_lock():
+                media = load_media(self.project_manager, project_id)
+                attached = None
+                if media['assets']:
+                    ids = {asset_id for a in media['assets'] for asset_id in (a['id'], a.get('proxy'), a.get('clip')) if asset_id}
+                    attached = {'arrangement': media, 'originals_included': False,
+                                'assets': [dict(a, project_relative_path=f"assets/{a['asset_id']}.{a['extension']}") for a in AssetStore(self.project_manager.get_project_dir(project_id), project_id).manifest() if a['asset_id'] in ids]}
+                archive = generate_codex_export(rhythm, edit_plan=load_edit_plan(self.project_manager, project_id, rhythm), custom_media=attached)
         except ValueError as exc:
             return 422, {"Content-Type": "application/json"}, json.dumps({"error": str(exc)}).encode()
         return 200, {
@@ -482,7 +490,8 @@ class WebApi:
 
         display_name = Path(unquote(raw_name)).name
         try:
-            entry = store.add(display_name, body)
+            with composition_lock():
+                entry = store.add(display_name, body)
         except AssetError as exc:
             status = 413 if exc.code in ("asset/too-large", "asset/budget") else 422
             return status, {"Content-Type": "application/json"}, json.dumps({

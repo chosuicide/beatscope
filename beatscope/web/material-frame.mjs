@@ -1,4 +1,28 @@
 import {createMaterialGpu} from './material-gpu.mjs';
+import {createMediaColor} from './media-color.mjs';
+// Score rectangles use normalized positions; angles, circles, text and stroke
+// widths use the short edge. Project coordinates before the uniform transform
+// so rotating a shape never stretches it into an ellipse.
+function aspectContext(raw,sx,sy){
+ if(sx===1&&sy===1)return raw;
+ const methods={
+  translate:(x,y)=>raw.translate(x*sx,y*sy),
+  rect:(x,y,w,h)=>raw.rect(x*sx,y*sy,w*sx,h*sy),
+  fillRect:(x,y,w,h)=>raw.fillRect(x*sx,y*sy,w*sx,h*sy),
+  clearRect:(x,y,w,h)=>raw.clearRect(x*sx,y*sy,w*sx,h*sy),
+  strokeRect:(x,y,w,h)=>raw.strokeRect(x*sx,y*sy,w*sx,h*sy),
+  moveTo:(x,y)=>raw.moveTo(x*sx,y*sy),lineTo:(x,y)=>raw.lineTo(x*sx,y*sy),
+  bezierCurveTo:(a,b,c,d,e,f)=>raw.bezierCurveTo(a*sx,b*sy,c*sx,d*sy,e*sx,f*sy),
+  arc:(x,y,r,a,b)=>raw.arc(x*sx,y*sy,r,a,b),
+  fillText:(text,x,y)=>raw.fillText(text,x*sx,y*sy),
+  drawImage:(image,...args)=>{
+   const a=[...args],i=a.length===8?4:0;a[i]*=sx;a[i+1]*=sy;
+   if(a.length!==2){a[i+2]*=sx;a[i+3]*=sy;}raw.drawImage(image,...a);
+  },
+ };
+ for(const name of ['save','restore','beginPath','closePath','clip','stroke','setTransform','scale','rotate'])methods[name]=raw[name].bind(raw);
+ return new Proxy(raw,{get:(_,name)=>methods[name]??raw[name],set:(_,name,value)=>{raw[name]=value;return true;}});
+}
 // CPU/Canvas remains the fallback when hardware WebGL cannot initialize.
 function createPixelGpu(enabled=true){
  if(!enabled)return null;
@@ -114,18 +138,24 @@ function createBurstLayer(ctx,canvas,gpu,compositor){
 }
 
 // Stateless picture adapter: score visits, source clocks, focal crops and phase maps.
-export async function createMaterialMovie(canvas,D,base="",{gpu:useGpu=true,composite:trueGpu=true}={}){
+export async function createMaterialMovie(canvas,D,base="",{gpu:useGpu=true,composite:trueGpu=true,mediaSource=null}={}){
  const start=0,duration=D.duration;let disposed=false;
- const compositor=createMaterialGpu(canvas,useGpu&&trueGpu),ctx=compositor?.ctx||canvas.getContext('2d'),images={},W=1080,gpu=compositor?null:createPixelGpu(useGpu);const burst=createBurstLayer(ctx,canvas,gpu,compositor);const contour=createLandscapeRelay(ctx,canvas,gpu,compositor);
- const pending={},touch=new Map();
- const pageFor=s=>{const a=D.assets[s.setup.sourceId];return a.kind==='video'?a.files[Math.floor(s.mediaCell/4)]:a.files[0];};
+ const W=1080,short=Math.min(canvas.width,canvas.height),aspectX=canvas.width/short,aspectY=canvas.height/short;
+ const compositor=createMaterialGpu(canvas,useGpu&&trueGpu),rawCtx=compositor?.ctx||canvas.getContext('2d'),ctx=aspectContext(rawCtx,aspectX,aspectY),images={},gpu=compositor?null:createPixelGpu(useGpu);
+ const center=[540*aspectX,540*aspectY],radius=820*Math.hypot(aspectX,aspectY)/Math.SQRT2;
+ const burst=createBurstLayer(ctx,canvas,gpu,compositor),contour=createLandscapeRelay(ctx,canvas,gpu,compositor);
+ const pending={},touch=new Map(),mediaColor=createMediaColor(useGpu&&!!mediaSource);
+ const customFor=s=>{const custom=mediaSource?.at(frameTimes.get(s));return custom?{...custom,bitmap:mediaColor.at(custom.bitmap,s.setup.palette||{base:'#f7f7f3',accent:'#f7f7f3',secondary:'#dedfd9'},mediaSource.color)}:null;};
+ const frameTimes=new WeakMap(D.frames.map((s,i)=>[s,i/30]));
+ const pageFor=s=>{if(mediaSource?.has(frameTimes.get(s)))return null;const a=D.assets[s.setup.sourceId];return a.kind==='video'?a.files[Math.floor(s.mediaCell/4)]:a.files[0];};
  const frameAt=time=>Math.max(0,Math.min(D.frames.length-1,Math.round((start+time)*30)));
- const needed=time=>{const f=frameAt(time),s=D.frames[f],files=[pageFor(s)],t=s.sinceCut;
-  if(s.previous&&t<.2&&['iris','dissolve','push','occlude'].includes(s.setup.transition))files.push(pageFor(D.frames[Math.max(0,f-Math.ceil(t*30)-1)]));
-  if(s.setup.trail&&t>0&&t<.2)for(const j of [1,3,5])files.push(pageFor(D.frames[Math.max(0,f-j)]));
-  return [...new Set(files)];};
+ const statesFor=time=>{const f=frameAt(time),s=D.frames[f],states=[s],t=s.sinceCut;
+  if(s.previous&&t<.2&&['iris','dissolve','push','occlude'].includes(s.setup.transition))states.push(D.frames[Math.max(0,f-Math.ceil(t*30)-1)]);
+  if(s.setup.trail&&t>0&&t<.2)for(const j of [1,3,5])states.push(D.frames[Math.max(0,f-j)]);
+  return states;};
+ const needed=time=>[...new Set(statesFor(time).map(pageFor).filter(Boolean))];
  async function load(file){if(images[file])return; if(!pending[file])pending[file]=(async()=>{if(compositor&&typeof createImageBitmap==='function'){const response=await fetch(base+file);if(!response.ok)throw Error('Material image missing');const bitmap=await createImageBitmap(await response.blob(),{premultiplyAlpha:'none'});if(disposed){bitmap.close();return;}images[file]=bitmap;}else{const im=new Image();im.src=base+file;await im.decode();images[file]=im;}})().catch(error=>{delete pending[file];throw error;});await pending[file];}
- async function prepare(time){const files=[...new Set([...needed(time),...needed(Math.min(duration,time+.25))])];await Promise.all(files.map(load));for(const f of files)touch.set(f,time);{for(const [f]of [...touch].sort((a,b)=>a[1]-b[1])){if(Object.keys(images).length<=10)break;if(!files.includes(f)){images[f]?.close?.();delete images[f];delete pending[f];touch.delete(f);}}}}
+ async function prepare(time){if(mediaSource)await mediaSource.prepare([...statesFor(time).map(s=>frameTimes.get(s)),Math.min(duration-1/30,time+.25)]);const files=[...new Set([...needed(time),...needed(Math.min(duration,time+.25))])];await Promise.all(files.map(load));for(const f of files)touch.set(f,time);{for(const [f]of [...touch].sort((a,b)=>a[1]-b[1])){if(Object.keys(images).length<=10)break;if(!files.includes(f)){images[f]?.close?.();delete images[f];delete pending[f];touch.delete(f);}}}}
  const files=needed(0);let next=0;
  await Promise.all(Array.from({length:4},async()=>{while(next<files.length)await load(files[next++]);}));
  const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),out=x=>1-(1-clamp(x))**3,expo=x=>x<=0?0:1-2**(-10*clamp(x));
@@ -133,17 +163,30 @@ export async function createMaterialMovie(canvas,D,base="",{gpu:useGpu=true,comp
  // Hold authored poses, then move over two native frames into the next one.
  const pose=(s,values)=>{const times=s.setup.phases,t=s.sinceCut;let i=times.length-1;while(i>0&&t<times[i])i--;const a=values[Math.min(i,values.length-1)];if(s.setup.stepPose)return a;if(i===times.length-1)return a;const next=times[i+1],p=clamp((t-next+.045)/.045);return a+(values[Math.min(i+1,values.length-1)]-a)*out(p);};
  function picture(s,w=W,h=W,z=1,ox=0,oy=0){
-  const a=D.assets[s.setup.sourceId];let im,sx=0,sy=0,sw,sh;
-  if(a.kind==='video'){const f=s.mediaCell;im=images[a.files[Math.floor(f/4)]];sx=f%2*a.width;sy=Math.floor(f%4/2)*a.height;sw=a.width;sh=a.height;}
+  const a=D.assets[s.setup.sourceId],custom=customFor(s);let im,sx=0,sy=0,sw,sh;
+  if(custom){im=custom.bitmap;sw=im.width;sh=im.height;}
+  else if(a.kind==='video'){const f=s.mediaCell;im=images[a.files[Math.floor(f/4)]];sx=f%2*a.width;sy=Math.floor(f%4/2)*a.height;sw=a.width;sh=a.height;}
   else{im=images[a.files[0]];sw=im.width;sh=im.height;}
-  const zoom=z*(s.values['camera.scale']||1),side=Math.min(sw,sh)/zoom;
-  const stretch=s.setup.mode==='squeeze'||s.setup.mode==='spine'||s.setup.mode==='liquidNeedle',ratio=w/h;
-  const cropW=stretch?side:side*Math.min(1,ratio),cropH=stretch?side:side*Math.min(1,1/ratio);
-  const focal=s.focus||s.setup.focal||[.5,.5];const fx=clamp(focal[0]+(s.values['camera.x']||0)+ox),fy=clamp(focal[1]+(s.values['camera.y']||0)+oy);
+  let focal=custom?[.5,.5]:s.focus||s.setup.focal||[.5,.5];
+  // The birdB atlas intentionally pads a 1080x570 shot for its square score.
+  // Rectangular cover uses its content, while keeping the cached square score intact.
+  if(!custom&&aspectX!==aspectY&&s.setup.sourceId==='birdB'){
+   const contentHeight=sh*570/1080,padding=(sh-contentHeight)/2;
+   focal=[focal[0],clamp((focal[1]*sh-padding)/contentHeight)];sy+=padding;sh=contentHeight;
+  }
+  const zoom=z*(s.values['camera.scale']||1)*(custom?1+.035*custom.progress:1),side=Math.min(sw,sh)/zoom;
+  const stretch=s.setup.mode==='squeeze'||s.setup.mode==='spine'||s.setup.mode==='liquidNeedle',ratio=w*aspectX/(h*aspectY);
+  const cropW=stretch?side:aspectX===aspectY?side*Math.min(1,ratio):Math.min(sw,sh*ratio)/zoom,cropH=stretch?side:cropW/ratio;
+  const fx=clamp(focal[0]+(s.values['camera.x']||0)+ox),fy=clamp(focal[1]+(s.values['camera.y']||0)+oy);
   sx+=clamp(sw*fx-cropW/2,0,sw-cropW);sy+=clamp(sh*fy-cropH/2,0,sh-cropH);
   return{im,sx,sy,sw:cropW,sh:cropH};
  }
  function source(s,x=0,y=0,w=W,h=W,z=1,ox=0,oy=0,alpha=1){
+  const custom=customFor(s);
+  if(custom?.focus.fit==='contain'){
+   const im=custom.bitmap,scale=Math.min(w*aspectX/im.width,h*aspectY/im.height)*(1+.025*custom.progress),iw=im.width*scale/aspectX,ih=im.height*scale/aspectY;
+   ctx.save();ctx.globalAlpha*=alpha;ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.drawImage(im,x+(w-iw)/2,y+(h-ih)/2,iw,ih);ctx.restore();return;
+  }
   const p=picture(s,w,h,z,ox,oy);ctx.save();ctx.globalAlpha*=alpha;ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.drawImage(p.im,p.sx,p.sy,p.sw,p.sh,x,y,w,h);ctx.restore();
  }
  let palette={base:'#f7f7f3',accent:'#f7f7f3',secondary:'#dedfd9'};
@@ -158,22 +201,24 @@ export async function createMaterialMovie(canvas,D,base="",{gpu:useGpu=true,comp
  // Reflect the video itself. Adjacent sectors share the same source clock and
  // focal edge, so flowing ink and ridgelines continue across the seams.
  function radial(s,n,angle,zoom,drift){
-  if(compositor){compositor.radial(picture(s,1640,1640,zoom,drift,.035),n,angle);return;}
-  const step=Math.PI*2/n,R=820;
+  const R=radius,p=picture(s,2*R/aspectX,2*R/aspectY,zoom,drift,.035);
+  if(compositor){compositor.radial(p,n,angle,center,R);return;}
+  const step=Math.PI*2/n;
   for(let i=0;i<n;i++){
-   ctx.save();ctx.translate(540,540);ctx.rotate(angle+i*step);
-   ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(R*Math.cos(-step/2-.002),R*Math.sin(-step/2-.002));
-   ctx.arc(0,0,R,-step/2-.002,step/2+.002);ctx.closePath();ctx.clip();
-   if(i%2)ctx.scale(1,-1);
-   source(s,-820,-820,1640,1640,zoom,drift,.035);ctx.restore();
+   rawCtx.save();rawCtx.translate(...center);rawCtx.rotate(angle+i*step);
+   rawCtx.beginPath();rawCtx.moveTo(0,0);rawCtx.lineTo(R*Math.cos(-step/2-.002),R*Math.sin(-step/2-.002));
+   rawCtx.arc(0,0,R,-step/2-.002,step/2+.002);rawCtx.closePath();rawCtx.clip();
+   if(i%2)rawCtx.scale(1,-1);
+   rawCtx.drawImage(p.im,p.sx,p.sy,p.sw,p.sh,-R,-R,2*R,2*R);rawCtx.restore();
   }
  }
  function fourfold(s,zoom,drift,angle=0){
-  if(compositor){compositor.fourfold(picture(s,820,820,zoom,drift,.10-drift*.4),angle);return;}
-  ctx.save();ctx.translate(540,540);ctx.rotate(angle);
+  const R=radius,p=picture(s,R/aspectX,R/aspectY,zoom,drift,.10-drift*.4);
+  if(compositor){compositor.fourfold(p,angle,center,R);return;}
+  rawCtx.save();rawCtx.translate(...center);rawCtx.rotate(angle);
   for(const x of [-1,1])for(const y of [-1,1]){
-   ctx.save();ctx.scale(x,y);source(s,0,0,820,820,zoom,drift,.10-drift*.4);ctx.restore();
-  }ctx.restore();
+   rawCtx.save();rawCtx.scale(x,y);rawCtx.drawImage(p.im,p.sx,p.sy,p.sw,p.sh,0,0,R,R);rawCtx.restore();
+  }rawCtx.restore();
  }
  function layout(s,tx=0){
   const t=s.sinceCut;let mode=s.setup.mode;if(s.setup.effectLimit&&t>=s.setup.effectLimit&&['liquidNeedle','liquidRemnant','liquidWindow','liquidSweep'].includes(mode))mode='subject';const {variant:v,attack,settle}=s.setup,e=out(t/settle),fast=expo(t/attack);
@@ -240,17 +285,17 @@ source(s,0,0,W,W,pose(s,s.setup.subjectZoom||[1,1,1]));}else if(mode==='rupture'
    let n=s.setup.sectors;for(const [at,count]of s.setup.sectorSteps||[])if(t>=at)n=count;
    const bluePlume=s.setup.sourceId==='ink';
    radial(s,n,-Math.PI/2+.09*p,(bluePlume?1.45:1.18)+.12*p,bluePlume?-.10+.03*p:.12-.07*p);
-   if(response(s)>.1){const a=-Math.PI/2+.09*p,b=a+Math.PI*2/n;edge(s,540,540,540+820*Math.cos(a),540+820*Math.sin(a),.7);edge(s,540,540,540+820*Math.cos(b),540+820*Math.sin(b),.5);}
+   if(response(s)>.1){const a=-Math.PI/2+.09*p,b=a+Math.PI*2/n;edge(s,540,540,540+radius*Math.cos(a)/aspectX,540+radius*Math.sin(a)/aspectY,.7);edge(s,540,540,540+radius*Math.cos(b)/aspectX,540+radius*Math.sin(b)/aspectY,.5);}
   }else if(mode==='centerFold'){
    const pull=out(t/.34),dunes=s.setup.sourceId==='desertB';
    fourfold(s,(dunes?1.6:1.16)+.26*pull,(dunes?.08:.20)-.15*pull,-.025*(1-pull));
    // On the final accent, the central detail expands out of the mirrored diamond.
-   if(t>.23){ctx.save();ctx.beginPath();ctx.arc(540,540,820*out((t-.23)/.28),0,Math.PI*2);ctx.clip();source(s,0,0,W,W,1.7);ctx.restore();}
+   if(t>.23){ctx.save();ctx.beginPath();ctx.arc(540,540,radius*out((t-.23)/.28),0,Math.PI*2);ctx.clip();source(s,0,0,W,W,1.7);ctx.restore();}
   }else if(mode==='inward'){
    const pull=smooth(clamp(t/.42));
    // Texture moves radially along mirrored sectors; no ornamental frame overlay.
    radial(s,s.setup.sectors||8,-Math.PI/4,1.12+.82*pull,.24-.31*pull);
-   if(t>.30){ctx.save();ctx.beginPath();ctx.arc(540,540,820*out((t-.30)/.25),0,Math.PI*2);ctx.clip();source(s,0,0,W,W,1.92);ctx.restore();}
+   if(t>.30){ctx.save();ctx.beginPath();ctx.arc(540,540,radius*out((t-.30)/.25),0,Math.PI*2);ctx.clip();source(s,0,0,W,W,1.92);ctx.restore();}
   }else if(mode==='travel'||mode==='detailFlow'){
    const progress=clamp((s.mediaTime-D.assets[s.setup.sourceId].sourceStart)/6);
    const z=mode==='detailFlow'?1.35:1.04;
@@ -348,7 +393,7 @@ source(s,0,0,W,W,pose(s,s.setup.subjectZoom||[1,1,1]));}else if(mode==='rupture'
   if(compositor){
    let base=compositor.snapshot();
    for(let n=0;n<3;n++){
-    const oldIndex=Math.max(0,f-[1,3,5][n]),old=D.frames[oldIndex];ctx.globalAlpha=1;const previous=compositor.layoutFrame(oldIndex,()=>layout(old));
+    const oldIndex=Math.max(0,f-[1,3,5][n]),old=D.frames[oldIndex];ctx.globalAlpha=1;const previous=compositor.layoutFrame(`${mediaSource?.revision??0}:${oldIndex}`,()=>layout(old));
     const light=s.setup.group==='gray'&&s.setup.trailPolarity!=='light',color=s.setup.group==='gray'?[[96,101,102],[140,144,145],[177,180,180]][n]:s.setup.group==='blue'?[[30,95,160],[56,139,204],[128,184,235]][n]:[[144,32,30],[199,70,43],[239,130,74]][n];
     const image=compositor.effect(previous,2,color,light);
     ctx.clearRect(0,0,W,W);ctx.drawImage(base,0,0,W,W);ctx.save();ctx.globalAlpha=energy*[.65,.38,.21][n];
@@ -359,7 +404,7 @@ source(s,0,0,W,W,pose(s,s.setup.subjectZoom||[1,1,1]));}else if(mode==='rupture'
    }
    ctx.globalAlpha=1;return;
   }
-  baseCtx.clearRect(0,0,W,W);baseCtx.drawImage(canvas,0,0);
+  baseCtx.clearRect(0,0,canvas.width,canvas.height);baseCtx.drawImage(canvas,0,0);
   for(let n=0;n<3;n++){
    const old=D.frames[Math.max(0,f-[1,3,5][n])];ctx.globalAlpha=1;layout(old);
    trailCtx.clearRect(0,0,384,384);trailCtx.drawImage(canvas,0,0,384,384);
@@ -373,19 +418,20 @@ source(s,0,0,W,W,pose(s,s.setup.subjectZoom||[1,1,1]));}else if(mode==='rupture'
    const shift=s.setup.trailDirection*(n+1)*energy*155;
    if(s.setup.trailAxis==='y'){ctx.translate(540,540+shift);ctx.scale(1,1+energy*(n+1)*.12);ctx.drawImage(trailImage,-540,-540,W,W);}
    else{ctx.translate(540+shift,540);ctx.scale(1+energy*(n+1)*.18,1);ctx.drawImage(trailImage,-540,-540,W,W);}
-   ctx.restore();baseCtx.clearRect(0,0,W,W);baseCtx.drawImage(canvas,0,0);
+   ctx.restore();baseCtx.clearRect(0,0,canvas.width,canvas.height);baseCtx.drawImage(canvas,0,0);
   }
   ctx.globalAlpha=1;
  }
  function draw(time){
   compositor?.begin();
   const at=start+time,f=frameAt(time),s=D.frames[f],t=s.sinceCut;
-  ctx.setTransform(canvas.width/W,0,0,canvas.height/W,0,0);
+  rawCtx.setTransform(1,0,0,1,0,0);rawCtx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.setTransform(short/W,0,0,short/W,0,0);
   ctx.globalAlpha=1;palette=s.setup.palette||palette;rect(0,0,W,W);
   const old=s.previous?D.frames[Math.max(0,f-Math.ceil(t*30)-1)]:null;
   if(old&&s.setup.transition==='iris'&&t<.14){
-   const radius=820*expo(t/.14);layout(old);ctx.save();ctx.beginPath();ctx.arc(540,540,radius,0,Math.PI*2);ctx.clip();layout(s);ctx.restore();
-   if(s.setup.edgeAccent){ctx.save();ctx.strokeStyle=s.setup.edgeColors?.[1]||'#aaaaaa';ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(540,540,radius,0,Math.PI*.9);ctx.stroke();ctx.restore();}
+   const r=radius*expo(t/.14);layout(old);ctx.save();ctx.beginPath();ctx.arc(540,540,r,0,Math.PI*2);ctx.clip();layout(s);ctx.restore();
+   if(s.setup.edgeAccent){ctx.save();ctx.strokeStyle=s.setup.edgeColors?.[1]||'#aaaaaa';ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(540,540,r,0,Math.PI*.9);ctx.stroke();ctx.restore();}
   }else if(old&&s.setup.transition==='dissolve'&&t<.13){layout(old);ctx.globalAlpha=smooth(t/.13);layout(s);ctx.globalAlpha=1;}
   else if(old&&s.setup.transition==='push'&&t<.1){
    const p=expo(t/.1);layout(old,-W*p);ctx.save();ctx.beginPath();ctx.rect(W*(1-p),0,W,W);ctx.clip();layout(s,W*(1-p));ctx.restore();
@@ -403,9 +449,10 @@ source(s,0,0,W,W,pose(s,s.setup.subjectZoom||[1,1,1]));}else if(mode==='rupture'
  }
  let queue=Promise.resolve(),lastDrawn=-1;
  const render=time=>{queue=queue.catch(()=>{}).then(async()=>{if(disposed)return;const f=frameAt(time);if(f===lastDrawn)return;await prepare(time);if(!disposed){draw(time);lastDrawn=f;}});return queue;};
+ render.invalidate=()=>{lastDrawn=-1;};
  let wanted=null,pump=null;
  render.preview=time=>{wanted=time;if(!pump)pump=(async()=>{while(wanted!==null&&!disposed){const at=wanted;wanted=null;await render(at);}})().finally(()=>{pump=null;});return pump;};
  render.acceleration={effects:compositor?'webgl2-composite':gpu?'webgl2':'cpu',renderer:compositor?.renderer??gpu?.renderer??null};
- render.dispose=()=>{disposed=true;compositor?.dispose();gpu?.dispose();for(const f of Object.keys(images)){images[f]?.close?.();delete images[f];}};
+ render.dispose=()=>{disposed=true;mediaColor.dispose();compositor?.dispose();gpu?.dispose();for(const f of Object.keys(images)){images[f]?.close?.();delete images[f];}};
  await render(0);return render;
 }

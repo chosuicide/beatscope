@@ -14,7 +14,10 @@ const input=JSON.parse(fs.readFileSync(path.join(root,'input.json')));
 const hash=createHash('sha256');for await(const chunk of fs.createReadStream(input.audio))hash.update(chunk);
 if(hash.digest('hex')!==input.rhythm.source.sha256)throw Error('Audio hash mismatch');
 const track=createTrack(input.rhythm,{responseRelevance:input.ranking});
-const plan=input.template&&input.template!=='voxel'?JSON.parse(fs.readFileSync(path.join(root,'plan.json'))):makePlan(input.rhythm,track.responseBetween(0,input.rhythm.source.duration),input.seed,input.editPlan);
+const plan=input.template?.startsWith('material-')?JSON.parse(fs.readFileSync(path.join(root,'plan.json'))):makePlan(input.rhythm,track.responseBetween(0,input.rhythm.source.duration),input.seed,input.editPlan);
+plan.template=input.template??'voxel';
+plan.output=input.output??{width:1080,height:1080,fps:30};
+plan.media=input.media;plan.mediaFiles=input.mediaFiles;plan.mediaFrames=input.mediaFrames;
 fs.writeFileSync(path.join(root,'plan.json'),JSON.stringify(plan));
 // Capture is the bottleneck (frame rendering itself costs <1 ms), so several
 // pages render and grab frames in parallel, chunk by chunk, and the frames are
@@ -24,7 +27,7 @@ fs.writeFileSync(path.join(root,'plan.json'),JSON.stringify(plan));
 // frames are reassembled in order. In-page encoding cannot: each page owns an
 // independent H.264 stream, so the encoder path is deliberately single-page.
 const PAGES=Math.max(1,Math.min(6,Math.floor(Number(process.env.BEATSCOPE_MV_PAGES)||3)));
-const PAGES_FOR=(mode)=>mode==='webcodecs'?1:PAGES;
+const PAGES_FOR=(mode)=>mode==='webcodecs'||input.template==='paint'?1:PAGES;
 const PRESET=process.env.BEATSCOPE_MV_PRESET||'slower';
 const CRF=process.env.BEATSCOPE_MV_CRF||'20';
 // Capping encoder threads keeps the capture pages fed: with all cores on x264
@@ -39,7 +42,7 @@ const COMPOSITE=process.env.BEATSCOPE_MV_COMPOSITE==='0'?'0':'1';
 const BITRATE=Math.max(100000,Math.min(50000000,Math.floor(Number(process.env.BEATSCOPE_MV_BITRATE)||8000000)));
 const token=randomBytes(24).toString('hex');
 let videoMode=ENCODER==='png'?'png':'webcodecs';
-const allowed=new Set(['mv-render.html','mv-frame.mjs','mv-visual.js','mv-plan.mjs','mv-encode.mjs','beatscope-runtime.js','edit-plan.js','input.json','plan.json','movie-factory.mjs','movie-templates.mjs','material-frame.mjs','material-gpu.mjs','material-timeline.json']);
+const allowed=new Set(['mv-render.html','mv-frame.mjs','mv-visual.js','mv-plan.mjs','mv-encode.mjs','beatscope-runtime.js','edit-plan.js','input.json','plan.json','movie-factory.mjs','movie-templates.mjs','material-frame.mjs','material-gpu.mjs','material-timeline.json','custom-media.mjs','media-color.mjs','paint-frame.mjs','paint-sources.mjs']);
 let encoderStream=null; // ffmpeg stdin, fed by POST /chunk from the page
 const publicInput=JSON.stringify({rhythm:input.rhythm,ranking:input.ranking});
 const server=http.createServer(async (req,res)=>{
@@ -55,9 +58,9 @@ const server=http.createServer(async (req,res)=>{
   return;
  }
  if(req.method!=='GET'){res.writeHead(405).end();return;}
- if(!allowed.has(name)&&!(input.template?.startsWith('material-')&&/^media\/[A-Za-z0-9_-]+\.jpg$/.test(name))){res.writeHead(404).end();return;}
+ if(!allowed.has(name)&&!(input.template?.startsWith('material-')&&/^media\/[A-Za-z0-9_-]+\.jpg$/.test(name))&&!(input.template==='paint'&&/^paint-assets\/[a-z]+\/(lo|hi)\/\d{4}\.jpg$/.test(name))&&!/^custom\/[0-9a-f]{64}\.(jpg|png|webp)$/.test(name)&&!/^custom\/v\/\d+\/\d{6}\.jpg$/.test(name)){res.writeHead(404).end();return;}
  if(!fs.existsSync(path.join(root,name))){res.writeHead(404).end();return;}
- res.setHeader('Content-Type',name.endsWith('.html')?'text/html':name.endsWith('.json')?'application/json':name.endsWith('.jpg')?'image/jpeg':'text/javascript');
+ res.setHeader('Content-Type',name.endsWith('.html')?'text/html':name.endsWith('.json')?'application/json':name.endsWith('.jpg')?'image/jpeg':name.endsWith('.png')?'image/png':name.endsWith('.webp')?'image/webp':'text/javascript');
  res.end(name==='input.json'?publicInput:fs.readFileSync(path.join(root,name)));
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -81,7 +84,7 @@ try {
  check();browser=await chromium.launch({headless:true,channel:process.env.BEATSCOPE_BROWSER_CHANNEL||(process.platform==='win32'?'msedge':'chromium'),args:['--enable-gpu','--enable-webgl']});
  const errors=[];
  const makeWorker=async()=>{
-  const page=await browser.newPage({viewport:{width:1080,height:1080},deviceScaleFactor:1});
+  const page=await browser.newPage({viewport:{width:plan.output.width,height:plan.output.height},deviceScaleFactor:1});
   page.on('pageerror',e=>errors.push(String(e)));
   // Lossless but much faster than page.screenshot(): the CDP screenshot with
   // optimizeForSpeed uses a faster zlib setting, so pixels are identical.

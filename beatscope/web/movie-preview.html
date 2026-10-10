@@ -35,10 +35,13 @@
 import { createTemplateMovie } from './movie-factory.mjs';
 import { makePlan } from './mv-plan.mjs';
 import { createTrack } from '../runtime/runtime.js';
+import {movieOutput} from './movie-output.mjs';
 
 let canvas = document.getElementById('frame');
 const fallback = document.getElementById('fallback');
 const params = new URLSearchParams(location.search);
+const output=movieOutput(params.get('aspect')||'1:1',1080,true);
+canvas.width=output.width;canvas.height=output.height;
 const projectId = params.get('project') || '';
 const loading=document.getElementById('loading');window.previewReady=false;
 let seed = params.has('seed') ? Number(params.get('seed')) : 1;
@@ -47,10 +50,13 @@ let render = null;
 let buildError = null;
 let generation = 0, latestTime = 0, buildingSeed = null;
 let cached = null, authoredPlan = null, appliedPlan = null;
+let latestMedia=null;
 
 function post(message) {
   if (window.parent && window.parent !== window) window.parent.postMessage(message, location.origin);
 }
+document.addEventListener('dragover',event=>{if(event.dataTransfer?.types.includes('Files'))event.preventDefault();});
+document.addEventListener('drop',event=>{if(event.dataTransfer?.files.length){event.preventDefault();post({type:'image-drop',files:Array.from(event.dataTransfer.files)});}});
 
 function applyCopy() {
   const zh = params.get('lang') === 'zh';
@@ -100,10 +106,11 @@ async function build(nextSeed, force = false) {
     const track = createTrack(rhythm, { responseRelevance: ranking });
     appliedPlan = JSON.stringify(authoredPlan ?? savedPlan);
     const plan = makePlan(rhythm, track.responseBetween(0, rhythm.source.duration), seed, authoredPlan ?? savedPlan);
-    plan.template=params.get('template')||'voxel';plan.projectId=projectId;
-    const nextRender=await createTemplateMovie(targetCanvas, rhythm, track, plan);
+    plan.template=params.get('template')||'voxel';plan.projectId=projectId;plan.output=output;
+    const nextRender=await createTemplateMovie(targetCanvas, rhythm, track, plan,{editableMedia:true});
     if(token!==generation){nextRender.dispose?.();return;}
     render=nextRender;
+    if(latestMedia)render.setMedia?.(latestMedia.value,latestMedia.at,latestMedia.animate);
     await render(latestTime);
     window.previewReady=true;loading.classList.add('hidden');
     buildError = null;
@@ -132,6 +139,10 @@ window.addEventListener('message', (event) => {
     try { Promise.resolve(render?.preview?render.preview(latestTime):render?.(latestTime)).catch(error=>post({type:'error',message:String(error)})); } catch (error) { post({ type: 'error', message: String(error) }); }
   } else if (data.type === 'lang' && ['zh','en'].includes(data.value)) {
     params.set('lang',data.value);applyCopy();
+  } else if(data.type==='custom-media'&&data.value){
+    latestMedia={value:data.value,at:Number.isFinite(data.at)?data.at:latestTime,animate:data.animate===true};
+    render?.setMedia?.(latestMedia.value,latestMedia.at,latestMedia.animate);
+    if(render&&latestMedia.at<=latestTime)Promise.resolve(render.preview?render.preview(latestTime):render(latestTime)).catch(error=>post({type:'error',message:String(error)}));
   } else if (data.type === 'seed') {
     if (Number.isInteger(data.value) && data.value >= 0 && data.value < 2**24) void build(data.value);
   } else if (data.type === 'edit-plan' && data.value) {

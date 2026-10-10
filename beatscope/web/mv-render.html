@@ -7,6 +7,8 @@ const data=await(await fetch('./input.json')).json();
 const plan=await(await fetch('./plan.json')).json();
 const track=createTrack(data.rhythm,{responseRelevance:data.ranking});
 const canvas=document.querySelector('canvas');
+canvas.width=plan.output?.width??1080;canvas.height=plan.output?.height??1080;
+canvas.style.width=canvas.width+'px';canvas.style.height=canvas.height+'px';
 window.renderAt=await createTemplateMovie(canvas,data.rhythm,track,plan,{gpu:params.get('gpu')!=='0',composite:params.get('composite')!=='0'});
 await window.renderAt(0);
 // In-page encoding: the worker asks for it with ?encode=webcodecs and streams

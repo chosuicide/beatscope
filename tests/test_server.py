@@ -18,6 +18,41 @@ def running_server():
     return server, thread
 
 
+def test_asset_stream_supports_ranges_without_reading_whole_file(tmp_path):
+    from types import SimpleNamespace
+
+    from beatscope.assets import AssetStore
+    from beatscope.web_api import WebApi
+
+    project_id = 'a' * 12
+    store = AssetStore(tmp_path, project_id)
+    raw = __import__('base64').b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1XkAAAAASUVORK5CYII=')
+    entry = store.add('range.png', raw)
+    manager = SimpleNamespace(get_project_rhythm=lambda _: {'source': {'duration': 8}},
+                              get_project_dir=lambda _: tmp_path)
+    server, thread = running_server()
+    server.ctx.web_api = WebApi(manager, server.ctx.job_manager)
+    path = f'/api/projects/{project_id}/assets/{entry["asset_id"]}'
+    try:
+        conn = http.client.HTTPConnection(*server.server_address)
+        for method, request_range, status, expected in [
+            ('GET', 'bytes=0-9', 206, raw[:10]),
+            ('GET', 'bytes=-8', 206, raw[-8:]),
+            ('GET', 'bytes=9999-', 416, b''),
+            ('HEAD', 'bytes=0-9', 206, b''),
+            ('GET', None, 200, raw),
+        ]:
+            conn.request(method, path, headers={'Range': request_range} if request_range else {})
+            response = conn.getresponse()
+            assert response.status == status
+            assert response.getheader('Accept-Ranges') == 'bytes'
+            assert response.read() == expected
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
 def test_upload_rejects_missing_length():
     """The upload guard runs before anything is read off the socket."""
     server, thread = running_server()

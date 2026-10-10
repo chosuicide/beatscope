@@ -15,7 +15,16 @@ from .edit_plan import edit_plan_bytes, load_edit_plan
 from .response_relevance import build_response_relevance
 
 WEB = Path(__file__).parent / 'web'
-TEMPLATES = {'voxel', 'material-mix'}
+TEMPLATES = {'voxel', 'material-mix', 'paint'}
+
+
+def paint_version():
+    digest = hashlib.sha256()
+    for name in ('paint-frame.mjs', 'paint-sources.mjs', 'media-color.mjs', 'custom-media.mjs', 'movie-factory.mjs', 'movie-templates.mjs', 'mv-plan.mjs', 'mv-worker.mjs'):
+        digest.update((WEB / name).read_bytes())
+    for name in ('runtime.js', 'edit-plan.js'):
+        digest.update((WEB.parent / 'runtime' / name).read_bytes())
+    return digest.hexdigest()
 
 def material_root():
     if os.environ.get('BEATSCOPE_MATERIAL_ROOT'):
@@ -46,7 +55,7 @@ def material_data_version():
 
 def material_version():
     digest = hashlib.sha256(material_data_version().encode())
-    for name in ('material-frame.mjs','material-gpu.mjs'):
+    for name in ('material-frame.mjs','material-gpu.mjs','movie-factory.mjs','custom-media.mjs','media-color.mjs'):
         digest.update((WEB / name).read_bytes())
     return digest.hexdigest()
 
@@ -62,7 +71,7 @@ class MaterialTemplates:
 
     def prepare(self, project_id, seed, template, tools, rhythm=None, edit_plan=None):
         validate_template(template)
-        if template == 'voxel' or not re.fullmatch(r'[0-9a-f]{12}', project_id):
+        if not template.startswith('material-') or not re.fullmatch(r'[0-9a-f]{12}', project_id):
             raise ValueError('Invalid material preview request')
         if type(seed) is not int or not 0 <= seed < 2**24:
             raise ValueError('Invalid seed')

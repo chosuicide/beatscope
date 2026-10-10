@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 import threading
 import time
@@ -134,6 +135,26 @@ class Handler(BaseHTTPRequestHandler):
         route = urlparse(self.path)
         path = route.path
         query = parse_qs(route.query)
+
+        # Stream originals and browser proxies without loading the whole file.
+        asset_route = re.fullmatch(r'/api/projects/([0-9a-f]{12})/assets/([0-9a-f]{64})', path)
+        if asset_route:
+            project_id, asset_id = asset_route.groups()
+            store = self.ctx.web_api._asset_store(project_id)
+            target = store.path_for(asset_id) if store else None
+            if store and target:
+                entry = next(a for a in store.manifest() if a['asset_id'] == asset_id)
+                self._send_media(target, {'Content-Type': entry['mime'],
+                    'Cache-Control': 'private, max-age=31536000, immutable'})
+            else:
+                self._send(404, b'{"error":"Asset not found"}', 'application/json')
+            return
+
+        if path.startswith('/api/projects/') and path.endswith('/custom-media'):
+            from .custom_media import media_request
+            status, headers, body = media_request(self.ctx.project_manager, path.split('/')[3])
+            self._send(status, body, headers['Content-Type'], headers)
+            return
 
         if path == '/api/materials/library':
             self._send(200, (ROOT / 'material-library.json').read_bytes(), 'application/json')
@@ -336,6 +357,27 @@ class Handler(BaseHTTPRequestHandler):
             return
         route = urlparse(self.path)
         path = route.path
+        if path.startswith('/api/projects/') and path.endswith('/custom-media/copy'):
+            from .custom_media import copy_media
+            copy_size = self.headers.get('Content-Length', '')
+            if not copy_size.isdigit() or not 0 < int(copy_size) <= 1024:
+                self.close_connection = True
+                self._send(400, b'{"error":"media/invalid-request"}', 'application/json')
+                return
+            try:
+                source = json.loads(self.rfile.read(int(copy_size)))['from']
+                copy_media(self.ctx.project_manager, source, path.split('/')[3])
+                self._send(200, b'{"ok":true}', 'application/json')
+            except (ValueError, KeyError, TypeError, FileNotFoundError) as exc:
+                self._send(422, json.dumps({'error':str(exc)}).encode(), 'application/json')
+            return
+
+        if re.fullmatch(r'/api/projects/[0-9a-f]{12}/assets/[0-9a-f]{64}/derive', path):
+            from .custom_media import derive_video
+            parts = path.split('/')
+            status, resp_headers, body_bytes = derive_video(self.ctx.project_manager, parts[3], parts[5])
+            self._send(status, body_bytes, resp_headers.get('Content-Type', 'application/json'), resp_headers)
+            return
 
         if path == "/api/movies":
             if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
@@ -351,7 +393,7 @@ class Handler(BaseHTTPRequestHandler):
                 data = json.loads(self.rfile.read(int(declared_size)))
                 if not isinstance(data, dict) or not isinstance(data.get("project_id"), str):
                     raise ValueError("project_id required")
-                job = self.ctx.movie_jobs.submit(data["project_id"], seed=data.get("seed"), **({'template':data['template']} if 'template' in data else {}))
+                job = self.ctx.movie_jobs.submit(data["project_id"], seed=data.get("seed"), **({key:data[key] for key in ('template','output') if key in data}))
                 self._send(202, json.dumps(job).encode(), "application/json")
             except RuntimeError as exc:
                 self._send(409, json.dumps({"message": str(exc)}).encode(), "application/json")
@@ -500,6 +542,16 @@ class Handler(BaseHTTPRequestHandler):
             return
         route = urlparse(self.path)
         path = route.path
+        if path.startswith('/api/projects/') and path.endswith('/custom-media'):
+            from .custom_media import media_request
+            media_size = self.headers.get('Content-Length', '')
+            if not media_size.isdigit() or not 0 < int(media_size) <= 512 * 1024:
+                self.close_connection = True
+                self._send(413, b'{"error":"media/too-large"}', 'application/json')
+                return
+            status, headers, body = media_request(self.ctx.project_manager, path.split('/')[3], self.rfile.read(int(media_size)), self.headers.get('If-Match'))
+            self._send(status, body, headers['Content-Type'], headers)
+            return
         if path.startswith("/api/projects/") and path.endswith("/edit-plan"):
             from .edit_plan import MAX_EDIT_PLAN_BYTES
             raw_size = self.headers.get("Content-Length", "")

@@ -22,7 +22,7 @@ parser.add_argument('--output', type=Path, help='Isolated sample output director
 parser.add_argument('--renderer', type=Path, help='Authored sample adapter, copied into the isolated job')
 args = parser.parse_args()
 validate_template(args.template)
-if args.template == 'voxel':
+if not args.template.startswith('material-'):
     raise ValueError('This demo is for material templates')
 projects = ProjectManager()
 rhythm = projects.get_project_rhythm(args.project)
@@ -38,7 +38,7 @@ payload = {'rhythm':rhythm,'ranking':build_response_relevance(rhythm),
 if args.score:
     payload['scoreFile'] = str(args.score.resolve())
 (root/'input.json').write_text(json.dumps(payload),encoding='utf-8')
-for name in ('mv-render.html','mv-frame.mjs','mv-visual.js','mv-plan.mjs','mv-encode.mjs','movie-factory.mjs','movie-templates.mjs','material-frame.mjs','material-gpu.mjs'):
+for name in ('mv-render.html','mv-frame.mjs','mv-visual.js','mv-plan.mjs','mv-encode.mjs','movie-factory.mjs','movie-templates.mjs','material-frame.mjs','material-gpu.mjs','custom-media.mjs','media-color.mjs','paint-frame.mjs','paint-sources.mjs'):
     shutil.copyfile(WEB/name,root/name)
 if args.renderer:
     shutil.copyfile(args.renderer,root/'material-frame.mjs')
