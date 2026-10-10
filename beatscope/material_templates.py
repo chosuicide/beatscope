@@ -15,7 +15,7 @@ from .edit_plan import edit_plan_bytes, load_edit_plan
 from .response_relevance import build_response_relevance
 
 WEB = Path(__file__).parent / 'web'
-TEMPLATES = {'voxel', 'material-mix'}
+TEMPLATES = {'voxel', 'material-mix', 'paint'}
 
 def material_root():
     if os.environ.get('BEATSCOPE_MATERIAL_ROOT'):

@@ -14,7 +14,8 @@ const input=JSON.parse(fs.readFileSync(path.join(root,'input.json')));
 const hash=createHash('sha256');for await(const chunk of fs.createReadStream(input.audio))hash.update(chunk);
 if(hash.digest('hex')!==input.rhythm.source.sha256)throw Error('Audio hash mismatch');
 const track=createTrack(input.rhythm,{responseRelevance:input.ranking});
-const plan=input.template&&input.template!=='voxel'?JSON.parse(fs.readFileSync(path.join(root,'plan.json'))):makePlan(input.rhythm,track.responseBetween(0,input.rhythm.source.duration),input.seed,input.editPlan);
+const plan=input.template&&input.template!=='voxel'&&input.template!=='paint'?JSON.parse(fs.readFileSync(path.join(root,'plan.json'))):makePlan(input.rhythm,track.responseBetween(0,input.rhythm.source.duration),input.seed,input.editPlan);
+if(input.template==='paint')plan.template='paint';
 fs.writeFileSync(path.join(root,'plan.json'),JSON.stringify(plan));
 // Capture is the bottleneck (frame rendering itself costs <1 ms), so several
 // pages render and grab frames in parallel, chunk by chunk, and the frames are
@@ -24,7 +25,8 @@ fs.writeFileSync(path.join(root,'plan.json'),JSON.stringify(plan));
 // frames are reassembled in order. In-page encoding cannot: each page owns an
 // independent H.264 stream, so the encoder path is deliberately single-page.
 const PAGES=Math.max(1,Math.min(6,Math.floor(Number(process.env.BEATSCOPE_MV_PAGES)||3)));
-const PAGES_FOR=(mode)=>mode==='webcodecs'?1:PAGES;
+// Pastel Bloom carries stroke state from frame to frame, so it renders on one page in order.
+const PAGES_FOR=(mode)=>mode==='webcodecs'||input.template==='paint'?1:PAGES;
 const PRESET=process.env.BEATSCOPE_MV_PRESET||'slower';
 const CRF=process.env.BEATSCOPE_MV_CRF||'20';
 // Capping encoder threads keeps the capture pages fed: with all cores on x264
@@ -39,7 +41,7 @@ const COMPOSITE=process.env.BEATSCOPE_MV_COMPOSITE==='0'?'0':'1';
 const BITRATE=Math.max(100000,Math.min(50000000,Math.floor(Number(process.env.BEATSCOPE_MV_BITRATE)||8000000)));
 const token=randomBytes(24).toString('hex');
 let videoMode=ENCODER==='png'?'png':'webcodecs';
-const allowed=new Set(['mv-render.html','mv-frame.mjs','mv-visual.js','mv-plan.mjs','mv-encode.mjs','beatscope-runtime.js','edit-plan.js','input.json','plan.json','movie-factory.mjs','movie-templates.mjs','material-frame.mjs','material-gpu.mjs','material-timeline.json']);
+const allowed=new Set(['mv-render.html','mv-frame.mjs','mv-visual.js','mv-plan.mjs','mv-encode.mjs','beatscope-runtime.js','edit-plan.js','input.json','plan.json','movie-factory.mjs','movie-templates.mjs','material-frame.mjs','material-gpu.mjs','material-timeline.json','paint-frame.mjs']);
 let encoderStream=null; // ffmpeg stdin, fed by POST /chunk from the page
 const publicInput=JSON.stringify({rhythm:input.rhythm,ranking:input.ranking});
 const server=http.createServer(async (req,res)=>{
@@ -55,7 +57,7 @@ const server=http.createServer(async (req,res)=>{
   return;
  }
  if(req.method!=='GET'){res.writeHead(405).end();return;}
- if(!allowed.has(name)&&!(input.template?.startsWith('material-')&&/^media\/[A-Za-z0-9_-]+\.jpg$/.test(name))){res.writeHead(404).end();return;}
+ if(!allowed.has(name)&&!(input.template?.startsWith('material-')&&/^media\/[A-Za-z0-9_-]+\.jpg$/.test(name))&&!(input.template==='paint'&&/^paint-assets\/[a-z]+\/(lo|hi)\/[0-9]{4}\.jpg$/.test(name))){res.writeHead(404).end();return;}
  if(!fs.existsSync(path.join(root,name))){res.writeHead(404).end();return;}
  res.setHeader('Content-Type',name.endsWith('.html')?'text/html':name.endsWith('.json')?'application/json':name.endsWith('.jpg')?'image/jpeg':'text/javascript');
  res.end(name==='input.json'?publicInput:fs.readFileSync(path.join(root,name)));
@@ -69,7 +71,7 @@ const watchdog=setInterval(()=>{
  const parent=Number(process.env.BEATSCOPE_RENDER_PARENT_PID);
  if(parent>0){try{process.kill(parent,0);}catch{parentGone=true;}}
  const requested=fs.existsSync(path.join(root,'cancel'));
- if(!aborted&&(requested||parentGone||Date.now()-lastProgress>90000)){
+ if(!aborted&&(requested||parentGone||Date.now()-lastProgress>(input.template==='paint'?300000:90000))){
   aborted=true;cancelled=requested;
   console.error(requested?'Cancelled':parentGone?'Render host stopped':'Render stalled for 90 seconds');
   encoderStream?.destroy();encoder?.kill();void browser?.close();
@@ -88,7 +90,7 @@ try {
   const cdp=await page.context().newCDPSession(page);
  const query=videoMode==='webcodecs'?`?encode=webcodecs&bitrate=${BITRATE}&hardware=${HARDWARE}&gpu=${GPU}&composite=${COMPOSITE}&token=${token}`:`?gpu=${GPU}&composite=${COMPOSITE}`;
   await page.goto(`http://127.0.0.1:${server.address().port}/${query}`);
-  await page.waitForFunction(()=>window.ready,{},{timeout:45000});
+  await page.waitForFunction(()=>window.ready,{},{timeout:input.template==='paint'?180000:45000});
   if(videoMode==='webcodecs'){
    const codec=await page.evaluate(()=>window.encoderCodec||null);
    if(!codec){await page.close();throw Error('webcodecs-unavailable');}
@@ -162,7 +164,7 @@ try {
  }
  if(videoMode==='webcodecs')await workers[0].page.evaluate(()=>window.finishEncode());
  encoderStream=null;encoder.stdin.end();const [code]=await closed;if(code!==0)throw Error(stderr);
- check();fs.renameSync(temp,output);
+ check();if(TMPD){fs.copyFileSync(temp,output);fs.rmSync(temp,{force:true});}else fs.renameSync(temp,output);
  const cpuAfter=await diagnostics.send('SystemInfo.getProcessInfo').catch(()=>null);
  if(cpuBefore&&cpuAfter){const initial=new Map(cpuBefore.processInfo.map(p=>[p.id,p.cpuTime]));acceleration.browserCpuSeconds=cpuAfter.processInfo.reduce((sum,p)=>sum+Math.max(0,p.cpuTime-(initial.get(p.id)??0)),0);}
  acceleration.renderSeconds=(Date.now()-renderStarted)/1000;
