@@ -10,9 +10,9 @@ English | [简体中文](README.zh-CN.md)
 
 BeatScope listens for beats, real transients, energy changes, tempo changes and repeated sections. Beathi Studio turns those measurements into a movie preview and a reusable timing package. Everything runs locally; your audio is not uploaded.
 
-[![Prismatic Echo II rendered in Beathi v0.16.0](docs/demo/prismatic-echo-ii-v016.webp)](docs/demo/prismatic-echo-ii-v016.mp4)
+[![Prismatic Echo II rendered in Beathi v0.16.0](docs/demo/prismatic-echo-ii-v016.webp)](https://github.com/chosuicide/beatscope/releases/download/v0.16.0/prismatic-echo-ii-v016.mp4)
 
-**[▶ Watch 8 seconds of Prismatic Echo II with audio](docs/demo/prismatic-echo-ii-v016.mp4)** — 720×720, 30 fps, cut from a full-song render of Shattered Heartbeat.
+**[▶ Watch 8 seconds of Prismatic Echo II with audio](https://github.com/chosuicide/beatscope/releases/download/v0.16.0/prismatic-echo-ii-v016.mp4)** — 720×720, 30 fps, cut from a full-song render of Shattered Heartbeat.
 
 ## What you do
 
