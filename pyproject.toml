@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "beatscope"
-version = "0.16.0"
+version = "0.16.1"
 description = "Local music timing analysis, deterministic video preview, and portable Agent handoffs"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -38,7 +38,7 @@ include = ["beatscope*"]
 # sit beside the runtime must not be packaged just because it shares an
 # extension. Every page and module the server and the renderer load at runtime
 # is listed here: include_package_data does not pick up tracked files in a
-# release build (v0.16.0 shipped without mv-visual.js).
+# release build (v0.16.1 shipped without mv-visual.js).
 beatscope = [
   "web/composition-preview.html", "web/composition-preview.mjs",
   "web/composition-probe.mjs", "web/composition-runtime.mjs",

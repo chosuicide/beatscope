@@ -35,8 +35,8 @@ def release_tree(tmp_path):
 
 
 def test_repository_versions_match_patch_release():
-    assert validate_release_version(ROOT, "v0.16.0") == []
-    assert set(read_versions(ROOT).values()) == {"0.16.0"}
+    assert validate_release_version(ROOT, "v0.16.1") == []
+    assert set(read_versions(ROOT).values()) == {"0.16.1"}
 
 
 def test_handoff_format_is_independent_of_product_release():
@@ -59,8 +59,8 @@ def test_rejects_malformed_or_nonstable_tag(tag):
 @pytest.mark.parametrize("source", SOURCES)
 def test_rejects_stale_version_source(release_tree, source):
     path = release_tree / source
-    path.write_text(path.read_text(encoding="utf-8").replace("0.16.0", "0.12.0"), encoding="utf-8")
-    errors = validate_release_version(release_tree, "v0.16.0")
+    path.write_text(path.read_text(encoding="utf-8").replace("0.16.1", "0.12.0"), encoding="utf-8")
+    errors = validate_release_version(release_tree, "v0.16.1")
     assert any(source in error and "does not match tag" in error for error in errors)
 
 
@@ -71,7 +71,7 @@ def test_checks_both_lockfile_versions_independently(release_tree, location):
     target = lock if location == "top" else lock["packages"][""]
     target["version"] = "0.12.0"
     path.write_text(json.dumps(lock), encoding="utf-8")
-    errors = validate_release_version(release_tree, "v0.16.0")
+    errors = validate_release_version(release_tree, "v0.16.1")
     assert len(errors) == 1
     assert "web-src/package-lock.json" in errors[0]
 
@@ -79,15 +79,15 @@ def test_checks_both_lockfile_versions_independently(release_tree, location):
 @pytest.mark.parametrize("source", SOURCES)
 def test_missing_source_fails_closed(release_tree, source):
     (release_tree / source).unlink()
-    assert "Cannot read release versions" in validate_release_version(release_tree, "v0.16.0")[0]
+    assert "Cannot read release versions" in validate_release_version(release_tree, "v0.16.1")[0]
 
 
 def test_malformed_metadata_fails_closed(release_tree):
     (release_tree / "web-src/package-lock.json").write_text("{}", encoding="utf-8")
-    assert "Cannot read release versions" in validate_release_version(release_tree, "v0.16.0")[0]
+    assert "Cannot read release versions" in validate_release_version(release_tree, "v0.16.1")[0]
 
 
-@pytest.mark.parametrize("tag,code", [("v0.16.0", 0), ("v0.12.0", 1), ("invalid", 1)])
+@pytest.mark.parametrize("tag,code", [("v0.16.1", 0), ("v0.12.0", 1), ("invalid", 1)])
 def test_cli_exit_status(tag, code, tmp_path):
     result = subprocess.run(
         [sys.executable, str(CHECKER), "--tag", tag],

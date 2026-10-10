@@ -5,6 +5,13 @@ that version. This file records the same history in one place, newest first;
 `PACKAGE_VERSION` in `beatscope/exports.py` tracks the handoff package format,
 which is versioned separately from the product.
 
+## 0.16.1
+
+- Fix movie rendering from Python installs: include the missing renderer and TypeScript declarations in wheel and source packages.
+- Check the actual built Python packages for missing or stale runtime files before publishing.
+
+See [release notes](.github/release-notes/v0.16.1.md).
+
 ## 0.16.0
 
 - Custom photos and video clips with shared template effects, timeline editing and optional palette matching.

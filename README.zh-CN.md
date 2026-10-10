@@ -3,7 +3,7 @@
 [English](README.md) | 简体中文
 
 [![CI](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml/badge.svg)](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.16.0-c65032)](https://github.com/chosuicide/beatscope/releases/tag/v0.16.0)
+[![Version](https://img.shields.io/badge/version-0.16.1-c65032)](https://github.com/chosuicide/beatscope/releases/tag/v0.16.1)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
 **上传一首歌，生成踩准节奏的影片；也可以把准确时序交给 Coding Agent。**
@@ -26,18 +26,18 @@ BeatScope 会测量拍点、真实瞬态、能量变化、速度变化和重复�
 
 ### Windows
 
-下载 **[Beathi Studio v0.16.0](https://github.com/chosuicide/beatscope/releases/download/v0.16.0/Beathi-Studio-v0.16.0-windows-x64.zip)**，完整解压后双击 **Beathi Studio.exe**。便携包包含分析器、Node.js、Playwright、FFmpeg 和模板素材；视频渲染使用 Windows 10/11 自带的 Microsoft Edge。
+下载 **[Beathi Studio v0.16.1](https://github.com/chosuicide/beatscope/releases/download/v0.16.1/Beathi-Studio-v0.16.1-windows-x64.zip)**，完整解压后双击 **Beathi Studio.exe**。便携包包含分析器、Node.js、Playwright、FFmpeg 和模板素材；视频渲染使用 Windows 10/11 自带的 Microsoft Edge。
 
 ### Python 3.10+
 
-从 [v0.16.0 Release](https://github.com/chosuicide/beatscope/releases/tag/v0.16.0) 下载 wheel，然后运行：
+从 [v0.16.1 Release](https://github.com/chosuicide/beatscope/releases/tag/v0.16.1) 下载 wheel，然后运行：
 
 ```powershell
-pip install beatscope-0.16.0-py3-none-any.whl
+pip install beatscope-0.16.1-py3-none-any.whl
 beatscope serve --open
 ```
 
-使用「棱镜残像」时，将独立的[素材包](https://github.com/chosuicide/beatscope/releases/download/v0.16.0/Beathi-Materials-v0.16.0.zip)解压到当前工作目录，保留 `materials/` 文件夹；也可以用 `BEATSCOPE_MATERIAL_ROOT` 指定它。Python 安装的视频渲染另需 Node.js、FFmpeg、Playwright 和支持的浏览器，见[本地渲染说明](docs/local-movie.md)。Windows 便携版已包含工具和素材。
+使用「棱镜残像」时，将独立的[素材包](https://github.com/chosuicide/beatscope/releases/download/v0.16.1/Beathi-Materials-v0.16.1.zip)解压到当前工作目录，保留 `materials/` 文件夹；也可以用 `BEATSCOPE_MATERIAL_ROOT` 指定它。Python 安装的视频渲染另需 Node.js、FFmpeg、Playwright 和支持的浏览器，见[本地渲染说明](docs/local-movie.md)。Windows 便携版已包含工具和素材。
 
 ## 两种实用输出
 

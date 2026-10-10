@@ -3,7 +3,7 @@
 English | [简体中文](README.zh-CN.md)
 
 [![CI](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml/badge.svg)](https://github.com/chosuicide/beatscope/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.16.0-c65032)](https://github.com/chosuicide/beatscope/releases/tag/v0.16.0)
+[![Version](https://img.shields.io/badge/version-0.16.1-c65032)](https://github.com/chosuicide/beatscope/releases/tag/v0.16.1)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
 **Turn a song into a beat-synchronised film — or give its timing to a coding agent.**
@@ -26,18 +26,18 @@ BeatScope listens for beats, real transients, energy changes, tempo changes and 
 
 ### Windows
 
-Download **[Beathi Studio v0.16.0](https://github.com/chosuicide/beatscope/releases/download/v0.16.0/Beathi-Studio-v0.16.0-windows-x64.zip)**, extract the whole ZIP, then double-click **Beathi Studio.exe**. It includes the analyser, Node.js, Playwright, FFmpeg and the template's material pack. Rendering uses Microsoft Edge on Windows 10/11.
+Download **[Beathi Studio v0.16.1](https://github.com/chosuicide/beatscope/releases/download/v0.16.1/Beathi-Studio-v0.16.1-windows-x64.zip)**, extract the whole ZIP, then double-click **Beathi Studio.exe**. It includes the analyser, Node.js, Playwright, FFmpeg and the template's material pack. Rendering uses Microsoft Edge on Windows 10/11.
 
 ### Python 3.10+
 
-Download the wheel from the [v0.16.0 release](https://github.com/chosuicide/beatscope/releases/tag/v0.16.0), then run:
+Download the wheel from the [v0.16.1 release](https://github.com/chosuicide/beatscope/releases/tag/v0.16.1), then run:
 
 ```powershell
-pip install beatscope-0.16.0-py3-none-any.whl
+pip install beatscope-0.16.1-py3-none-any.whl
 beatscope serve --open
 ```
 
-For Prismatic Echo, extract the separate [material pack](https://github.com/chosuicide/beatscope/releases/download/v0.16.0/Beathi-Materials-v0.16.0.zip) into your working directory, keeping its `materials/` folder. Alternatively set `BEATSCOPE_MATERIAL_ROOT` to that folder. Python movie rendering also needs Node.js, FFmpeg, Playwright and a supported browser; see [local rendering](docs/local-movie.md). The Windows portable download includes these tools and materials.
+For Prismatic Echo, extract the separate [material pack](https://github.com/chosuicide/beatscope/releases/download/v0.16.1/Beathi-Materials-v0.16.1.zip) into your working directory, keeping its `materials/` folder. Alternatively set `BEATSCOPE_MATERIAL_ROOT` to that folder. Python movie rendering also needs Node.js, FFmpeg, Playwright and a supported browser; see [local rendering](docs/local-movie.md). The Windows portable download includes these tools and materials.
 
 ## Two useful outputs
 
