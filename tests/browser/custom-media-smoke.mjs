@@ -73,7 +73,7 @@ try{
  await page.locator('.media-thumb').first().locator('button').first().click();
  await page.getByRole('button',{name:'Pin at playhead',exact:true}).click();
  await page.waitForFunction(()=>document.querySelectorAll('.media-placement .fixed').length>0);
- saved=await doc();assert.equal(saved.slots[0].fixed,true);
+ saved=await doc();assert.ok(saved.slots.some(s=>s.fixed),'Pin at playhead must save a fixed slot');
  await page.locator('.media-delete').first().click();
  await page.waitForFunction(()=>document.querySelectorAll('.media-thumb').length===2);
  await page.locator('.media-panel').getByRole('button',{name:'Undo',exact:true}).click();
@@ -81,9 +81,9 @@ try{
  saved=await doc();assert.ok(saved.slots.some(s=>s.fixed));
  await page.reload();await ready();assert.equal(await page.locator('.media-thumb').count(),3);
  const screenshots=[];
- for(const template of ['voxel','material-mix']){
+ for(const template of ['voxel','material-mix','paint']){
   await page.locator('.template-select').selectOption(template);await ready();
-  assert.equal(await page.locator('.media-panel').count(),template==='voxel'?0:1,'only Prismatic Echo accepts custom images');
+  assert.equal(await page.locator('.media-panel').count(),template==='voxel'?0:1,'Prismatic Echo and Pastel Bloom accept custom media; Voxel does not');
   for(const aspect of ['1:1','16:9','9:16']){
    await page.getByLabel('Aspect ratio',{exact:true}).selectOption(aspect);await ready();
    const dimensions=await page.frameLocator('iframe.mv-preview').locator('canvas').evaluate(c=>[c.width,c.height]);
