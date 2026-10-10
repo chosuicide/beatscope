@@ -10,9 +10,9 @@
 
 BeatScope 会测量拍点、真实瞬态、能量变化、速度变化和重复段落。Beathi Studio 用这些数据生成影片预览，也能导出一份可复用的时序包。所有处理都在本机完成，音频不会上传。
 
-[![Beathi v0.15.0 棱镜残像实渲样片](docs/demo/prismatic-echo-v015.webp)](https://github.com/chosuicide/beatscope/releases/download/v0.15.0/Beathi-v0.15.0-prismatic-echo-demo.mp4)
+[![Beathi v0.16.0 棱镜残像 II 实渲样片](docs/demo/prismatic-echo-ii-v016.webp)](docs/demo/prismatic-echo-ii-v016.mp4)
 
-**[▶ 观看 v0.15.0 的8秒实渲样片（带音频）](https://github.com/chosuicide/beatscope/releases/download/v0.15.0/Beathi-v0.15.0-prismatic-echo-demo.mp4)** — 1080×1080、30fps；这是短片验证，不是全曲。
+**[▶ 观看「棱镜残像 II」8秒实渲片段（带音频）](docs/demo/prismatic-echo-ii-v016.mp4)** — 720×720、30fps，截自《Shattered Heartbeat》全曲渲染。
 
 ## 你只需要做三步
 
