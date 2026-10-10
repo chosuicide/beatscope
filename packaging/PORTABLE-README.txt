@@ -1,4 +1,4 @@
-BEATHI STUDIO / BEATSCOPE v0.16.1
+BEATHI STUDIO / BEATSCOPE v0.16.0
 ================================
 
 1. Extract the whole ZIP.
