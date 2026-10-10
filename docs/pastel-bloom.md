@@ -41,5 +41,5 @@ Checks: `node tests/browser/paint-template.mjs http://127.0.0.1:8772` uses synth
 inputs, built-in frames, three aspects, custom images/video, palette and repeated
 seeks. Native export can be exercised through the existing movie job API with
 `template: "paint"` and the same output settings as the other templates.
-See [footage provenance](../beatscope/web/paint-assets/SOURCES.md); individual
-source credits are still absent from the incoming PR.
+See [footage provenance](../beatscope/web/paint-assets/SOURCES.md) for the
+Pexels source of each clip.
