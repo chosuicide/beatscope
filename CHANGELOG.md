@@ -5,6 +5,16 @@ that version. This file records the same history in one place, newest first;
 `PACKAGE_VERSION` in `beatscope/exports.py` tracks the handoff package format,
 which is versioned separately from the product.
 
+## 0.16.0
+
+- Custom photos and video clips with shared template effects, timeline editing and optional palette matching.
+- Square, landscape and portrait exports at 720p or 1080p, 30 fps.
+- Two new templates: Prismatic Echo II and Pastel Bloom.
+- Agent timing queries, resumable rendering, PNG-sequence input and timing checks.
+- Preview/editor fixes and bundled-tool support for M4A import.
+
+See [release notes](.github/release-notes/v0.16.0.md).
+
 ## 0.15.0
 
 - Ship two native movie templates: Voxel Interference and Prismatic Echo.
