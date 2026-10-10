@@ -4,7 +4,7 @@ export function makeMaterialScore(plan,library,setups,template){
  const palettes={gray:{base:'#d7ddde',accent:'#e2e7e7',secondary:'#a7afb0'},blue:{base:'#061528',accent:'#167ce0',secondary:'#154975'},red:{base:'#23070c',accent:'#fa5327',secondary:'#882323'}};
  const counters={gray:0,blue:0,red:0},families=new Map(),motifs={},spans={},visitInfo=[];let lastBurst=-5;
  for(const visit of plan.shots){const family=visit.stageId??visit.family;if(!families.has(family))families.set(family,families.size);
-  const group=template==='material-mix'?['gray','blue','red'][families.get(family)%3]:template.replace('material-',''),n=counters[group]++,motif=Math.floor(n/4),key=`${group}:${motif}`;
+  const group=template.startsWith('material-mix')?['gray','blue','red'][families.get(family)%3]:template.replace('material-',''),n=counters[group]++,motif=Math.floor(n/4),key=`${group}:${motif}`;
   spans[key]=(spans[key]??0)+visit.end-visit.start;visitInfo.push({group,n,motif});
  }
  const shots=plan.shots.map((visit,i)=>{

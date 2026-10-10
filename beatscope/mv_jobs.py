@@ -138,7 +138,7 @@ class MovieJobs:
                    "template": template, "template_digest": template_digest,
                    "output": output,
                    "media_digest": media_digest,
-                   "template_version": 'pastel-bloom-2' if template == 'paint' else 'prismatic-echo-5' if template == 'material-mix' else 'voxel-phrase-2',
+                   "template_version": 'pastel-bloom-2' if template == 'paint' else 'prismatic-echo-5' if template == 'material-mix' else 'prismatic-echo-ii-1' if template == 'material-mix-2' else 'voxel-phrase-2',
                    "state": "queued", "progress": 0, "message": msg("movie.preparing"), "duration": duration}
             self._save(job)
             (directory / 'custom-media.json').write_bytes(media_bytes(media))

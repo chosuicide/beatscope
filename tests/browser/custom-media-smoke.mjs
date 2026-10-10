@@ -81,7 +81,7 @@ try{
  saved=await doc();assert.ok(saved.slots.some(s=>s.fixed));
  await page.reload();await ready();assert.equal(await page.locator('.media-thumb').count(),3);
  const screenshots=[];
- for(const template of ['voxel','material-mix']){
+ for(const template of ['voxel','material-mix','material-mix-2']){
   await page.locator('.template-select').selectOption(template);await ready();
   assert.equal(await page.locator('.media-panel').count(),template==='voxel'?0:1,'only Prismatic Echo accepts custom images');
   for(const aspect of ['1:1','16:9','9:16']){

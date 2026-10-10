@@ -5,13 +5,13 @@ const library=JSON.parse(fs.readFileSync('beatscope/web/material-library.json'))
 const plan={duration:12,seed:7,stages:[{start:0},{start:4},{start:8}],shots:Array.from({length:12},(_,i)=>({start:i,end:i+1,stageId:`s${Math.floor(i/4)}`,family:'A',kind:i%4===0?'stage':'cue',eventId:i}))};
 assert.equal(library.assets.length,51);
 assert.equal(new Set(library.assets.map(a=>a.id)).size,51);
-for(const id of ['material-mix']){
+for(const id of ['material-mix','material-mix-2']){
  const score=makeMaterialScore(plan,library,setups,id),compiled=compileMaterialScore(score);
  assert.deepEqual(makeMaterialScore(plan,library,setups,id),score);
  for(const s of score.shots){assert.equal(s.setup.rgb,false);assert.ok(!['rupture','ridgeSlice','card','mosaic'].includes(s.setup.mode));}
  for(const t of [0,2.4,7.1,11.9,3.3]){const a=compiled.at(t);compiled.at(0);assert.deepEqual(compiled.at(t),a);}
  assert.equal(compiled.cuts.length,12);
- if(id==='material-mix')assert.deepEqual([...new Set(score.shots.map(s=>s.setup.group))],['gray','blue','red']);
+ if(id.startsWith('material-mix'))assert.deepEqual([...new Set(score.shots.map(s=>s.setup.group))],['gray','blue','red']);
  else assert.ok(score.shots.every(s=>s.setup.group===id.replace('material-','')));
 }
 const edited={...plan,shots:plan.shots.filter(s=>s.start!==2).map(s=>s.start===3?{...s,start:3.25}:s)};
