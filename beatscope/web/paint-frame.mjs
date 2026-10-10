@@ -1,4 +1,4 @@
-// LIVE PAINT (活笔触): real footage repainted stroke by stroke on the beat.
+// PASTEL BLOOM (粉彩花信): real flower footage repainted stroke by stroke on the beat.
 // Seek-safe: render(t) replays the current shot from its first frame when time jumps.
 export async function createPaintMovie(outCanvas, map, track, plan, options = {}) {
 const W = 1920, H = 1080, AW = 640, AH = 360, S = W / AW;
@@ -7,7 +7,7 @@ const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; 
 const cx2 = c => c.getContext('2d', CTXO);
 const cv = mk(W, H); const out = cx2(cv); const octx = outCanvas.getContext('2d');
 const ASSET = options.assetBase || new URL('./paint-assets/', import.meta.url).href;
-const RM = map; const BEATS = (RM.beats || []).map(b => b.time); const NB = BEATS.length; if (NB < 8) throw Error('Live Paint needs a beat grid of at least 8 beats');
+const RM = map; const BEATS = (RM.beats || []).map(b => b.time); const NB = BEATS.length; if (NB < 8) throw Error('Pastel Bloom needs a beat grid of at least 8 beats');
 const B = i => i >= NB ? BEATS[NB - 1] + (i - NB + 1) * (BEATS[NB - 1] - BEATS[NB - 2]) : BEATS[Math.max(0, i)];
 const cl = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 function lastIdx(arr, t) { let lo = 0, hi = arr.length - 1, r = -1; while (lo <= hi) { const m = (lo + hi) >> 1; if (arr[m] <= t) { r = m; lo = m + 1; } else hi = m - 1; } return r; }

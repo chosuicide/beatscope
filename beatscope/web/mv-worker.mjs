@@ -25,7 +25,7 @@ fs.writeFileSync(path.join(root,'plan.json'),JSON.stringify(plan));
 // frames are reassembled in order. In-page encoding cannot: each page owns an
 // independent H.264 stream, so the encoder path is deliberately single-page.
 const PAGES=Math.max(1,Math.min(6,Math.floor(Number(process.env.BEATSCOPE_MV_PAGES)||3)));
-// Live Paint carries stroke state from frame to frame, so it renders on one page in order.
+// Pastel Bloom carries stroke state from frame to frame, so it renders on one page in order.
 const PAGES_FOR=(mode)=>mode==='webcodecs'||input.template==='paint'?1:PAGES;
 const PRESET=process.env.BEATSCOPE_MV_PRESET||'slower';
 const CRF=process.env.BEATSCOPE_MV_CRF||'20';

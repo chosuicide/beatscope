@@ -95,7 +95,7 @@ class MovieJobs:
 
     def submit(self, project_id, seed=None, template='voxel'):
         validate_template(template)
-        template_digest = {'voxel': 'voxel-phrase-2', 'paint': 'live-paint-1'}.get(template) or material_version()
+        template_digest = {'voxel': 'voxel-phrase-2', 'paint': 'pastel-bloom-1'}.get(template) or material_version()
         if seed is not None and (type(seed) is not int or not 0 <= seed < 2**24):
             raise ValueError("seed must be an integer from 0 to 16777215")
         if not re.fullmatch(r"[0-9a-f]{12}", project_id):
@@ -126,7 +126,7 @@ class MovieJobs:
             job = {"id": job_id, "project_id": project_id, "seed": secrets.randbits(24) if seed is None else seed,
                    "edit_plan_digest": edit_digest,
                    "template": template, "template_digest": template_digest,
-                   "template_version": {'material-mix': 'prismatic-echo-4', 'paint': 'live-paint-1'}.get(template, 'voxel-phrase-2'),
+                   "template_version": {'material-mix': 'prismatic-echo-4', 'paint': 'pastel-bloom-1'}.get(template, 'voxel-phrase-2'),
                    "state": "queued", "progress": 0, "message": msg("movie.preparing"), "duration": duration}
             self.jobs[job_id] = job
             self.active = job_id
