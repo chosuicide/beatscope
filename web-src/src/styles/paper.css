@@ -36,15 +36,17 @@ body .mv-shell {
   background: transparent;
 }
 
-/* The analysis panel and the transport pill used to paint their own paper and
-   read as cards pasted over the sheet. They join the wall now; the two chart
-   plates keep a light wash so the waveform hairlines never sit on the drawing
-   itself. */
-.mv-shell .cm {
+/* The analysis panel, the media panel and the transport pill used to paint
+   their own paper and read as cards pasted over the sheet. They join the wall
+   now; the chart plates and the image lane keep a light wash so the waveform
+   hairlines and thumbnails never sit on the drawing itself. */
+.mv-shell .cm,
+.mv-shell .media-panel {
   background: transparent;
 }
 
-.mv-shell .cm-stack {
+.mv-shell .cm-stack,
+.mv-shell .media-placement {
   background: color-mix(in srgb, var(--paper-0) 58%, transparent);
 }
 

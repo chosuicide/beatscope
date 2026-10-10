@@ -355,6 +355,12 @@
   border: 0;
   background: #0b0b0d;
 }
+.output-field {display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0;font-size:13px;}
+.output-field select {font:inherit;padding:5px;color:var(--ink-1);background:var(--surface-1);border:1px solid var(--line-strong);border-radius:4px;}
+.material-hint {margin:8px 0 0;font-size:12px;color:var(--ink-2);}
+.link-btn {border:0;background:none;padding:0;margin-left:6px;color:var(--accent);font:inherit;cursor:pointer;}
+.link-btn:hover {text-decoration:underline;}
+.link-btn:disabled {opacity:.45;cursor:default;text-decoration:none;}
 .mv-placeholder {
   position: absolute;
   inset: 0;
@@ -510,7 +516,7 @@
   transition: grid-template-rows 440ms var(--ease-settle);
 }
 
-.cm.collapsed .cm-body {
+:is(.cm, .media-panel).collapsed .cm-body {
   grid-template-rows: 0fr;
 }
 
@@ -528,7 +534,7 @@
   transition: --cm-wipe 440ms var(--ease-settle);
 }
 
-.cm.collapsed .cm-body-inner {
+:is(.cm, .media-panel).collapsed .cm-body-inner {
   --cm-wipe: 240px;
 }
 
@@ -541,15 +547,15 @@
 .cm-body-inner > *:nth-child(3) { transition-delay: 180ms; }
 .cm-body-inner > *:nth-child(4) { transition-delay: 240ms; }
 
-.cm.collapsed .cm-body-inner > * {
+:is(.cm, .media-panel).collapsed .cm-body-inner > * {
   opacity: 0;
   transform: translateY(-10px);
 }
 
-.cm.collapsed .cm-body-inner > *:nth-child(1) { transition-delay: 0ms; }
-.cm.collapsed .cm-body-inner > *:nth-child(2) { transition-delay: 40ms; }
-.cm.collapsed .cm-body-inner > *:nth-child(3) { transition-delay: 80ms; }
-.cm.collapsed .cm-body-inner > *:nth-child(4) { transition-delay: 120ms; }
+:is(.cm, .media-panel).collapsed .cm-body-inner > *:nth-child(1) { transition-delay: 0ms; }
+:is(.cm, .media-panel).collapsed .cm-body-inner > *:nth-child(2) { transition-delay: 40ms; }
+:is(.cm, .media-panel).collapsed .cm-body-inner > *:nth-child(3) { transition-delay: 80ms; }
+:is(.cm, .media-panel).collapsed .cm-body-inner > *:nth-child(4) { transition-delay: 120ms; }
 .cm-toggle {
   font-size: 10px;
   padding: 4px 8px;

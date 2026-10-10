@@ -34,6 +34,7 @@ const MAP_W = 1400;
 const MAP_H = 232;
 const OVERVIEW_W = 1560;
 const OVERVIEW_H = 128;
+export function overviewAxis(width:number,height:number){const scale=Math.min(width/OVERVIEW_W,height/OVERVIEW_H),offsetX=(width-OVERVIEW_W*scale)/2;return {left:offsetX+LEFT*scale,right:offsetX+RIGHT*scale};}
 
 const INK = '#171719';
 const MID = '#77737d';

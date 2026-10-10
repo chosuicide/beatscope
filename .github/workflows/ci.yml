@@ -113,6 +113,8 @@ jobs:
       - name: Install Chromium
         working-directory: tests/browser
         run: npx playwright install --with-deps chromium
+      - name: Install clip decoder
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Browser round trip
         shell: bash
         run: |
@@ -125,10 +127,27 @@ jobs:
             sleep 1
           done
           node tests/browser/studio-webmcp-smoke.mjs http://127.0.0.1:8771
+          node tests/browser/custom-media-smoke.mjs http://127.0.0.1:8771 --ci
+          node tests/browser/custom-media-effects.mjs http://127.0.0.1:8771
+          node tests/browser/custom-media-aspects.mjs http://127.0.0.1:8771
+          node tests/browser/paint-template.mjs http://127.0.0.1:8771
+          kill "$server_pid"
+          python tests/browser/studio_webmcp_server.py --port 8772 --short-render > build/studio-media-server.json 2>&1 &
+          server_pid=$!
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:8772/app/ > /dev/null && break
+            sleep 1
+          done
+          node tests/browser/custom-media-interactions.mjs http://127.0.0.1:8772
+          node tests/browser/custom-media-video.mjs http://127.0.0.1:8772 --ci
+          node tests/browser/custom-media-regressions.mjs http://127.0.0.1:8772
       - name: Upload failure evidence
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: studio-webmcp-failure
-          path: build/studio-webmcp-server.json
+          path: |
+            build/studio-webmcp-server.json
+            build/studio-media-server.json
+            output/playwright/
           retention-days: 7
