@@ -40,6 +40,39 @@ jobs:
           npm ci --prefix web-src --no-audit --no-fund
           npm run build --prefix web-src
       - run: python -m build
+      - name: Verify built Python package data
+        run: |
+          python - <<'PY'
+          import pathlib
+          import tarfile
+          import tomllib
+          import zipfile
+
+          root = pathlib.Path('beatscope')
+          patterns = tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8'))['tool']['setuptools']['package-data']['beatscope']
+          expected = {f'beatscope/{path.relative_to(root).as_posix()}': path
+                      for pattern in patterns for path in root.glob(pattern) if path.is_file()}
+          assert 'beatscope/web/mv-visual.js' in expected
+          wheels = list(pathlib.Path('dist').glob('beatscope-*.whl'))
+          sources = list(pathlib.Path('dist').glob('beatscope-*.tar.gz'))
+          assert wheels and sources, 'Missing wheel or source archive'
+          for wheel in wheels:
+              with zipfile.ZipFile(wheel) as archive:
+                  missing = sorted(set(expected) - set(archive.namelist()))
+                  assert not missing, f'{wheel.name}: missing package data: {missing}'
+                  wrong = [name for name, data in expected.items() if archive.read(name) != data.read_bytes()]
+                  assert not wrong, f'{wheel.name}: stale package data: {wrong}'
+              print(f'{wheel.name}: verified {len(expected)} package data files')
+          for source in sources:
+              with tarfile.open(source) as archive:
+                  members = {member.name.split('/', 1)[1]: member for member in archive.getmembers()
+                             if member.isfile() and '/' in member.name}
+                  missing = sorted(set(expected) - set(members))
+                  assert not missing, f'{source.name}: missing package data: {missing}'
+                  wrong = [name for name, data in expected.items() if archive.extractfile(members[name]).read() != data.read_bytes()]
+                  assert not wrong, f'{source.name}: stale package data: {wrong}'
+              print(f'{source.name}: verified {len(expected)} package data files')
+          PY
       - uses: actions/upload-artifact@v7
         with:
           name: python-package
