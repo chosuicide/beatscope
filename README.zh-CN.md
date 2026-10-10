@@ -6,19 +6,19 @@
 [![Version](https://img.shields.io/badge/version-0.16.0-c65032)](https://github.com/chosuicide/beatscope/releases/tag/v0.16.0)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
-**上传一首歌，生成踩准节奏的影片；也可以把准确时序交给 Coding Agent。**
+**把任何一首歌变成踩准节拍的 MV；也可以把准确时序交给 Coding Agent。**
 
 BeatScope 会测量拍点、真实瞬态、能量变化、速度变化和重复段落。Beathi Studio 用这些数据生成影片预览，也能导出一份可复用的时序包。所有处理都在本机完成，音频不会上传。
 
 [![Beathi v0.15.0 棱镜残像实渲样片](docs/demo/prismatic-echo-v015.webp)](https://github.com/chosuicide/beatscope/releases/download/v0.15.0/Beathi-v0.15.0-prismatic-echo-demo.mp4)
 
-**[▶ 观看最新8秒实渲样片（带音频）](https://github.com/chosuicide/beatscope/releases/download/v0.15.0/Beathi-v0.15.0-prismatic-echo-demo.mp4)** — 1080×1080、30fps；这是短片验证，不是全曲。
+**[▶ 观看 v0.15.0 的8秒实渲样片（带音频）](https://github.com/chosuicide/beatscope/releases/download/v0.15.0/Beathi-v0.15.0-prismatic-echo-demo.mp4)** — 1080×1080、30fps；这是短片验证，不是全曲。
 
 ## 你只需要做三步
 
 1. 上传 WAV、FLAC、MP3、OGG 或 M4A 音频。
-2. 查看影片预览、歌曲结构和节奏图。
-3. 渲染视频、导出 MIDI/CSV，或者把 `.beatscope` 包交给 Coding Agent。
+2. 选一套模板，想用自己的图片或视频就拖进来，再查看影片预览、歌曲结构和节奏图。
+3. 渲染方形、横屏或竖屏视频、导出 MIDI/CSV，或者把 `.beatscope` 包交给 Coding Agent。
 
 ![Beathi v0.15.0：棱镜残像、阶段编辑与卡点标识](docs/demo/beathi-studio-v015-zh.png)
 
@@ -37,13 +37,22 @@ pip install beatscope-0.16.0-py3-none-any.whl
 beatscope serve --open
 ```
 
-使用「棱镜残像」时，将独立的[素材包](https://github.com/chosuicide/beatscope/releases/download/v0.16.0/Beathi-Materials-v0.16.0.zip)解压到当前工作目录，保留 `materials/` 文件夹；也可以用 `BEATSCOPE_MATERIAL_ROOT` 指定它。Python 安装的视频渲染另需 Node.js、FFmpeg、Playwright 和支持的浏览器，见[本地渲染说明](docs/local-movie.md)。Windows 便携版已包含工具和素材。
+使用「棱镜残像 I / II」时，将独立的[素材包](https://github.com/chosuicide/beatscope/releases/download/v0.16.0/Beathi-Materials-v0.16.0.zip)解压到当前工作目录，保留 `materials/` 文件夹；也可以用 `BEATSCOPE_MATERIAL_ROOT` 指定它。Python 安装的视频渲染另需 Node.js、FFmpeg、Playwright 和支持的浏览器，见[本地渲染说明](docs/local-movie.md)。Windows 便携版已包含工具和素材。
 
 ## 两种实用输出
 
 ### 直接观看的影片
 
-选择「体素干扰」生成程序化故障画面，或选择「棱镜残像」使用灰白、蓝、红素材，结合镜像、万花筒、同色轮廓拖影和少量动态负片。两个模板都支持全曲 MP4，输出1080×1080、30fps；实时预览为540×540。
+四套模板：
+
+- 「体素干扰」：程序化故障画面。
+- 「棱镜残像 I」：灰白、蓝、红素材，结合镜像、万花筒、同色轮廓拖影和少量动态负片。
+- 「棱镜残像 II」：在 I 的基础上，每两小节来一段采样切片：重复切片、错位画面和单帧闪白，其余时间素材正常流动。
+- 「粉彩花信」：花卉实拍被实时画成油彩、墨线和粉彩笔触。[粉彩花信说明](docs/pastel-bloom.md)。
+
+「棱镜残像」和「粉彩花信」都能用你自己的图片和视频：拖进来放到素材时间线上，模板效果会叠在上面；可选的场景配色让整体颜色统一。
+
+所有模板都能导出全曲 MP4，30fps，画幅可选 1:1、16:9、9:16，分辨率 720p 或 1080p。每种画幅都按画面重新构图，不是从方形裁出来的。
 
 在节奏图上编辑阶段边界，添加、移动或静音卡点，支持撤销、重做和可选吸附。编辑立即保存，点击「更新预览」后应用到画面；导出包和正式渲染始终使用最新保存的编辑计划。[模板说明](docs/material-template.md)。
 
@@ -111,7 +120,7 @@ beatscope serve --open
 
 ## 目前的限制
 
-- Studio 内置两套模板；「棱镜残像」使用51份 Pexels 视频/图片素材，素材许可与 MIT 源码许可分开。
+- Studio 内置四套模板；「棱镜残像 I / II」使用51份 Pexels 视频/图片素材，「粉彩花信」使用10段 Pexels 花卉视频。素材许可与 MIT 源码许可分开，署名见素材包和粉彩花信说明。
 - 结构字母只表示重复关系，不代表主歌、副歌或情绪。
 - 真实音乐上的拍点、速度和结构评测仍需要更广泛的公开基准。
 - MP3 支持依赖本机 libsndfile 或 FFmpeg。
