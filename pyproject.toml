@@ -36,16 +36,16 @@ include = ["beatscope*"]
 [tool.setuptools.package-data]
 # Explicit names rather than a web/*.mjs glob: a research module that happens to
 # sit beside the runtime must not be packaged just because it shares an
-# extension. Files git tracks inside the package (mv-visual.js, the .d.mts
-# declarations) come along through include_package_data; the entries here are
-# the pages and modules the server and the renderer load at runtime.
+# extension. Every page and module the server and the renderer load at runtime
+# is listed here: include_package_data does not pick up tracked files in a
+# release build (v0.16.0 shipped without mv-visual.js).
 beatscope = [
   "web/composition-preview.html", "web/composition-preview.mjs",
   "web/composition-probe.mjs", "web/composition-runtime.mjs",
   "web/movie-preview.html", "web/mv-render.html",
   "web/music-grid.mjs", "web/studio-session.mjs",
   "web/mv-encode.mjs", "web/mv-frame.mjs", "web/mv-io.mjs",
-  "web/mv-plan.mjs", "web/mv-worker.mjs",
+  "web/mv-plan.mjs", "web/mv-worker.mjs", "web/mv-visual.js", "web/*.d.mts",
   "web/movie-factory.mjs", "web/movie-templates.mjs",
   "web/movie-output.mjs",
   "web/custom-media.mjs",
