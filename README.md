@@ -6,19 +6,19 @@ English | [简体中文](README.zh-CN.md)
 [![Version](https://img.shields.io/badge/version-0.16.0-c65032)](https://github.com/chosuicide/beatscope/releases/tag/v0.16.0)
 [![License: MIT](https://img.shields.io/badge/license-MIT-171713.svg)](LICENSE)
 
-**Turn a song into a beat-synchronised film — or give its timing to a coding agent.**
+**Turn any song into a beat-synced music video — or give its timing to a coding agent.**
 
 BeatScope listens for beats, real transients, energy changes, tempo changes and repeated sections. Beathi Studio turns those measurements into a movie preview and a reusable timing package. Everything runs locally; your audio is not uploaded.
 
-[![Prismatic Echo rendered in Beathi v0.15.0](docs/demo/prismatic-echo-v015.webp)](https://github.com/chosuicide/beatscope/releases/download/v0.15.0/Beathi-v0.15.0-prismatic-echo-demo.mp4)
+[![Prismatic Echo II rendered in Beathi v0.16.0](docs/demo/prismatic-echo-ii-v016.webp)](docs/demo/prismatic-echo-ii-v016.mp4)
 
-**[▶ Watch the latest 8-second native render with audio](https://github.com/chosuicide/beatscope/releases/download/v0.15.0/Beathi-v0.15.0-prismatic-echo-demo.mp4)** — 1080×1080, 30 fps; this is a short verification sample, not the whole song.
+**[▶ Watch 8 seconds of Prismatic Echo II with audio](docs/demo/prismatic-echo-ii-v016.mp4)** — 720×720, 30 fps, cut from a full-song render of Shattered Heartbeat.
 
 ## What you do
 
 1. Upload a WAV, FLAC, MP3, OGG or M4A file.
-2. Check the film preview, song structure and rhythm map.
-3. Render a video, export MIDI/CSV, or give the `.beatscope` package to a coding agent.
+2. Pick a template, add your own photos or clips if you like, and check the film preview, song structure and rhythm map.
+3. Render a square, landscape or portrait video, export MIDI/CSV, or give the `.beatscope` package to a coding agent.
 
 ![Beathi v0.15.0 with Prismatic Echo, editable stages and onset markers](docs/demo/beathi-studio-v015.png)
 
@@ -37,19 +37,22 @@ pip install beatscope-0.16.0-py3-none-any.whl
 beatscope serve --open
 ```
 
-For Prismatic Echo, extract the separate [material pack](https://github.com/chosuicide/beatscope/releases/download/v0.16.0/Beathi-Materials-v0.16.0.zip) into your working directory, keeping its `materials/` folder. Alternatively set `BEATSCOPE_MATERIAL_ROOT` to that folder. Python movie rendering also needs Node.js, FFmpeg, Playwright and a supported browser; see [local rendering](docs/local-movie.md). The Windows portable download includes these tools and materials.
+For Prismatic Echo I and II, extract the separate [material pack](https://github.com/chosuicide/beatscope/releases/download/v0.16.0/Beathi-Materials-v0.16.0.zip) into your working directory, keeping its `materials/` folder. Alternatively set `BEATSCOPE_MATERIAL_ROOT` to that folder. Python movie rendering also needs Node.js, FFmpeg, Playwright and a supported browser; see [local rendering](docs/local-movie.md). The Windows portable download includes these tools and materials.
 
 ## Two useful outputs
 
 ### A film you can watch
 
-Choose **Voxel Interference** for procedural glitch visuals or **Prismatic Echo** for grey, blue and red footage, mirrors, kaleidoscopes, contour trails and sparse moving negatives. Both render the full song to MP4 at 1080×1080, 30 fps. The live preview uses 540×540.
+Four templates:
 
-The development checkout also includes **Pastel Bloom**, which repaints footage
-with oil, ink and charcoal strokes. It shares custom image/video placement and
-the optional scene palette control with Prismatic Echo. Development exports
-support 1:1, 16:9 and 9:16 at 720p or 1080p; the published v0.15.0 download
-predates these additions. [Pastel Bloom guide](docs/pastel-bloom.md).
+- **Voxel Interference**: procedural glitch visuals.
+- **Prismatic Echo I**: grey, blue and red footage, mirrors, kaleidoscopes, contour trails and sparse moving negatives.
+- **Prismatic Echo II**: Echo I with a sampler chop every two bars: repeated slices, slipped bands and one-frame flashes, while the footage flows in between.
+- **Pastel Bloom**: flower footage repainted live with oil, ink and pastel strokes. [Pastel Bloom guide](docs/pastel-bloom.md).
+
+Prismatic Echo and Pastel Bloom also take your own images and video clips: drop them in and place them on the media timeline, and the template's effects play over them. An optional scene palette control keeps the colours together.
+
+Every template renders the full song to MP4 at 30 fps, as 1:1, 16:9 or 9:16, at 720p or 1080p. Each format is composed for its frame, not cropped from a square.
 
 Edit stage boundaries and add, move or mute cue markers on the rhythm graph, with undo/redo and optional snapping. Edits save immediately; **Update preview** applies them to the film. Exports and renders always use the latest saved edit plan, even while the preview is stale. [Template guide](docs/material-template.md).
 
@@ -119,7 +122,7 @@ Read more: [Agent handoff](docs/agent-handoff.md) · [movie renderer](docs/local
 
 ## Honest limits
 
-- The published v0.15.0 Studio ships two templates; the development checkout adds Pastel Bloom. Prismatic Echo uses a 51-item Pexels video/photo pack. Media are licensed separately from the MIT code; incoming Pastel Bloom source credits are tracked in its guide.
+- Prismatic Echo I and II use a 51-item Pexels video/photo pack; Pastel Bloom uses 10 Pexels flower clips. Media are licensed separately from the MIT code; credits are in the material pack and the Pastel Bloom guide.
 - Structure labels describe repetition, not Verse/Chorus or emotion.
 - Real-world beat, tempo and structure evaluation still needs broader public benchmarks.
 - MP3 support requires local libsndfile support or FFmpeg.
