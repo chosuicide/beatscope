@@ -73,7 +73,7 @@ try{
  await page.locator('.media-thumb').first().locator('button').first().click();
  await page.getByRole('button',{name:'Pin at playhead',exact:true}).click();
  await page.waitForFunction(()=>document.querySelectorAll('.media-placement .fixed').length>0);
- saved=await doc();assert.equal(saved.slots[0].fixed,true);
+ saved=await doc();assert.ok(saved.slots.some(s=>s.fixed&&s.asset===saved.assets[0].id),'the selected asset is pinned at the playhead');
  await page.locator('.media-delete').first().click();
  await page.waitForFunction(()=>document.querySelectorAll('.media-thumb').length===2);
  await page.locator('.media-panel').getByRole('button',{name:'Undo',exact:true}).click();
