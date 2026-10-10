@@ -1,7 +1,9 @@
 import {createMovie} from './mv-frame.mjs';
 import {createMaterialMovie} from './material-frame.mjs';
 import {materialTemplate} from './movie-templates.mjs';
+import {createPaintMovie} from './paint-frame.mjs';
 export async function createTemplateMovie(canvas,map,track,plan,options){
+ if(plan.template==='paint')return createPaintMovie(canvas,map,track,plan,options);
  if(!materialTemplate(plan.template))return createMovie(canvas,map,track,plan);
  let base='./';
  if(plan.projectId){

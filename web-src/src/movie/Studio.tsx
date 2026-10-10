@@ -668,7 +668,8 @@ export default function MovieStudio() {
             </select>
             <details className="template-details">
               <summary>{lang==='zh'?'模板说明':'Template details'}</summary>
-              {TEMPLATE.id!=='voxel'&&<p className="material-note">{lang==='zh'?'裁切、镜像、万花筒、同色拖影与负片，按色组编排。':'Crops, mirrors, kaleidoscopes, tonal trails and negatives, arranged by color.'}</p>}
+              {TEMPLATE.id==='paint'&&<p className="material-note">{lang==='zh'?'实拍花卉在节拍上被一笔笔重画：厚涂油彩、色粉、墨，重拍处刮画、丝网错版、对折墨印。':'Real flower footage repainted stroke by stroke on the beat: impasto oil, pastel on toned paper and ink, with sgraffito, misregistered prints and folded ink on the accents.'}</p>}
+              {TEMPLATE.id.startsWith('material-')&&<p className="material-note">{lang==='zh'?'裁切、镜像、万花筒、同色拖影与负片，按色组编排。':'Crops, mirrors, kaleidoscopes, tonal trails and negatives, arranged by color.'}</p>}
               <div className="kv"><span>{copy.kv.version}</span><b>{TEMPLATE.version}</b></div>
             </details>
           </section>

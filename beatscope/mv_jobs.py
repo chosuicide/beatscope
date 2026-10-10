@@ -95,7 +95,7 @@ class MovieJobs:
 
     def submit(self, project_id, seed=None, template='voxel'):
         validate_template(template)
-        template_digest = material_version() if template != 'voxel' else 'voxel-phrase-2'
+        template_digest = {'voxel': 'voxel-phrase-2', 'paint': 'live-paint-1'}.get(template) or material_version()
         if seed is not None and (type(seed) is not int or not 0 <= seed < 2**24):
             raise ValueError("seed must be an integer from 0 to 16777215")
         if not re.fullmatch(r"[0-9a-f]{12}", project_id):
@@ -126,7 +126,7 @@ class MovieJobs:
             job = {"id": job_id, "project_id": project_id, "seed": secrets.randbits(24) if seed is None else seed,
                    "edit_plan_digest": edit_digest,
                    "template": template, "template_digest": template_digest,
-                   "template_version": 'prismatic-echo-4' if template == 'material-mix' else 'voxel-phrase-2',
+                   "template_version": {'material-mix': 'prismatic-echo-4', 'paint': 'live-paint-1'}.get(template, 'voxel-phrase-2'),
                    "state": "queued", "progress": 0, "message": msg("movie.preparing"), "duration": duration}
             self.jobs[job_id] = job
             self.active = job_id
@@ -149,15 +149,17 @@ class MovieJobs:
         job = self.jobs[job_id]
         process = None
         try:
-            for name in ("mv-render.html", "mv-frame.mjs", "mv-visual.js", "mv-plan.mjs", "mv-encode.mjs", 'movie-factory.mjs', 'movie-templates.mjs', 'material-frame.mjs', 'material-gpu.mjs'):
+            for name in ("mv-render.html", "mv-frame.mjs", "mv-visual.js", "mv-plan.mjs", "mv-encode.mjs", 'movie-factory.mjs', 'movie-templates.mjs', 'material-frame.mjs', 'material-gpu.mjs', 'paint-frame.mjs'):
                 shutil.copyfile(WEB / name, directory / name)
+            if job.get('template') == 'paint':
+                shutil.copytree(WEB / 'paint-assets', directory / 'paint-assets', copy_function=_link_or_copy)
             shutil.copyfile(RUNTIME / "runtime.js", directory / "beatscope-runtime.js")
             shutil.copyfile(RUNTIME / "edit-plan.js", directory / "edit-plan.js")
             (directory / "package.json").write_text('{"type":"module"}', encoding="utf-8")
             ranking = build_response_relevance(rhythm)
             (directory / "input.json").write_text(json.dumps({"rhythm": rhythm, "ranking": ranking,
                 "audio": str(audio.resolve()), "seed": job["seed"], "editPlan": edit_plan, 'template': job.get('template', 'voxel')}), encoding="utf-8")
-            if job.get('template', 'voxel') != 'voxel':
+            if job.get('template', 'voxel') not in ('voxel', 'paint'):
                 while True:
                     if (directory / 'cancel').exists():
                         raise ValueError('cancelled')
