@@ -149,7 +149,46 @@ export async function createMaterialMovie(canvas,D,base="",{gpu:useGpu=true,comp
  const frameTimes=new WeakMap(D.frames.map((s,i)=>[s,i/30]));
  const pageFor=s=>{if(mediaSource?.has(frameTimes.get(s)))return null;const a=D.assets[s.setup.sourceId];return a.kind==='video'?a.files[Math.floor(s.mediaCell/4)]:a.files[0];};
  const frameAt=time=>Math.max(0,Math.min(D.frames.length-1,Math.round((start+time)*30)));
- const statesFor=time=>{const f=frameAt(time),s=D.frames[f],states=[s],t=s.sinceCut;
+ // Chop layer (Prismatic Echo II only; Echo I ships no steps): on a sixteenth grid the picture is retriggered, flashed, cut into paper windows,
+ // sliced into strips or punched into a macro crop, like a sampler chopping the same moment.
+ const steps=D.steps||[],chopCache=new Map();
+ const hash=n=>{let x=(n*2654435761+(D.seed||0)*97)>>>0;x^=x>>>15;x=Math.imul(x,2246822519)>>>0;x^=x>>>13;return (x>>>0)/4294967296;};
+ const stepIndex=time=>{let lo=0,hi=steps.length-1;if(hi<0||time<steps[0][0])return -1;while(lo<hi){const m=(lo+hi+1)>>1;if(steps[m][0]<=time+1e-4)lo=m;else hi=m-1;}return lo;};
+ const BEAT_PATTERNS={
+  hold:[null,null,null,null],
+  stutter:[null,'rep0','rep0',null],
+  triple:[null,'rep0','rep0','rep0'],
+  backbeat:[null,'rep0',null,'rep2'],
+  window:[null,null,'window',null],
+  macro:['macro',null,null,null],
+  sampler:[null,'samp','samp','samp'],
+  repcut:['samp','rep0','samp','rep0'],
+  chopper:['samp',null,'samp','samp'],
+  late:[null,null,'rep0','samp'],
+  squeeze:[null,'samp','rep0','slice'],
+  mix:[null,'rep0','samp','macro'],
+ };
+ const PATTERN_ORDER=['hold','sampler','stutter','repcut','macro','chopper','backbeat','sampler','window','triple','late','squeeze','repcut','mix','chopper','hold'];
+ const firstDown=Math.max(0,Math.round(steps.findIndex(x=>x[3])/4));
+ function chopAt(time){
+  const i=stepIndex(time);if(i<0)return null;let c=chopCache.get(i);if(c)return c;
+  const [t0,strength,k,downbeat,energy]=steps[i],beatStart=i-k,beatNo=Math.round(steps[beatStart]?.[0]*1000)||i;
+  const b=Math.floor(i/4)+Math.floor((steps[beatStart]?.[0]??0)*2);
+  // Mostly let the footage flow. One burst per two bars, on the phrase's last beat,
+  // sometimes two beats as a fill when the song is loud. Flashes only open eight-bar sections.
+  const gb=Math.round(beatStart/4)-firstDown+64,pos=gb%8,burst=pos===7||(pos===6&&energy>.7&&hash(gb*13+1)<.4);
+  let name=!burst||energy<.3?'hold':PATTERN_ORDER[Math.floor(hash(b)*PATTERN_ORDER.length)];
+  if(burst&&name==='hold')name='sampler';
+  if(energy<.45&&!['hold','macro','stutter'].includes(name))name=hash(b+7)<.5?'macro':'stutter';
+  let ev=BEAT_PATTERNS[name][k];
+  const flash=k===0&&gb%32===0&&gb>0&&strength>.4?(hash(i+11)<.5?'grey':'paper'):null;
+  const frozen=ev?.startsWith('rep')||(ev==='samp'&&hash(i+19)<.65);
+  const srcStep=frozen?beatStart+(ev[3]==='2'?2:0):i;
+  c={i,t0,k,ev,flash,srcStep,srcT0:steps[srcStep]?.[0]??t0,v:hash(i*5+1),w:hash(i*7+2),u:hash(b*3+5)};
+  chopCache.set(i,c);return c;
+ }
+ const srcFrame=time=>{const f=frameAt(time),c=chopAt(start+time);if(!c||c.srcStep===c.i)return f;const g=Math.round(c.srcT0*30)+(f-Math.round(c.t0*30));return Math.max(0,Math.min(D.frames.length-1,g));};
+ const statesFor=time=>{const f=srcFrame(time),s=D.frames[f],states=[s],t=s.sinceCut;
   if(s.previous&&t<.2&&['iris','dissolve','push','occlude'].includes(s.setup.transition))states.push(D.frames[Math.max(0,f-Math.ceil(t*30)-1)]);
   if(s.setup.trail&&t>0&&t<.2)for(const j of [1,3,5])states.push(D.frames[Math.max(0,f-j)]);
   return states;};
@@ -422,13 +461,70 @@ source(s,0,0,W,W,pose(s,s.setup.subjectZoom||[1,1,1]));}else if(mode==='rupture'
   }
   ctx.globalAlpha=1;
  }
+ const PAPER='#eeece6',PAPER_SHADE='#d9d8d3';
+ const swatches={},swatch=c=>{if(!swatches[c]){const k=document.createElement('canvas');k.width=k.height=4;const q=k.getContext('2d');q.fillStyle=c;q.fillRect(0,0,4,4);swatches[c]=k;}return swatches[c];};
+ const paper=(x,y,w,h,c=PAPER,a=1)=>{ctx.save();ctx.globalAlpha=a;ctx.drawImage(swatch(c),0,0,4,4,x,y,w,h);ctx.restore();};
+ function snap(){if(compositor)return compositor.snapshot();baseCtx.clearRect(0,0,canvas.width,canvas.height);baseCtx.drawImage(canvas,0,0);return trailBase;}
+ function piece(img,x,y,w,h,dx=0,dy=0,alpha=1){const kx=img.width/W,ky=img.height/W,sx=clamp(x+dx,0,W-w),sy=clamp(y+dy,0,W-h);ctx.save();ctx.globalAlpha=alpha;ctx.drawImage(img,sx*kx,sy*ky,w*kx,h*ky,x,y,w,h);ctx.restore();}
+ function chop(s,at){
+  const c=chopAt(at);if(!c)return;const local=at-c.t0,frame=Math.floor(local*30+1e-3);
+  if(c.flash&&frame===0){
+   if(c.flash==='grey'){paper(0,0,W,W,'#9d9f9e');ctx.save();ctx.globalAlpha=.10;source(s,0,0,W,W,1);ctx.restore();}
+   else{paper(0,0,W,W);ctx.save();ctx.globalAlpha=.07;source(s,0,0,W,W,1.2);ctx.restore();}
+   return;
+  }
+  const ev=c.ev==='rep0w'?'window':c.ev;
+  if(ev==='window'){
+   const img=snap(),n=1+Math.floor(c.v*2),cx=300+c.w*480;
+   paper(0,0,W,W);
+   // Pale stacked sheets behind the windows, like offset paper cut-outs.
+   for(let j=0;j<1;j++){const w=300+((c.u*7+j)%1)*260,h=560+((c.v*5+j)%1)*300,x=clamp(cx-w/2+(j?60:-40),20,W-w-20),y=clamp(180+j*70-c.w*80,20,W-h-20);
+    paper(x,y,w,h,PAPER_SHADE,.55);piece(img,x,y,w,h,0,0,.16);}
+   for(let j=0;j<n;j++){const r=(c.v*13+j*.37)%1,q=(c.w*11+j*.61)%1,w=180+r*300,h=140+q*360,x=clamp(cx-w/2+(j-1)*120*(c.u<.5?1:-1),30,W-w-30),y=clamp(250+j*190*(q<.5?1:.7),30,W-h-30);
+    piece(img,x,y,w,h,(r-.5)*160,(q-.5)*120,1);}
+  }else if(ev==='macro'){
+   const z=3.2+c.v*2.6,ox=(c.w-.5)*.3,oy=(c.u-.5)*.3;source(s,0,0,W,W,z,ox,oy);
+  }else if(ev==='samp'){
+   // Sampler slices and misregistration. The same moment is re-cut on each sixteenth:
+   // stamped columns (the subject repeats, cut at each edge), shifted bands, slit smears, squeezes.
+   const img=snap(),kx=img.width/W,ky=img.height/W,cut=(sx,sy,sw,sh,x,y,w,h)=>ctx.drawImage(img,clamp(sx,0,W-sw)*kx,clamp(sy,0,W-sh)*ky,sw*kx,sh*ky,x,y,w,h);
+   const r=n=>hash(c.i*31+n),style=Math.floor(r(1)*5);if(style===4)paper(0,0,W,W);else rect(0,0,W,W);
+   const cx=W*(.5+(c.u-.5)*.25);
+   if(style===0||style===1){
+    // Stamped columns: every column reads the same centre strip, so the subject repeats side by side.
+    let x=0,j=0;const shrink=style===0;let w=W*(.30+.18*r(2));
+    while(x<W-2){const ww=Math.min(W-x,Math.max(26,shrink?w:W*(.08+.22*r(10+j))));const dy=(r(30+j)-.5)*(j?90:0),sx=cx-ww/2+(r(50+j)-.5)*ww*.35;
+     cut(sx,dy<0?-dy:0,ww,W-Math.abs(dy),x,dy>0?dy:0,ww,W-Math.abs(dy));if(dy){ctx.save();ctx.globalAlpha=.9;cut(sx,dy<0?W+dy:0,ww,Math.abs(dy),x,dy>0?0:W+dy,ww,Math.abs(dy));ctx.restore();}
+     x+=ww;w*=.62;j++;}
+   }else if(style===2){
+    // Horizontal bands slip against each other.
+    let y=0,j=0;while(y<W-2){const h=Math.min(W-y,Math.max(40,W*(.08+.3*r(60+j)))),dx=(r(80+j)-.5)*260,dy=(r(90+j)-.5)*(r(95+j)<.4?320:60);
+     cut(dx<0?-dx:0,y+dy,W-Math.abs(dx),h,dx>0?dx:0,y,W-Math.abs(dx),h);if(dx)cut(dx>0?W-dx:0,y+dy,Math.abs(dx),h,dx>0?0:W+dx,y,Math.abs(dx),h);y+=h;j++;}
+   }else if(style===3){
+    // Slit smear: one thin column of the frame is pulled across a band, the rest stays put.
+    const y0=W*(.15+.5*r(70)),h=W*(.18+.35*r(71)),sx=cx+(r(72)-.5)*200;
+    ctx.drawImage(img,0,0,img.width,img.height,0,0,W,W);cut(sx,y0,3,h,0,y0,W,h);
+    if(r(73)<.5){const y1=clamp(y0+h+W*.05,0,W-40),h1=W*(.04+.1*r(74));cut(sx+40,y1,2,h1,0,y1,W,h1);}
+   }else{
+    // Squeeze: the whole moment pinched into a tall needle or a flat strip on bare paper.
+    const tall=r(75)<.6,w=tall?W*(.12+.2*r(76)):W,h=tall?W:W*(.12+.2*r(76)),x=tall?cx-w/2+(r(77)-.5)*300:0,y=tall?0:W*(.2+.6*r(78))-h/2;
+    ctx.drawImage(img,0,0,img.width,img.height,clamp(x,0,W-w),clamp(y,0,W-h),w,h);
+   }
+  }else if(ev==='slice'){
+   const img=snap(),vertical=c.v<.6;
+   if(vertical){const n=3+Math.floor(c.w*4),sw=W/n,src=W/2-sw/2+(c.u-.5)*300;
+    for(let j=0;j<n;j++){ctx.save();if(j%2){ctx.translate(j*sw+sw,0);ctx.scale(-1,1);piece(img,0,0,sw,W,src,0);}else{ctx.translate(j*sw,0);piece(img,0,0,sw,W,src,0);}ctx.restore();}
+   }else{const band=W*(.25+c.w*.25),y=W*(.35+c.u*.3)-band/2,kx=img.width/W,ky=img.height/W;
+    ctx.drawImage(img,0,y*ky,W*kx,6*ky,0,0,W,y);ctx.drawImage(img,0,y*ky,W*kx,band*ky,0,y,W,band);ctx.drawImage(img,0,(y+band-6)*ky,W*kx,6*ky,0,y+band,W,W-y-band);}
+  }
+ }
  function draw(time){
   compositor?.begin();
-  const at=start+time,f=frameAt(time),s=D.frames[f],t=s.sinceCut;
+  const at=start+time,f=srcFrame(time),s=D.frames[f],t=s.sinceCut;
   rawCtx.setTransform(1,0,0,1,0,0);rawCtx.clearRect(0,0,canvas.width,canvas.height);
   ctx.setTransform(short/W,0,0,short/W,0,0);
   ctx.globalAlpha=1;palette=s.setup.palette||palette;rect(0,0,W,W);
-  const old=s.previous?D.frames[Math.max(0,f-Math.ceil(t*30)-1)]:null;
+  const old=s.previous&&f===frameAt(time)?D.frames[Math.max(0,f-Math.ceil(t*30)-1)]:null;
   if(old&&s.setup.transition==='iris'&&t<.14){
    const r=radius*expo(t/.14);layout(old);ctx.save();ctx.beginPath();ctx.arc(540,540,r,0,Math.PI*2);ctx.clip();layout(s);ctx.restore();
    if(s.setup.edgeAccent){ctx.save();ctx.strokeStyle=s.setup.edgeColors?.[1]||'#aaaaaa';ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(540,540,r,0,Math.PI*.9);ctx.stroke();ctx.restore();}
@@ -444,6 +540,7 @@ source(s,0,0,W,W,pose(s,s.setup.subjectZoom||[1,1,1]));}else if(mode==='rupture'
   if(s.setup.blankFrames){const [a,b]=s.setup.blankFrames;if(t>=a/30&&t<b/30){rect(0,0,W,W);ctx.save();ctx.globalAlpha=.025;source(s,0,0,W,W,1);ctx.restore();}}
   if(s.setup.flashFrames&&t<s.setup.flashFrames/30){ctx.save();ctx.globalAlpha=.34;rect(0,0,W,W,'#d6d7d2');ctx.restore();}
 
+  chop(s,at);
   if(s.setup.finalRelease){const [a,b]=s.setup.finalRelease;if(at>a){ctx.globalAlpha=smooth((at-a)/(b-a));rect(0,0,W,W,s.setup.finalColor||'#faf8f2');ctx.globalAlpha=1;}}
   compositor?.present();
  }

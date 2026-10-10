@@ -371,7 +371,7 @@ export default function MovieStudio() {
       const linkedSeed=Number(link.get('seed'));if(link.has('seed')&&Number.isInteger(linkedSeed)&&linkedSeed>=0&&linkedSeed<2**24)saved.seed=linkedSeed;
     }
     if (saved && typeof saved.name === 'string') {
-      if(saved.template?.startsWith('material-')&&saved.template!=='material-mix')saved.template='material-mix';
+      if(saved.template?.startsWith('material-')&&!MOVIE_TEMPLATES.some(t=>t.id===saved!.template))saved.template='material-mix';
       save(saved);
       void (async () => {
         if (saved!.projectId) {
@@ -696,6 +696,7 @@ export default function MovieStudio() {
             <details className="template-details">
               <summary>{lang==='zh'?'模板说明':'Template details'}</summary>
               {TEMPLATE.id==='material-mix'&&<p className="material-note">{lang==='zh'?'裁切、镜像、万花筒、同色拖影与负片，按色组编排。':'Crops, mirrors, kaleidoscopes, tonal trails and negatives, arranged by color.'}</p>}
+              {TEMPLATE.id==='material-mix-2'&&<p className="material-note">{lang==='zh'?'在棱镜残像 I 的基础上，每两小节末拍把同一瞬间切成重复竖条、错位横带和细缝拖影，段落开头闪一帧。':'Prismatic Echo I, plus a sampler chop on the last beat of every two bars: the same moment cut into repeated columns, slipped bands and slit smears, with a one-frame flash at each section.'}</p>}
               {TEMPLATE.id==='paint'&&<p className="material-note">{lang==='zh'?'素材随节奏生长为油彩、水墨与粉彩，结合刻痕、套印、折叠与拼贴。':'Footage grows into oil, ink and pastel on the rhythm, with scratches, print offsets, folds and collage.'}</p>}
               <div className="kv"><span>{copy.kv.version}</span><b>{TEMPLATE.version}</b></div>
             </details>

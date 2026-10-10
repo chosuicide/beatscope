@@ -51,6 +51,16 @@ for(const id of new Set(frames.map(f=>f.setup.sourceId))){
  assets[id]={files,frames:indices.length,width:1080,height:1080,fps,kind:'video'};
  console.log(JSON.stringify({asset:id,frames:indices.length}));
 }
-fs.writeFileSync(path.join(root,'material-timeline.json'),JSON.stringify({duration:outputEnd,fps:30,assets,frames}));
+// Prismatic Echo II only. Sixteenth-note grid for the chop layer: time, onset strength, slot in beat, bar downbeat, beat energy.
+const steps=input.template!=='material-mix-2'?[]:(()=>{const r=input.rhythm,beats=r.beats.map(b=>typeof b==='number'?{time:b}:b),en=r.energy?.bands?.all||[],fps=r.energy?.fps||1;
+ const level=beats.map((b,i)=>{const e=beats[i+1]?.time??b.time+.5,a=Math.floor(b.time*fps),z=Math.max(a+1,Math.floor(e*fps));let m=0;for(let j=a;j<z;j++)m+=en[j]||0;return m/(z-a);});
+ const sorted=[...level].sort((a,b)=>a-b),top=sorted[Math.floor(sorted.length*.9)]||1;
+ const smooth=level.map((_,i)=>{let m=0,n=0;for(let j=Math.max(0,i-2);j<=Math.min(level.length-1,i+2);j++){m+=level[j];n++;}return Math.min(1,m/n/top);});
+ const onsets=r.onsets||[],out=[];
+ for(let i=0;i<beats.length;i++){const a=beats[i].time,b=beats[i+1]?.time??a+(a-(beats[i-1]?.time??a-.5));
+  for(let k=0;k<4;k++){const t=a+(b-a)*k/4;if(t>outputEnd)break;let st=0;for(const o of onsets)if(Math.abs(o.time-t)<.035)st=Math.max(st,o.strength);
+   out.push([+t.toFixed(4),+st.toFixed(3),k,k===0&&beats[i].downbeat?1:0,+smooth[i].toFixed(3)]);}}
+ return out;})();
+fs.writeFileSync(path.join(root,'material-timeline.json'),JSON.stringify({duration:outputEnd,fps:30,assets,frames,steps}));
 fs.writeFileSync(path.join(root,'material-library.json'),JSON.stringify(library,null,2));
 fs.writeFileSync(path.join(root,'plan.json'),JSON.stringify({...plan,duration:outputEnd,template:input.template,version:score.notes.version}));
