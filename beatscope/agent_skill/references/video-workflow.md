@@ -6,6 +6,17 @@ Use this workflow for a video, MV or animated work, with or without a reference.
 
 Inventory the user's brief, song, reference and usable materials. Inspect a supplied reference through `reference-workflow.md`. Reuse answered choices. When creative direction is delegated, choose a concrete concept yourself; otherwise ask one focused question only if a missing creative decision blocks work.
 
+### User-facing 6-step director loop (Reference + Music -> Final)
+
+When the user supplies a reference video and a target song, run a tight, low-rework loop instead of jumping straight into a full-length render:
+
+1. **Dual deconstruction**: Inspect the song via BeatScope (`query.mjs` / `music-brief.mjs`) to locate high-energy excerpts and measured cues, and inspect the reference for underlying grammar (cadence, material language, negative space, graphic restraint) without copying literal shots, text, or props.
+2. **Compact direction card**: Route the concept to the fitting execution track — *Layered 3D Alpha × Backdrop Deck* (Blender RGBA + photographic/procedural backdrops), *2D Graphic/Typography* (HyperFrames/GSAP or vector), *Generative/Shader* (WebGL/GLSL), or *Footage Remix* — and treat **musical energy/cut density** and **graphic/text overlay density** as independent switches so removing templates never collapses high-BPM energy.
+3. **Decoupled assets & 3-way harmony contract**: For 3D + backdrop pipelines, render 3D foregrounds with **transparent RGBA alpha** and environment reflections matched to the backdrop world, and apply one cohesive film/color grade across all photographic backdrop plates so foreground materials, lighting, and rotating backdrops belong to one optical world (and backdrop swaps cost zero 3D re-renders).
+4. **Multi-frame look-dev contact sheet gate**: Before full-length rendering, render 4–12 representative landmark frames across all acts (`bake-timeline.mjs --probe-count 4..12` + `reference-tools.mjs probe-grid`), visually inspect for material clashes, awkward geometry, seam halos, or template feel, and iterate cheaply until approved.
+5. **Full render & dual audit**: Render the full sequence, mux with `render.mjs`, check measured sync with `verify.mjs`, and visually inspect the finished MP4 with audio before delivery.
+6. **Shot-level surgical repair**: When revising one passage or ending, re-render only the edited frame range and re-mux with `render.mjs --frames-dir ... --reuse-unchanged` so untouched segments are verified by SHA-256 and reused without re-encoding.
+
 Read `visual-relations.md` when choosing how the sequence is organized. Coherence can come from matching composition, directional movement, representation changes, graphics/typography, recurrence, thematic association or deliberate contrast. Continuous transformation of one object is only one option. Preserve the requested reference's variety and density; do not simplify a layered montage into a slow morph because that is easier to implement. For dot/point material references, use `material-treatment.md` before choosing a renderer.
 
 Before renderer code, use `production-plan.md` to translate retained observations into the user's assets, timed layer operations, handoffs, visible criteria and musical roles. Run the production-stage structural check. If the user currently requests only analysis/planning and suspends demonstrations, deliver this plan and its limitations, then stop. For an authorized video, self-check and continue without inventing an extra approval step.

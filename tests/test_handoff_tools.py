@@ -241,6 +241,12 @@ def test_frames_directory_without_playwright_and_changed_frame_resume(package):
     assert node(package, *args, '--resume')['reusedSegments'] == 3
     Image.new('RGB', (320, 320), 'red').save(frames / 'frame-000005.png')
     node(package, *args, '--resume', expected=2)
+    # Surgical --reuse-unchanged reuses the 2 untouched segments and re-encodes only segment 2 (frames 3..5)!
+    partial = node(package, *args, '--reuse-unchanged')
+    assert partial['reusedSegments'] == 2 and partial['segments'] == 3 and partial['frameCount'] == 9
+    # --reuse-unchanged is mutually exclusive with --resume and requires --frames-dir
+    node(package, *args, '--reuse-unchanged', '--resume', expected=2)
+    node(package, 'render.mjs', '--example', 'accent', '--demo-audio', '--out', package.parent / 'bad-reuse.mp4', '--reuse-unchanged', expected=2)
     report = node(package, *args, '--clean')
     assert report['cachePolicy'] == 'removed-after-success'
     assert not list(package.parent.glob('.render-*'))

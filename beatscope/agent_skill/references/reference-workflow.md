@@ -39,7 +39,7 @@ Do not compress a feature to a palette adjective. For an anchor, describe geomet
 
 ## 4. Render, compare and repair
 
-Follow `video-workflow.md` to plan the work. Before rendering a full continuous excerpt, render four landmark frames (opening steady frame, cue/impact frame, peak activity/climax frame, and boundary/closing frame) and assemble a 2×2 diagnostic contact sheet with `node reference-tools.mjs probe-grid ...` (optionally adding `--grayscale-out` to verify luminance/composition structure without color distractions). Fix obvious lighting, seam, edge, or framing defects before rendering the full continuous passage.
+Follow `video-workflow.md` to plan the work. Before rendering a full continuous excerpt, render 4–12 landmark frames spanning key acts and transitions (opening steady frame, cue/impact frames, peak activity/climax frames, and boundary/closing frame) and assemble a diagnostic contact sheet with `node reference-tools.mjs probe-grid ...` (optionally adding `--cols 4` for 12-frame multi-act sheets and `--grayscale-out` to verify luminance/composition structure without color distractions). Fix obvious material/backdrop color clashes, awkward geometry, lighting, seam, edge, or framing defects before rendering the full continuous passage.
 
 Then render a representative continuous passage including the shots around a difficult transition. Record source/plan and preview hashes before building a comparison.
 

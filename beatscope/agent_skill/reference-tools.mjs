@@ -15,7 +15,7 @@ const ffprobe = process.env.BEATSCOPE_FFPROBE || 'ffprobe';
 function usage() {
   process.stderr.write('Usage: node reference-tools.mjs inspect --input MEDIA --out NEW_DIR [--interval START:END] (repeat up to 4) [--fps native|1..120] [--slowdown 2..8]\n');
   process.stderr.write('       node reference-tools.mjs compare --record creative-review.json --out comparison.mp4\n');
-  process.stderr.write('       node reference-tools.mjs probe-grid (--frames-dir DIR [--frame-pattern frame-%06d.png] [--frames F0,F1,F2,F3 | --timeline timeline.json] | --video MEDIA --times T0,T1,T2,T3) --out probe-grid.png [--grayscale-out probe-grid-gray.png] [--fps 24] [--start 0] [--labels L0,L1,L2,L3]\n');
+  process.stderr.write('       node reference-tools.mjs probe-grid (--frames-dir DIR [--frame-pattern frame-%06d.png] [--frames F0,F1,... | --timeline timeline.json] | --video MEDIA --times T0,T1,...) --out probe-grid.png [--cols 2..6] [--grayscale-out probe-grid-gray.png] [--fps 24] [--start 0] [--labels L0,L1,...]\n');
   process.stderr.write('       node reference-tools.mjs check --record creative-review.json --stage reference|production|plan|preview|final\n');
   process.stderr.write('check exit 0 = structural evidence present (not aesthetic approval); 1 = incomplete; 2 = invalid invocation/tool unavailable.\n');
 }
@@ -25,7 +25,7 @@ function argsOf(argv) {
   const args = { action, interval: [] };
   const allowed = [
     'input', 'out', 'record', 'stage', 'fps', 'slowdown',
-    'frames-dir', 'frame-pattern', 'frames', 'timeline', 'video', 'times', 'start', 'labels', 'grayscale-out',
+    'frames-dir', 'frame-pattern', 'frames', 'timeline', 'video', 'times', 'start', 'labels', 'grayscale-out', 'cols',
   ];
   for (let i = 0; i < tail.length; i += 2) {
     const key = tail[i];
@@ -250,19 +250,19 @@ async function probeGrid(args) {
       if (args.fps == null && Number.isFinite(tl.window?.fps)) fps = tl.window.fps;
       if (args.start == null && Number.isFinite(tl.window?.start)) start = tl.window.start;
       if (!args.frames) {
-        const picked = Array.isArray(tl.probeFrames) ? tl.probeFrames.slice(0, 4) : [];
-        if (picked.length !== 4) throw new Error('timeline must provide 4 probeFrames when --frames is omitted');
+        const picked = Array.isArray(tl.probeFrames) ? tl.probeFrames.slice(0, 16) : [];
+        if (picked.length < 2 || picked.length > 16) throw new Error('timeline must provide 2..16 probeFrames when --frames is omitted');
         frameSpecs = picked.map((p) => ({ frame: p.frame, time: p.time, label: p.role || `frame ${p.frame}` }));
       }
     }
     if (!Number.isFinite(fps) || fps <= 0 || fps > 120 || !Number.isFinite(start) || start < 0) throw new Error('invalid fps or start');
     if (args.frames) {
       const indices = args.frames.split(',').map((v) => Number(v.trim()));
-      if (indices.length !== 4 || !indices.every((n) => Number.isInteger(n) && n >= 0)) throw new Error('--frames must specify exactly 4 non-negative integer frame indices');
+      if (indices.length < 2 || indices.length > 16 || !indices.every((n) => Number.isInteger(n) && n >= 0)) throw new Error('--frames must specify 2..16 non-negative integer frame indices');
       frameSpecs = indices.map((frame, i) => ({ frame, time: start + frame / fps, label: customLabels?.[i] || `slot ${i + 1}` }));
     }
-    if (frameSpecs.length !== 4) throw new Error('probe-grid requires exactly 4 frames (via --frames or --timeline)');
-    for (let i = 0; i < 4; i++) {
+    if (frameSpecs.length < 2 || frameSpecs.length > 16) throw new Error('probe-grid requires 2..16 frames (via --frames or --timeline)');
+    for (let i = 0; i < frameSpecs.length; i++) {
       const spec = frameSpecs[i];
       const file = join(framesDir, formatFrameFile(pattern, spec.frame));
       if (!existsSync(file) || !(await stat(file)).isFile()) throw new Error(`probe frame missing: ${file}`);
@@ -274,12 +274,12 @@ async function probeGrid(args) {
     const videoPath = resolve(args.video);
     if (!(await stat(videoPath)).isFile()) throw new Error('video is not a file');
     const info = await metadata(videoPath);
-    if (!args.times) throw new Error('--video requires --times T0,T1,T2,T3');
+    if (!args.times) throw new Error('--video requires --times T0,T1,...');
     const times = args.times.split(',').map((v) => Number(v.trim()));
-    if (times.length !== 4 || !times.every((t) => Number.isFinite(t) && t >= 0 && t <= info.duration + 0.001)) {
-      throw new Error('--times must specify exactly 4 timestamps within video duration');
+    if (times.length < 2 || times.length > 16 || !times.every((t) => Number.isFinite(t) && t >= 0 && t <= info.duration + 0.001)) {
+      throw new Error('--times must specify 2..16 timestamps within video duration');
     }
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < times.length; i++) {
       const t = Math.min(Math.max(0, times[i]), Math.max(0, info.duration - 0.001));
       inputArgs.push('-ss', t.toFixed(6), '-i', videoPath);
       const labelText = safeDrawtext(customLabels?.[i] || `slot ${i + 1}`);
@@ -287,15 +287,38 @@ async function probeGrid(args) {
     }
   }
 
+  const count = entries.length;
+  const cols = args.cols != null ? Number(args.cols) : (count <= 4 ? 2 : count <= 9 ? 3 : 4);
+  if (!Number.isInteger(cols) || cols < 1 || cols > 6) throw new Error('--cols must be an integer in 1..6');
+  const rows = Math.ceil(count / cols);
+  const totalSlots = cols * rows;
+
   const filters = [];
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < count; i++) {
     const e = entries[i];
     const tag = e.frame != null
       ? `F${String(e.frame).padStart(5, '0')} ${e.time.toFixed(2)}s ${e.label}`
       : `${e.time.toFixed(2)}s ${e.label}`;
     filters.push(`[${i}:v]scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2,drawtext=text='${safeDrawtext(tag)}':x=12:y=12:fontsize=18:fontcolor=white:box=1:boxcolor=black@0.7[p${i}]`);
   }
-  filters.push('[p0][p1]hstack=inputs=2[top];[p2][p3]hstack=inputs=2[bot];[top][bot]vstack=inputs=2[grid]');
+  for (let i = count; i < totalSlots; i++) {
+    filters.push(`color=c=black:s=640x360:d=1[p${i}]`);
+  }
+  const rowLabels = [];
+  for (let r = 0; r < rows; r++) {
+    const rowInputs = [];
+    for (let c = 0; c < cols; c++) rowInputs.push(`[p${r * cols + c}]`);
+    const label = rows === 1 ? 'grid' : `row${r}`;
+    if (cols === 1) {
+      filters.push(`${rowInputs[0]}copy[${label}]`);
+    } else {
+      filters.push(`${rowInputs.join('')}hstack=inputs=${cols}[${label}]`);
+    }
+    rowLabels.push(`[${label}]`);
+  }
+  if (rows > 1) {
+    filters.push(`${rowLabels.join('')}vstack=inputs=${rows}[grid]`);
+  }
   await mkdir(dirname(outPath), { recursive: true });
   await run(ffmpeg, [...inputArgs, '-filter_complex', filters.join(';'), '-map', '[grid]', '-frames:v', '1', '-y', outPath]);
   const outHash = await hashFile(outPath);
@@ -312,6 +335,7 @@ async function probeGrid(args) {
     sha256: outHash,
     grayscale_out: grayPath,
     grayscale_sha256: grayHash,
+    grid: { cols, rows, count },
     aesthetic_verdict: 'not_automatically_determined',
     frames: entries,
   }, null, 2));

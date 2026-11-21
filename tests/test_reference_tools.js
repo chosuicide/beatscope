@@ -285,6 +285,13 @@ test('probe-grid builds 2x2 diagnostic sheet and grayscale bone-check from PNG f
   const vidGrid = join(root, 'video-probe.png');
   const vidBuilt = call('node', [helper, 'probe-grid', '--video', clip, '--times', '0.1,0.6,1.2,1.8', '--out', vidGrid], root);
   assert.equal(vidBuilt.status, 0, vidBuilt.stderr);
+  // Multi-act 6-frame grid (3x2) via explicit --times and --cols
+  const multiGrid = join(root, 'video-probe-6.png');
+  const multiBuilt = call('node', [helper, 'probe-grid', '--video', clip, '--times', '0.1,0.4,0.7,1.0,1.4,1.8', '--cols', '3', '--out', multiGrid], root);
+  assert.equal(multiBuilt.status, 0, multiBuilt.stderr);
+  const multiReport = JSON.parse(multiBuilt.stdout);
+  assert.deepEqual(multiReport.grid, { cols: 3, rows: 2, count: 6 });
+  assert.equal(multiReport.frames.length, 6);
 
   // Validate surgical repairs[] + probe_grid in creative-review.json
   const timing = JSON.stringify({ duration: 2, beats: [{ id: 1, time: 0.5 }], onsets: [{ id: 2, time: 0.75 }] });

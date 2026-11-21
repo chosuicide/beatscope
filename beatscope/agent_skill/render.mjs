@@ -51,11 +51,13 @@ async function demoAudio(path,seconds,example){
  }await writeFile(path,buffer);
 }
 export async function renderMain(argv){
- const a=options(argv,['resume','clean','demo-audio','help'],['entry','root','audio','reference-audio','out','start','seconds','fps','width','height','chunk-frames','memory-mb','playwright','browser','executable','browser-restart-every','example','exclude','frames-dir','frame-pattern','frame-start'],['exclude']);
- if(a.help){console.log('node render.mjs --entry ../scene.html --root .. --audio ../song.mp3 --out ../sample.mp4 [--executable /path/to/chromium --browser-restart-every 10 --exclude generated --clean --resume]\nFrames: --frames-dir ../frames --frame-pattern frame-%06d.png --frame-start 0\nTranscoded song: --audio ../song.mp3 --reference-audio ../original.wav\nTutorial: --example accent --demo-audio --out ../accent.mp4');return;}
+ const a=options(argv,['resume','reuse-unchanged','clean','demo-audio','help'],['entry','root','audio','reference-audio','out','start','seconds','fps','width','height','chunk-frames','memory-mb','playwright','browser','executable','browser-restart-every','example','exclude','frames-dir','frame-pattern','frame-start'],['exclude']);
+ if(a.help){console.log('node render.mjs --entry ../scene.html --root .. --audio ../song.mp3 --out ../sample.mp4 [--executable /path/to/chromium --browser-restart-every 10 --exclude generated --clean --resume]\nFrames: --frames-dir ../frames --frame-pattern frame-%06d.png --frame-start 0 [--reuse-unchanged]\nTranscoded song: --audio ../song.mp3 --reference-audio ../original.wav\nTutorial: --example accent --demo-audio --out ../accent.mp4');return;}
  if(a.example&&!['accent','transition','transition-late','buildup','dense','pause','return'].includes(a.example))throw Error('Unknown tutorial example');
  const framesMode=Boolean(a['frames-dir']);
  if(a['demo-audio']&&!a.example)throw Error('Synthetic sound is only available for named tutorials');
+ if(a['reuse-unchanged']&&!framesMode)throw Error('--reuse-unchanged requires --frames-dir');
+ if(a['reuse-unchanged']&&a.resume)throw Error('Choose --resume or --reuse-unchanged, not both');
  if(framesMode&&(a.entry||a.example||a.playwright||a.browser||a.executable||a['browser-restart-every']))throw Error('--frames-dir is separate from browser/entry/example options');
  if(framesMode&&(a.root||a.exclude))throw Error('--root/--exclude apply to browser sources; frames-dir hashes only the selected PNGs');
  if(!framesMode&&(a['frame-pattern']||a['frame-start']))throw Error('--frame-pattern/--frame-start require --frames-dir');
@@ -110,20 +112,30 @@ export async function renderMain(argv){
    inputMode:framesMode?'frames':'browser',framesDir,framePattern:framesMode?a['frame-pattern']??'frame-%06d.png':null,frameStart,
    browser:framesMode?null:a.browser??null,executable,browserRestartEvery:framesMode?null:restartEvery,
    exclude:excludePaths.map(p=>relative(root,p).replaceAll('\\','/'))};
-  const key=digest({settings,sources,frames:selectedFrames?.files,audio:audioHash,identity,driver:await hashFile(fileURLToPath(import.meta.url)),utils:await hashFile(join(toolRoot,'tool-utils.mjs')),inputs:await hashFile(join(toolRoot,'render-inputs.mjs'))});
+  const driverHash=await hashFile(fileURLToPath(import.meta.url));
+  const key=digest({settings,sources,frames:selectedFrames?.files,audio:audioHash,identity,driver:driverHash,utils:await hashFile(join(toolRoot,'tool-utils.mjs')),inputs:await hashFile(join(toolRoot,'render-inputs.mjs'))});
   const statePath=join(work,'state.json');let state={schema:'beatscope-render-checkpoint-1',key,settings,parts:[]};
+  let savedParts=[];
   if(existsSync(statePath)){
    const saved=await jsonFile(statePath);
    if(a.resume&&saved.key!==key)throw Error('Resume inputs changed; rerun without --resume to render the changed sources');
-   if(a.resume&&saved.key===key)state=saved;
+   if(a.resume&&saved.key===key){state=saved;savedParts=saved.parts??[];}
+   else if(a['reuse-unchanged']&&Array.isArray(saved.parts)){savedParts=saved.parts;}
   }
   const totalParts=Math.ceil(frameCount/chunkFrames),reusable=new Set();let retainedBytes=0,reused=0;
+  const partKeys=new Map();
   for(let part=0;part<totalParts;part++){
-   const name=`part-${String(part).padStart(6,'0')}.mp4`,file=join(work,name),record=state.parts.find(p=>p.part===part);
-   const count=Math.min(chunkFrames,frameCount-part*chunkFrames);
-   if(a.resume&&record&&existsSync(file)&&await hashFile(file)===record.sha256){
+   const first=part*chunkFrames,count=Math.min(chunkFrames,frameCount-first),name=`part-${String(part).padStart(6,'0')}.mp4`,file=join(work,name);
+   const partKey=framesMode?digest({part,first,count,fps,width,height,chunkFrames,driver:driverHash,frames:selectedFrames.files.slice(first,first+count)}):null;
+   if(partKey)partKeys.set(part,partKey);
+   const record=savedParts.find(p=>p.part===part);
+   const canReuse=record&&existsSync(file)&&((a.resume)||(a['reuse-unchanged']&&partKey&&record.partKey===partKey));
+   if(canReuse&&await hashFile(file)===record.sha256){
     const info=await probe(file),video=info.streams.find(s=>s.codec_type==='video');
-    if(video?.width===width&&video.height===height&&Number(video.nb_read_frames)===count){reusable.add(part);retainedBytes+=(await stat(file)).size;}
+    if(video?.width===width&&video.height===height&&Number(video.nb_read_frames)===count){
+     reusable.add(part);retainedBytes+=(await stat(file)).size;
+     if(a['reuse-unchanged'])state.parts.push(record);
+    }
    }
   }
   const space=await diskSpace(dirname(out),{width,height,frameCount,retainedBytes});
@@ -169,7 +181,8 @@ export async function renderMain(argv){
    await job.done;encoder=null;
    const info=await probe(file),video=info.streams.find(s=>s.codec_type==='video');
    if(video?.width!==width||video.height!==height||Number(video.nb_read_frames)!==count)throw Error(`Encoded segment ${part+1} has ${video?.width}×${video?.height}, ${video?.nb_read_frames} frames; requested ${width}×${height}, ${count} frames`);
-   state.parts=state.parts.filter(p=>p.part!==part);state.parts.push({part,name,first,count,sha256:await hashFile(file)});await saveJson(statePath,state);
+   const partKey=partKeys.get(part);
+   state.parts=state.parts.filter(p=>p.part!==part);state.parts.push({part,name,first,count,sha256:await hashFile(file),...(partKey?{partKey}:{})});await saveJson(statePath,state);
    process.stderr.write(`Rendered segment ${part+1}/${totalParts}\n`);
   }
   await recycle();

@@ -98,9 +98,10 @@ node bake-timeline.mjs --out ../frame-timeline.json --score ../score.json --star
 
 `bake-timeline.mjs` outputs `beatscope-frame-timeline-1` containing resolved stages,
 resolved cues with frame indices, per-frame beat/bar/band/onset/structure/score state,
-and four suggested musical landmark frames (`probeFrames`). Render those four probe
-frames first and inspect them as a 2×2 diagnostic sheet (plus optional grayscale
-luminance check) before committing to a full-length sequence render:
+and suggested musical landmark frames (`probeFrames`, default 4 or `--probe-count 1..16`
+for multi-act films). Render those probe frames first and inspect them as a 2×2 or 4×3
+diagnostic contact sheet (plus optional grayscale luminance check) before committing to
+a full-length sequence render:
 
 ```sh
 node reference-tools.mjs probe-grid --frames-dir ../frames --timeline ../frame-timeline.json --out ../probe-grid.png --grayscale-out ../probe-grid-gray.png
@@ -117,9 +118,13 @@ Frame start defaults to zero; --start is song/audio time, not the image number.
 Only the requested contiguous frames are hashed and checked for missing files
 and dimensions before encoding. Unused frames are not scanned. This shares the
 same segmented encode, resume, audio mux and report. A changed selected frame
-invalidates resume. --clean leaves all input PNGs untouched. Input is a local PNG
-filename pattern with one %d/%0Nd placeholder; no glob or subdirectory pattern.
---root and --exclude apply to browser scenes; they are unnecessary in frame mode.
+invalidates strict `--resume`. For surgical re-renders where only a subset of PNG
+frames changed, pass `--reuse-unchanged` (without `--resume`) to verify each segment's
+exact per-frame SHA-256 digest and cached segment integrity, re-encoding only the
+modified segments while copying untouched segments losslessly. --clean leaves all
+input PNGs untouched. Input is a local PNG filename pattern with one %d/%0Nd
+placeholder; no glob or subdirectory pattern. --root and --exclude apply to
+browser scenes; they are unnecessary in frame mode.
 
 ## Synchronization diagnostics
 Add optional `sync` declarations to a job score:
