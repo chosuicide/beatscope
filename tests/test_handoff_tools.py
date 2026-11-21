@@ -324,3 +324,38 @@ def test_excluded_dependency_cannot_bypass_snapshot(package):
     result = subprocess.run(list(map(str, args)), cwd=package, capture_output=True, text=True, encoding='utf-8', timeout=40)
     assert result.returncode == 2 and 'excluded dependency' in result.stderr
     assert not list(package.parent.glob('.render-*/part-*.mp4'))
+
+
+def test_bake_timeline_preserves_edit_plan_score_and_probe_landmarks(package):
+    project = package.parent / 'bake-project'
+    node(package, 'examples/start.mjs', '--out', project, '--seconds', '3')
+    timeline_path = project / 'frame-timeline.json'
+    summary = node(
+        package, 'bake-timeline.mjs',
+        '--out', timeline_path,
+        '--score', project / 'score.json',
+        '--start', '0',
+        '--seconds', '3',
+        '--fps', '24',
+    )
+    assert summary['schema'] == 'beatscope-frame-timeline-1'
+    assert summary['window']['frameCount'] == 72
+    assert len(summary['probeFrames']) == 4
+    assert len({p['frame'] for p in summary['probeFrames']}) == 4
+
+    timeline = json.loads(timeline_path.read_text(encoding='utf-8'))
+    cue_ids = {c['id'] for c in timeline['cues']}
+    assert 'o:0' not in cue_ids
+    assert 'o:1' in cue_ids and 'u:added' in cue_ids
+    moved = next(c for c in timeline['cues'] if c['id'] == 'o:1')
+    assert moved['time'] == pytest.approx(2.2)
+    assert len(timeline['frames']) == 72
+    assert timeline['frames'][0]['stageId'] == 'start'
+    assert timeline['frames'][-1]['stageId'] == 's:saved'
+    assert timeline['frames'][0]['score']['viewId'] == 'main'
+    # Reject mismatched score hash
+    bad_score = project / 'bad-score.json'
+    raw_score = json.loads((project / 'score.json').read_text(encoding='utf-8'))
+    raw_score['source']['sha256'] = '0' * 64
+    bad_score.write_text(json.dumps(raw_score), encoding='utf-8')
+    node(package, 'bake-timeline.mjs', '--out', project / 'bad.json', '--score', bad_score, expected=2)

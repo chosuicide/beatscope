@@ -513,6 +513,8 @@ def _executable_trust_check(
         required = isinstance(capabilities, dict) and capabilities.get("render_driver")
         if name == "render-inputs.mjs" and manifest.get("package_version") == "0.20.0":
             required = False
+        if name == "bake-timeline.mjs" and manifest.get("package_version") in {"0.20.0", "0.20.1"}:
+            required = False
         if name.endswith((".mjs", ".html")) and (name in members or required):
             expected[name] = _agent_skill_file(name).encode("utf-8")
     if response_relevance is not None and "response-relevance-data.js" in members:

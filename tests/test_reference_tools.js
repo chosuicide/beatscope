@@ -247,3 +247,83 @@ test('film sequence gate accepts holds and motivated montage, rejects broken pla
   record.schema = 'beatscope-creative-review-1'; await save();
   assert.equal(check('preview').status, 1, 'legacy feature records must not silently become continuity evidence');
 });
+
+test('probe-grid builds 2x2 diagnostic sheet and grayscale bone-check from PNG frames and videos, and check validates surgical repairs', async (t) => {
+  if (!available('ffmpeg') || !available('ffprobe')) { t.skip('FFmpeg unavailable'); return; }
+  const root = await mkdtemp(join(tmpdir(), 'beatscope probe surgical '));
+  const framesDir = join(root, 'frames');
+  await mkdir(framesDir);
+  const colors = ['red', 'green', 'blue', 'yellow'];
+  const indices = [0, 8, 16, 23];
+  for (let i = 0; i < 4; i++) {
+    const outPng = join(framesDir, `frame-${String(indices[i]).padStart(6, '0')}.png`);
+    const made = call('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', `color=c=${colors[i]}:s=160x90:d=0.1`, '-frames:v', '1', outPng], root);
+    assert.equal(made.status, 0, made.stderr);
+  }
+  const timelinePath = join(root, 'frame-timeline.json');
+  await writeFile(timelinePath, JSON.stringify({
+    schema: 'beatscope-frame-timeline-1',
+    window: { start: 0, seconds: 1, duration: 1, fps: 24, frameCount: 24 },
+    probeFrames: indices.map((frame, i) => ({ frame, time: frame / 24, role: ['opening_steady', 'cue_impact', 'peak_activity', 'closing_frame'][i] })),
+  }));
+  const gridOut = join(root, 'probe-grid.png');
+  const grayOut = join(root, 'probe-grid-gray.png');
+  const built = call('node', [helper, 'probe-grid', '--frames-dir', framesDir, '--timeline', timelinePath, '--out', gridOut, '--grayscale-out', grayOut], root);
+  assert.equal(built.status, 0, built.stderr);
+  const report = JSON.parse(built.stdout);
+  assert.equal(report.schema, 'beatscope-probe-grid-1');
+  assert.equal(report.aesthetic_verdict, 'not_automatically_determined');
+  assert.equal(report.frames.length, 4);
+  assert.equal(report.sha256, digest(await readFile(gridOut)));
+  assert.equal(report.grayscale_sha256, digest(await readFile(grayOut)));
+  // Refuses overwrite of existing output
+  assert.equal(call('node', [helper, 'probe-grid', '--frames-dir', framesDir, '--timeline', timelinePath, '--out', gridOut], root).status, 2);
+
+  // Also test video mode
+  const clip = join(root, 'clip.mp4');
+  assert.equal(call('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'testsrc=s=160x90:r=24:d=2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', clip], root).status, 0);
+  const vidGrid = join(root, 'video-probe.png');
+  const vidBuilt = call('node', [helper, 'probe-grid', '--video', clip, '--times', '0.1,0.6,1.2,1.8', '--out', vidGrid], root);
+  assert.equal(vidBuilt.status, 0, vidBuilt.stderr);
+
+  // Validate surgical repairs[] + probe_grid in creative-review.json
+  const timing = JSON.stringify({ duration: 2, beats: [{ id: 1, time: 0.5 }], onsets: [{ id: 2, time: 0.75 }] });
+  await writeFile(join(root, 'timing.json'), timing);
+  await writeFile(join(root, 'source.py'), '# renderer\n');
+  await writeFile(join(root, 'preview.mp4'), 'preview bytes');
+  const plan = filmPlan(2, digest(timing));
+  const planText = JSON.stringify(plan);
+  await writeFile(join(root, 'plan.json'), planText);
+  const record = {
+    schema: 'beatscope-creative-review-2', reference_mode: 'original',
+    user_request: { task: 'Surgical repair check', supplied_choices: [], authorized_assumptions: [] }, inputs: [],
+    requirements: [{ id: 'seam', instruction: 'clean cutout edges', priority: 'critical', success_criterion: 'no white halo' }],
+    asset_bindings: [{ requirement_id: 'seam', asset_ids: [], generated_material: 'blender+opencv', code_location: 'source.py' }],
+    preview: { path: 'preview.mp4', sha256: digest('preview bytes'), source_path: 'source.py', source_sha256: digest('# renderer\n'), plan_path: 'plan.json', plan_sha256: digest(planText), renderer: 'blender-opencv' },
+    probe_grid: { path: 'probe-grid.png', sha256: report.sha256, grayscale_path: 'probe-grid-gray.png', grayscale_sha256: report.grayscale_sha256 },
+    reviews: [{ requirement_id: 'seam', status: 'matched', paired_evidence: 'preview.mp4', result: 'Clean edges after dilation' }],
+    sequence_reviews: [],
+    repairs: [{
+      id: 'patch-1',
+      before_preview_sha256: 'abc123',
+      locked_intervals: [[1.0, 2.0]],
+      target_intervals: [[0.5, 0.9]],
+      changes: ['increase cv2.dilate from 1px to 2px on mask seam'],
+      probe_grid_path: 'probe-grid.png',
+      probe_grid_sha256: report.sha256,
+    }],
+    review: { level: 'self', user_accepted: false },
+  };
+  record.sequence_reviews = [sequenceReview(record, [0, 2])];
+  const recordPath = join(root, 'review.json');
+  const check = async () => { await writeFile(recordPath, JSON.stringify(record)); return call('node', [helper, 'check', '--record', recordPath, '--stage', 'preview'], root); };
+  assert.equal((await check()).status, 0);
+  record.repairs[0].probe_grid_sha256 = 'stale';
+  assert.equal((await check()).status, 1, 'stale repair probe grid hash must fail');
+  record.repairs[0].probe_grid_sha256 = report.sha256;
+  record.repairs[0].changes = [];
+  assert.equal((await check()).status, 1, 'repair without concrete changes must fail');
+  record.repairs[0].changes = ['fix seam'];
+  record.repairs[0].target_intervals = [];
+  assert.equal((await check()).status, 1, 'repair without target_intervals must fail');
+});

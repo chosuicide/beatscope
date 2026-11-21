@@ -33,12 +33,12 @@ from .timing_quality import timing_quality
 # The handoff package format version (plan section 4.3). This tracks the
 # package contract only: the audio analyser stays at schema.ANALYZER_VERSION
 # (0.7.0) and the visual recipe contract at 0.8.0.
-PACKAGE_VERSION = "0.20.1"
+PACKAGE_VERSION = "0.20.2"
 
 # Generic instructional assets, never a per-song visual plan or original media.
 DIRECTING_EXAMPLES = ("accent", "transition", "transition-late", "buildup", "dense", "pause", "return")
 HANDOFF_RESOURCES = (
-    "query.mjs", "tool-utils.mjs", "render-inputs.mjs", "render.mjs", "verify.mjs",
+    "query.mjs", "bake-timeline.mjs", "tool-utils.mjs", "render-inputs.mjs", "render.mjs", "verify.mjs",
     "references/handoff-rules.md", "references/complete-example.md",
     "references/rendering.md", "references/common-failures.md",
     "examples/start.mjs", "examples/directing/player.html", "examples/directing/draw.mjs",
@@ -128,6 +128,7 @@ def _package_manifest(
             "edit_score": True,
             "edit_plan": True,
             "bounded_query": True,
+            "timeline_bake": True,
             "render_driver": True,
             "sync_inspection": True,
             "directing_examples": True,
@@ -148,6 +149,7 @@ def _package_manifest(
             "editor_factory": "createEditScore",
             "plan_module": "edit-plan.js",
             "query": "query.mjs",
+            "bake": "bake-timeline.mjs",
             "render": "render.mjs",
             "verify": "verify.mjs",
             "example": "examples/start.mjs",
@@ -543,6 +545,7 @@ Read `AGENT.md` first. Query data; do not load the map in full into context.
   resolve with `resolveEditPlan(rhythm, plan)` before authoring the score.
 - `picture-tools.js`: optional target framing and native picture bindings; no style.
 - `query.mjs`, `music-brief.mjs`: bounded window selectors, activity and saved stages.
+- `bake-timeline.mjs`: bake per-frame timing and optional score JSON for external/offline renderers.
 - `render.mjs`: segmented, resumable sample render via an existing scene adapter.
 - `verify.mjs`: cue binding and coarse picture-change diagnostics; not aesthetic proof.
 - `examples/start.mjs`: runnable new-project example; no existing files overwritten.

@@ -15,20 +15,25 @@ const ffprobe = process.env.BEATSCOPE_FFPROBE || 'ffprobe';
 function usage() {
   process.stderr.write('Usage: node reference-tools.mjs inspect --input MEDIA --out NEW_DIR [--interval START:END] (repeat up to 4) [--fps native|1..120] [--slowdown 2..8]\n');
   process.stderr.write('       node reference-tools.mjs compare --record creative-review.json --out comparison.mp4\n');
+  process.stderr.write('       node reference-tools.mjs probe-grid (--frames-dir DIR [--frame-pattern frame-%06d.png] [--frames F0,F1,F2,F3 | --timeline timeline.json] | --video MEDIA --times T0,T1,T2,T3) --out probe-grid.png [--grayscale-out probe-grid-gray.png] [--fps 24] [--start 0] [--labels L0,L1,L2,L3]\n');
   process.stderr.write('       node reference-tools.mjs check --record creative-review.json --stage reference|production|plan|preview|final\n');
   process.stderr.write('check exit 0 = structural evidence present (not aesthetic approval); 1 = incomplete; 2 = invalid invocation/tool unavailable.\n');
 }
 function argsOf(argv) {
   const [action, ...tail] = argv;
-  if (!['inspect', 'compare', 'check'].includes(action)) throw new Error('invalid action');
+  if (!['inspect', 'compare', 'probe-grid', 'check'].includes(action)) throw new Error('invalid action');
   const args = { action, interval: [] };
+  const allowed = [
+    'input', 'out', 'record', 'stage', 'fps', 'slowdown',
+    'frames-dir', 'frame-pattern', 'frames', 'timeline', 'video', 'times', 'start', 'labels', 'grayscale-out',
+  ];
   for (let i = 0; i < tail.length; i += 2) {
     const key = tail[i];
     const val = tail[i + 1];
     if (!key?.startsWith('--') || !val || val.startsWith('--')) throw new Error(`invalid argument ${key}`);
     const name = key.slice(2);
     if (name === 'interval') args.interval.push(val);
-    else if (['input', 'out', 'record', 'stage', 'fps', 'slowdown'].includes(name) && args[name] == null) args[name] = val;
+    else if (allowed.includes(name) && args[name] == null) args[name] = val;
     else throw new Error(`unsupported or repeated argument ${key}`);
   }
   return args;
@@ -202,6 +207,114 @@ async function compare(args) {
   await run(ffmpeg, [...inputArgs, '-filter_complex', filters.join(';'), '-map', '[out]', '-an', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', output]);
   const hash = await hashFile(output);
   console.log(JSON.stringify({ path: output, sha256: hash, preview_sha256: previewHash, audio: 'muted', pairs: pairs.length }, null, 2));
+}
+function formatFrameFile(pattern, frameIndex) {
+  if (typeof pattern !== 'string' || pattern.includes('/') || pattern.includes('\\') || pattern.includes('..')) {
+    throw new Error('frame-pattern must be a plain filename pattern');
+  }
+  const matches = pattern.match(/%0?\d*d/g);
+  if (!matches || matches.length !== 1) throw new Error('frame-pattern must contain exactly one %d or %0Nd placeholder');
+  return pattern.replace(/%(0?)(\d*)d/, (_, zero, width) => {
+    const raw = String(frameIndex);
+    return width ? raw.padStart(Number(width), zero === '0' ? '0' : ' ') : raw;
+  });
+}
+function safeDrawtext(value) {
+  return String(value ?? '').replace(/[^A-Za-z0-9 ._+-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 64);
+}
+async function probeGrid(args) {
+  if (!args.out) throw new Error('probe-grid requires --out');
+  const outPath = resolve(args.out);
+  if (existsSync(outPath)) throw new Error('probe-grid output already exists; choose a new path');
+  if (!['.png', '.jpg', '.jpeg'].includes(extname(outPath).toLowerCase())) throw new Error('probe-grid output must be png or jpg');
+  const grayPath = args['grayscale-out'] ? resolve(args['grayscale-out']) : null;
+  if (grayPath && existsSync(grayPath)) throw new Error('grayscale output already exists; choose a new path');
+  if (grayPath && !['.png', '.jpg', '.jpeg'].includes(extname(grayPath).toLowerCase())) throw new Error('grayscale output must be png or jpg');
+
+  const framesMode = Boolean(args['frames-dir']);
+  const videoMode = Boolean(args.video);
+  if (framesMode === videoMode) throw new Error('probe-grid requires exactly one of --frames-dir or --video');
+  const customLabels = args.labels ? args.labels.split(',').map((s) => s.trim()) : null;
+  const entries = [];
+  const inputArgs = ['-hide_banner', '-loglevel', 'error'];
+
+  if (framesMode) {
+    const framesDir = await realpath(resolve(args['frames-dir']));
+    const pattern = args['frame-pattern'] || 'frame-%06d.png';
+    let fps = args.fps != null ? Number(args.fps) : 24;
+    let start = args.start != null ? Number(args.start) : 0;
+    let frameSpecs = [];
+    if (args.timeline) {
+      const tl = JSON.parse(await readFile(resolve(args.timeline), 'utf8'));
+      if (tl?.schema !== 'beatscope-frame-timeline-1') throw new Error('timeline must use beatscope-frame-timeline-1');
+      if (args.fps == null && Number.isFinite(tl.window?.fps)) fps = tl.window.fps;
+      if (args.start == null && Number.isFinite(tl.window?.start)) start = tl.window.start;
+      if (!args.frames) {
+        const picked = Array.isArray(tl.probeFrames) ? tl.probeFrames.slice(0, 4) : [];
+        if (picked.length !== 4) throw new Error('timeline must provide 4 probeFrames when --frames is omitted');
+        frameSpecs = picked.map((p) => ({ frame: p.frame, time: p.time, label: p.role || `frame ${p.frame}` }));
+      }
+    }
+    if (!Number.isFinite(fps) || fps <= 0 || fps > 120 || !Number.isFinite(start) || start < 0) throw new Error('invalid fps or start');
+    if (args.frames) {
+      const indices = args.frames.split(',').map((v) => Number(v.trim()));
+      if (indices.length !== 4 || !indices.every((n) => Number.isInteger(n) && n >= 0)) throw new Error('--frames must specify exactly 4 non-negative integer frame indices');
+      frameSpecs = indices.map((frame, i) => ({ frame, time: start + frame / fps, label: customLabels?.[i] || `slot ${i + 1}` }));
+    }
+    if (frameSpecs.length !== 4) throw new Error('probe-grid requires exactly 4 frames (via --frames or --timeline)');
+    for (let i = 0; i < 4; i++) {
+      const spec = frameSpecs[i];
+      const file = join(framesDir, formatFrameFile(pattern, spec.frame));
+      if (!existsSync(file) || !(await stat(file)).isFile()) throw new Error(`probe frame missing: ${file}`);
+      inputArgs.push('-i', file);
+      const labelText = safeDrawtext(customLabels?.[i] || spec.label);
+      entries.push({ slot: i + 1, frame: spec.frame, time: Number(spec.time.toFixed(4)), label: labelText, source: file });
+    }
+  } else {
+    const videoPath = resolve(args.video);
+    if (!(await stat(videoPath)).isFile()) throw new Error('video is not a file');
+    const info = await metadata(videoPath);
+    if (!args.times) throw new Error('--video requires --times T0,T1,T2,T3');
+    const times = args.times.split(',').map((v) => Number(v.trim()));
+    if (times.length !== 4 || !times.every((t) => Number.isFinite(t) && t >= 0 && t <= info.duration + 0.001)) {
+      throw new Error('--times must specify exactly 4 timestamps within video duration');
+    }
+    for (let i = 0; i < 4; i++) {
+      const t = Math.min(Math.max(0, times[i]), Math.max(0, info.duration - 0.001));
+      inputArgs.push('-ss', t.toFixed(6), '-i', videoPath);
+      const labelText = safeDrawtext(customLabels?.[i] || `slot ${i + 1}`);
+      entries.push({ slot: i + 1, frame: null, time: Number(times[i].toFixed(4)), label: labelText, source: videoPath });
+    }
+  }
+
+  const filters = [];
+  for (let i = 0; i < 4; i++) {
+    const e = entries[i];
+    const tag = e.frame != null
+      ? `F${String(e.frame).padStart(5, '0')} ${e.time.toFixed(2)}s ${e.label}`
+      : `${e.time.toFixed(2)}s ${e.label}`;
+    filters.push(`[${i}:v]scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2,drawtext=text='${safeDrawtext(tag)}':x=12:y=12:fontsize=18:fontcolor=white:box=1:boxcolor=black@0.7[p${i}]`);
+  }
+  filters.push('[p0][p1]hstack=inputs=2[top];[p2][p3]hstack=inputs=2[bot];[top][bot]vstack=inputs=2[grid]');
+  await mkdir(dirname(outPath), { recursive: true });
+  await run(ffmpeg, [...inputArgs, '-filter_complex', filters.join(';'), '-map', '[grid]', '-frames:v', '1', '-y', outPath]);
+  const outHash = await hashFile(outPath);
+
+  let grayHash = null;
+  if (grayPath) {
+    await mkdir(dirname(grayPath), { recursive: true });
+    await run(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-i', outPath, '-vf', 'format=gray', '-frames:v', '1', '-y', grayPath]);
+    grayHash = await hashFile(grayPath);
+  }
+  console.log(JSON.stringify({
+    schema: 'beatscope-probe-grid-1',
+    out: outPath,
+    sha256: outHash,
+    grayscale_out: grayPath,
+    grayscale_sha256: grayHash,
+    aesthetic_verdict: 'not_automatically_determined',
+    frames: entries,
+  }, null, 2));
 }
 const textPresent = value => typeof value === 'string' && value.trim().length > 0;
 const sameTime = (a, b) => Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= 0.000001;
@@ -448,6 +561,51 @@ async function check(args) {
       else if (review.status === 'mismatch' && req.priority === 'critical') { mismatch++; errors.push(`critical feature mismatch: ${req.id}`); }
     }
     if (!['self', 'independent', 'user'].includes(record.review?.level)) errors.push('review level missing; file existence is not visual review');
+    if (record.probe_grid != null) {
+      try {
+        const probePath = await existingEvidence(root, record.probe_grid.path);
+        if (await hashFile(probePath) !== record.probe_grid.sha256) throw new Error();
+        if (record.probe_grid.grayscale_path != null) {
+          const grayPath = await existingEvidence(root, record.probe_grid.grayscale_path);
+          if (await hashFile(grayPath) !== record.probe_grid.grayscale_sha256) throw new Error();
+        }
+      } catch { errors.push('probe grid missing or stale'); }
+    }
+    if (record.repairs != null) {
+      if (!Array.isArray(record.repairs)) {
+        errors.push('repairs must be an array');
+      } else {
+        const repairIds = new Set();
+        for (const repair of record.repairs) {
+          if (!textPresent(repair?.id) || repairIds.has(repair.id)) errors.push('repair ID missing or duplicated');
+          repairIds.add(repair?.id);
+          if (!textPresent(repair?.before_preview_sha256)) errors.push(`repair before_preview_sha256 missing: ${repair?.id}`);
+          if (!Array.isArray(repair?.locked_intervals)) errors.push(`repair locked_intervals must be an array: ${repair?.id}`);
+          else {
+            for (const span of repair.locked_intervals) {
+              try { finiteInterval(span, Number.MAX_SAFE_INTEGER, `repair ${repair.id} locked`); }
+              catch (err) { errors.push(err.message); }
+            }
+          }
+          if (!Array.isArray(repair?.target_intervals) || !repair.target_intervals.length) errors.push(`repair target_intervals missing: ${repair?.id}`);
+          else {
+            for (const span of repair.target_intervals) {
+              try { finiteInterval(span, Number.MAX_SAFE_INTEGER, `repair ${repair.id} target`); }
+              catch (err) { errors.push(err.message); }
+            }
+          }
+          if (!Array.isArray(repair?.changes) || !repair.changes.length || !repair.changes.every(textPresent)) {
+            errors.push(`repair changes missing: ${repair?.id}`);
+          }
+          if (repair?.probe_grid_path != null || repair?.probe_grid_sha256 != null) {
+            try {
+              const p = await existingEvidence(root, repair.probe_grid_path);
+              if (await hashFile(p) !== repair.probe_grid_sha256) throw new Error();
+            } catch { errors.push(`repair probe grid missing or stale: ${repair?.id}`); }
+          }
+        }
+      }
+    }
   }
   if (args.stage === 'final') {
     try {
@@ -463,6 +621,7 @@ try {
   const args = argsOf(process.argv.slice(2));
   if (args.action === 'inspect') await inspect(args);
   if (args.action === 'compare') await compare(args);
+  if (args.action === 'probe-grid') await probeGrid(args);
   if (args.action === 'check') await check(args);
 } catch (error) {
   usage();

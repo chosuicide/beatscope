@@ -87,10 +87,30 @@ untouched. Without a verified original, hash mismatch still needs a reference;
 the package contains no source audio to decode. Tutorials use separate synthetic sound.
 
 ## Frames from another renderer
-No browser or Playwright is needed for an existing PNG sequence:
+No browser or Playwright is needed for an existing PNG sequence. To drive an external
+renderer (Python, Blender `bpy`, OpenCV, TouchDesigner, etc.) from BeatScope's
+authoritative JS timing and `edit-plan.json` (plus an optional `score.json`), bake
+a deterministic per-frame timeline first:
 
 ```sh
-node render.mjs --frames-dir ../frames --frame-pattern frame-%06d.png --frame-start 0 --audio ../song.mp3 --out ../sample.mp4 --start 16.5 --seconds 3 --width 1280 --height 720
+node bake-timeline.mjs --out ../frame-timeline.json --score ../score.json --start 16.5 --seconds 3 --fps 24
+```
+
+`bake-timeline.mjs` outputs `beatscope-frame-timeline-1` containing resolved stages,
+resolved cues with frame indices, per-frame beat/bar/band/onset/structure/score state,
+and four suggested musical landmark frames (`probeFrames`). Render those four probe
+frames first and inspect them as a 2×2 diagnostic sheet (plus optional grayscale
+luminance check) before committing to a full-length sequence render:
+
+```sh
+node reference-tools.mjs probe-grid --frames-dir ../frames --timeline ../frame-timeline.json --out ../probe-grid.png --grayscale-out ../probe-grid-gray.png
+```
+
+Once the probe frames look clean, render the full PNG sequence and mux with BeatScope's
+resumable frame driver:
+
+```sh
+node render.mjs --frames-dir ../frames --frame-pattern frame-%06d.png --frame-start 0 --audio ../song.mp3 --out ../sample.mp4 --start 16.5 --seconds 3 --fps 24 --width 1280 --height 720
 ```
 
 Frame start defaults to zero; --start is song/audio time, not the image number.

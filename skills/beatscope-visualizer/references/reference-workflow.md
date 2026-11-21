@@ -20,6 +20,13 @@ An anchor can also be a recurring graphic, typography, compositional axis, treat
 
 For multiple main references, observe each separately before comparing shared grammar. Describe both recurring operations and differences, with source intervals from each. A role handoff, foreground surviving a background cut, a deliberate full-frame interruption, or source-derived reflection/fragmentation can provide coherence. Do not force uninterrupted physical continuity or full-time intact asset recognition onto a reference that deliberately changes them. Preserve required identity at the appropriate sequence level and keep explicit departures visible in the review.
 
+### Optional grammar-extraction & Director/Tech decoupling
+
+When the user wants to derive a reference's underlying visual grammar (luminance/negative-space skeleton, temporal cadence, intrusion/transition physics, resolution grammar) **without copying literal objects, text, or signature palettes**, split observation from implementation:
+
+1. **Director role** inspects the reference video and BeatScope's bounded summary (`query.mjs`), strips concrete objects/text/branding, and writes a concrete physical/timing spec plus any project-scoped anti-pattern lints (e.g., forbidding unrequested overlays, text, or smooth fades when the brief calls for stark hard cuts). Never hardcode one house style across unrelated projects.
+2. **Renderer/Tech role** receives only the stripped spec and BeatScope timing (`score.json` / `frame-timeline.json`) — never the raw reference video — so implementation builds original material instead of tracing reference props.
+
 ## 3. Bind a concrete brief
 
 From observations and explicit user changes, write a few testable features. For each, name the reference interval, target output interval, usable source asset, responsible source module and observable preview criterion. Prefer preserving the reference's defining motion and composition while making only requested changes. If a feature cannot be implemented with the available tools/assets, record the gap before promising it. Avoid a default “glitch,” “cinematic,” or other house look: different references must produce different briefs.
@@ -32,11 +39,13 @@ Do not compress a feature to a palette adjective. For an anchor, describe geomet
 
 ## 4. Render, compare and repair
 
-Follow `video-workflow.md` to plan the work and render a representative continuous passage. Include the shots around a difficult transition. Record source/plan and preview hashes before building a comparison.
+Follow `video-workflow.md` to plan the work. Before rendering a full continuous excerpt, render four landmark frames (opening steady frame, cue/impact frame, peak activity/climax frame, and boundary/closing frame) and assemble a 2×2 diagnostic contact sheet with `node reference-tools.mjs probe-grid ...` (optionally adding `--grayscale-out` to verify luminance/composition structure without color distractions). Fix obvious lighting, seam, edge, or framing defects before rendering the full continuous passage.
+
+Then render a representative continuous passage including the shots around a difficult transition. Record source/plan and preview hashes before building a comparison.
 
 Build a paired comparison of the reference and preview with clearly labeled **source times on both sides**. Preserve each panel's native playback speed; hold a shorter panel on its last frame rather than stretching it. Mute the comparison or use only one specified soundtrack—never let two BGMs compete. **Watch the resulting comparison** or inspect sufficiently dense ordered frames. For each brief feature, record `matched`, `mismatch` or `unverified` with a concrete visible observation. Examples of mismatch: subject much larger than reference, stationary layer shaking, sustained flow reduced to isolated pulses, effect never recovering, supplied footage replaced by generic geometry.
 
-Repair mismatches in the real consumer and re-render the affected interval. Normally allow two local repair passes; then disclose remaining mismatch or ask one targeted question if the reference is genuinely ambiguous. Do not quietly drop a difficult requirement. Expand to the authorized complete piece via the same renderer once no critical mismatch remains, unless the user wants to approve the preview first.
+Repair mismatches in the real consumer using **surgical patches** rather than rewriting the whole renderer: explicitly record `locked_intervals` (already-matched passages that must not regress), `target_intervals`, and 2–4 concrete parameter/code `changes` inside `repairs[]` in `creative-review.json`, re-verify via `probe-grid`, and re-render only the affected interval. Normally allow two local repair passes; then disclose remaining mismatch or ask one targeted question if the reference is genuinely ambiguous. Do not quietly drop a difficult requirement. Expand to the authorized complete piece via the same renderer once no critical mismatch remains, unless the user wants to approve the preview first.
 
 ## 5. Job-local review record
 
