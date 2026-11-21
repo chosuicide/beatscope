@@ -2,6 +2,17 @@
 
 Use this guide for observing and comparing a supplied visual reference. `video-workflow.md` owns the production sequence and shot-continuity review for all video tasks. The user's request and actual media determine creative direction. Keep plans and review records in the **job directory**, outside the timing package.
 
+## 0. Choose the reference mode first (CRITICAL — prevents accidental reskinning)
+
+Before extracting requirements, classify how the user intends to use the reference video into one of two isolated tracks:
+
+1. **`style-inspiration` (DEFAULT whenever the user asks to match a reference's vibe, energy, texture, or aesthetic rather than remake it shot-for-shot)**:
+   - **Strictly forbidden**: preserving the reference's shot-by-shot `state-sequence` order, reusing its spatial layout/silhouette placements, or doing object-for-object geometric substitution (e.g., never replace a reference prop with a geometric bar/circle in the exact same screen spot, and never replicate the reference's signature shot motifs such as twin bokeh rings or a centered starburst in matching order).
+   - **Extract ONLY non-spatial aesthetic parameters**: luminance/contrast ratio, material/texture family, edit cadence & transition physics, and graphic/text restraint level.
+   - **Invent a 100% original visual world, subject, composition vocabulary, and shot order** driven by the target song's own structure. Do NOT require side-by-side layout-matching `paired comparison` against the reference frames; evaluate visual quality and musical sync against the target song and user brief instead.
+2. **`structural-adaptation` (ONLY when the user explicitly asks to remake, reskin, or closely replicate the reference's specific shots, layout, or transition sequence)**:
+   - Apply the full `persistent-anchor`, `state-sequence`, and `within-state-evolution` preservation inventory and side-by-side `paired comparison` workflow below.
+
 ## 1. Inventory and roles
 
 List each existing input with a stable ID, path, SHA-256, and one or more explicit roles: `target_audio`, `reference`, `usable_asset`, `source_template`. A reference video's frames or soundtrack are not automatically usable assets. Reuse already answered preferences; ask only when a conflict or genuinely missing choice changes the result. If a runnable template is supplied, inspect its output and relevant implementation before replacing it. Record missing media, inaccessible files and reproduction limits plainly.
